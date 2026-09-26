@@ -1,0 +1,160 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../services/nuvio_plugin_service.dart';
+import '../theme/glass_theme.dart';
+import 'glass_box.dart';
+
+class NuvioPluginInstallerModal extends StatefulWidget {
+  const NuvioPluginInstallerModal({super.key, required this.pluginService});
+
+  final NuvioPluginService pluginService;
+
+  static Future<void> show(
+    BuildContext context,
+    NuvioPluginService pluginService,
+  ) => showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (_) => NuvioPluginInstallerModal(pluginService: pluginService),
+  );
+
+  @override
+  State<NuvioPluginInstallerModal> createState() =>
+      _NuvioPluginInstallerModalState();
+}
+
+class _NuvioPluginInstallerModalState extends State<NuvioPluginInstallerModal> {
+  final _url = TextEditingController();
+  bool _busy = false;
+  String? _error;
+  String? _success;
+
+  @override
+  void dispose() {
+    _url.dispose();
+    super.dispose();
+  }
+
+  Future<void> _paste() async {
+    final clipboard = await Clipboard.getData(Clipboard.kTextPlain);
+    if (!mounted || clipboard?.text == null) return;
+    setState(() {
+      _url.text = clipboard!.text!.trim();
+      _error = null;
+      _success = null;
+    });
+  }
+
+  Future<void> _install() async {
+    setState(() {
+      _busy = true;
+      _error = null;
+      _success = null;
+    });
+    try {
+      final repository = await widget.pluginService.install(_url.text);
+      if (!mounted) return;
+      setState(() {
+        _url.clear();
+        _success =
+            'Added ${repository.plugins.length} provider(s). Enable the ones you want to use.';
+      });
+      FocusScope.of(context).unfocus();
+    } catch (error) {
+      if (mounted) {
+        setState(
+          () => _error = error.toString().replaceFirst('Exception: ', ''),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => SafeArea(
+    child: Padding(
+      padding: EdgeInsets.only(
+        left: 16,
+        right: 16,
+        top: 12,
+        bottom: MediaQuery.viewInsetsOf(context).bottom + 16,
+      ),
+      child: GlassBox(
+        radius: 26,
+        padding: const EdgeInsets.all(20),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Install a Nuvio plugin',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Close',
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
+              ),
+              const Text(
+                'Copy a provider manifest URL from nuvioplugin.com, then paste it below.',
+                style: TextStyle(color: GlassTheme.muted),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _url,
+                keyboardType: TextInputType.url,
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => _busy ? null : _install(),
+                decoration: InputDecoration(
+                  hintText: 'Nuvio manifest URL',
+                  prefixIcon: const Icon(Icons.link_rounded),
+                  suffixIcon: IconButton(
+                    tooltip: 'Paste from clipboard',
+                    onPressed: _busy ? null : _paste,
+                    icon: const Icon(Icons.content_paste_rounded),
+                  ),
+                ),
+              ),
+              if (_error != null) ...[
+                const SizedBox(height: 10),
+                Text(_error!, style: const TextStyle(color: Colors.redAccent)),
+              ],
+              if (_success != null) ...[
+                const SizedBox(height: 10),
+                Text(_success!, style: const TextStyle(color: GlassTheme.cyan)),
+              ],
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: _busy ? null : _install,
+                  icon: _busy
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.download_rounded),
+                  label: Text(
+                    _busy ? 'Checking manifest…' : 'Install provider',
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+}
