@@ -11,11 +11,13 @@ class PlayerScreen extends StatelessWidget {
     required this.source,
     required this.sources,
     required this.storage,
+    this.onRefreshSources,
   });
   final MediaItem item;
   final StreamSource source;
   final List<StreamSource> sources;
   final StorageService storage;
+  final Future<List<StreamSource>> Function()? onRefreshSources;
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -26,6 +28,7 @@ class PlayerScreen extends StatelessWidget {
       sources: sources,
       subtitles: source.subtitles,
       storage: storage,
+      onRefreshSources: onRefreshSources,
     ),
   );
 }

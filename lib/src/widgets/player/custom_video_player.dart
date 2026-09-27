@@ -26,12 +26,14 @@ class CustomVideoPlayer extends StatefulWidget {
     required this.sources,
     required this.subtitles,
     required this.storage,
+    this.onRefreshSources,
   });
   final MediaItem item;
   final StreamSource source;
   final List<StreamSource> sources;
   final List<SubtitleTrack> subtitles;
   final StorageService storage;
+  final Future<List<StreamSource>> Function()? onRefreshSources;
   @override
   State<CustomVideoPlayer> createState() => _CustomVideoPlayerState();
 }
@@ -56,11 +58,13 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   String? _errorMessage;
   int _initializationGeneration = 0;
   final Set<String> _attemptedSourceKeys = {};
+  late List<StreamSource> _sources;
   final _openSubtitles = OpenSubtitlesService();
   bool _handlingFailure = false;
   @override
   void initState() {
     super.initState();
+    _sources = List.of(widget.sources);
     _source = widget.source;
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     _initialize(widget.source);
@@ -169,9 +173,9 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
           await _torrentSession?.stop();
         } catch (_) {}
         _torrentSession = null;
-        final message = error.toString().replaceFirst('Exception: ', '').trim();
+        final message = _safePlaybackError(error.toString());
         _attemptedSourceKeys.add(requestedSourceKey);
-        final alternative = widget.sources
+        final alternative = _sources
             .where(
               (candidate) =>
                   !_attemptedSourceKeys.contains(_sourceKey(candidate)),
@@ -200,6 +204,55 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     return '${source.url}|${jsonEncode(headers.map((e) => [e.key.toLowerCase(), e.value]).toList())}';
   }
 
+  String _safePlaybackError(String error) {
+    final cleaned = error.replaceFirst('Exception: ', '').trim();
+    // Signed stream URLs can carry credentials in their query string. Keep
+    // the hostname for diagnostics without rendering the signed URL/token.
+    return cleaned.replaceAllMapped(
+      RegExp(r'https?://[^\s,()]+', caseSensitive: false),
+      (match) {
+        final uri = Uri.tryParse(match.group(0)!);
+        return uri?.host.isNotEmpty == true ? uri!.host : 'the stream URL';
+      },
+    );
+  }
+
+  Future<void> _retryPlayback() async {
+    final refresh = widget.onRefreshSources;
+    if (refresh == null) {
+      await _initialize(_source!);
+      return;
+    }
+    setState(() {
+      _error = false;
+      _errorMessage = null;
+    });
+    try {
+      final freshSources = await refresh();
+      if (!mounted) return;
+      final playable = freshSources
+          .where((source) => source.isPlayable)
+          .toList();
+      if (playable.isNotEmpty) {
+        final previous = _source!;
+        _sources = playable;
+        final refreshed = playable
+            .where(
+              (source) =>
+                  source.name == previous.name &&
+                  source.providerName == previous.providerName &&
+                  source.description == previous.description,
+            )
+            .firstOrNull;
+        await _initialize(refreshed ?? playable.first);
+        return;
+      }
+    } catch (_) {
+      // If refresh fails, retry the last known URL.
+    }
+    if (mounted) await _initialize(_source!);
+  }
+
   Future<void> _handleRuntimePlaybackFailure(
     String failedSourceKey,
     String error,
@@ -226,7 +279,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     // available from Choose another.
     const maxAutomaticSources = 5;
     final alternative = _attemptedSourceKeys.length < maxAutomaticSources
-        ? widget.sources
+        ? _sources
               .where(
                 (candidate) =>
                     !_attemptedSourceKeys.contains(_sourceKey(candidate)),
@@ -238,7 +291,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
       return;
     }
 
-    final message = error.replaceFirst('Exception: ', '').trim();
+    final message = _safePlaybackError(error);
     if (!mounted || generation != _initializationGeneration) return;
     setState(() {
       _error = true;
@@ -330,7 +383,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   }
 
   Future<void> _pickStream() async {
-    final streams = widget.sources;
+    final streams = _sources;
     if (streams.length < 2) return;
     final picked = await StreamSelectorSheet.show(context, streams, _source!);
     if (picked != null) {
@@ -683,11 +736,11 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
                             runSpacing: 8,
                             children: [
                               OutlinedButton.icon(
-                                onPressed: () => _initialize(_source!),
+                                onPressed: _retryPlayback,
                                 icon: const Icon(Icons.refresh_rounded),
                                 label: const Text('Retry'),
                               ),
-                              if (widget.sources.length > 1)
+                              if (_sources.length > 1)
                                 FilledButton.icon(
                                   onPressed: _pickStream,
                                   icon: const Icon(Icons.playlist_play_rounded),

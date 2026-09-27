@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter_js/javascript_runtime.dart';
 import 'package:http/http.dart' as http;
@@ -8,6 +10,10 @@ import 'package:http/http.dart' as http;
 /// HTTP client. Keeping the bridge here avoids flutter_js's polling XHR
 /// extension, which loses response status/headers and leaves a timer per VM.
 class ProviderFetchBridge {
+  static const _maxConcurrentRequests = 4;
+  static const _maxRequestBodyBytes = 2 * 1024 * 1024;
+  static const _maxResponseBodyBytes = 2 * 1024 * 1024;
+
   ProviderFetchBridge(this.runtime, this.client) {
     final setup = runtime.evaluate(_polyfill);
     if (setup.isError) throw StateError(setup.stringResult);
@@ -17,12 +23,28 @@ class ProviderFetchBridge {
   final JavascriptRuntime runtime;
   final http.Client client;
   bool _active = true;
+  int _activeRequests = 0;
+  final Queue<Map<String, dynamic>> _queuedRequests = Queue();
 
   void dispose() => _active = false;
 
   void _onFetch(dynamic request) {
     if (!_active || request is! Map) return;
-    unawaited(_fetch(Map<String, dynamic>.from(request)));
+    final data = Map<String, dynamic>.from(request);
+    if (_activeRequests >= _maxConcurrentRequests) {
+      if (_queuedRequests.length >= 32) {
+        _reject(data['id'], 'Provider request limit reached.');
+      } else {
+        _queuedRequests.addLast(data);
+      }
+      return;
+    }
+    _startFetch(data);
+  }
+
+  void _startFetch(Map<String, dynamic> data) {
+    _activeRequests++;
+    unawaited(_fetch(data));
   }
 
   Future<void> _fetch(Map<String, dynamic> data) async {
@@ -42,18 +64,33 @@ class ProviderFetchBridge {
       }
       final body = data['body'];
       if (body != null && method != 'GET' && method != 'HEAD') {
-        request.body = body is String ? body : jsonEncode(body);
+        final requestBody = body is String ? body : jsonEncode(body);
+        if (utf8.encode(requestBody).length > _maxRequestBodyBytes) {
+          throw const FormatException('Provider request body is too large.');
+        }
+        request.body = requestBody;
       }
       request.followRedirects = data['followRedirects'] != false;
       final maxRedirects = data['maxRedirects'];
-      if (maxRedirects is num) request.maxRedirects = maxRedirects.toInt();
+      request.maxRedirects = maxRedirects is num
+          ? maxRedirects.toInt().clamp(0, 5).toInt()
+          : 5;
 
       final streamed = await client
           .send(request)
           .timeout(const Duration(seconds: 55));
-      final bytes = await streamed.stream.toBytes().timeout(
+      final responseBytes = BytesBuilder(copy: false);
+      var responseSize = 0;
+      await for (final chunk in streamed.stream.timeout(
         const Duration(seconds: 55),
-      );
+      )) {
+        responseSize += chunk.length;
+        if (responseSize > _maxResponseBodyBytes) {
+          throw const FormatException('Provider response is too large.');
+        }
+        responseBytes.add(chunk);
+      }
+      final bytes = responseBytes.takeBytes();
       if (!_active) return;
       // IOClient keeps `request.url` as the original URL. Its response also
       // implements BaseResponseWithUrl, which contains the final redirect URL.
@@ -73,10 +110,20 @@ class ProviderFetchBridge {
       );
     } catch (error) {
       if (!_active) return;
-      runtime.evaluate(
-        'globalThis.__onfeedFetchReject(${jsonEncode(id)}, ${jsonEncode(error.toString())});',
-      );
+      _reject(id, error.toString());
+    } finally {
+      _activeRequests--;
+      if (_active && _queuedRequests.isNotEmpty) {
+        _startFetch(_queuedRequests.removeFirst());
+      }
     }
+  }
+
+  void _reject(dynamic id, String message) {
+    if (!_active) return;
+    runtime.evaluate(
+      'globalThis.__onfeedFetchReject(${jsonEncode(id)}, ${jsonEncode(message)});',
+    );
   }
 
   static String _reasonPhrase(int status) => switch (status) {
@@ -103,6 +150,135 @@ class ProviderFetchBridge {
 
   static const _polyfill = r'''
     (function() {
+      // Provider scripts commonly use Node's Buffer for base64-encoded API
+      // URLs. QuickJS does not provide Buffer, so supply the subset used by
+      // providers without relying on browser or Node globals.
+      if (typeof globalThis.Buffer === 'undefined') {
+        const base64Chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+        function bytesFromBase64(value) {
+          const input = String(value).replace(/-/g, '+').replace(/_/g, '/').replace(/[^A-Za-z0-9+/=]/g, '');
+          const output = [];
+          let accumulator = 0;
+          let bitCount = 0;
+          for (let index = 0; index < input.length; index++) {
+            const character = input[index];
+            if (character === '=') break;
+            const digit = base64Chars.indexOf(character);
+            if (digit < 0) continue;
+            accumulator = (accumulator << 6) | digit;
+            bitCount += 6;
+            if (bitCount >= 8) {
+              bitCount -= 8;
+              output.push((accumulator >> bitCount) & 255);
+            }
+          }
+          return output;
+        }
+        function bytesFromHex(value) {
+          const input = String(value);
+          const output = [];
+          for (let index = 0; index + 1 < input.length; index += 2) {
+            if (!/^[0-9a-f]{2}$/i.test(input.slice(index, index + 2))) break;
+            output.push(parseInt(input.slice(index, index + 2), 16));
+          }
+          return output;
+        }
+        function bytesFromUtf8(value) {
+          const escaped = encodeURIComponent(String(value));
+          const output = [];
+          for (let index = 0; index < escaped.length; index++) {
+            if (escaped[index] === '%') {
+              output.push(parseInt(escaped.slice(index + 1, index + 3), 16));
+              index += 2;
+            } else {
+              output.push(escaped.charCodeAt(index));
+            }
+          }
+          return output;
+        }
+        function encodeBase64(bytes) {
+          let output = '';
+          for (let index = 0; index < bytes.length; index += 3) {
+            const first = bytes[index] & 255;
+            const hasSecond = index + 1 < bytes.length;
+            const hasThird = index + 2 < bytes.length;
+            const second = hasSecond ? bytes[index + 1] & 255 : 0;
+            const third = hasThird ? bytes[index + 2] & 255 : 0;
+            output += base64Chars[first >> 2];
+            output += base64Chars[((first & 3) << 4) | (second >> 4)];
+            output += hasSecond ? base64Chars[((second & 15) << 2) | (third >> 6)] : '=';
+            output += hasThird ? base64Chars[third & 63] : '=';
+          }
+          return output;
+        }
+        function makeBuffer(bytes) {
+          const output = new Uint8Array(bytes);
+          Object.defineProperty(output, '_onfeedBuffer', { value: true });
+          Object.defineProperty(output, 'toString', {
+            value: function(encoding) {
+              const format = String(encoding || 'utf8').toLowerCase();
+              if (format === 'base64' || format === 'base64url') {
+                const result = encodeBase64(this);
+                return format === 'base64url'
+                  ? result.replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_')
+                  : result;
+              }
+              if (format === 'hex') {
+                return Array.from(this).map(byte => byte.toString(16).padStart(2, '0')).join('');
+              }
+              if (format === 'ascii' || format === 'latin1' || format === 'binary') {
+                return Array.from(this, byte => String.fromCharCode(format === 'ascii' ? byte & 127 : byte)).join('');
+              }
+              const escaped = Array.from(this, byte => '%' + byte.toString(16).padStart(2, '0')).join('');
+              try { return decodeURIComponent(escaped); }
+              catch (_) { return Array.from(this, byte => String.fromCharCode(byte)).join(''); }
+            }
+          });
+          return output;
+        }
+        const BufferCompat = function(value, encoding) {
+          return BufferCompat.from(value, encoding);
+        };
+        BufferCompat.from = function(value, encoding) {
+          if (typeof value === 'string') {
+            const format = String(encoding || 'utf8').toLowerCase();
+            if (format === 'base64' || format === 'base64url') return makeBuffer(bytesFromBase64(value));
+            if (format === 'hex') return makeBuffer(bytesFromHex(value));
+            if (format === 'ascii' || format === 'latin1' || format === 'binary') {
+              return makeBuffer(Array.from(value, character => character.charCodeAt(0) & 255));
+            }
+            return makeBuffer(bytesFromUtf8(value));
+          }
+          if (value instanceof ArrayBuffer) return makeBuffer(new Uint8Array(value));
+          if (ArrayBuffer.isView(value)) return makeBuffer(new Uint8Array(value.buffer, value.byteOffset, value.byteLength));
+          if (Array.isArray(value)) return makeBuffer(value);
+          throw new TypeError('The first argument must be a string, Buffer, ArrayBuffer, or array.');
+        };
+        BufferCompat.alloc = function(size, fill) {
+          const output = makeBuffer(new Uint8Array(Math.max(0, Number(size) || 0)));
+          if (fill != null) output.fill(typeof fill === 'number' ? fill : BufferCompat.from(fill)[0] || 0);
+          return output;
+        };
+        BufferCompat.allocUnsafe = BufferCompat.alloc;
+        BufferCompat.isBuffer = value => !!(value && value._onfeedBuffer === true);
+        BufferCompat.byteLength = (value, encoding) => BufferCompat.from(String(value), encoding).length;
+        BufferCompat.concat = function(values, totalLength) {
+          const buffers = values.map(value => BufferCompat.from(value));
+          const length = totalLength == null
+            ? buffers.reduce((sum, buffer) => sum + buffer.length, 0)
+            : Math.max(0, Number(totalLength) || 0);
+          const output = BufferCompat.alloc(length);
+          let offset = 0;
+          for (const buffer of buffers) {
+            const count = Math.min(buffer.length, length - offset);
+            if (count <= 0) break;
+            output.set(buffer.subarray(0, count), offset);
+            offset += count;
+          }
+          return output;
+        };
+        globalThis.Buffer = BufferCompat;
+      }
       let nextFetchId = 0;
       const pendingFetches = Object.create(null);
       function normalizeHeaders(input) {

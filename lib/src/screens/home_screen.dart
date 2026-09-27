@@ -43,6 +43,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _start() async {
+    unawaited(_load());
     await _nuvioPlugins.load();
     await _loadHistory();
   }
@@ -177,6 +178,11 @@ class _HomeScreenState extends State<HomeScreen> {
             source: source,
             sources: streams,
             storage: _storage,
+            onRefreshSources: () => _nuvioPlugins.streams(
+              pluginItem,
+              season: season,
+              episode: episode,
+            ),
           ),
         ),
       );
