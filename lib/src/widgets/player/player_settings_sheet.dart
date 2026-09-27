@@ -11,6 +11,7 @@ class PlayerSettings {
     this.subtitle,
     this.subtitleDelay = 0,
     this.videoTrack,
+    this.audioTrackId,
   });
   final double speed;
   final BoxFit fit;
@@ -18,6 +19,7 @@ class PlayerSettings {
   final SubtitleTrack? subtitle;
   final double subtitleDelay;
   final VideoTrack? videoTrack;
+  final String? audioTrackId;
   PlayerSettings copyWith({
     double? speed,
     BoxFit? fit,
@@ -27,6 +29,7 @@ class PlayerSettings {
     double? subtitleDelay,
     VideoTrack? videoTrack,
     bool clearVideoTrack = false,
+    String? audioTrackId,
   }) => PlayerSettings(
     speed: speed ?? this.speed,
     fit: fit ?? this.fit,
@@ -34,6 +37,7 @@ class PlayerSettings {
     subtitle: clearSubtitle ? null : (subtitle ?? this.subtitle),
     subtitleDelay: subtitleDelay ?? this.subtitleDelay,
     videoTrack: clearVideoTrack ? null : (videoTrack ?? this.videoTrack),
+    audioTrackId: audioTrackId ?? this.audioTrackId,
   );
 }
 
@@ -43,15 +47,18 @@ class PlayerSettingsSheet extends StatelessWidget {
     required this.value,
     required this.subtitles,
     this.videoTracks = const [],
+    this.audioTracks = const [],
   });
   final PlayerSettings value;
   final List<SubtitleTrack> subtitles;
   final List<VideoTrack> videoTracks;
+  final List<VideoAudioTrack> audioTracks;
   static Future<PlayerSettings?> show(
     BuildContext context,
     PlayerSettings value,
     List<SubtitleTrack> subtitles, [
     List<VideoTrack> videoTracks = const [],
+    List<VideoAudioTrack> audioTracks = const [],
   ]) => showModalBottomSheet<PlayerSettings>(
     context: context,
     backgroundColor: Colors.transparent,
@@ -59,6 +66,7 @@ class PlayerSettingsSheet extends StatelessWidget {
       value: value,
       subtitles: subtitles,
       videoTracks: videoTracks,
+      audioTracks: audioTracks,
     ),
   );
   @override
@@ -119,6 +127,33 @@ class PlayerSettingsSheet extends StatelessWidget {
                       ),
                   ],
                 ),
+                const SizedBox(height: 8),
+              ],
+              if (audioTracks.length > 1) ...[
+                const Text('Audio track'),
+                for (final track in audioTracks)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(
+                      track.id == value.audioTrackId ||
+                              (value.audioTrackId == null && track.isSelected)
+                          ? Icons.radio_button_checked_rounded
+                          : Icons.radio_button_off_rounded,
+                    ),
+                    title: Text(track.label ?? track.language ?? 'Audio track'),
+                    subtitle: Text(
+                      [
+                        if (track.language?.isNotEmpty == true) track.language!,
+                        if (track.codec?.isNotEmpty == true) track.codec!,
+                        if (track.channelCount != null)
+                          '${track.channelCount} ch',
+                      ].join(' · '),
+                    ),
+                    onTap: () => Navigator.pop(
+                      context,
+                      value.copyWith(audioTrackId: track.id),
+                    ),
+                  ),
                 const SizedBox(height: 8),
               ],
               const Text('Aspect ratio'),

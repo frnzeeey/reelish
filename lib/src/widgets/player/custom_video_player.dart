@@ -10,6 +10,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../models/media_item.dart';
 import '../../models/stream_source.dart';
 import '../../services/storage_service.dart';
+import '../../services/open_subtitles_service.dart';
 import '../../theme/glass_theme.dart';
 import 'glass_controls_overlay.dart';
 import 'gesture_touch_layer.dart';
@@ -46,6 +47,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   SubtitleTrack? _subtitle;
   List<_Cue> _cues = [];
   List<VideoTrack> _videoTracks = [];
+  List<VideoAudioTrack> _audioTracks = [];
   VideoTrack? _selectedVideoTrack;
   double _subtitleDelay = 0;
   TorrentStreamSession? _torrentSession;
@@ -54,6 +56,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   String? _errorMessage;
   int _initializationGeneration = 0;
   final Set<String> _attemptedSourceKeys = {};
+  final _openSubtitles = OpenSubtitlesService();
   bool _handlingFailure = false;
   @override
   void initState() {
@@ -89,6 +92,8 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
       _visible = true;
     });
     _source = source;
+    _videoTracks = [];
+    _audioTracks = [];
     _selectedVideoTrack = null;
     if (_subtitle != null &&
         ![
@@ -121,6 +126,13 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
       } catch (_) {
         // Track selection is optional; playback should continue without it.
         _videoTracks = [];
+      }
+      try {
+        _audioTracks = c.isAudioTrackSupportAvailable()
+            ? await c.getAudioTracks()
+            : [];
+      } catch (_) {
+        _audioTracks = [];
       }
       c.addListener(_tick);
       await c.setPlaybackSpeed(_speed);
@@ -341,6 +353,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
       ),
       _availableSubtitles,
       _videoTracks,
+      _audioTracks,
     );
     if (result == null) return;
     setState(() {
@@ -355,6 +368,26 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     await _controller?.setPlaybackSpeed(_speed);
     if (_videoTracks.isNotEmpty)
       await _controller?.selectVideoTrack(_selectedVideoTrack);
+    if (result.audioTrackId != null) {
+      await _controller?.selectAudioTrack(result.audioTrackId!);
+      if (mounted) {
+        setState(() {
+          _audioTracks = [
+            for (final track in _audioTracks)
+              VideoAudioTrack(
+                id: track.id,
+                label: track.label,
+                language: track.language,
+                isSelected: track.id == result.audioTrackId,
+                bitrate: track.bitrate,
+                sampleRate: track.sampleRate,
+                channelCount: track.channelCount,
+                codec: track.codec,
+              ),
+          ];
+        });
+      }
+    }
     if (_subtitle != null) await _loadSubtitle(_subtitle!);
     _show();
   }
@@ -372,8 +405,13 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
       context,
       _availableSubtitles,
       _subtitle,
+      onOpenSubtitles: true,
     );
     if (selected == null || !mounted) return;
+    if (selected.url == 'opensubtitles://search') {
+      await _searchOpenSubtitles();
+      return;
+    }
     if (selected.url.isEmpty) {
       setState(() {
         _subtitle = null;
@@ -390,10 +428,86 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     _show();
   }
 
+  Future<void> _searchOpenSubtitles() async {
+    try {
+      final results = await _openSubtitles.search(
+        type: widget.item.type,
+        imdbId: widget.item.externalId,
+        fallbackId: widget.item.id,
+        subtitleQuery: widget.item.subtitleQuery,
+      );
+      if (!mounted) return;
+      if (results.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No OpenSubtitles v3 results found.')),
+        );
+        return;
+      }
+      final result = await showModalBottomSheet<OpenSubtitleResult>(
+        context: context,
+        backgroundColor: Colors.transparent,
+        useSafeArea: true,
+        builder: (context) => Padding(
+          padding: const EdgeInsets.all(14),
+          child: Material(
+            color: const Color(0xFF171D29),
+            borderRadius: BorderRadius.circular(24),
+            child: ListView(
+              shrinkWrap: true,
+              children: [
+                const ListTile(
+                  leading: Icon(Icons.search_rounded),
+                  title: Text('OpenSubtitles v3 results'),
+                ),
+                for (final subtitle in results)
+                  ListTile(
+                    leading: const Icon(Icons.subtitles_rounded),
+                    title: Text(
+                      subtitle.name.isEmpty ? subtitle.language : subtitle.name,
+                    ),
+                    subtitle: Text(
+                      '${subtitle.language}${subtitle.format.isNotEmpty ? ' · ${subtitle.format}' : ''}',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    onTap: () => Navigator.pop(context, subtitle),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      );
+      if (result == null || !mounted) return;
+      final track = SubtitleTrack(
+        url: result.url,
+        lang: result.language,
+        id: result.id,
+        format: result.format,
+        headers: result.headers,
+      );
+      setState(() {
+        _subtitle = track;
+        _cues = [];
+      });
+      await _loadSubtitle(track);
+      _show();
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'OpenSubtitles v3: ${error.toString().replaceFirst('Exception: ', '')}',
+            ),
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _loadSubtitle(SubtitleTrack track) async {
     try {
       final response = await http
-          .get(Uri.parse(track.url))
+          .get(Uri.parse(track.url), headers: track.headers)
           .timeout(const Duration(seconds: 12));
       if (response.statusCode < 200 || response.statusCode >= 300)
         throw Exception();

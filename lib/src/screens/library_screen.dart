@@ -57,16 +57,41 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   for (final item in items)
                     Padding(
                       padding: const EdgeInsets.only(right: 12),
-                      child: MediaCard(
-                        item: item,
-                        progress: item.resumeMs > 0 ? 0.3 : 0,
-                        onTap: () => widget.onPlay(item),
-                        onFavorite: favorite
-                            ? () async {
-                                await widget.storage.toggleFavorite(item);
-                                await _load();
-                              }
-                            : null,
+                      child: Stack(
+                        children: [
+                          MediaCard(
+                            item: item,
+                            progress: item.resumeMs > 0 ? 0.3 : 0,
+                            onTap: () => widget.onPlay(item),
+                            onFavorite: favorite
+                                ? () async {
+                                    await widget.storage.toggleFavorite(item);
+                                    await _load();
+                                  }
+                                : null,
+                          ),
+                          if (!favorite)
+                            Positioned(
+                              top: 5,
+                              right: 5,
+                              child: Material(
+                                color: Colors.black.withValues(alpha: .72),
+                                shape: const CircleBorder(),
+                                child: IconButton(
+                                  tooltip: 'Remove from watch history',
+                                  visualDensity: VisualDensity.compact,
+                                  icon: const Icon(
+                                    Icons.close_rounded,
+                                    size: 18,
+                                  ),
+                                  onPressed: () async {
+                                    await widget.storage.removeHistory(item);
+                                    await _load();
+                                  },
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                 ],

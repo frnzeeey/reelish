@@ -126,7 +126,13 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     setState(() => _resolvingStreams = true);
     try {
-      final playableItem = await _tmdb.resolveIds(item);
+      final resolvedItem = await _tmdb.resolveIds(item);
+      final episodeCode = season != null && episode != null
+          ? ' S${season.toString().padLeft(2, '0')}E${episode.toString().padLeft(2, '0')}'
+          : '';
+      final subtitleQuery =
+          '${item.name}$episodeCode${item.year.isNotEmpty ? ' ${item.year}' : ''}';
+      final playableItem = resolvedItem.copyWith(subtitleQuery: subtitleQuery);
       final pluginId = await _tmdb.resolveTmdbId(playableItem);
       final pluginItem = pluginId.isEmpty
           ? playableItem

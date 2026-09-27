@@ -9,21 +9,28 @@ class SubtitlePickerSheet extends StatelessWidget {
     super.key,
     required this.tracks,
     required this.selected,
+    this.onOpenSubtitles = false,
   });
 
   final List<SubtitleTrack> tracks;
   final SubtitleTrack? selected;
+  final bool onOpenSubtitles;
 
   static Future<SubtitleTrack?> show(
     BuildContext context,
     List<SubtitleTrack> tracks,
-    SubtitleTrack? selected,
-  ) => showModalBottomSheet<SubtitleTrack>(
+    SubtitleTrack? selected, {
+    bool onOpenSubtitles = false,
+  }) => showModalBottomSheet<SubtitleTrack>(
     context: context,
     backgroundColor: Colors.transparent,
     isScrollControlled: true,
     useSafeArea: true,
-    builder: (_) => SubtitlePickerSheet(tracks: tracks, selected: selected),
+    builder: (_) => SubtitlePickerSheet(
+      tracks: tracks,
+      selected: selected,
+      onOpenSubtitles: onOpenSubtitles,
+    ),
   );
 
   @override
@@ -71,6 +78,17 @@ class SubtitlePickerSheet extends StatelessWidget {
                     const SubtitleTrack(url: '', lang: 'Off'),
                   ),
                 ),
+                if (onOpenSubtitles)
+                  _SubtitleTile(
+                    label: 'Search OpenSubtitles v3',
+                    detail: 'Find and load an online subtitle',
+                    icon: Icons.search_rounded,
+                    selected: false,
+                    onTap: () => Navigator.pop(
+                      context,
+                      const SubtitleTrack(url: 'opensubtitles://search'),
+                    ),
+                  ),
                 for (final track in tracks)
                   _SubtitleTile(
                     label: track.lang,
@@ -86,7 +104,7 @@ class SubtitlePickerSheet extends StatelessWidget {
                   const Padding(
                     padding: EdgeInsets.fromLTRB(12, 10, 12, 8),
                     child: Text(
-                      'No subtitle tracks were provided for this stream.',
+                      'No subtitle tracks were provided. Search OpenSubtitles v3 to find one.',
                       style: TextStyle(color: GlassTheme.muted),
                     ),
                   ),
