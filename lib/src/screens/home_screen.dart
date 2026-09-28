@@ -32,8 +32,12 @@ class _HomeScreenState extends State<HomeScreen> {
   final _spotlightController = PageController();
   List<MediaItem> _items = [], _history = [];
   List<MediaItem> _recommendations = [];
+  List<MediaItem> _newReleases = [];
   final Map<String, List<MediaItem>> _recommendationCache = {};
-  bool _loading = true, _resolvingStreams = false;
+  bool _loading = true,
+      _loadingNewReleases = false,
+      _newReleasesLoaded = false,
+      _resolvingStreams = false;
   bool _searchVisible = false;
   String _category = 'For you';
   int _tab = 0;
@@ -83,6 +87,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _load({String? query}) async {
     if (mounted) setState(() => _loading = true);
+    if (query == null && _category == 'For you') {
+      unawaited(_loadNewReleases());
+    }
     Future<List<MediaItem>> safe(Future<List<MediaItem>> future) async {
       try {
         return await future;
@@ -113,20 +120,46 @@ class _HomeScreenState extends State<HomeScreen> {
       _items = values;
       _loading = false;
     });
-    final spotlights = _spotlightItems;
-    final currentSpotlight = spotlights.isEmpty
-        ? null
-        : spotlights[_spotlightPage % spotlights.length];
-    unawaited(_loadRecommendations(currentSpotlight));
+    if (query == null && _category == 'For you') {
+      unawaited(_loadTopRecommendations(values));
+    }
   }
 
-  Future<void> _loadRecommendations(MediaItem? item) async {
+  Future<void> _loadNewReleases() async {
+    if (_newReleasesLoaded || _loadingNewReleases) return;
+    if (mounted) setState(() => _loadingNewReleases = true);
+    try {
+      final releases = await _tmdb.newReleases();
+      if (!mounted) return;
+      setState(() {
+        _newReleases = releases;
+        _newReleasesLoaded = true;
+        _loadingNewReleases = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loadingNewReleases = false);
+    }
+  }
+
+  Future<void> _loadTopRecommendations(List<MediaItem> items) async {
     final request = ++_recommendationRequest;
-    if (item == null) {
+    final seeds = <MediaItem>[];
+    for (final type in ['movie', 'series']) {
+      final candidates = items.where((item) => item.type == type).toList()
+        ..sort((a, b) {
+          final ratingA = double.tryParse(a.rating) ?? 0;
+          final ratingB = double.tryParse(b.rating) ?? 0;
+          return ratingB.compareTo(ratingA);
+        });
+      if (candidates.isNotEmpty) seeds.add(candidates.first);
+    }
+    if (seeds.isEmpty) {
       if (mounted) setState(() => _recommendations = []);
       return;
     }
-    final cacheKey = '${item.type}:${item.id}';
+    final cacheKey =
+        'top:${seeds.map((item) => '${item.type}:${item.id}').join('|')}';
     final cached = _recommendationCache[cacheKey];
     if (cached != null) {
       if (mounted) setState(() => _recommendations = cached);
@@ -134,10 +167,28 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     if (mounted) setState(() => _recommendations = []);
     try {
-      final recommendations = await _tmdb.recommendations(item);
+      final seedKeys = seeds.map((item) => '${item.type}:${item.id}').toSet();
+      final lists = await Future.wait(
+        seeds.map((item) => _tmdb.recommendations(item)),
+      );
+      final seen = <String>{};
+      final recommendations =
+          lists
+              .expand((list) => list)
+              .where(
+                (item) =>
+                    !seedKeys.contains('${item.type}:${item.id}') &&
+                    seen.add('${item.type}:${item.id}'),
+              )
+              .toList()
+            ..sort((a, b) {
+              final ratingA = double.tryParse(a.rating) ?? 0;
+              final ratingB = double.tryParse(b.rating) ?? 0;
+              return ratingB.compareTo(ratingA);
+            });
       _recommendationCache[cacheKey] = recommendations;
       if (!mounted || request != _recommendationRequest) return;
-      setState(() => _recommendations = recommendations);
+      setState(() => _recommendations = recommendations.take(10).toList());
     } catch (_) {
       if (!mounted || request != _recommendationRequest) return;
       setState(() => _recommendations = []);
@@ -401,10 +452,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _onSpotlightPageChanged(int page) {
     _spotlightPage = page;
-    final spotlights = _spotlightItems;
-    if (spotlights.isEmpty) return;
-    final item = spotlights[page % spotlights.length];
-    unawaited(_loadRecommendations(item));
     if (mounted) setState(() {});
   }
 
@@ -420,7 +467,11 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  Widget _section(String title, List<MediaItem> items) => Padding(
+  Widget _section(
+    String title,
+    List<MediaItem> items, {
+    bool showRanks = false,
+  }) => Padding(
     padding: const EdgeInsets.fromLTRB(18, 8, 0, 22),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -457,7 +508,7 @@ class _HomeScreenState extends State<HomeScreen> {
             separatorBuilder: (_, __) => const SizedBox(width: 13),
             itemBuilder: (context, index) {
               final item = items[index];
-              return MediaCard(
+              final card = MediaCard(
                 item: item,
                 progress: item.resumeMs > 0 ? .36 : 0,
                 onTap: () => _showDetails(item),
@@ -471,6 +522,40 @@ class _HomeScreenState extends State<HomeScreen> {
                     );
                   }
                 },
+              );
+              if (!showRanks) return card;
+
+              final rank = '${index + 1}';
+              return SizedBox(
+                width: 194,
+                height: 264,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Positioned(
+                      left: 0,
+                      bottom: -7,
+                      child: IgnorePointer(
+                        child: Text(
+                          rank,
+                          maxLines: 1,
+                          softWrap: false,
+                          style: TextStyle(
+                            fontSize: index == 9 ? 138 : 190,
+                            height: .82,
+                            letterSpacing: index == 9 ? -12 : -8,
+                            fontWeight: FontWeight.w900,
+                            foreground: Paint()
+                              ..style = PaintingStyle.stroke
+                              ..strokeWidth = 1
+                              ..color = Colors.white.withValues(alpha: .78),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(left: 48, top: 0, child: card),
+                  ],
+                ),
               );
             },
           ),
@@ -632,9 +717,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final movies = _items.where((item) => item.type == 'movie').toList();
     final series = _items.where((item) => item.type == 'series').toList();
     final spotlights = _spotlightItems;
-    final activeSpotlight = spotlights.isEmpty
-        ? null
-        : spotlights[_spotlightPage % spotlights.length];
     final continueWatching = _history
         .where((item) => item.resumeMs > 0)
         .toList();
@@ -753,10 +835,35 @@ class _HomeScreenState extends State<HomeScreen> {
               _recommendations.isNotEmpty)
             SliverToBoxAdapter(
               child: _section(
-                'More like ${activeSpotlight?.name ?? _items.first.name}',
-                _recommendations,
+                'Top 10 recommendations',
+                _recommendations.take(10).toList(),
+                showRanks: true,
               ),
             ),
+          if (_category == 'For you' && !isSearch && _loadingNewReleases)
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(18, 12, 18, 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'New releases',
+                      style: TextStyle(
+                        fontSize: 19,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    SizedBox(height: 14),
+                    Center(
+                      child: CircularProgressIndicator(color: GlassTheme.cyan),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          if (_category == 'For you' && !isSearch && _newReleases.isNotEmpty)
+            SliverToBoxAdapter(child: _section('New releases', _newReleases)),
           if ((_category == 'Movies' || _category == 'Trending') &&
               _shown.isNotEmpty)
             SliverToBoxAdapter(

@@ -58,6 +58,52 @@ class TmdbService {
     return results;
   }
 
+  Future<List<MediaItem>> newReleases() async {
+    final today = DateTime.now().toUtc();
+    final from = today.subtract(const Duration(days: 180));
+    String date(DateTime value) =>
+        '${value.year.toString().padLeft(4, '0')}-'
+        '${value.month.toString().padLeft(2, '0')}-'
+        '${value.day.toString().padLeft(2, '0')}';
+
+    Future<List<Map<String, dynamic>>> discover(
+      String type,
+      String dateField,
+    ) async {
+      final data = await _get('/discover/$type', {
+        '$dateField.gte': date(from),
+        '$dateField.lte': date(today),
+        'sort_by': '$dateField.desc',
+        'vote_count.gte': '10',
+        'page': '1',
+      });
+      return ((data['results'] as List?) ?? const [])
+          .whereType<Map>()
+          .map((entry) => Map<String, dynamic>.from(entry))
+          .toList();
+    }
+
+    final results = await Future.wait([
+      discover('movie', 'primary_release_date'),
+      discover('tv', 'first_air_date'),
+    ]);
+    final releases = <({MediaItem item, String releaseDate})>[];
+    for (var index = 0; index < results.length; index++) {
+      final type = index == 0 ? 'movie' : 'tv';
+      final dateField = index == 0 ? 'release_date' : 'first_air_date';
+      for (final entry in results[index]) {
+        final releaseDate = '${entry[dateField] ?? ''}';
+        if (releaseDate.isEmpty) continue;
+        releases.add((
+          item: MediaItem.fromTmdb(entry, mediaType: type),
+          releaseDate: releaseDate,
+        ));
+      }
+    }
+    releases.sort((a, b) => b.releaseDate.compareTo(a.releaseDate));
+    return releases.take(20).map((release) => release.item).toList();
+  }
+
   Future<MediaDetails> details(MediaItem item) async {
     final pathType = item.type == 'series' ? 'tv' : 'movie';
     final resolvedId = int.tryParse(item.id) == null
