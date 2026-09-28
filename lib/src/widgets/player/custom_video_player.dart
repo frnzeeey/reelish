@@ -10,6 +10,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../models/media_item.dart';
 import '../../models/stream_source.dart';
 import '../../services/storage_service.dart';
+import '../../services/open_subtitles_service.dart';
 import '../../theme/glass_theme.dart';
 import 'glass_controls_overlay.dart';
 import 'gesture_touch_layer.dart';
@@ -25,12 +26,14 @@ class CustomVideoPlayer extends StatefulWidget {
     required this.sources,
     required this.subtitles,
     required this.storage,
+    this.onRefreshSources,
   });
   final MediaItem item;
   final StreamSource source;
   final List<StreamSource> sources;
   final List<SubtitleTrack> subtitles;
   final StorageService storage;
+  final Future<List<StreamSource>> Function()? onRefreshSources;
   @override
   State<CustomVideoPlayer> createState() => _CustomVideoPlayerState();
 }
@@ -46,6 +49,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   SubtitleTrack? _subtitle;
   List<_Cue> _cues = [];
   List<VideoTrack> _videoTracks = [];
+  List<VideoAudioTrack> _audioTracks = [];
   VideoTrack? _selectedVideoTrack;
   double _subtitleDelay = 0;
   TorrentStreamSession? _torrentSession;
@@ -54,10 +58,13 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   String? _errorMessage;
   int _initializationGeneration = 0;
   final Set<String> _attemptedSourceKeys = {};
+  late List<StreamSource> _sources;
+  final _openSubtitles = OpenSubtitlesService();
   bool _handlingFailure = false;
   @override
   void initState() {
     super.initState();
+    _sources = List.of(widget.sources);
     _source = widget.source;
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     _initialize(widget.source);
@@ -89,6 +96,8 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
       _visible = true;
     });
     _source = source;
+    _videoTracks = [];
+    _audioTracks = [];
     _selectedVideoTrack = null;
     if (_subtitle != null &&
         ![
@@ -121,6 +130,13 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
       } catch (_) {
         // Track selection is optional; playback should continue without it.
         _videoTracks = [];
+      }
+      try {
+        _audioTracks = c.isAudioTrackSupportAvailable()
+            ? await c.getAudioTracks()
+            : [];
+      } catch (_) {
+        _audioTracks = [];
       }
       c.addListener(_tick);
       await c.setPlaybackSpeed(_speed);
@@ -157,9 +173,9 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
           await _torrentSession?.stop();
         } catch (_) {}
         _torrentSession = null;
-        final message = error.toString().replaceFirst('Exception: ', '').trim();
+        final message = _safePlaybackError(error.toString());
         _attemptedSourceKeys.add(requestedSourceKey);
-        final alternative = widget.sources
+        final alternative = _sources
             .where(
               (candidate) =>
                   !_attemptedSourceKeys.contains(_sourceKey(candidate)),
@@ -188,6 +204,61 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     return '${source.url}|${jsonEncode(headers.map((e) => [e.key.toLowerCase(), e.value]).toList())}';
   }
 
+  String _safePlaybackError(String error) {
+    final cleaned = error.replaceFirst('Exception: ', '').trim();
+    final normalized = cleaned.toLowerCase();
+    if (normalized.contains('failed to recognize file format') ||
+        normalized.contains('unrecognizedinputformatexception') ||
+        normalized.contains('unrecognized input format')) {
+      return 'The provider did not return a recognizable video stream. Try another source or provider.';
+    }
+    // Signed stream URLs can carry credentials in their query string. Keep
+    // the hostname for diagnostics without rendering the signed URL/token.
+    return cleaned.replaceAllMapped(
+      RegExp(r'https?://[^\s,()]+', caseSensitive: false),
+      (match) {
+        final uri = Uri.tryParse(match.group(0)!);
+        return uri?.host.isNotEmpty == true ? uri!.host : 'the stream URL';
+      },
+    );
+  }
+
+  Future<void> _retryPlayback() async {
+    final refresh = widget.onRefreshSources;
+    if (refresh == null) {
+      await _initialize(_source!);
+      return;
+    }
+    setState(() {
+      _error = false;
+      _errorMessage = null;
+    });
+    try {
+      final freshSources = await refresh();
+      if (!mounted) return;
+      final playable = freshSources
+          .where((source) => source.isPlayable)
+          .toList();
+      if (playable.isNotEmpty) {
+        final previous = _source!;
+        _sources = playable;
+        final refreshed = playable
+            .where(
+              (source) =>
+                  source.name == previous.name &&
+                  source.providerName == previous.providerName &&
+                  source.description == previous.description,
+            )
+            .firstOrNull;
+        await _initialize(refreshed ?? playable.first);
+        return;
+      }
+    } catch (_) {
+      // If refresh fails, retry the last known URL.
+    }
+    if (mounted) await _initialize(_source!);
+  }
+
   Future<void> _handleRuntimePlaybackFailure(
     String failedSourceKey,
     String error,
@@ -214,7 +285,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     // available from Choose another.
     const maxAutomaticSources = 5;
     final alternative = _attemptedSourceKeys.length < maxAutomaticSources
-        ? widget.sources
+        ? _sources
               .where(
                 (candidate) =>
                     !_attemptedSourceKeys.contains(_sourceKey(candidate)),
@@ -226,7 +297,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
       return;
     }
 
-    final message = error.replaceFirst('Exception: ', '').trim();
+    final message = _safePlaybackError(error);
     if (!mounted || generation != _initializationGeneration) return;
     setState(() {
       _error = true;
@@ -318,7 +389,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   }
 
   Future<void> _pickStream() async {
-    final streams = widget.sources;
+    final streams = _sources;
     if (streams.length < 2) return;
     final picked = await StreamSelectorSheet.show(context, streams, _source!);
     if (picked != null) {
@@ -341,6 +412,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
       ),
       _availableSubtitles,
       _videoTracks,
+      _audioTracks,
     );
     if (result == null) return;
     setState(() {
@@ -355,6 +427,26 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     await _controller?.setPlaybackSpeed(_speed);
     if (_videoTracks.isNotEmpty)
       await _controller?.selectVideoTrack(_selectedVideoTrack);
+    if (result.audioTrackId != null) {
+      await _controller?.selectAudioTrack(result.audioTrackId!);
+      if (mounted) {
+        setState(() {
+          _audioTracks = [
+            for (final track in _audioTracks)
+              VideoAudioTrack(
+                id: track.id,
+                label: track.label,
+                language: track.language,
+                isSelected: track.id == result.audioTrackId,
+                bitrate: track.bitrate,
+                sampleRate: track.sampleRate,
+                channelCount: track.channelCount,
+                codec: track.codec,
+              ),
+          ];
+        });
+      }
+    }
     if (_subtitle != null) await _loadSubtitle(_subtitle!);
     _show();
   }
@@ -372,8 +464,13 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
       context,
       _availableSubtitles,
       _subtitle,
+      onOpenSubtitles: true,
     );
     if (selected == null || !mounted) return;
+    if (selected.url == 'opensubtitles://search') {
+      await _searchOpenSubtitles();
+      return;
+    }
     if (selected.url.isEmpty) {
       setState(() {
         _subtitle = null;
@@ -390,10 +487,86 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     _show();
   }
 
+  Future<void> _searchOpenSubtitles() async {
+    try {
+      final results = await _openSubtitles.search(
+        type: widget.item.type,
+        imdbId: widget.item.externalId,
+        fallbackId: widget.item.id,
+        subtitleQuery: widget.item.subtitleQuery,
+      );
+      if (!mounted) return;
+      if (results.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No OpenSubtitles v3 results found.')),
+        );
+        return;
+      }
+      final result = await showModalBottomSheet<OpenSubtitleResult>(
+        context: context,
+        backgroundColor: Colors.transparent,
+        useSafeArea: true,
+        builder: (context) => Padding(
+          padding: const EdgeInsets.all(14),
+          child: Material(
+            color: const Color(0xFF171D29),
+            borderRadius: BorderRadius.circular(24),
+            child: ListView(
+              shrinkWrap: true,
+              children: [
+                const ListTile(
+                  leading: Icon(Icons.search_rounded),
+                  title: Text('OpenSubtitles v3 results'),
+                ),
+                for (final subtitle in results)
+                  ListTile(
+                    leading: const Icon(Icons.subtitles_rounded),
+                    title: Text(
+                      subtitle.name.isEmpty ? subtitle.language : subtitle.name,
+                    ),
+                    subtitle: Text(
+                      '${subtitle.language}${subtitle.format.isNotEmpty ? ' · ${subtitle.format}' : ''}',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    onTap: () => Navigator.pop(context, subtitle),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      );
+      if (result == null || !mounted) return;
+      final track = SubtitleTrack(
+        url: result.url,
+        lang: result.language,
+        id: result.id,
+        format: result.format,
+        headers: result.headers,
+      );
+      setState(() {
+        _subtitle = track;
+        _cues = [];
+      });
+      await _loadSubtitle(track);
+      _show();
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'OpenSubtitles v3: ${error.toString().replaceFirst('Exception: ', '')}',
+            ),
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _loadSubtitle(SubtitleTrack track) async {
     try {
       final response = await http
-          .get(Uri.parse(track.url))
+          .get(Uri.parse(track.url), headers: track.headers)
           .timeout(const Duration(seconds: 12));
       if (response.statusCode < 200 || response.statusCode >= 300)
         throw Exception();
@@ -569,11 +742,11 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
                             runSpacing: 8,
                             children: [
                               OutlinedButton.icon(
-                                onPressed: () => _initialize(_source!),
+                                onPressed: _retryPlayback,
                                 icon: const Icon(Icons.refresh_rounded),
                                 label: const Text('Retry'),
                               ),
-                              if (widget.sources.length > 1)
+                              if (_sources.length > 1)
                                 FilledButton.icon(
                                   onPressed: _pickStream,
                                   icon: const Icon(Icons.playlist_play_rounded),

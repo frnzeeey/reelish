@@ -52,9 +52,9 @@ class GlassControlsOverlay extends StatelessWidget {
               const IgnorePointer(
                 child: Column(
                   children: [
-                    _Scrim(height: .31, top: true),
+                    _Scrim(height: .27, top: true),
                     Spacer(),
-                    _Scrim(height: .4, top: false),
+                    _Scrim(height: .52, top: false),
                   ],
                 ),
               ),
@@ -62,172 +62,72 @@ class GlassControlsOverlay extends StatelessWidget {
                 top: 8,
                 left: 14,
                 right: 14,
-                child: _GlassPanel(
-                  radius: 24,
-                  padding: const EdgeInsets.fromLTRB(6, 6, 8, 6),
-                  child: Row(
-                    children: [
-                      _RoundButton(
-                        icon: Icons.arrow_back_rounded,
-                        tooltip: 'Back',
-                        onPressed: onBack,
-                      ),
-                      const SizedBox(width: 5),
-                      Expanded(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
+                child: Row(
+                  children: [
+                    _RoundButton(
+                      icon: Icons.arrow_back_rounded,
+                      tooltip: 'Back',
+                      onPressed: onBack,
+                      surface: true,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              shadows: [
+                                Shadow(color: Colors.black54, blurRadius: 12),
+                              ],
+                            ),
+                          ),
+                          if (sourceLabel.isNotEmpty) ...[
+                            const SizedBox(height: 2),
                             Text(
-                              title,
+                              sourceLabel,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
+                                color: Colors.white70,
+                                fontSize: 11,
+                                shadows: [
+                                  Shadow(color: Colors.black54, blurRadius: 8),
+                                ],
                               ),
                             ),
-                            if (sourceLabel.isNotEmpty)
-                              Text(
-                                sourceLabel,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: Colors.white60,
-                                  fontSize: 11,
-                                ),
-                              ),
                           ],
-                        ),
+                        ],
                       ),
-                      const SizedBox(width: 4),
-                      _RoundButton(
-                        icon: Icons.closed_caption_rounded,
-                        tooltip: 'Subtitles',
-                        selected: subtitleEnabled,
-                        onPressed: onSubtitles,
-                      ),
-                      _RoundButton(
-                        icon: Icons.playlist_play_rounded,
-                        tooltip: 'Choose stream',
-                        onPressed: onStreams,
-                      ),
-                      _RoundButton(
-                        icon: Icons.picture_in_picture_alt_rounded,
-                        tooltip: 'Picture in picture',
-                        onPressed: onPip,
-                      ),
-                      _RoundButton(
-                        icon: Icons.tune_rounded,
-                        tooltip: 'Playback settings',
-                        onPressed: onSettings,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              Center(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    _RoundButton(
-                      icon: Icons.replay_10_rounded,
-                      tooltip: 'Back 10 seconds',
-                      size: 54,
-                      iconSize: 30,
-                      onPressed: () =>
-                          onSeek(value.position - const Duration(seconds: 10)),
-                    ),
-                    const SizedBox(width: 28),
-                    _PlayPauseButton(
-                      playing: value.isPlaying,
-                      buffering: value.isBuffering,
-                      onPressed: onToggle,
-                    ),
-                    const SizedBox(width: 28),
-                    _RoundButton(
-                      icon: Icons.forward_10_rounded,
-                      tooltip: 'Forward 10 seconds',
-                      size: 54,
-                      iconSize: 30,
-                      onPressed: () =>
-                          onSeek(value.position + const Duration(seconds: 10)),
                     ),
                   ],
                 ),
               ),
               Positioned(
-                left: 16,
-                right: 16,
-                bottom: 12,
-                child: _GlassPanel(
-                  radius: 23,
-                  padding: const EdgeInsets.fromLTRB(18, 12, 18, 11),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            _time(value.position),
-                            style: const TextStyle(
-                              fontFeatures: [FontFeature.tabularFigures()],
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const Spacer(),
-                          Text(
-                            value.duration > Duration.zero
-                                ? '-${_time(value.duration - value.position)}'
-                                : '--:--',
-                            style: const TextStyle(
-                              color: Colors.white70,
-                              fontFeatures: [FontFeature.tabularFigures()],
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                      VideoProgressIndicator(
-                        controller,
-                        allowScrubbing: true,
-                        padding: const EdgeInsets.symmetric(vertical: 13),
-                        colors: const VideoProgressColors(
-                          playedColor: GlassTheme.cyan,
-                          bufferedColor: Color(0x88FFFFFF),
-                          backgroundColor: Color(0x44FFFFFF),
-                        ),
-                      ),
-                      Row(
-                        children: [
-                          Icon(
-                            value.isBuffering
-                                ? Icons.downloading_rounded
-                                : Icons.play_circle_outline_rounded,
-                            size: 16,
-                            color: value.isBuffering
-                                ? GlassTheme.cyan
-                                : Colors.white70,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            value.isBuffering ? 'Buffering' : 'Now playing',
-                            style: const TextStyle(
-                              color: Colors.white70,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const Spacer(),
-                          _InfoPill(
-                            icon: Icons.speed_rounded,
-                            label: '${value.playbackSpeed}×',
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                left: 14,
+                right: 14,
+                bottom: 10,
+                child: _ControlDock(
+                  position: value.position,
+                  duration: value.duration,
+                  playing: value.isPlaying,
+                  buffering: value.isBuffering,
+                  subtitleEnabled: subtitleEnabled,
+                  playbackSpeed: value.playbackSpeed,
+                  controller: controller,
+                  time: _time,
+                  onToggle: onToggle,
+                  onSeek: onSeek,
+                  onStreams: onStreams,
+                  onSettings: onSettings,
+                  onSubtitles: onSubtitles,
+                  onPip: onPip,
                 ),
               ),
             ],
@@ -236,33 +136,209 @@ class GlassControlsOverlay extends StatelessWidget {
       );
 }
 
-class _GlassPanel extends StatelessWidget {
-  const _GlassPanel({
-    required this.child,
-    required this.padding,
-    this.radius = 20,
+class _ControlDock extends StatelessWidget {
+  const _ControlDock({
+    required this.position,
+    required this.duration,
+    required this.playing,
+    required this.buffering,
+    required this.subtitleEnabled,
+    required this.playbackSpeed,
+    required this.controller,
+    required this.time,
+    required this.onToggle,
+    required this.onSeek,
+    required this.onStreams,
+    required this.onSettings,
+    required this.onSubtitles,
+    required this.onPip,
   });
+
+  final Duration position;
+  final Duration duration;
+  final bool playing;
+  final bool buffering;
+  final bool subtitleEnabled;
+  final double playbackSpeed;
+  final VideoPlayerController controller;
+  final String Function(Duration) time;
+  final VoidCallback onToggle;
+  final ValueChanged<Duration> onSeek;
+  final VoidCallback onStreams;
+  final VoidCallback onSettings;
+  final VoidCallback onSubtitles;
+  final VoidCallback onPip;
+
+  @override
+  Widget build(BuildContext context) => _GlassPanel(
+    padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          children: [
+            Text(time(position), style: _timeStyle),
+            const Spacer(),
+            Text(
+              duration > Duration.zero
+                  ? '-${time(duration - position)}'
+                  : '--:--',
+              style: _timeStyle.copyWith(color: Colors.white70),
+            ),
+          ],
+        ),
+        VideoProgressIndicator(
+          controller,
+          allowScrubbing: true,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          colors: const VideoProgressColors(
+            playedColor: GlassTheme.cyan,
+            bufferedColor: Color(0x99FFFFFF),
+            backgroundColor: Color(0x44FFFFFF),
+          ),
+        ),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final actions = _utilityButtons();
+            final transport = _transportButtons();
+
+            if (constraints.maxWidth < 420) {
+              return Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: actions,
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: transport,
+                  ),
+                ],
+              );
+            }
+
+            return Row(
+              children: [
+                ...actions,
+                if (constraints.maxWidth >= 480) ...[
+                  const SizedBox(width: 8),
+                  _SpeedBadge(speed: playbackSpeed),
+                ],
+                const Spacer(),
+                ...transport,
+              ],
+            );
+          },
+        ),
+      ],
+    ),
+  );
+
+  List<Widget> _utilityButtons() => [
+    _RoundButton(
+      icon: Icons.closed_caption_rounded,
+      tooltip: 'Subtitles',
+      selected: subtitleEnabled,
+      onPressed: onSubtitles,
+      size: 38,
+      iconSize: 20,
+    ),
+    _RoundButton(
+      icon: Icons.audiotrack_rounded,
+      tooltip: 'Choose audio or stream',
+      onPressed: onStreams,
+      size: 38,
+      iconSize: 20,
+    ),
+    _RoundButton(
+      icon: Icons.picture_in_picture_alt_rounded,
+      tooltip: 'Picture in picture',
+      onPressed: onPip,
+      size: 38,
+      iconSize: 19,
+    ),
+    _RoundButton(
+      icon: Icons.tune_rounded,
+      tooltip: 'Playback settings',
+      onPressed: onSettings,
+      size: 38,
+      iconSize: 19,
+    ),
+  ];
+
+  List<Widget> _transportButtons() => [
+    _RoundButton(
+      icon: Icons.replay_10_rounded,
+      tooltip: 'Back 10 seconds',
+      onPressed: () => onSeek(position - const Duration(seconds: 10)),
+      size: 42,
+      iconSize: 24,
+    ),
+    const SizedBox(width: 3),
+    _PlayPauseButton(
+      playing: playing,
+      buffering: buffering,
+      onPressed: onToggle,
+    ),
+    const SizedBox(width: 3),
+    _RoundButton(
+      icon: Icons.forward_10_rounded,
+      tooltip: 'Forward 10 seconds',
+      onPressed: () => onSeek(position + const Duration(seconds: 10)),
+      size: 42,
+      iconSize: 24,
+    ),
+  ];
+
+  static const _timeStyle = TextStyle(
+    fontFeatures: [FontFeature.tabularFigures()],
+    fontSize: 12,
+    fontWeight: FontWeight.w600,
+  );
+}
+
+class _SpeedBadge extends StatelessWidget {
+  const _SpeedBadge({required this.speed});
+
+  final double speed;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+    decoration: BoxDecoration(
+      color: Colors.white.withValues(alpha: .08),
+      borderRadius: BorderRadius.circular(20),
+    ),
+    child: Text(
+      '${speed}×',
+      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+    ),
+  );
+}
+
+class _GlassPanel extends StatelessWidget {
+  const _GlassPanel({required this.child, required this.padding});
 
   final Widget child;
   final EdgeInsetsGeometry padding;
-  final double radius;
 
   @override
   Widget build(BuildContext context) => ClipRRect(
-    borderRadius: BorderRadius.circular(radius),
+    borderRadius: BorderRadius.circular(22),
     child: BackdropFilter(
-      filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+      filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
       child: Container(
         padding: padding,
         decoration: BoxDecoration(
-          color: const Color(0xCC141A26),
-          borderRadius: BorderRadius.circular(radius),
+          color: const Color(0xD9101520),
+          borderRadius: BorderRadius.circular(22),
           border: Border.all(color: Colors.white.withValues(alpha: .14)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: .24),
-              blurRadius: 28,
-              offset: const Offset(0, 10),
+              color: Colors.black.withValues(alpha: .3),
+              blurRadius: 32,
+              offset: const Offset(0, 12),
             ),
           ],
         ),
@@ -278,6 +354,7 @@ class _RoundButton extends StatelessWidget {
     required this.tooltip,
     required this.onPressed,
     this.selected = false,
+    this.surface = false,
     this.size = 42,
     this.iconSize = 21,
   });
@@ -286,6 +363,7 @@ class _RoundButton extends StatelessWidget {
   final String tooltip;
   final VoidCallback onPressed;
   final bool selected;
+  final bool surface;
   final double size;
   final double iconSize;
 
@@ -295,6 +373,8 @@ class _RoundButton extends StatelessWidget {
     child: Material(
       color: selected
           ? GlassTheme.cyan.withValues(alpha: .16)
+          : surface
+          ? const Color(0x66101520)
           : Colors.transparent,
       shape: const CircleBorder(),
       child: InkWell(
@@ -336,62 +416,37 @@ class _PlayPauseButton extends StatelessWidget {
         customBorder: const CircleBorder(),
         onTap: onPressed,
         child: Ink(
-          width: 76,
-          height: 76,
+          width: 50,
+          height: 50,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             gradient: GlassTheme.gradient,
             boxShadow: [
               BoxShadow(
-                color: GlassTheme.cyan.withValues(alpha: .36),
-                blurRadius: 30,
-                spreadRadius: 2,
+                color: GlassTheme.cyan.withValues(alpha: .3),
+                blurRadius: 20,
+                spreadRadius: 1,
               ),
             ],
           ),
           child: Center(
             child: buffering
                 ? const SizedBox(
-                    width: 28,
-                    height: 28,
+                    width: 21,
+                    height: 21,
                     child: CircularProgressIndicator(
                       color: Color(0xFF07100F),
-                      strokeWidth: 2.5,
+                      strokeWidth: 2.3,
                     ),
                   )
                 : Icon(
                     playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                    size: 42,
+                    size: 30,
                     color: const Color(0xFF07100F),
                   ),
           ),
         ),
       ),
-    ),
-  );
-}
-
-class _InfoPill extends StatelessWidget {
-  const _InfoPill({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-    decoration: BoxDecoration(
-      color: Colors.white.withValues(alpha: .08),
-      borderRadius: BorderRadius.circular(30),
-      border: Border.all(color: Colors.white.withValues(alpha: .08)),
-    ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 14, color: GlassTheme.cyan),
-        const SizedBox(width: 4),
-        Text(label, style: const TextStyle(fontSize: 11)),
-      ],
     ),
   );
 }

@@ -89,38 +89,41 @@ class PluginsScreen extends StatelessWidget {
                 child: GlassBox(
                   radius: 20,
                   padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: ExpansionTile(
-                    leading: const Icon(
-                      Icons.browse_gallery_rounded,
-                      color: GlassTheme.cyan,
+                  child: Material(
+                    color: Colors.transparent,
+                    child: ExpansionTile(
+                      leading: const Icon(
+                        Icons.browse_gallery_rounded,
+                        color: GlassTheme.cyan,
+                      ),
+                      title: Text(
+                        repo.name,
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      subtitle: Text('${repo.plugins.length} providers'),
+                      trailing: IconButton(
+                        tooltip: 'Remove repository',
+                        onPressed: () => pluginService.remove(repo),
+                        icon: const Icon(Icons.delete_outline_rounded),
+                      ),
+                      children: [
+                        for (final plugin in repo.plugins)
+                          SwitchListTile(
+                            dense: true,
+                            title: Text(plugin.name),
+                            subtitle: plugin.description.isEmpty
+                                ? null
+                                : Text(
+                                    plugin.description,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                            value: plugin.enabled,
+                            onChanged: (enabled) => pluginService
+                                .setPluginEnabled(repo, plugin, enabled),
+                          ),
+                      ],
                     ),
-                    title: Text(
-                      repo.name,
-                      style: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                    subtitle: Text('${repo.plugins.length} providers'),
-                    trailing: IconButton(
-                      tooltip: 'Remove repository',
-                      onPressed: () => pluginService.remove(repo),
-                      icon: const Icon(Icons.delete_outline_rounded),
-                    ),
-                    children: [
-                      for (final plugin in repo.plugins)
-                        SwitchListTile(
-                          dense: true,
-                          title: Text(plugin.name),
-                          subtitle: plugin.description.isEmpty
-                              ? null
-                              : Text(
-                                  plugin.description,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                          value: plugin.enabled,
-                          onChanged: (enabled) => pluginService
-                              .setPluginEnabled(repo, plugin, enabled),
-                        ),
-                    ],
                   ),
                 ),
               ),

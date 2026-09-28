@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -116,9 +117,10 @@ class NuvioPluginService extends ChangeNotifier {
   }
 
   Future<NuvioPluginRepository> _readRepository(String url) async {
-    final response = await http
-        .get(Uri.parse(url))
-        .timeout(const Duration(seconds: 15));
+    final response = await _secureGet(
+      Uri.parse(url),
+      timeout: const Duration(seconds: 15),
+    );
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception(
         'Plugin manifest request failed (${response.statusCode}).',
@@ -249,9 +251,11 @@ class NuvioPluginService extends ChangeNotifier {
           final codeClient = http.Client();
           late final http.Response codeResponse;
           try {
-            codeResponse = await codeClient
-                .get(codeUrl)
-                .timeout(const Duration(seconds: 12));
+            codeResponse = await _secureGet(
+              codeUrl,
+              timeout: const Duration(seconds: 12),
+              client: codeClient,
+            );
           } finally {
             codeClient.close();
           }
@@ -430,10 +434,10 @@ class NuvioPluginService extends ChangeNotifier {
   Future<String> _normalizeUrl(String raw) async {
     final url = raw.trim();
     final uri = Uri.tryParse(url);
-    if (uri == null ||
-        !uri.hasAuthority ||
-        !{'https', 'http'}.contains(uri.scheme)) {
-      throw Exception('Enter a URL to a Nuvio plugin repository or manifest.');
+    if (uri == null || !uri.hasAuthority || uri.scheme != 'https') {
+      throw Exception(
+        'Use an HTTPS URL for a Nuvio plugin repository or manifest.',
+      );
     }
 
     // Plugin directories commonly provide either a raw manifest link or a
@@ -462,12 +466,11 @@ class NuvioPluginService extends ChangeNotifier {
 
       // A repository root or tree link needs its default branch to construct
       // the raw manifest URL.
-      final response = await http
-          .get(
-            Uri.https('api.github.com', 'repos/$owner/$repository'),
-            headers: const {'User-Agent': 'Onfeed'},
-          )
-          .timeout(const Duration(seconds: 15));
+      final response = await _secureGet(
+        Uri.https('api.github.com', 'repos/$owner/$repository'),
+        headers: const {'User-Agent': 'Onfeed'},
+        timeout: const Duration(seconds: 15),
+      );
       if (response.statusCode < 200 || response.statusCode >= 300) {
         throw Exception(
           'Could not read that GitHub repository (${response.statusCode}). Paste its raw manifest.json URL instead.',
@@ -493,8 +496,72 @@ class NuvioPluginService extends ChangeNotifier {
     return uri.toString();
   }
 
-  String _friendly(Object error) => error
-      .toString()
-      .replaceFirst('Exception: ', '')
-      .replaceFirst('FormatException: ', '');
+  Future<http.Response> _secureGet(
+    Uri uri, {
+    Map<String, String> headers = const {},
+    required Duration timeout,
+    http.Client? client,
+  }) async {
+    if (uri.scheme != 'https' || !uri.hasAuthority || uri.userInfo.isNotEmpty) {
+      throw const FormatException('Plugin requests must use HTTPS.');
+    }
+
+    final requestClient = client ?? http.Client();
+    try {
+      var current = uri;
+      for (var redirects = 0; redirects <= 5; redirects++) {
+        final request = http.Request('GET', current)
+          ..followRedirects = false
+          ..headers.addAll(headers);
+        final streamed = await requestClient.send(request).timeout(timeout);
+        if ({301, 302, 303, 307, 308}.contains(streamed.statusCode)) {
+          final location = streamed.headers['location'];
+          await streamed.stream.listen((_) {}).cancel();
+          if (location == null || redirects == 5) {
+            throw const FormatException('Invalid plugin redirect.');
+          }
+          final target = current.resolve(location);
+          if (target.scheme != 'https' ||
+              !target.hasAuthority ||
+              target.userInfo.isNotEmpty) {
+            throw const FormatException(
+              'Plugin redirects must remain on HTTPS.',
+            );
+          }
+          current = target;
+          continue;
+        }
+
+        final bytes = BytesBuilder(copy: false);
+        var responseSize = 0;
+        await for (final chunk in streamed.stream.timeout(timeout)) {
+          responseSize += chunk.length;
+          if (responseSize > 4 * 1024 * 1024) {
+            throw const FormatException('Plugin response is too large.');
+          }
+          bytes.add(chunk);
+        }
+        return http.Response.bytes(
+          bytes.takeBytes(),
+          streamed.statusCode,
+          request: request,
+          headers: streamed.headers,
+          reasonPhrase: streamed.reasonPhrase,
+        );
+      }
+      throw const FormatException('Too many plugin redirects.');
+    } finally {
+      if (client == null) requestClient.close();
+    }
+  }
+
+  String _friendly(Object error) {
+    if (error is TimeoutException) {
+      return 'This provider took too long to respond. Try again later or use another provider.';
+    }
+    return error
+        .toString()
+        .replaceFirst('Exception: ', '')
+        .replaceFirst('FormatException: ', '');
+  }
 }

@@ -10,6 +10,7 @@ class MediaItem {
     this.rating = '',
     this.externalId = '',
     this.resumeMs = 0,
+    this.subtitleQuery = '',
   });
   final String id,
       type,
@@ -21,6 +22,7 @@ class MediaItem {
       rating,
       externalId;
   final int resumeMs;
+  final String subtitleQuery;
   factory MediaItem.fromJson(Map<String, dynamic> j, {String type = 'movie'}) =>
       MediaItem(
         id: '${j['id'] ?? ''}',
@@ -32,6 +34,7 @@ class MediaItem {
         year: '${j['year'] ?? ''}',
         rating: '${j['imdbRating'] ?? ''}',
         externalId: '${j['imdb_id'] ?? ''}',
+        subtitleQuery: '${j['subtitleQuery'] ?? ''}',
       );
   factory MediaItem.fromStorage(Map<String, dynamic> j) => MediaItem.fromJson(
     j,
@@ -74,18 +77,24 @@ class MediaItem {
     'rating': rating,
     'externalId': externalId,
     'resumeMs': resumeMs,
+    'subtitleQuery': subtitleQuery,
   };
-  MediaItem copyWith({int? resumeMs, String? externalId, String? id}) =>
-      MediaItem(
-        id: id ?? this.id,
-        type: type,
-        name: name,
-        poster: poster,
-        background: background,
-        description: description,
-        year: year,
-        rating: rating,
-        externalId: externalId ?? this.externalId,
-        resumeMs: resumeMs ?? this.resumeMs,
-      );
+  MediaItem copyWith({
+    int? resumeMs,
+    String? externalId,
+    String? id,
+    String? subtitleQuery,
+  }) => MediaItem(
+    id: id ?? this.id,
+    type: type,
+    name: name,
+    poster: poster,
+    background: background,
+    description: description,
+    year: year,
+    rating: rating,
+    externalId: externalId ?? this.externalId,
+    resumeMs: resumeMs ?? this.resumeMs,
+    subtitleQuery: subtitleQuery ?? this.subtitleQuery,
+  );
 }

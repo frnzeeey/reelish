@@ -10,6 +10,7 @@ abstract final class GlassTheme {
   static const gradient = LinearGradient(colors: [cyan, violet]);
   static ThemeData get dark => ThemeData(
     brightness: Brightness.dark,
+    fontFamily: 'Montserrat',
     scaffoldBackgroundColor: background,
     colorScheme: ColorScheme.fromSeed(
       seedColor: cyan,

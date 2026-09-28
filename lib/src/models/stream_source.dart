@@ -4,13 +4,18 @@ class SubtitleTrack {
     this.lang = 'Unknown',
     this.id = '',
     this.format = '',
+    this.headers = const {},
   });
   final String url, lang, id, format;
+  final Map<String, String> headers;
   factory SubtitleTrack.fromJson(Map<String, dynamic> j) => SubtitleTrack(
     url: '${j['url'] ?? ''}',
     lang: '${j['lang'] ?? j['language'] ?? 'Unknown'}',
     id: '${j['id'] ?? ''}',
     format: '${j['format'] ?? ''}',
+    headers: j['headers'] is Map
+        ? (j['headers'] as Map).map((key, value) => MapEntry('$key', '$value'))
+        : const {},
   );
 }
 

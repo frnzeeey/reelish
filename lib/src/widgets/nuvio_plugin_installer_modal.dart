@@ -108,7 +108,7 @@ class _NuvioPluginInstallerModalState extends State<NuvioPluginInstallerModal> {
                 ],
               ),
               const Text(
-                'Copy a provider manifest URL from nuvioplugin.com, then paste it below.',
+                'Provider scripts run on this device and can make network requests. Install only repositories you trust. Use an HTTPS manifest URL.',
                 style: TextStyle(color: GlassTheme.muted),
               ),
               const SizedBox(height: 16),
