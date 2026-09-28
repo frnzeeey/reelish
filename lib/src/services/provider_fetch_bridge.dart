@@ -6,6 +6,8 @@ import 'dart:typed_data';
 import 'package:flutter_js/javascript_runtime.dart';
 import 'package:http/http.dart' as http;
 
+import 'network_target_policy.dart';
+
 /// Supplies provider scripts with fetch and XMLHttpRequest backed by Dart's
 /// HTTP client. Keeping the bridge here avoids flutter_js's polling XHR
 /// extension, which loses response status/headers and leaves a timer per VM.
@@ -51,34 +53,87 @@ class ProviderFetchBridge {
     final id = data['id'];
     try {
       final uri = Uri.parse('${data['url'] ?? ''}');
-      if (!uri.hasAuthority || !{'http', 'https'}.contains(uri.scheme)) {
-        throw const FormatException('fetch requires an HTTP or HTTPS URL.');
+      if (!isSafeProviderTarget(uri)) {
+        throw const FormatException(
+          'Provider requests must use HTTPS to a public hostname.',
+        );
       }
-      final method = '${data['method'] ?? 'GET'}'.toUpperCase();
-      final request = http.Request(method, uri);
+      var method = '${data['method'] ?? 'GET'}'.toUpperCase();
       final headers = data['headers'];
+      final requestHeaders = <String, String>{};
       if (headers is Map) {
-        request.headers.addAll(
+        requestHeaders.addAll(
           headers.map((key, value) => MapEntry('$key', '$value')),
         );
       }
       final body = data['body'];
+      String? requestBody;
       if (body != null && method != 'GET' && method != 'HEAD') {
-        final requestBody = body is String ? body : jsonEncode(body);
+        requestBody = body is String ? body : jsonEncode(body);
         if (utf8.encode(requestBody).length > _maxRequestBodyBytes) {
           throw const FormatException('Provider request body is too large.');
         }
-        request.body = requestBody;
       }
-      request.followRedirects = data['followRedirects'] != false;
-      final maxRedirects = data['maxRedirects'];
-      request.maxRedirects = maxRedirects is num
-          ? maxRedirects.toInt().clamp(0, 5).toInt()
-          : 5;
 
-      final streamed = await client
-          .send(request)
-          .timeout(const Duration(seconds: 55));
+      final maxRedirects = data['followRedirects'] == false
+          ? 0
+          : (data['maxRedirects'] is num
+                ? (data['maxRedirects'] as num).toInt().clamp(0, 5)
+                : 5);
+      var current = uri;
+      late http.StreamedResponse streamed;
+      late http.Request request;
+      var redirectCount = 0;
+      while (true) {
+        request = http.Request(method, current)
+          ..followRedirects = false
+          ..headers.addAll(requestHeaders);
+        if (requestBody != null) request.body = requestBody;
+        streamed = await client
+            .send(request)
+            .timeout(const Duration(seconds: 55));
+        if (![301, 302, 303, 307, 308].contains(streamed.statusCode)) break;
+
+        final location = streamed.headers['location'];
+        await streamed.stream.listen((_) {}).cancel();
+        if (location == null || redirectCount >= maxRedirects) {
+          throw const FormatException('Invalid provider redirect.');
+        }
+        final next = current.resolve(location);
+        if (!isSafeProviderTarget(next)) {
+          throw const FormatException(
+            'Provider redirects must stay on HTTPS public hosts.',
+          );
+        }
+        final sameOrigin =
+            current.scheme == next.scheme &&
+            current.host.toLowerCase() == next.host.toLowerCase() &&
+            current.port == next.port;
+        if (!sameOrigin) {
+          requestHeaders.removeWhere(
+            (name, _) => const {
+              'authorization',
+              'cookie',
+              'proxy-authorization',
+            }.contains(name.toLowerCase()),
+          );
+        }
+        if (streamed.statusCode == 303 ||
+            ((streamed.statusCode == 301 || streamed.statusCode == 302) &&
+                method != 'GET' &&
+                method != 'HEAD')) {
+          method = 'GET';
+          requestBody = null;
+          requestHeaders.removeWhere(
+            (name, _) =>
+                name.toLowerCase() == 'content-length' ||
+                name.toLowerCase() == 'content-type',
+          );
+        }
+        current = next;
+        redirectCount++;
+      }
+
       final responseBytes = BytesBuilder(copy: false);
       var responseSize = 0;
       await for (final chunk in streamed.stream.timeout(
@@ -96,7 +151,7 @@ class ProviderFetchBridge {
       // implements BaseResponseWithUrl, which contains the final redirect URL.
       final responseUrl = streamed is http.BaseResponseWithUrl
           ? (streamed as http.BaseResponseWithUrl).url
-          : streamed.request?.url ?? uri;
+          : streamed.request?.url ?? current;
       final response = {
         'status': streamed.statusCode,
         'statusText': _reasonPhrase(streamed.statusCode),

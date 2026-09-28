@@ -57,6 +57,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   String? _gestureHint;
   String? _errorMessage;
   int _initializationGeneration = 0;
+  int _lastProgressSaveBucket = -1;
   final Set<String> _attemptedSourceKeys = {};
   late List<StreamSource> _sources;
   final _openSubtitles = OpenSubtitlesService();
@@ -651,7 +652,9 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
       );
       return;
     }
-    if (c.value.position.inSeconds % 5 == 0) {
+    final progressBucket = c.value.position.inSeconds ~/ 5;
+    if (progressBucket != _lastProgressSaveBucket) {
+      _lastProgressSaveBucket = progressBucket;
       _save?.cancel();
       _save = Timer(const Duration(milliseconds: 300), _saveProgress);
     }

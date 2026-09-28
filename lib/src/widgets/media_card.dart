@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../models/media_item.dart';
 import '../theme/glass_theme.dart';
@@ -20,7 +19,6 @@ class MediaCard extends StatelessWidget {
   Widget _frosted({
     required Widget child,
     double radius = 14,
-    bool blur = false,
   }) {
     final surface = DecoratedBox(
       decoration: BoxDecoration(
@@ -32,12 +30,7 @@ class MediaCard extends StatelessWidget {
     );
     return ClipRRect(
       borderRadius: BorderRadius.circular(radius),
-      child: blur
-          ? BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-              child: surface,
-            )
-          : surface,
+      child: surface,
     );
   }
 
@@ -147,7 +140,6 @@ class MediaCard extends StatelessWidget {
                     bottom: progress > 0 ? 11 : 9,
                     child: _frosted(
                       radius: 15,
-                      blur: true,
                       child: Padding(
                         padding: EdgeInsets.fromLTRB(
                           9,

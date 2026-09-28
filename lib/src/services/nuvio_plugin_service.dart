@@ -11,6 +11,7 @@ import '../models/media_item.dart';
 import '../models/nuvio_plugin.dart';
 import '../models/stream_source.dart';
 import 'provider_fetch_bridge.dart';
+import 'network_target_policy.dart';
 import 'storage_service.dart';
 
 class NuvioPluginService extends ChangeNotifier {
@@ -434,7 +435,7 @@ class NuvioPluginService extends ChangeNotifier {
   Future<String> _normalizeUrl(String raw) async {
     final url = raw.trim();
     final uri = Uri.tryParse(url);
-    if (uri == null || !uri.hasAuthority || uri.scheme != 'https') {
+    if (uri == null || !isSafeProviderTarget(uri)) {
       throw Exception(
         'Use an HTTPS URL for a Nuvio plugin repository or manifest.',
       );
@@ -502,8 +503,10 @@ class NuvioPluginService extends ChangeNotifier {
     required Duration timeout,
     http.Client? client,
   }) async {
-    if (uri.scheme != 'https' || !uri.hasAuthority || uri.userInfo.isNotEmpty) {
-      throw const FormatException('Plugin requests must use HTTPS.');
+    if (!isSafeProviderTarget(uri)) {
+      throw const FormatException(
+        'Plugin requests must use HTTPS to a public hostname.',
+      );
     }
 
     final requestClient = client ?? http.Client();
@@ -521,11 +524,9 @@ class NuvioPluginService extends ChangeNotifier {
             throw const FormatException('Invalid plugin redirect.');
           }
           final target = current.resolve(location);
-          if (target.scheme != 'https' ||
-              !target.hasAuthority ||
-              target.userInfo.isNotEmpty) {
+          if (!isSafeProviderTarget(target)) {
             throw const FormatException(
-              'Plugin redirects must remain on HTTPS.',
+              'Plugin redirects must remain on HTTPS public hosts.',
             );
           }
           current = target;
