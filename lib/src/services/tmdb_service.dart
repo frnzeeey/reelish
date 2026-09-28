@@ -30,6 +30,29 @@ class TmdbService {
         .toList();
   }
 
+  Future<List<MediaItem>> recommendations(MediaItem item) async {
+    final pathType = item.type == 'series' ? 'tv' : 'movie';
+    final data = await _get(
+      '/$pathType/${Uri.encodeComponent(item.id)}/recommendations',
+    );
+    final results = ((data['results'] as List?) ?? const [])
+        .whereType<Map>()
+        .map(
+          (entry) => MediaItem.fromTmdb(
+            Map<String, dynamic>.from(entry),
+            mediaType: pathType,
+          ),
+        )
+        .where((recommendation) => recommendation.id != item.id)
+        .toList();
+    results.sort((a, b) {
+      final ratingA = double.tryParse(a.rating) ?? 0;
+      final ratingB = double.tryParse(b.rating) ?? 0;
+      return ratingB.compareTo(ratingA);
+    });
+    return results;
+  }
+
   Future<List<MediaItem>> search(String query) async {
     final data = await _get('/search/multi', {'query': query});
     return ((data['results'] as List?) ?? const [])
