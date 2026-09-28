@@ -32,7 +32,7 @@ class SoftGlassDock extends StatelessWidget {
           height: 72,
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
           decoration: BoxDecoration(
-            color: const Color(0x33111721),
+            color: const Color(0x10111721),
             borderRadius: BorderRadius.circular(26),
             border: Border.all(color: Colors.white.withValues(alpha: .12)),
             boxShadow: [

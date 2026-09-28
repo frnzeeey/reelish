@@ -1090,12 +1090,27 @@ class _HomeScreenState extends State<HomeScreen> {
       LibraryScreen(key: _libraryKey, storage: _storage, onPlay: _showDetails),
     ];
     return Scaffold(
-      extendBody: true,
       body: Stack(
         fit: StackFit.expand,
         children: [
           SafeArea(
+            bottom: false,
             child: IndexedStack(index: _tab, children: pages),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: SoftGlassDock(
+              selectedIndex: _tab,
+              onSelected: (value) {
+                setState(() => _tab = value);
+                if (value == 2) {
+                  _loadHistory();
+                  _libraryKey = UniqueKey();
+                }
+              },
+            ),
           ),
           if (_resolvingStreams)
             ColoredBox(
@@ -1120,16 +1135,6 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
         ],
-      ),
-      bottomNavigationBar: SoftGlassDock(
-        selectedIndex: _tab,
-        onSelected: (value) {
-          setState(() => _tab = value);
-          if (value == 2) {
-            _loadHistory();
-            _libraryKey = UniqueKey();
-          }
-        },
       ),
     );
   }
