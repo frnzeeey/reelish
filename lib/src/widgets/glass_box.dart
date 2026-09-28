@@ -19,17 +19,18 @@ class GlassBox extends StatelessWidget {
     borderRadius: BorderRadius.circular(radius),
     child: BackdropFilter(
       filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          child: Container(
-            padding: padding,
-            decoration: BoxDecoration(
-              color: GlassTheme.surface,
-              borderRadius: BorderRadius.circular(radius),
-              border: Border.all(color: GlassTheme.border),
-            ),
+      child: Container(
+        padding: padding,
+        decoration: BoxDecoration(
+          color: GlassTheme.surface,
+          borderRadius: BorderRadius.circular(radius),
+          border: Border.all(color: GlassTheme.border),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(radius),
             child: child,
           ),
         ),

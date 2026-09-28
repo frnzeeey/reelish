@@ -15,6 +15,7 @@ import '../widgets/player/episode_selector_sheet.dart';
 import 'plugins_screen.dart';
 import 'library_screen.dart';
 import 'player_screen.dart';
+import 'media_details_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -31,6 +32,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final _spotlightController = PageController();
   List<MediaItem> _items = [], _history = [];
   List<MediaItem> _recommendations = [];
+  final Map<String, List<MediaItem>> _recommendationCache = {};
   bool _loading = true, _resolvingStreams = false;
   bool _searchVisible = false;
   String _category = 'For you';
@@ -45,6 +47,12 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _nuvioPlugins.addListener(_onPluginChange);
+    _startSpotlightTimer();
+    _start();
+  }
+
+  void _startSpotlightTimer() {
+    _spotlightTimer?.cancel();
     _spotlightTimer = Timer.periodic(const Duration(seconds: 6), (_) {
       if (!mounted ||
           _tab != 0 ||
@@ -60,7 +68,6 @@ class _HomeScreenState extends State<HomeScreen> {
         curve: Curves.easeInOutCubic,
       );
     });
-    _start();
   }
 
   Future<void> _start() async {
@@ -119,9 +126,16 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) setState(() => _recommendations = []);
       return;
     }
+    final cacheKey = '${item.type}:${item.id}';
+    final cached = _recommendationCache[cacheKey];
+    if (cached != null) {
+      if (mounted) setState(() => _recommendations = cached);
+      return;
+    }
     if (mounted) setState(() => _recommendations = []);
     try {
       final recommendations = await _tmdb.recommendations(item);
+      _recommendationCache[cacheKey] = recommendations;
       if (!mounted || request != _recommendationRequest) return;
       setState(() => _recommendations = recommendations);
     } catch (_) {
@@ -137,6 +151,33 @@ class _HomeScreenState extends State<HomeScreen> {
     _searchChanged('');
   }
 
+  Future<void> _showDetails(MediaItem item) async {
+    _spotlightTimer?.cancel();
+    try {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => MediaDetailsScreen(
+            item: item,
+            tmdb: _tmdb,
+            onPlay: (detailsContext) =>
+                _openItem(item, presentationContext: detailsContext),
+            onPlayEpisode: (detailsContext, season, episode) => _openItem(
+              item,
+              presentationContext: detailsContext,
+              selectedSeason: season,
+              selectedEpisode: episode,
+            ),
+          ),
+        ),
+      );
+    } finally {
+      if (mounted && ModalRoute.of(context)?.isCurrent == true) {
+        _startSpotlightTimer();
+      }
+    }
+  }
+
   Future<void> _loadHistory() async {
     final value = await _storage.history();
     if (mounted) setState(() => _history = value);
@@ -150,16 +191,30 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Future<void> _openItem(MediaItem item) async {
-    int? season, episode;
-    if (item.type == 'series') {
+  Future<void> _openItem(
+    MediaItem item, {
+    BuildContext? presentationContext,
+    int? selectedSeason,
+    int? selectedEpisode,
+  }) async {
+    var searchDialogOpen = false;
+    void dismissSearchDialog() {
+      if (!searchDialogOpen) return;
+      searchDialogOpen = false;
+      if (presentationContext?.mounted == true) {
+        Navigator.of(presentationContext!, rootNavigator: true).pop();
+      }
+    }
+
+    int? season = selectedSeason, episode = selectedEpisode;
+    if (item.type == 'series' && (season == null || episode == null)) {
       var episodeList = <Map<String, dynamic>>[];
       try {
         episodeList = await _tmdb.allEpisodes(item);
       } catch (_) {}
-      if (!mounted) return;
+      if (!mounted || presentationContext?.mounted == false) return;
       if (episodeList.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ScaffoldMessenger.of(presentationContext ?? context).showSnackBar(
           const SnackBar(
             content: Text('No episode list is available for this series.'),
           ),
@@ -167,15 +222,68 @@ class _HomeScreenState extends State<HomeScreen> {
         return;
       }
       final selected = await EpisodeSelectorSheet.show(
-        context,
+        presentationContext ?? context,
         item.name,
         episodeList,
       );
-      if (selected == null || !mounted) return;
+      if (selected == null ||
+          !mounted ||
+          presentationContext?.mounted == false) {
+        return;
+      }
       season = selected.season;
       episode = selected.episode;
     }
-    setState(() => _resolvingStreams = true);
+    if (presentationContext?.mounted == true) {
+      searchDialogOpen = true;
+      unawaited(
+        showDialog<void>(
+          context: presentationContext!,
+          useRootNavigator: true,
+          barrierDismissible: false,
+          builder: (_) => PopScope(
+            canPop: false,
+            child: Dialog(
+              backgroundColor: Colors.transparent,
+              child: GlassBox(
+                padding: const EdgeInsets.all(22),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const CircularProgressIndicator(color: GlassTheme.cyan),
+                    const SizedBox(width: 18),
+                    Flexible(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Searching providers…',
+                            style: TextStyle(fontWeight: FontWeight.w800),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Finding a stream for ${item.name}',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: GlassTheme.muted,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    } else if (mounted) {
+      setState(() => _resolvingStreams = true);
+    }
     try {
       final resolvedItem = await _tmdb.resolveIds(item);
       final episodeCode = season != null && episode != null
@@ -193,10 +301,13 @@ class _HomeScreenState extends State<HomeScreen> {
         season: season,
         episode: episode,
       );
+      dismissSearchDialog();
       if (!mounted) return;
-      setState(() => _resolvingStreams = false);
+      if (presentationContext == null) {
+        setState(() => _resolvingStreams = false);
+      }
       if (streams.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ScaffoldMessenger.of(presentationContext ?? context).showSnackBar(
           SnackBar(
             duration: const Duration(seconds: 10),
             content: Text(
@@ -205,7 +316,12 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             action: SnackBarAction(
               label: 'PLUGINS',
-              onPressed: () => setState(() => _tab = 1),
+              onPressed: () {
+                setState(() => _tab = 1);
+                if (presentationContext?.mounted == true) {
+                  Navigator.of(presentationContext!).pop();
+                }
+              },
             ),
           ),
         );
@@ -214,31 +330,39 @@ class _HomeScreenState extends State<HomeScreen> {
       final source = streams.length == 1
           ? streams.first
           : await StreamSelectorSheet.show(
-              context,
+              presentationContext ?? context,
               streams,
               streams.first,
               status: _nuvioPlugins.lastLookupMessage,
             );
       if (source == null || !mounted) return;
-      await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => PlayerScreen(
-            item: playableItem,
-            source: source,
-            sources: streams,
-            storage: _storage,
-            onRefreshSources: () => _nuvioPlugins.streams(
-              pluginItem,
-              season: season,
-              episode: episode,
+      _spotlightTimer?.cancel();
+      try {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => PlayerScreen(
+              item: playableItem,
+              source: source,
+              sources: streams,
+              storage: _storage,
+              onRefreshSources: () => _nuvioPlugins.streams(
+                pluginItem,
+                season: season,
+                episode: episode,
+              ),
             ),
           ),
-        ),
-      );
+        );
+      } finally {
+        if (mounted && ModalRoute.of(context)?.isCurrent == true) {
+          _startSpotlightTimer();
+        }
+      }
       await _loadHistory();
     } finally {
-      if (mounted && _resolvingStreams) {
+      dismissSearchDialog();
+      if (mounted && presentationContext == null && _resolvingStreams) {
         setState(() => _resolvingStreams = false);
       }
     }
@@ -336,7 +460,7 @@ class _HomeScreenState extends State<HomeScreen> {
               return MediaCard(
                 item: item,
                 progress: item.resumeMs > 0 ? .36 : 0,
-                onTap: () => _openItem(item),
+                onTap: () => _showDetails(item),
                 onFavorite: () async {
                   await _storage.toggleFavorite(item);
                   if (mounted) {
@@ -433,10 +557,8 @@ class _HomeScreenState extends State<HomeScreen> {
             duration: const Duration(milliseconds: 280),
             switchInCurve: Curves.easeOut,
             switchOutCurve: Curves.easeIn,
-            transitionBuilder: (child, animation) => FadeTransition(
-              opacity: animation,
-              child: child,
-            ),
+            transitionBuilder: (child, animation) =>
+                FadeTransition(opacity: animation, child: child),
             child: _searchVisible
                 ? Row(
                     key: const ValueKey('search-visible'),
@@ -679,9 +801,8 @@ class _HomeScreenState extends State<HomeScreen> {
             controller: _spotlightController,
             itemCount: items.length > 1 ? null : items.length,
             onPageChanged: _onSpotlightPageChanged,
-            itemBuilder: (context, page) => _featured(
-              items[page % items.length],
-            ),
+            itemBuilder: (context, page) =>
+                _featured(items[page % items.length]),
           ),
         ),
         if (items.length > 1) ...[
@@ -729,11 +850,7 @@ class _HomeScreenState extends State<HomeScreen> {
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [
-                Color(0xAA080B12),
-                Color(0x00080B12),
-                Color(0xF2080B12),
-              ],
+              colors: [Color(0xAA080B12), Color(0x00080B12), Color(0xF2080B12)],
               stops: [0, .32, 1],
             ),
           ),
@@ -818,10 +935,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         vertical: 12,
                       ),
                     ),
-                    onPressed: () => _openItem(item),
-                    icon: const Icon(Icons.play_arrow_rounded),
+                    onPressed: () => _showDetails(item),
+                    icon: const Icon(Icons.info_outline_rounded),
                     label: const Text(
-                      'Watch now',
+                      'Details',
                       style: TextStyle(fontWeight: FontWeight.w800),
                     ),
                   ),
@@ -863,7 +980,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final pages = [
       _home(),
       PluginsScreen(pluginService: _nuvioPlugins),
-      LibraryScreen(key: _libraryKey, storage: _storage, onPlay: _openItem),
+      LibraryScreen(key: _libraryKey, storage: _storage, onPlay: _showDetails),
     ];
     return Scaffold(
       extendBody: true,

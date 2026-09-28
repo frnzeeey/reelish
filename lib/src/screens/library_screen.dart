@@ -50,7 +50,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
             ),
           if (items.isNotEmpty)
             SizedBox(
-              height: 224,
+              height: 264,
               child: ListView(
                 scrollDirection: Axis.horizontal,
                 children: [

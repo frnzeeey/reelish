@@ -1,11 +1,16 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../tmdb_config.local.dart' as tmdb_config;
+import '../models/media_details.dart';
 import '../models/media_item.dart';
 
 class TmdbService {
   static const _base = 'https://api.themoviedb.org/3';
   static const _key = tmdb_config.tmdbApiKey;
+  final Map<String, MediaDetails> _detailsCache = {};
+  final Map<String, String> _resolvedTmdbIds = {};
+  final Map<String, List<Map<String, dynamic>>> _seasonsCache = {};
+  final Map<String, List<Map<String, dynamic>>> _episodesCache = {};
 
   Future<List<MediaItem>> popular(String type) async {
     final pathType = type == 'series' ? 'tv' : 'movie';
@@ -53,6 +58,25 @@ class TmdbService {
     return results;
   }
 
+  Future<MediaDetails> details(MediaItem item) async {
+    final pathType = item.type == 'series' ? 'tv' : 'movie';
+    final resolvedId = int.tryParse(item.id) == null
+        ? await resolveTmdbId(item)
+        : item.id;
+    final id = resolvedId.isEmpty ? item.id : resolvedId;
+    final cacheKey = '$pathType:$id';
+    final cached = _detailsCache[cacheKey];
+    if (cached != null) return cached;
+    final data = await _get('/$pathType/${Uri.encodeComponent(id)}', {
+      'append_to_response': 'credits',
+    });
+    final details = MediaDetails.fromTmdb(data);
+    if (_detailsCache.length >= 100)
+      _detailsCache.remove(_detailsCache.keys.first);
+    _detailsCache[cacheKey] = details;
+    return details;
+  }
+
   Future<List<MediaItem>> search(String query) async {
     final data = await _get('/search/multi', {'query': query});
     return ((data['results'] as List?) ?? const [])
@@ -80,13 +104,23 @@ class TmdbService {
     if (int.tryParse(item.id) != null) return item.id;
     final externalId = item.externalId.isNotEmpty ? item.externalId : item.id;
     if (!externalId.startsWith('tt')) return '';
+    final cacheKey = '${item.type}:$externalId';
+    final cached = _resolvedTmdbIds[cacheKey];
+    if (cached != null) return cached;
     try {
       final result = await _get('/find/${Uri.encodeComponent(externalId)}', {
         'external_source': 'imdb_id',
       });
       final key = item.type == 'series' ? 'tv_results' : 'movie_results';
       final entries = (result[key] as List? ?? const []).whereType<Map>();
-      return entries.isEmpty ? '' : '${entries.first['id'] ?? ''}';
+      final id = entries.isEmpty ? '' : '${entries.first['id'] ?? ''}';
+      if (id.isNotEmpty) {
+        if (_resolvedTmdbIds.length >= 200) {
+          _resolvedTmdbIds.remove(_resolvedTmdbIds.keys.first);
+        }
+        _resolvedTmdbIds[cacheKey] = id;
+      }
+      return id;
     } catch (_) {
       return '';
     }
@@ -94,25 +128,46 @@ class TmdbService {
 
   Future<List<Map<String, dynamic>>> seasons(MediaItem item) async {
     if (item.type != 'series') return [];
-    final data = await _get('/tv/${Uri.encodeComponent(item.id)}');
-    return ((data['seasons'] as List?) ?? const [])
+    final id = await _seriesTmdbId(item);
+    if (id.isEmpty) return [];
+    final cached = _seasonsCache[id];
+    if (cached != null) return cached;
+    final data = await _get('/tv/${Uri.encodeComponent(id)}');
+    final result = ((data['seasons'] as List?) ?? const [])
         .whereType<Map>()
         .map((e) => Map<String, dynamic>.from(e))
         .where((e) => (e['season_number'] as num? ?? 0) > 0)
         .toList();
+    if (_seasonsCache.length >= 100) {
+      _seasonsCache.remove(_seasonsCache.keys.first);
+    }
+    _seasonsCache[id] = result;
+    return result;
   }
 
   Future<List<Map<String, dynamic>>> episodes(
     MediaItem item,
     int season,
   ) async {
-    final data = await _get(
-      '/tv/${Uri.encodeComponent(item.id)}/season/$season',
-    );
-    return ((data['episodes'] as List?) ?? const [])
+    final id = await _seriesTmdbId(item);
+    if (id.isEmpty) return [];
+    final cacheKey = '$id:$season';
+    final cached = _episodesCache[cacheKey];
+    if (cached != null) return cached;
+    final data = await _get('/tv/${Uri.encodeComponent(id)}/season/$season');
+    final result = ((data['episodes'] as List?) ?? const [])
         .whereType<Map>()
         .map((e) => Map<String, dynamic>.from(e))
         .toList();
+    if (_episodesCache.length >= 100) {
+      _episodesCache.remove(_episodesCache.keys.first);
+    }
+    _episodesCache[cacheKey] = result;
+    return result;
+  }
+
+  Future<String> _seriesTmdbId(MediaItem item) async {
+    return int.tryParse(item.id) != null ? item.id : resolveTmdbId(item);
   }
 
   Future<List<Map<String, dynamic>>> allEpisodes(MediaItem item) async {

@@ -555,8 +555,13 @@ class NuvioPluginService extends ChangeNotifier {
     }
   }
 
-  String _friendly(Object error) => error
-      .toString()
-      .replaceFirst('Exception: ', '')
-      .replaceFirst('FormatException: ', '');
+  String _friendly(Object error) {
+    if (error is TimeoutException) {
+      return 'This provider took too long to respond. Try again later or use another provider.';
+    }
+    return error
+        .toString()
+        .replaceFirst('Exception: ', '')
+        .replaceFirst('FormatException: ', '');
+  }
 }

@@ -206,6 +206,12 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
 
   String _safePlaybackError(String error) {
     final cleaned = error.replaceFirst('Exception: ', '').trim();
+    final normalized = cleaned.toLowerCase();
+    if (normalized.contains('failed to recognize file format') ||
+        normalized.contains('unrecognizedinputformatexception') ||
+        normalized.contains('unrecognized input format')) {
+      return 'The provider did not return a recognizable video stream. Try another source or provider.';
+    }
     // Signed stream URLs can carry credentials in their query string. Keep
     // the hostname for diagnostics without rendering the signed URL/token.
     return cleaned.replaceAllMapped(
