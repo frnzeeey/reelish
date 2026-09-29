@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import 'network_target_policy.dart';
+
 class OpenSubtitleResult {
   const OpenSubtitleResult({
     required this.id,
@@ -24,6 +26,7 @@ class OpenSubtitleResult {
 /// uses for addon-provided subtitles. This avoids requiring a user's API key.
 class OpenSubtitlesService {
   static const _addonBase = 'https://opensubtitles-v3.strem.io';
+  final NetworkDestinationValidator _network = NetworkDestinationValidator();
 
   Future<List<OpenSubtitleResult>> search({
     required String type,
@@ -48,7 +51,27 @@ class OpenSubtitlesService {
     }
 
     final uri = Uri.parse('$_addonBase/subtitles/$type/$videoId.json');
-    final response = await http.get(uri).timeout(const Duration(seconds: 20));
+    var current = uri;
+    late http.Response response;
+    for (var redirects = 0; redirects <= 5; redirects++) {
+      final request = http.Request('GET', current)..followRedirects = false;
+      response = await _network.sendForBytes(
+        request,
+        allowedSchemes: const {'https'},
+        maxResponseBytes: 2 * 1024 * 1024,
+        timeout: const Duration(seconds: 20),
+      );
+      if (![301, 302, 303, 307, 308].contains(response.statusCode)) break;
+      final location = response.headers['location'];
+      if (location == null || redirects == 5) {
+        throw const FormatException('Invalid OpenSubtitles redirect.');
+      }
+      current = await _network.validateRedirect(
+        current,
+        location,
+        allowedSchemes: const {'https'},
+      );
+    }
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception(
         'OpenSubtitles v3 request failed (HTTP ${response.statusCode}).',

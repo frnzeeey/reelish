@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:flutter_js/javascript_runtime.dart';
 import 'package:http/http.dart' as http;
@@ -16,14 +15,19 @@ class ProviderFetchBridge {
   static const _maxRequestBodyBytes = 2 * 1024 * 1024;
   static const _maxResponseBodyBytes = 2 * 1024 * 1024;
 
-  ProviderFetchBridge(this.runtime, this.client) {
+  ProviderFetchBridge(
+    this.runtime, [
+    this._testClient,
+    NetworkDestinationValidator? validator,
+  ]) : _validator = validator ?? NetworkDestinationValidator() {
     final setup = runtime.evaluate(_polyfill);
     if (setup.isError) throw StateError(setup.stringResult);
     runtime.onMessage('OnfeedFetch', _onFetch);
   }
 
   final JavascriptRuntime runtime;
-  final http.Client client;
+  final http.Client? _testClient;
+  final NetworkDestinationValidator _validator;
   bool _active = true;
   int _activeRequests = 0;
   final Queue<Map<String, dynamic>> _queuedRequests = Queue();
@@ -53,12 +57,18 @@ class ProviderFetchBridge {
     final id = data['id'];
     try {
       final uri = Uri.parse('${data['url'] ?? ''}');
-      if (!isSafeProviderTarget(uri)) {
-        throw const FormatException(
-          'Provider requests must use HTTPS to a public hostname.',
-        );
-      }
       var method = '${data['method'] ?? 'GET'}'.toUpperCase();
+      if (!const {
+        'GET',
+        'HEAD',
+        'POST',
+        'PUT',
+        'PATCH',
+        'DELETE',
+        'OPTIONS',
+      }.contains(method)) {
+        throw const FormatException('Provider HTTP method is not allowed.');
+      }
       final headers = data['headers'];
       final requestHeaders = <String, String>{};
       if (headers is Map) {
@@ -81,45 +91,44 @@ class ProviderFetchBridge {
                 ? (data['maxRedirects'] as num).toInt().clamp(0, 5)
                 : 5);
       var current = uri;
-      late http.StreamedResponse streamed;
-      late http.Request request;
+      late http.Response response;
       var redirectCount = 0;
       while (true) {
-        request = http.Request(method, current)
+        final request = http.Request(method, current)
           ..followRedirects = false
           ..headers.addAll(requestHeaders);
         if (requestBody != null) request.body = requestBody;
-        streamed = await client
-            .send(request)
-            .timeout(const Duration(seconds: 55));
-        if (![301, 302, 303, 307, 308].contains(streamed.statusCode)) break;
+        response = await _validator.sendForBytes(
+          request,
+          allowedSchemes: const {'https'},
+          maxRequestBytes: _maxRequestBodyBytes,
+          maxResponseBytes: _maxResponseBodyBytes,
+          timeout: const Duration(seconds: 20),
+          testClient: _testClient,
+        );
+        if (![301, 302, 303, 307, 308].contains(response.statusCode)) break;
 
-        final location = streamed.headers['location'];
-        await streamed.stream.listen((_) {}).cancel();
+        final location = response.headers['location'];
         if (location == null || redirectCount >= maxRedirects) {
           throw const FormatException('Invalid provider redirect.');
         }
-        final next = current.resolve(location);
-        if (!isSafeProviderTarget(next)) {
-          throw const FormatException(
-            'Provider redirects must stay on HTTPS public hosts.',
-          );
-        }
+        final next = await _validator.validateRedirect(
+          current,
+          location,
+          allowedSchemes: const {'https'},
+        );
         final sameOrigin =
             current.scheme == next.scheme &&
             current.host.toLowerCase() == next.host.toLowerCase() &&
             current.port == next.port;
         if (!sameOrigin) {
           requestHeaders.removeWhere(
-            (name, _) => const {
-              'authorization',
-              'cookie',
-              'proxy-authorization',
-            }.contains(name.toLowerCase()),
+            (name, _) =>
+                !const {'accept', 'user-agent'}.contains(name.toLowerCase()),
           );
         }
-        if (streamed.statusCode == 303 ||
-            ((streamed.statusCode == 301 || streamed.statusCode == 302) &&
+        if (response.statusCode == 303 ||
+            ((response.statusCode == 301 || response.statusCode == 302) &&
                 method != 'GET' &&
                 method != 'HEAD')) {
           method = 'GET';
@@ -134,34 +143,19 @@ class ProviderFetchBridge {
         redirectCount++;
       }
 
-      final responseBytes = BytesBuilder(copy: false);
-      var responseSize = 0;
-      await for (final chunk in streamed.stream.timeout(
-        const Duration(seconds: 55),
-      )) {
-        responseSize += chunk.length;
-        if (responseSize > _maxResponseBodyBytes) {
-          throw const FormatException('Provider response is too large.');
-        }
-        responseBytes.add(chunk);
-      }
-      final bytes = responseBytes.takeBytes();
+      final bytes = response.bodyBytes;
       if (!_active) return;
-      // IOClient keeps `request.url` as the original URL. Its response also
-      // implements BaseResponseWithUrl, which contains the final redirect URL.
-      final responseUrl = streamed is http.BaseResponseWithUrl
-          ? (streamed as http.BaseResponseWithUrl).url
-          : streamed.request?.url ?? current;
-      final response = {
-        'status': streamed.statusCode,
-        'statusText': _reasonPhrase(streamed.statusCode),
+      final responseUrl = response.request?.url ?? current;
+      final payload = {
+        'status': response.statusCode,
+        'statusText': _reasonPhrase(response.statusCode),
         'url': responseUrl.toString(),
         'originalUrl': uri.toString(),
-        'headers': streamed.headers,
+        'headers': response.headers,
         'body': utf8.decode(bytes, allowMalformed: true),
       };
       runtime.evaluate(
-        'globalThis.__onfeedFetchResolve(${jsonEncode(id)}, ${jsonEncode(response)});',
+        'globalThis.__onfeedFetchResolve(${jsonEncode(id)}, ${jsonEncode(payload)});',
       );
     } catch (error) {
       if (!_active) return;

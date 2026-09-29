@@ -28,11 +28,16 @@ class PluginsScreen extends StatelessWidget {
             ),
           ],
         ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () =>
-              NuvioPluginInstallerModal.show(context, pluginService),
-          icon: const Icon(Icons.add_rounded),
-          label: const Text('Install plugin'),
+        floatingActionButton: Padding(
+          // The app-wide glass dock overlays this nested screen's Scaffold.
+          // Lift the action above it and leave a small visual gap.
+          padding: const EdgeInsets.only(bottom: 84),
+          child: FloatingActionButton.extended(
+            onPressed: () =>
+                NuvioPluginInstallerModal.show(context, pluginService),
+            icon: const Icon(Icons.add_rounded),
+            label: const Text('Install plugin'),
+          ),
         ),
         body: ListView(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),

@@ -31,5 +31,17 @@ void main() {
 
       expect(source.isTorrent, isTrue);
     });
+
+    test('accepts normal mixed-case playback header names', () {
+      final source = StreamSource.fromJson({
+        'url': 'https://media.example/video.m3u8',
+        'headers': {
+          'Referer': 'https://provider.example/',
+          'User-Agent': 'Player',
+        },
+      });
+
+      expect(source.isPlayable, isTrue);
+    });
   });
 }

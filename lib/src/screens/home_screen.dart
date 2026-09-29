@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:feather_icon_font/feather_icon_font.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/media_item.dart';
 import '../services/github_update_service.dart';
@@ -13,7 +14,6 @@ import '../widgets/category_chip.dart';
 import '../widgets/glass_box.dart';
 import '../widgets/media_card.dart';
 import '../widgets/soft_glass_dock.dart';
-import '../widgets/player/stream_selector_sheet.dart';
 import '../widgets/player/episode_selector_sheet.dart';
 import 'plugins_screen.dart';
 import 'library_screen.dart';
@@ -34,8 +34,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final _searchFocus = FocusNode();
   final _spotlightController = PageController();
   List<MediaItem> _items = [], _history = [];
+  List<MediaItem> _spotlightItems = [];
   List<MediaItem> _recommendations = [];
   List<MediaItem> _newReleases = [];
+  String? _catalogError;
   final Map<String, List<MediaItem>> _recommendationCache = {};
   bool _loading = true,
       _loadingNewReleases = false,
@@ -170,14 +172,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _load({String? query}) async {
-    if (mounted) setState(() => _loading = true);
+    if (mounted) {
+      setState(() {
+        _loading = true;
+        _catalogError = null;
+      });
+    }
     if (query == null && _category == 'For you') {
       unawaited(_loadNewReleases());
     }
+    Object? loadError;
     Future<List<MediaItem>> safe(Future<List<MediaItem>> future) async {
       try {
         return await future;
-      } catch (_) {
+      } catch (error) {
+        loadError ??= error;
         return [];
       }
     }
@@ -202,11 +211,32 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (!mounted) return;
     setState(() {
       _items = values;
+      _spotlightItems = _tmdb.spotlight([..._newReleases, ...values]);
       _loading = false;
+      _catalogError = loadError == null
+          ? null
+          : _catalogFailureMessage(loadError!);
     });
     if (query == null && _category == 'For you') {
       unawaited(_loadTopRecommendations(values));
     }
+  }
+
+  String _catalogFailureMessage(Object error) {
+    final message = error.toString();
+    if (message.contains('TMDB API key is not configured')) {
+      return 'TMDB is not configured. Add a valid API key, then restart the app.';
+    }
+    final status = RegExp(
+      r'TMDB request failed \((\d{3})\)',
+    ).firstMatch(message)?.group(1);
+    if (status == '401' || status == '403') {
+      return 'TMDB rejected the API key. Check that the configured key is active.';
+    }
+    if (status == '429') {
+      return 'TMDB is rate limiting requests. Wait a moment and retry.';
+    }
+    return 'Could not load titles from TMDB. Check your connection and retry.';
   }
 
   Future<void> _loadNewReleases() async {
@@ -217,6 +247,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       if (!mounted) return;
       setState(() {
         _newReleases = releases;
+        _spotlightItems = _tmdb.spotlight([...releases, ..._items]);
         _newReleasesLoaded = true;
         _loadingNewReleases = false;
       });
@@ -420,28 +451,42 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       setState(() => _resolvingStreams = true);
     }
     try {
-      final resolvedItem = await _tmdb.resolveIds(item);
+      // Resolve IMDb metadata for subtitles in parallel with stream discovery.
+      // Nuvio providers need the TMDB ID already present on the selected item;
+      // serially waiting for this optional lookup delays every playback start.
+      final externalIdsFuture = _tmdb.resolveIds(item);
       final episodeCode = season != null && episode != null
           ? ' S${season.toString().padLeft(2, '0')}E${episode.toString().padLeft(2, '0')}'
           : '';
-      final subtitleQuery =
-          '${item.name}$episodeCode${item.year.isNotEmpty ? ' ${item.year}' : ''}';
-      final playableItem = resolvedItem.copyWith(subtitleQuery: subtitleQuery);
-      final pluginId = await _tmdb.resolveTmdbId(playableItem);
-      final pluginItem = pluginId.isEmpty
-          ? playableItem
-          : playableItem.copyWith(id: pluginId);
-      final streams = await _nuvioPlugins.streams(
+      // Legacy items may carry an IMDb ID and need a TMDB lookup before
+      // providers can search. Bound this optional lookup so a slow TMDB
+      // response cannot delay provider discovery and playback startup.
+      final pluginId = await _tmdb
+          .resolveTmdbId(item)
+          .timeout(const Duration(seconds: 3), onTimeout: () => '');
+      final pluginItem = pluginId.isEmpty ? item : item.copyWith(id: pluginId);
+      final discovery = _nuvioPlugins.discoverStreams(
         pluginItem,
         season: season,
         episode: episode,
       );
+      final source = await discovery.firstSource;
       dismissSearchDialog();
-      if (!mounted) return;
+      if (!mounted) {
+        discovery.cancel();
+        return;
+      }
+      final resolvedItem = await externalIdsFuture.timeout(
+        const Duration(milliseconds: 100),
+        onTimeout: () => item,
+      );
+      final subtitleQuery =
+          '${item.name}$episodeCode${item.year.isNotEmpty ? ' ${item.year}' : ''}';
+      final playableItem = resolvedItem.copyWith(subtitleQuery: subtitleQuery);
       if (presentationContext == null) {
         setState(() => _resolvingStreams = false);
       }
-      if (streams.isEmpty) {
+      if (source == null) {
         ScaffoldMessenger.of(presentationContext ?? context).showSnackBar(
           SnackBar(
             duration: const Duration(seconds: 10),
@@ -462,15 +507,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         );
         return;
       }
-      final source = streams.length == 1
-          ? streams.first
-          : await StreamSelectorSheet.show(
-              presentationContext ?? context,
-              streams,
-              streams.first,
-              status: _nuvioPlugins.lastLookupMessage,
-            );
-      if (source == null || !mounted) return;
+      if (!mounted) {
+        discovery.cancel();
+        return;
+      }
       _spotlightTimer?.cancel();
       try {
         await Navigator.push(
@@ -479,7 +519,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             builder: (_) => PlayerScreen(
               item: playableItem,
               source: source,
-              sources: streams,
+              sources: discovery.sources,
+              discovery: discovery,
               storage: _storage,
               onRefreshSources: () => _nuvioPlugins.streams(
                 pluginItem,
@@ -490,6 +531,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
         );
       } finally {
+        discovery.cancel();
         if (mounted && ModalRoute.of(context)?.isCurrent == true) {
           _startSpotlightTimer();
         }
@@ -511,27 +553,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (_category == 'Continue watching')
       return _history.where((e) => e.resumeMs > 0).toList();
     return _items;
-  }
-
-  List<MediaItem> get _spotlightItems {
-    List<MediaItem> topRated(String type) {
-      final items = _items.where((item) => item.type == type).toList()
-        ..sort((a, b) {
-          final ratingA = double.tryParse(a.rating) ?? 0;
-          final ratingB = double.tryParse(b.rating) ?? 0;
-          return ratingB.compareTo(ratingA);
-        });
-      return items.take(6).toList();
-    }
-
-    final movies = topRated('movie');
-    final series = topRated('series');
-    final mixed = <MediaItem>[];
-    for (var index = 0; index < 6; index++) {
-      if (index < movies.length) mixed.add(movies[index]);
-      if (index < series.length) mixed.add(series[index]);
-    }
-    return mixed;
   }
 
   void _onSpotlightPageChanged(int page) {
@@ -576,7 +597,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 ),
               ),
               const Icon(
-                Icons.arrow_forward_ios_rounded,
+                FeatherIcons.chevronRight,
                 size: 14,
                 color: GlassTheme.muted,
               ),
@@ -695,7 +716,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             backgroundColor: Colors.white.withValues(alpha: .09),
             foregroundColor: Colors.white,
           ),
-          icon: const Icon(Icons.search_rounded),
+          icon: const Icon(FeatherIcons.search),
         ),
         const SizedBox(width: 5),
         IconButton(
@@ -705,7 +726,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             backgroundColor: Colors.white.withValues(alpha: .09),
             foregroundColor: Colors.white,
           ),
-          icon: const Icon(Icons.person_outline_rounded),
+          icon: const Icon(FeatherIcons.user),
         ),
       ],
     ),
@@ -739,7 +760,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                             _searchChanged(value);
                           },
                           decoration: InputDecoration(
-                            prefixIcon: const Icon(Icons.search_rounded),
+                            prefixIcon: const Icon(FeatherIcons.search),
                             hintText: 'Find your next favorite',
                             suffixIcon: _search.text.isEmpty
                                 ? null
@@ -750,7 +771,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                       setState(() {});
                                       _searchChanged('');
                                     },
-                                    icon: const Icon(Icons.close_rounded),
+                                    icon: const Icon(FeatherIcons.x),
                                   ),
                           ),
                         ),
@@ -759,7 +780,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       IconButton(
                         tooltip: 'Close search',
                         onPressed: _closeSearch,
-                        icon: const Icon(Icons.close_rounded),
+                        icon: const Icon(FeatherIcons.x),
                       ),
                     ],
                   )
@@ -834,7 +855,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           borderRadius: BorderRadius.circular(14),
                         ),
                         child: const Icon(
-                          Icons.add_link_rounded,
+                          FeatherIcons.link,
                           color: GlassTheme.primary,
                         ),
                       ),
@@ -863,7 +884,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           context,
                           _nuvioPlugins,
                         ),
-                        icon: const Icon(Icons.add_rounded),
+                        icon: const Icon(FeatherIcons.plus),
                       ),
                     ],
                   ),
@@ -877,6 +898,44 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 child: Center(child: CircularProgressIndicator()),
               ),
             ),
+          if (!_loading && _catalogError != null && _items.isNotEmpty)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(18, 10, 18, 0),
+                child: GlassBox(
+                  radius: 16,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        FeatherIcons.cloudOff,
+                        color: GlassTheme.muted,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          _catalogError!,
+                          style: const TextStyle(
+                            color: GlassTheme.muted,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Retry catalog',
+                        onPressed: () =>
+                            _load(query: isSearch ? _search.text.trim() : null),
+                        icon: const Icon(FeatherIcons.refreshCw),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           if (!_loading && _items.isEmpty)
             SliverToBoxAdapter(
               child: Padding(
@@ -886,24 +945,38 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 ),
                 child: Column(
                   children: [
-                    const Icon(
-                      Icons.movie_filter_outlined,
+                    Icon(
+                      _catalogError == null
+                          ? FeatherIcons.film
+                          : FeatherIcons.cloudOff,
                       size: 34,
                       color: GlassTheme.muted,
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      isSearch
-                          ? 'No results matching ${_search.text.trim()}'
-                          : 'Nothing to show just yet',
+                      _catalogError ??
+                          (isSearch
+                              ? 'No results matching ${_search.text.trim()}'
+                              : 'Nothing to show just yet'),
                       style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
                     const SizedBox(height: 5),
-                    const Text(
-                      'Try another search or refresh your picks.',
+                    Text(
+                      _catalogError == null
+                          ? 'Try another search or refresh your picks.'
+                          : 'Your API key is not shown in this message. Retry after checking the connection or key.',
                       textAlign: TextAlign.center,
                       style: TextStyle(color: GlassTheme.muted),
                     ),
+                    if (_catalogError != null) ...[
+                      const SizedBox(height: 12),
+                      OutlinedButton.icon(
+                        onPressed: () =>
+                            _load(query: isSearch ? _search.text.trim() : null),
+                        icon: const Icon(FeatherIcons.refreshCw),
+                        label: const Text('Retry'),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -1127,7 +1200,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       ),
                     ),
                     onPressed: () => _showDetails(item),
-                    icon: const Icon(Icons.info_outline_rounded),
+                    icon: const Icon(FeatherIcons.info),
                     label: const Text(
                       'Details',
                       style: TextStyle(fontWeight: FontWeight.w800),
@@ -1155,7 +1228,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         );
                       }
                     },
-                    icon: const Icon(Icons.add_rounded, size: 19),
+                    icon: const Icon(FeatherIcons.plus, size: 19),
                     label: const Text('My list'),
                   ),
                 ],

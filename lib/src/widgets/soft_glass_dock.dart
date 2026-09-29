@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:feather_icon_font/feather_icon_font.dart';
 
 import '../theme/glass_theme.dart';
 
@@ -15,9 +16,9 @@ class SoftGlassDock extends StatelessWidget {
   final ValueChanged<int> onSelected;
 
   static const _destinations = [
-    (Icons.explore_outlined, Icons.explore_rounded, 'Discover'),
-    (Icons.extension_outlined, Icons.extension_rounded, 'Plugins'),
-    (Icons.bookmark_border_rounded, Icons.bookmark_rounded, 'Library'),
+    (FeatherIcons.compass, FeatherIcons.compass, 'Discover'),
+    (FeatherIcons.box, FeatherIcons.box, 'Plugins'),
+    (FeatherIcons.bookmark, FeatherIcons.bookmark, 'Library'),
   ];
 
   @override

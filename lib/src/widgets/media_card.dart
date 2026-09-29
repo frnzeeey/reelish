@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:feather_icon_font/feather_icon_font.dart';
 import '../models/media_item.dart';
 import '../theme/glass_theme.dart';
 
@@ -62,7 +63,7 @@ class MediaCard extends StatelessWidget {
                     const ColoredBox(
                       color: GlassTheme.elevatedSurface,
                       child: Icon(
-                        Icons.movie_outlined,
+                        FeatherIcons.film,
                         size: 36,
                         color: Colors.white30,
                       ),
@@ -74,7 +75,7 @@ class MediaCard extends StatelessWidget {
                       cacheWidth: (146 * imagePixelRatio).round(),
                       errorBuilder: (_, __, ___) => const ColoredBox(
                         color: GlassTheme.elevatedSurface,
-                        child: Icon(Icons.movie_outlined),
+                        child: Icon(FeatherIcons.film),
                       ),
                     ),
                   const Positioned.fill(
@@ -126,7 +127,7 @@ class MediaCard extends StatelessWidget {
                           child: IconButton(
                             padding: EdgeInsets.zero,
                             onPressed: onFavorite,
-                            icon: const Icon(Icons.favorite_border, size: 17),
+                            icon: const Icon(FeatherIcons.heart, size: 17),
                           ),
                         ),
                       ),
@@ -158,21 +159,40 @@ class MediaCard extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(height: 3),
-                            Text(
-                              [
-                                    item.year,
-                                    if (item.rating.isNotEmpty)
-                                      '★ ${item.rating}',
-                                  ]
-                                  .where((value) => value.isNotEmpty)
-                                  .join('  ·  '),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: Colors.white70,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                              ),
+                            Row(
+                              children: [
+                                if (item.year.isNotEmpty)
+                                  Flexible(
+                                    child: Text(
+                                      item.year,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                if (item.rating.isNotEmpty) ...[
+                                  if (item.year.isNotEmpty)
+                                    const SizedBox(width: 7),
+                                  const Icon(
+                                    FeatherIcons.star,
+                                    size: 10,
+                                    color: GlassTheme.primary,
+                                  ),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    item.rating,
+                                    style: const TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                             if (progress > 0) ...[
                               const SizedBox(height: 7),

@@ -27,43 +27,72 @@ class StreamSource {
     this.headers = const {},
     this.subtitles = const [],
     this.providerName = '',
+    this.sourceId = '',
+    this.quality = '',
+    this.container = '',
+    this.codec = '',
+    this.expiresAt,
+    this.isDirect = true,
     this.infoHash = '',
     this.fileIdx = -1,
     this.torrentSources = const [],
   });
   final String name, url, description, providerName;
+  final String sourceId, quality, container, codec;
+  final DateTime? expiresAt;
+  final bool isDirect;
   final String infoHash;
   final int fileIdx;
   final List<String> torrentSources;
   bool get isTorrent =>
       url.toLowerCase().startsWith('magnet:') ||
       (url.isEmpty && infoHash.isNotEmpty);
-  bool get isPlayable => isTorrent || _hasSupportedUrl(url);
+  bool get isExpired =>
+      expiresAt != null && !expiresAt!.isAfter(DateTime.now());
+  bool get isPlayable =>
+      !isExpired &&
+      headers.entries.every(
+        (entry) =>
+            RegExp(
+              r"^[!#$%&'*+.^_`|~0-9a-z-]+$",
+            ).hasMatch(entry.key.toLowerCase()) &&
+            !entry.value.contains(RegExp(r'[\x00-\x08\x0a-\x1f\x7f]')),
+      ) &&
+      (isTorrent || _hasSupportedUrl(url));
   final Map<String, String> headers;
   final List<SubtitleTrack> subtitles;
 
   static bool _hasSupportedUrl(String raw) {
     final uri = Uri.tryParse(raw.trim());
     if (uri == null) return false;
-    switch (uri.scheme.toLowerCase()) {
-      case 'http':
-      case 'https':
-      case 'rtmp':
-      case 'rtmps':
-      case 'rtsp':
-      case 'rtsps':
-      case 'rtp':
-      case 'udp':
-      case 'tcp':
-      case 'srt':
-      case 'mms':
-      case 'mmsh':
-        return uri.hasAuthority && uri.host.isNotEmpty;
-      case 'file':
-        return uri.path.isNotEmpty;
-      default:
-        return false;
+    if (uri.userInfo.isNotEmpty || uri.scheme.toLowerCase() == 'file') {
+      return false;
     }
+    return const {
+          'http',
+          'https',
+          'rtmp',
+          'rtmps',
+          'rtsp',
+          'rtsps',
+          'rtp',
+          'udp',
+          'tcp',
+          'srt',
+          'mms',
+          'mmsh',
+        }.contains(uri.scheme.toLowerCase()) &&
+        uri.hasAuthority &&
+        uri.host.isNotEmpty;
+  }
+
+  static bool isSafeTorrentTracker(String raw) {
+    final uri = Uri.tryParse(raw);
+    return uri != null &&
+        const {'http', 'https', 'udp'}.contains(uri.scheme.toLowerCase()) &&
+        uri.hasAuthority &&
+        uri.userInfo.isEmpty &&
+        uri.host.isNotEmpty;
   }
 
   factory StreamSource.fromJson(
@@ -90,9 +119,10 @@ class StreamSource {
     };
     final normalizedHeaders = <String, String>{};
     for (final entry in raw.entries) {
-      final key = entry.key.trim().toLowerCase();
+      final key = entry.key.trim();
       final value = entry.value;
-      if (key.isNotEmpty && value != null) {
+      if (key.isNotEmpty &&
+          (value is String || value is num || value is bool)) {
         normalizedHeaders[key] = '$value';
       }
     }
@@ -101,6 +131,7 @@ class StreamSource {
         ? sourceList
               .whereType<String>()
               .where((source) => source.startsWith('tracker:'))
+              .where((source) => isSafeTorrentTracker(source.substring(8)))
               .toList()
         : const <String>[];
     return StreamSource(
@@ -108,6 +139,14 @@ class StreamSource {
       url: url,
       description: '${j['description'] ?? j['quality'] ?? j['title'] ?? ''}',
       providerName: providerName,
+      sourceId: '${j['id'] ?? j['sourceId'] ?? ''}',
+      quality: '${j['quality'] ?? j['resolution'] ?? ''}',
+      container: '${j['container'] ?? j['type'] ?? ''}',
+      codec: '${j['codec'] ?? ''}',
+      expiresAt: _parseExpiration(
+        j['expiresAt'] ?? j['expires'] ?? j['expiry'],
+      ),
+      isDirect: j['isDirect'] != false && j['direct'] != false,
       infoHash: '${j['infoHash'] ?? ''}',
       fileIdx: int.tryParse('${j['fileIdx'] ?? -1}') ?? -1,
       torrentSources: torrentSources,
@@ -116,6 +155,20 @@ class StreamSource {
           .whereType<Map>()
           .map((e) => SubtitleTrack.fromJson(Map<String, dynamic>.from(e)))
           .toList(),
+    );
+  }
+
+  static DateTime? _parseExpiration(dynamic value) {
+    if (value == null) return null;
+    final raw = value.toString();
+    final parsed = DateTime.tryParse(raw);
+    if (parsed != null) return parsed;
+    final seconds = int.tryParse(raw);
+    if (seconds == null) return null;
+    // Unix timestamps below 10^12 are conventionally expressed in seconds.
+    return DateTime.fromMillisecondsSinceEpoch(
+      seconds < 1000000000000 ? seconds * 1000 : seconds,
+      isUtc: true,
     );
   }
 }

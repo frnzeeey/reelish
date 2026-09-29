@@ -1,13 +1,98 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_js/flutter_js.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:onfeed/src/services/provider_fetch_bridge.dart';
+import 'package:onfeed/src/services/network_target_policy.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  test('plugin runtime exposes no native or secret-bearing APIs', () async {
+    final runtime = QuickJsRuntime2()..enableHandlePromises();
+    final mock = MockClient((request) async {
+      fail('private network request reached the HTTP client: ${request.url}');
+    });
+    final validator = NetworkDestinationValidator(
+      lookup: (_) async => [InternetAddress('93.184.216.34')],
+    );
+    final bridge = ProviderFetchBridge(runtime, mock, validator);
+
+    try {
+      final globals = runtime.evaluate('''
+        JSON.stringify({
+          process: typeof process,
+          require: typeof require,
+          localStorage: typeof localStorage,
+          document: typeof document,
+          dart: typeof Dart,
+          fetch: typeof fetch,
+          cookies: typeof document === 'undefined'
+        })
+      ''');
+      expect(globals.isError, isFalse);
+      expect(globals.stringResult, contains('"process":"undefined"'));
+      expect(globals.stringResult, contains('"require":"undefined"'));
+      expect(globals.stringResult, contains('"localStorage":"undefined"'));
+      expect(globals.stringResult, contains('"dart":"undefined"'));
+      expect(globals.stringResult, contains('"fetch":"function"'));
+
+      final privateFetch = await runtime.evaluateAsync('''
+        fetch('http://127.0.0.1/private')
+          .then(() => 'unexpected success')
+          .catch(error => 'blocked')
+      ''');
+      final result = await runtime
+          .handlePromise(privateFetch)
+          .timeout(const Duration(seconds: 5));
+      expect(result.stringResult, 'blocked');
+    } finally {
+      bridge.dispose();
+      mock.close();
+      final runtimeId = runtime.getEngineInstanceId();
+      runtime.dispose();
+      JavascriptRuntime.channelFunctionsRegistered.remove(runtimeId);
+    }
+  });
+
+  test('fetch bridge rejects a public-to-private redirect', () async {
+    var requestCount = 0;
+    final runtime = QuickJsRuntime2()..enableHandlePromises();
+    final client = MockClient((request) async {
+      requestCount++;
+      return http.Response(
+        '',
+        302,
+        headers: {'location': 'http://127.0.0.1/private'},
+      );
+    });
+    final validator = NetworkDestinationValidator(
+      lookup: (_) async => [InternetAddress('93.184.216.34')],
+    );
+    final bridge = ProviderFetchBridge(runtime, client, validator);
+
+    try {
+      final call = await runtime.evaluateAsync('''
+        fetch('https://provider.example.org/start')
+          .then(() => 'unexpected success')
+          .catch(() => 'blocked')
+      ''');
+      final result = await runtime
+          .handlePromise(call)
+          .timeout(const Duration(seconds: 5));
+      expect(result.stringResult, 'blocked');
+      expect(requestCount, 1);
+    } finally {
+      bridge.dispose();
+      client.close();
+      final runtimeId = runtime.getEngineInstanceId();
+      runtime.dispose();
+      JavascriptRuntime.channelFunctionsRegistered.remove(runtimeId);
+    }
+  });
 
   test('fetch returns actual status, response body, and headers', () async {
     final runtime = QuickJsRuntime2()..enableHandlePromises();
@@ -27,12 +112,15 @@ void main() {
         request: request,
       );
     });
-    final bridge = ProviderFetchBridge(runtime, client);
+    final validator = NetworkDestinationValidator(
+      lookup: (_) async => [InternetAddress('93.184.216.34')],
+    );
+    final bridge = ProviderFetchBridge(runtime, client, validator);
 
     try {
       final result = runtime.evaluateAsync('''
         (async function() {
-          const url = new URL('/test?old=1', 'https://example.test/base');
+          const url = new URL('/test?old=1', 'https://provider.example.org/base');
           url.searchParams.set('q', 'hello world');
           const response = await fetch(url, {
             headers: new Headers({ 'X-Test': 'sent' })
@@ -61,7 +149,7 @@ void main() {
             token: 'abc123',
             name: 'Reelish App'
           }).toString();
-          const response = await fetch('https://example.test/test', {
+          const response = await fetch('https://provider.example.org/test', {
             method: 'POST', body
           });
           return response.status;
@@ -75,7 +163,7 @@ void main() {
       final xhrCall = await runtime.evaluateAsync('''
         new Promise(resolve => {
           const xhr = new XMLHttpRequest();
-          xhr.open('GET', 'https://example.test/test');
+          xhr.open('GET', 'https://provider.example.org/test');
           xhr.onload = () => resolve(JSON.stringify({
             status: xhr.status,
             header: xhr.getResponseHeader('x-provider-check'),

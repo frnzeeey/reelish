@@ -5,11 +5,13 @@ class NuvioPlugin {
     required this.filename,
     this.description = '',
     this.supportedTypes = const ['movie', 'tv'],
+    this.priority = 0,
     this.enabled = true,
   });
 
   final String id, name, filename, description;
   final List<String> supportedTypes;
+  final int priority;
   final bool enabled;
 
   NuvioPlugin copyWith({bool? enabled}) => NuvioPlugin(
@@ -18,6 +20,7 @@ class NuvioPlugin {
     filename: filename,
     description: description,
     supportedTypes: supportedTypes,
+    priority: priority,
     enabled: enabled ?? this.enabled,
   );
 
@@ -29,6 +32,7 @@ class NuvioPlugin {
     supportedTypes: (json['supportedTypes'] as List? ?? const ['movie', 'tv'])
         .map((type) => '$type')
         .toList(),
+    priority: int.tryParse('${json['priority'] ?? 0}') ?? 0,
     enabled: json['enabled'] != false,
   );
 }

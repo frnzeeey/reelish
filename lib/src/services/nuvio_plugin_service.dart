@@ -1,6 +1,6 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -13,17 +13,21 @@ import '../models/stream_source.dart';
 import 'provider_fetch_bridge.dart';
 import 'network_target_policy.dart';
 import 'storage_service.dart';
+import 'stream_discovery.dart';
 
 class NuvioPluginService extends ChangeNotifier {
   static Future<String>? _cheerioBundle;
+  static final _providerRuntimeSlots = _AsyncSemaphore(2);
 
   NuvioPluginService({StorageService? storage})
     : _storage = storage ?? StorageService();
 
   final StorageService _storage;
   final List<NuvioPluginRepository> repositories = [];
+  final NetworkDestinationValidator _networkDestinations =
+      NetworkDestinationValidator();
   final Map<String, String> errors = {};
-  final Map<String, int> _providerStreamSuccessCount = {};
+  final Map<String, StreamDiscovery> _inflightDiscoveries = {};
   Map<String, bool> _enabledOverrides = {};
   String? lastLookupMessage;
 
@@ -197,10 +201,42 @@ class NuvioPluginService extends ChangeNotifier {
           value['file'] != null ||
           value['script'] != null);
 
+  StreamDiscovery discoverStreams(MediaItem item, {int? season, int? episode}) {
+    final key = '${item.type}|${item.id}|${season ?? ''}|${episode ?? ''}';
+    final existing = _inflightDiscoveries[key];
+    if (existing != null && !existing.isCancelled) return existing;
+
+    final discovery = StreamDiscovery();
+    _inflightDiscoveries[key] = discovery;
+    unawaited(() async {
+      try {
+        await streams(
+          item,
+          season: season,
+          episode: episode,
+          onSource: discovery.add,
+          onCandidate: discovery.recordCandidate,
+          isCancelled: () => discovery.isCancelled,
+        );
+      } catch (error) {
+        lastLookupMessage = _friendly(error);
+      } finally {
+        discovery.complete();
+        if (identical(_inflightDiscoveries[key], discovery)) {
+          _inflightDiscoveries.remove(key);
+        }
+      }
+    }());
+    return discovery;
+  }
+
   Future<List<StreamSource>> streams(
     MediaItem item, {
     int? season,
     int? episode,
+    void Function(StreamSource source)? onSource,
+    void Function()? onCandidate,
+    bool Function()? isCancelled,
   }) async {
     final mediaType = item.type == 'series' ? 'tv' : 'movie';
     final providers = repositories
@@ -212,11 +248,7 @@ class NuvioPluginService extends ChangeNotifier {
             .where((entry) => _supportsMediaType(entry.$2, mediaType))
             .toList()
           ..sort((a, b) {
-            final aKey = '${a.$1.url}|${a.$2.id}';
-            final bKey = '${b.$1.url}|${b.$2.id}';
-            return (_providerStreamSuccessCount[bKey] ?? 0).compareTo(
-              _providerStreamSuccessCount[aKey] ?? 0,
-            );
+            return b.$2.priority.compareTo(a.$2.priority);
           });
     if (repositories.isEmpty) {
       lastLookupMessage =
@@ -240,7 +272,9 @@ class NuvioPluginService extends ChangeNotifier {
     var nextProviderIndex = 0;
     var stopStartingProviders = false;
     Future<void> runProviderWorker() async {
-      while (!stopStartingProviders && nextProviderIndex < available.length) {
+      while (!stopStartingProviders &&
+          !(isCancelled?.call() ?? false) &&
+          nextProviderIndex < available.length) {
         // Claim the index before the first await so each worker gets a
         // distinct provider. A small worker pool prevents 90+ enabled
         // providers from creating 90+ simultaneous QuickJS runtimes.
@@ -249,52 +283,98 @@ class NuvioPluginService extends ChangeNotifier {
         errors.remove(errorKey);
         try {
           final codeUrl = Uri.parse(repo.url).resolve(plugin.filename);
-          final codeClient = http.Client();
-          late final http.Response codeResponse;
-          try {
-            codeResponse = await _secureGet(
-              codeUrl,
-              timeout: const Duration(seconds: 12),
-              client: codeClient,
-            );
-          } finally {
-            codeClient.close();
-          }
+          final codeResponse = await _secureGet(
+            codeUrl,
+            timeout: const Duration(seconds: 12),
+          );
           if (codeResponse.statusCode < 200 || codeResponse.statusCode >= 300) {
             throw Exception(
               'Provider script request failed (${codeResponse.statusCode}).',
             );
           }
-          final runtime = QuickJsRuntime2(timeout: 60000)
-            ..enableHandlePromises();
-          final providerFetchClient = http.Client();
+          if (stopStartingProviders || (isCancelled?.call() ?? false)) return;
+          await _providerRuntimeSlots.acquire();
+          QuickJsRuntime2? runtime;
           ProviderFetchBridge? fetchBridge;
           try {
-            fetchBridge = ProviderFetchBridge(runtime, providerFetchClient);
-            if (RegExp(
-              r'''require\s*\(\s*['"](?:cheerio|cheerio-without-node-native|react-native-cheerio|crypto-js)['"]''',
-            ).hasMatch(codeResponse.body)) {
+            if (stopStartingProviders || (isCancelled?.call() ?? false)) return;
+            // The local flutter_js bridge resolves Android's exported QuickJS
+            // memory-limit symbol so each provider keeps a bounded JS heap.
+            final activeRuntime = QuickJsRuntime2(
+              timeout: 20000,
+              memoryLimit: 64 * 1024 * 1024,
+            )..enableHandlePromises();
+            runtime = activeRuntime;
+            fetchBridge = ProviderFetchBridge(
+              activeRuntime,
+              null,
+              _networkDestinations,
+            );
+            // Provider scripts often build package names dynamically, so
+            // matching only literal require('...') calls misses valid module
+            // requests such as `require(packageName)`. Detect the package
+            // references anywhere in the source and install the compatible
+            // modules before evaluating the provider.
+            final normalizedProviderCode = codeResponse.body.toLowerCase();
+            final needsCheerio = normalizedProviderCode.contains('cheerio');
+            // Providers sometimes join "crypto" and "js" at runtime, so a
+            // literal "crypto-js" search is not enough to find the import.
+            final needsCryptoJs = normalizedProviderCode.contains('crypto');
+            if (needsCheerio || needsCryptoJs) {
               final bundle = await (_cheerioBundle ??= rootBundle.loadString(
                 'assets/js/cheerio_bundle.js',
               ));
-              final loadedBundle = runtime.evaluate(bundle);
+              final loadedBundle = activeRuntime.evaluate(bundle);
               if (loadedBundle.isError) {
                 throw Exception(loadedBundle.stringResult);
               }
+              if (needsCheerio) {
+                final status = activeRuntime.evaluate(
+                  'typeof globalThis.__onfeedCheerio + ":" + '
+                  'String(!!globalThis.__onfeedCheerio)',
+                );
+                if (status.isError ||
+                    !const {
+                      'function:true',
+                      'object:true',
+                    }.contains(status.stringResult)) {
+                  throw StateError(
+                    'The bundled Cheerio module did not initialize '
+                    '(${status.stringResult}).',
+                  );
+                }
+              }
+              if (needsCryptoJs) {
+                final status = activeRuntime.evaluate(
+                  'typeof globalThis.__onfeedCryptoJs + ":" + '
+                  'String(!!globalThis.__onfeedCryptoJs)',
+                );
+                if (status.isError ||
+                    !const {
+                      'function:true',
+                      'object:true',
+                    }.contains(status.stringResult)) {
+                  throw StateError(
+                    'The bundled CryptoJS module did not initialize '
+                    '(${status.stringResult}).',
+                  );
+                }
+              }
             }
-            final setup = runtime.evaluate('''
+            final setup = activeRuntime.evaluate('''
             globalThis.module = { exports: {} };
             globalThis.exports = globalThis.module.exports;
             globalThis.SCRAPER_ID = ${jsonEncode(plugin.id)};
             globalThis.SCRAPER_SETTINGS = {};
             globalThis.require = function(name) {
-              if ((name === 'cheerio' || name === 'cheerio-without-node-native' || name === 'react-native-cheerio') && globalThis.__onfeedCheerio) {
+              const requestedModule = String(name).replace(/^node:/, '').toLowerCase();
+              if ((requestedModule === 'cheerio' || requestedModule === 'cheerio-without-node-native' || requestedModule === 'react-native-cheerio') && globalThis.__onfeedCheerio) {
                 return globalThis.__onfeedCheerio;
               }
-              if (name === 'crypto-js' && globalThis.__onfeedCryptoJs) {
+              if (requestedModule === 'crypto-js' && globalThis.__onfeedCryptoJs) {
                 return globalThis.__onfeedCryptoJs;
               }
-              throw new Error('Unsupported provider module: ' + name);
+              throw new Error('Unsupported provider module: ' + requestedModule);
             };
             globalThis.global = globalThis;
             globalThis.window = globalThis;
@@ -311,12 +391,12 @@ class NuvioPluginService extends ChangeNotifier {
             };
           ''');
             if (setup.isError) throw Exception(setup.stringResult);
-            final loaded = runtime.evaluate(
+            final loaded = activeRuntime.evaluate(
               '(function() {\n${codeResponse.body}\n})();',
               sourceUrl: codeUrl.toString(),
             );
             if (loaded.isError) throw Exception(loaded.stringResult);
-            final call = await runtime.evaluateAsync('''
+            final call = await activeRuntime.evaluateAsync('''
             (async function() {
               const provider = globalThis.module.exports || globalThis.exports || {};
               const getStreams = provider.getStreams || globalThis.getStreams;
@@ -325,7 +405,7 @@ class NuvioPluginService extends ChangeNotifier {
               }
               const streams = await getStreams(
                 ${jsonEncode(item.id)}, ${jsonEncode(mediaType)},
-                ${season == null ? 'undefined' : season}, ${episode == null ? 'undefined' : episode}
+                ${season?.toString() ?? 'undefined'}, ${episode?.toString() ?? 'undefined'}
               );
               return JSON.stringify({
                 streams: Array.isArray(streams) ? streams : [],
@@ -333,7 +413,7 @@ class NuvioPluginService extends ChangeNotifier {
               });
             })()
           ''');
-            final value = await runtime
+            final value = await activeRuntime
                 .handlePromise(call)
                 .timeout(const Duration(seconds: 15));
             final decoded = jsonDecode(value.stringResult);
@@ -348,26 +428,36 @@ class NuvioPluginService extends ChangeNotifier {
               streamEntries = const [];
             }
             for (final entry in streamEntries.whereType<Map>()) {
+              onCandidate?.call();
               final source = StreamSource.fromJson(
                 Map<String, dynamic>.from(entry),
                 providerName: plugin.name,
               );
               if (source.isPlayable) {
                 results.add(source);
-                final providerKey = '${repo.url}|${plugin.id}';
-                _providerStreamSuccessCount.update(
-                  providerKey,
-                  (count) => count + 1,
-                  ifAbsent: () => 1,
-                );
+                onSource?.call(source);
               }
             }
           } finally {
-            fetchBridge?.dispose();
-            providerFetchClient.close();
-            final runtimeId = runtime.getEngineInstanceId();
-            runtime.dispose();
-            JavascriptRuntime.channelFunctionsRegistered.remove(runtimeId);
+            try {
+              fetchBridge?.dispose();
+            } finally {
+              final activeRuntime = runtime;
+              try {
+                if (activeRuntime != null) {
+                  final runtimeId = activeRuntime.getEngineInstanceId();
+                  try {
+                    activeRuntime.dispose();
+                  } finally {
+                    JavascriptRuntime.channelFunctionsRegistered.remove(
+                      runtimeId,
+                    );
+                  }
+                }
+              } finally {
+                _providerRuntimeSlots.release();
+              }
+            }
           }
         } catch (error) {
           final message = _friendly(error);
@@ -377,12 +467,14 @@ class NuvioPluginService extends ChangeNotifier {
       }
     }
 
-    final workerCount = available.length < 8 ? available.length : 8;
+    // Fetch scripts concurrently; the shared runtime gate bounds JS heaps.
+    final workerCount = available.length < 4 ? available.length : 4;
+    const searchTimeout = Duration(seconds: 30);
     var searchTimedOut = false;
     try {
       await Future.wait(
         List.generate(workerCount, (_) => runProviderWorker()),
-      ).timeout(const Duration(seconds: 30));
+      ).timeout(searchTimeout);
     } on TimeoutException {
       // Stop workers from starting additional providers. Active provider
       // runtimes finish their own bounded request and clean themselves up.
@@ -398,9 +490,10 @@ class NuvioPluginService extends ChangeNotifier {
       unique.putIfAbsent(key, () => stream);
     }
     if (searchTimedOut) {
+      final timeoutSeconds = searchTimeout.inSeconds;
       lastLookupMessage = unique.isEmpty
-          ? 'Provider search stopped after 30 seconds without finding a stream. Try fewer enabled providers or try again.'
-          : 'Showing sources found in 30 seconds. Some providers did not finish.';
+          ? 'Provider search stopped after $timeoutSeconds seconds without finding a stream. Try fewer enabled providers or try again.'
+          : 'Showing sources found in $timeoutSeconds seconds. Some providers did not finish.';
     }
     if (unique.isEmpty) {
       if (searchTimedOut) {
@@ -435,11 +528,12 @@ class NuvioPluginService extends ChangeNotifier {
   Future<String> _normalizeUrl(String raw) async {
     final url = raw.trim();
     final uri = Uri.tryParse(url);
-    if (uri == null || !isSafeProviderTarget(uri)) {
+    if (uri == null) {
       throw Exception(
         'Use an HTTPS URL for a Nuvio plugin repository or manifest.',
       );
     }
+    await _networkDestinations.resolveDestination(uri);
 
     // Plugin directories commonly provide either a raw manifest link or a
     // GitHub repository/file link. Convert those links to the raw manifest
@@ -501,68 +595,79 @@ class NuvioPluginService extends ChangeNotifier {
     Uri uri, {
     Map<String, String> headers = const {},
     required Duration timeout,
-    http.Client? client,
   }) async {
-    if (!isSafeProviderTarget(uri)) {
-      throw const FormatException(
-        'Plugin requests must use HTTPS to a public hostname.',
+    var current = uri;
+    final requestHeaders = Map<String, String>.of(headers);
+    for (var redirects = 0; redirects <= 5; redirects++) {
+      final request = http.Request('GET', current)
+        ..followRedirects = false
+        ..headers.addAll(requestHeaders);
+      final response = await _networkDestinations.sendForBytes(
+        request,
+        allowedSchemes: const {'https'},
+        maxResponseBytes: 4 * 1024 * 1024,
+        timeout: timeout,
       );
-    }
-
-    final requestClient = client ?? http.Client();
-    try {
-      var current = uri;
-      for (var redirects = 0; redirects <= 5; redirects++) {
-        final request = http.Request('GET', current)
-          ..followRedirects = false
-          ..headers.addAll(headers);
-        final streamed = await requestClient.send(request).timeout(timeout);
-        if ({301, 302, 303, 307, 308}.contains(streamed.statusCode)) {
-          final location = streamed.headers['location'];
-          await streamed.stream.listen((_) {}).cancel();
-          if (location == null || redirects == 5) {
-            throw const FormatException('Invalid plugin redirect.');
-          }
-          final target = current.resolve(location);
-          if (!isSafeProviderTarget(target)) {
-            throw const FormatException(
-              'Plugin redirects must remain on HTTPS public hosts.',
-            );
-          }
-          current = target;
-          continue;
-        }
-
-        final bytes = BytesBuilder(copy: false);
-        var responseSize = 0;
-        await for (final chunk in streamed.stream.timeout(timeout)) {
-          responseSize += chunk.length;
-          if (responseSize > 4 * 1024 * 1024) {
-            throw const FormatException('Plugin response is too large.');
-          }
-          bytes.add(chunk);
-        }
-        return http.Response.bytes(
-          bytes.takeBytes(),
-          streamed.statusCode,
-          request: request,
-          headers: streamed.headers,
-          reasonPhrase: streamed.reasonPhrase,
+      if (![301, 302, 303, 307, 308].contains(response.statusCode)) {
+        return response;
+      }
+      final location = response.headers['location'];
+      if (location == null || redirects == 5) {
+        throw const FormatException('Invalid plugin redirect.');
+      }
+      final target = await _networkDestinations.validateRedirect(
+        current,
+        location,
+        allowedSchemes: const {'https'},
+      );
+      final sameOrigin =
+          current.scheme == target.scheme &&
+          current.host.toLowerCase() == target.host.toLowerCase() &&
+          current.port == target.port;
+      if (!sameOrigin) {
+        requestHeaders.removeWhere(
+          (name, _) =>
+              !const {'accept', 'user-agent'}.contains(name.toLowerCase()),
         );
       }
-      throw const FormatException('Too many plugin redirects.');
-    } finally {
-      if (client == null) requestClient.close();
+      current = target;
     }
+    throw const FormatException('Too many plugin redirects.');
   }
 
   String _friendly(Object error) {
     if (error is TimeoutException) {
       return 'This provider took too long to respond. Try again later or use another provider.';
     }
-    return error
-        .toString()
-        .replaceFirst('Exception: ', '')
-        .replaceFirst('FormatException: ', '');
+    return error.toString().replaceFirst(
+      RegExp(r'^[A-Za-z0-9_]*Exception:\s*'),
+      '',
+    );
+  }
+}
+
+class _AsyncSemaphore {
+  _AsyncSemaphore(this._capacity);
+
+  final int _capacity;
+  final Queue<Completer<void>> _waiters = Queue<Completer<void>>();
+  int _active = 0;
+
+  Future<void> acquire() {
+    if (_active < _capacity) {
+      _active++;
+      return Future<void>.value();
+    }
+    final waiter = Completer<void>();
+    _waiters.addLast(waiter);
+    return waiter.future;
+  }
+
+  void release() {
+    if (_waiters.isNotEmpty) {
+      _waiters.removeFirst().complete();
+      return;
+    }
+    _active--;
   }
 }

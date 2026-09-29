@@ -10,6 +10,8 @@ import 'package:path_provider/path_provider.dart';
 import '../../models/media_item.dart';
 import '../../models/stream_source.dart';
 import '../../services/storage_service.dart';
+import '../../services/stream_discovery.dart';
+import '../../services/network_target_policy.dart';
 import '../../services/open_subtitles_service.dart';
 import '../../theme/glass_theme.dart';
 import 'glass_controls_overlay.dart';
@@ -26,6 +28,7 @@ class CustomVideoPlayer extends StatefulWidget {
     required this.sources,
     required this.subtitles,
     required this.storage,
+    this.discovery,
     this.onRefreshSources,
   });
   final MediaItem item;
@@ -33,6 +36,7 @@ class CustomVideoPlayer extends StatefulWidget {
   final List<StreamSource> sources;
   final List<SubtitleTrack> subtitles;
   final StorageService storage;
+  final StreamDiscovery? discovery;
   final Future<List<StreamSource>> Function()? onRefreshSources;
   @override
   State<CustomVideoPlayer> createState() => _CustomVideoPlayerState();
@@ -62,11 +66,32 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   late List<StreamSource> _sources;
   final _openSubtitles = OpenSubtitlesService();
   bool _handlingFailure = false;
+  StreamSubscription<StreamSource>? _discoverySubscription;
+  final DateTime _playerStartedAt = DateTime.now();
+  final NetworkDestinationValidator _networkDestinations =
+      NetworkDestinationValidator();
   @override
   void initState() {
     super.initState();
     _sources = List.of(widget.sources);
     _source = widget.source;
+    _discoverySubscription = widget.discovery?.updates.listen((source) {
+      if (!mounted || !source.isPlayable) return;
+      final key = _sourceKey(source);
+      if (_sources.any((entry) => _sourceKey(entry) == key)) return;
+      setState(() => _sources.add(source));
+      if (_error && _attemptedSourceKeys.length < 5) {
+        final alternative = _nextAutomaticSource(
+          _sourceKey(_source ?? widget.source),
+        );
+        if (alternative == null) return;
+        setState(() {
+          _error = false;
+          _errorMessage = null;
+        });
+        unawaited(_initialize(alternative, resetAttempts: false));
+      }
+    });
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     _initialize(widget.source);
   }
@@ -109,8 +134,41 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
       _cues = [];
     }
     try {
-      if (source.isTorrent) source = await _prepareTorrent(source);
+      final isTorrent = source.isTorrent;
+      if (isTorrent) source = await _prepareTorrent(source);
+      if (!isTorrent) {
+        // media_kit/libmpv opens stream and playlist URLs in native code, so
+        // it cannot use the pinned Dart HTTP client. Resolve and reject unsafe
+        // destinations before handing them off. Dynamic provider hosts prevent
+        // a safe static Android cleartext allowlist; Android cleartext stays
+        // disabled globally while validated HTTP streams remain supported.
+        await _networkDestinations.resolveDestination(
+          Uri.parse(source.url),
+          allowedSchemes: const {
+            'https',
+            'http',
+            'rtmp',
+            'rtmps',
+            'rtsp',
+            'rtsps',
+            'rtp',
+            'udp',
+            'tcp',
+            'srt',
+            'mms',
+            'mmsh',
+          },
+        );
+      }
       if (!mounted || generation != _initializationGeneration) return;
+      NetworkDestinationValidator.validateHeaders(source.headers);
+      if (kDebugMode) {
+        // ignore: avoid_print
+        print(
+          '[Stream] Player initialization started (TTP) in '
+          '${DateTime.now().difference(_playerStartedAt).inMilliseconds}ms',
+        );
+      }
       final c = VideoPlayerController.networkUrl(
         Uri.parse(source.url),
         httpHeaders: source.headers,
@@ -121,26 +179,42 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
         await c.dispose();
         return;
       }
-      try {
-        if (c.isVideoTrackSupportAvailable()) {
-          _videoTracks = await c.getVideoTracks();
-          _videoTracks.sort((a, b) => (b.height ?? 0).compareTo(a.height ?? 0));
-        } else {
-          _videoTracks = [];
+      // Track menus are optional. Query both concurrently and never make
+      // playback wait indefinitely for a backend that does not expose tracks.
+      Future<void> loadVideoTracks() async {
+        try {
+          final tracks = c.isVideoTrackSupportAvailable()
+              ? await c.getVideoTracks()
+              : <VideoTrack>[];
+          if (generation != _initializationGeneration) return;
+          _videoTracks = tracks
+            ..sort((a, b) => (b.height ?? 0).compareTo(a.height ?? 0));
+        } catch (_) {
+          if (generation == _initializationGeneration) _videoTracks = [];
         }
-      } catch (_) {
-        // Track selection is optional; playback should continue without it.
-        _videoTracks = [];
       }
-      try {
-        _audioTracks = c.isAudioTrackSupportAvailable()
-            ? await c.getAudioTracks()
-            : [];
-      } catch (_) {
-        _audioTracks = [];
+
+      Future<void> loadAudioTracks() async {
+        try {
+          final tracks = c.isAudioTrackSupportAvailable()
+              ? await c.getAudioTracks()
+              : <VideoAudioTrack>[];
+          if (generation == _initializationGeneration) _audioTracks = tracks;
+        } catch (_) {
+          if (generation == _initializationGeneration) _audioTracks = [];
+        }
       }
+
+      await Future.wait<void>([
+        loadVideoTracks(),
+        loadAudioTracks(),
+      ]).timeout(const Duration(seconds: 2), onTimeout: () => <void>[]);
       c.addListener(_tick);
-      await c.setPlaybackSpeed(_speed);
+      try {
+        await c.setPlaybackSpeed(_speed).timeout(const Duration(seconds: 2));
+      } catch (_) {
+        // Playback at normal speed can proceed if the backend is slow here.
+      }
       if (widget.item.resumeMs > 0) {
         final resume = Duration(milliseconds: widget.item.resumeMs);
         final duration = c.value.duration;
@@ -150,7 +224,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
             : resume;
         if (safeResume > Duration.zero) {
           try {
-            await c.seekTo(safeResume);
+            await c.seekTo(safeResume).timeout(const Duration(seconds: 2));
           } catch (_) {
             // Some live streams do not support seeking; playback can continue.
           }
@@ -159,6 +233,13 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
       if (!mounted || generation != _initializationGeneration) return;
       await c.play();
       if (mounted && generation == _initializationGeneration) {
+        if (kDebugMode) {
+          // ignore: avoid_print
+          print(
+            '[Stream] Playback command accepted in '
+            '${DateTime.now().difference(_playerStartedAt).inMilliseconds}ms',
+          );
+        }
         setState(() => _ready = true);
         _scheduleHide();
       }
@@ -176,12 +257,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
         _torrentSession = null;
         final message = _safePlaybackError(error.toString());
         _attemptedSourceKeys.add(requestedSourceKey);
-        final alternative = _sources
-            .where(
-              (candidate) =>
-                  !_attemptedSourceKeys.contains(_sourceKey(candidate)),
-            )
-            .firstOrNull;
+        final alternative = _nextAutomaticSource(requestedSourceKey);
         if (alternative != null && _attemptedSourceKeys.length < 5) {
           await _initialize(alternative, resetAttempts: false);
           return;
@@ -208,6 +284,12 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   String _safePlaybackError(String error) {
     final cleaned = error.replaceFirst('Exception: ', '').trim();
     final normalized = cleaned.toLowerCase();
+    if (normalized.contains('failed to open') ||
+        normalized.contains('could not open')) {
+      // Native player errors may omit the URL scheme while still including a
+      // signed URL's path and query. Never show that raw input to the user.
+      return 'The selected stream could not be opened. Try another source or provider.';
+    }
     if (normalized.contains('failed to recognize file format') ||
         normalized.contains('unrecognizedinputformatexception') ||
         normalized.contains('unrecognized input format')) {
@@ -222,6 +304,37 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
         return uri?.host.isNotEmpty == true ? uri!.host : 'the stream URL';
       },
     );
+  }
+
+  StreamSource? _nextAutomaticSource(String failedSourceKey) {
+    final candidates = _sources
+        .where((source) => !_attemptedSourceKeys.contains(_sourceKey(source)))
+        .toList();
+    if (candidates.isEmpty) return null;
+
+    final failedSource =
+        _sources
+            .where((source) => _sourceKey(source) == failedSourceKey)
+            .firstOrNull ??
+        _source;
+    final failedProvider = failedSource?.providerName ?? '';
+    if (failedProvider.isEmpty) return candidates.first;
+
+    final differentProvider = candidates
+        .where((source) => source.providerName != failedProvider)
+        .firstOrNull;
+    if (differentProvider != null) return differentProvider;
+
+    final triedFromProvider = _sources
+        .where(
+          (source) =>
+              source.providerName == failedProvider &&
+              _attemptedSourceKeys.contains(_sourceKey(source)),
+        )
+        .length;
+    // Several links from one scraper often point to the same failing host.
+    // Give it one alternate, then let other providers finish and take over.
+    return triedFromProvider < 2 ? candidates.first : null;
   }
 
   Future<void> _retryPlayback() async {
@@ -286,12 +399,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     // available from Choose another.
     const maxAutomaticSources = 5;
     final alternative = _attemptedSourceKeys.length < maxAutomaticSources
-        ? _sources
-              .where(
-                (candidate) =>
-                    !_attemptedSourceKeys.contains(_sourceKey(candidate)),
-              )
-              .firstOrNull
+        ? _nextAutomaticSource(failedSourceKey)
         : null;
     if (alternative != null) {
       await _initialize(alternative, resetAttempts: false);
@@ -312,18 +420,60 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     if (!Theme.of(context).platform.toString().contains('android')) {
       throw UnsupportedError('Torrent streaming is available on Android only.');
     }
-    var magnet = source.url;
-    if (!magnet.startsWith('magnet:')) {
-      final hash = source.infoHash.trim();
-      if (hash.isEmpty) throw Exception('Torrent source has no info hash.');
-      magnet = 'magnet:?xt=urn:btih:$hash';
-      if (source.name.isNotEmpty)
-        magnet += '&dn=${Uri.encodeComponent(source.name)}';
-      for (final tracker in source.torrentSources) {
-        if (tracker.startsWith('tracker:'))
-          magnet += '&tr=${Uri.encodeComponent(tracker.substring(8))}';
+    final topicPattern = RegExp(
+      r'^urn:btih:(?:[0-9a-f]{40}|[a-z2-7]{32})$|^urn:btmh:1220[0-9a-f]{64}$',
+      caseSensitive: false,
+    );
+    final rawMagnet = source.url.toLowerCase().startsWith('magnet:')
+        ? Uri.tryParse(source.url)
+        : null;
+    final topic =
+        rawMagnet?.queryParametersAll['xt']
+            ?.where((value) => topicPattern.hasMatch(value))
+            .firstOrNull ??
+        (source.infoHash.isEmpty ? null : 'urn:btih:${source.infoHash.trim()}');
+    if (topic == null || !topicPattern.hasMatch(topic)) {
+      throw Exception('Torrent source has no valid info hash.');
+    }
+    final trackerCandidates = <String>{
+      ...?rawMagnet?.queryParametersAll['tr'],
+      ...source.torrentSources
+          .where((tracker) => tracker.startsWith('tracker:'))
+          .map((tracker) => tracker.substring(8)),
+    }.where(StreamSource.isSafeTorrentTracker).toList();
+    final trackerUrls = <String>[];
+    final trackersToCheck = trackerCandidates.take(8).toList();
+    var nextTracker = 0;
+    Future<void> validateTrackers() async {
+      while (nextTracker < trackersToCheck.length) {
+        final tracker = trackersToCheck[nextTracker++];
+        try {
+          await _networkDestinations.resolveDestination(
+            Uri.parse(tracker),
+            allowedSchemes: const {'http', 'https', 'udp'},
+          );
+          trackerUrls.add(tracker);
+        } catch (_) {
+          // Invalid, private, or unresolvable trackers are omitted. The native
+          // torrent engine performs its own peer/DHT networking beyond this
+          // Dart preflight, so this check narrows plugin-supplied tracker risk
+          // without claiming to pin native sockets.
+        }
       }
     }
+
+    await Future.wait(
+      List.generate(
+        trackersToCheck.length < 4 ? trackersToCheck.length : 4,
+        (_) => validateTrackers(),
+      ),
+    );
+    final query = <String, dynamic>{
+      'xt': topic,
+      if (source.name.isNotEmpty) 'dn': source.name,
+      if (trackerUrls.isNotEmpty) 'tr': trackerUrls,
+    };
+    final magnet = Uri(scheme: 'magnet', queryParameters: query).toString();
     final dir = await getApplicationDocumentsDirectory();
     final session = await FlutterTorrentStreamer().startStream(
       magnet,
@@ -331,9 +481,17 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     );
     _torrentSession = session;
     List<TorrentFile> files = [];
-    for (var i = 0; i < 60 && files.isEmpty; i++) {
-      await Future<void>.delayed(const Duration(seconds: 1));
-      files = await session.getFiles();
+    final metadataTimer = Stopwatch()..start();
+    while (files.isEmpty &&
+        metadataTimer.elapsed < const Duration(seconds: 30)) {
+      try {
+        files = await session.getFiles().timeout(const Duration(seconds: 1));
+      } on TimeoutException {
+        // Poll again until the bounded metadata deadline expires.
+      }
+      if (files.isEmpty) {
+        await Future<void>.delayed(const Duration(milliseconds: 500));
+      }
     }
     if (files.isEmpty) throw Exception('Torrent metadata did not load.');
     final videoFiles = files
@@ -426,8 +584,9 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
       _cues = [];
     });
     await _controller?.setPlaybackSpeed(_speed);
-    if (_videoTracks.isNotEmpty)
+    if (_videoTracks.isNotEmpty) {
       await _controller?.selectVideoTrack(_selectedVideoTrack);
+    }
     if (result.audioTrackId != null) {
       await _controller?.selectAudioTrack(result.audioTrackId!);
       if (mounted) {
@@ -566,12 +725,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
 
   Future<void> _loadSubtitle(SubtitleTrack track) async {
     try {
-      final response = await http
-          .get(Uri.parse(track.url), headers: track.headers)
-          .timeout(const Duration(seconds: 12));
-      if (response.statusCode < 200 || response.statusCode >= 300)
-        throw Exception();
-      final raw = response.body.replaceAll('\r', '');
+      final raw = (await _fetchSubtitle(track)).replaceAll('\r', '');
       final cues = <_Cue>[];
       final reg = RegExp(
         r'((?:\d{2}:)?\d{2}:\d{2}[,.]\d{3})\s*-->\s*((?:\d{2}:)?\d{2}:\d{2}[,.]\d{3})',
@@ -604,16 +758,61 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
             .replaceAll('&gt;', '>')
             .replaceAll('&nbsp;', ' ')
             .trim();
-        if (text.isNotEmpty)
+        if (text.isNotEmpty) {
           cues.add(_Cue(sec(m.group(1)!), sec(m.group(2)!), text));
+        }
       }
       if (mounted) setState(() => _cues = cues);
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Could not load subtitles.')),
         );
+      }
     }
+  }
+
+  Future<String> _fetchSubtitle(SubtitleTrack track) async {
+    var current = Uri.parse(track.url);
+    final headers = Map<String, String>.of(track.headers);
+    for (var redirects = 0; redirects <= 5; redirects++) {
+      final request = http.Request('GET', current)
+        ..followRedirects = false
+        ..headers.addAll(headers);
+      final response = await _networkDestinations.sendForBytes(
+        request,
+        allowedSchemes: const {'https'},
+        maxResponseBytes: 4 * 1024 * 1024,
+        timeout: const Duration(seconds: 12),
+      );
+      if (![301, 302, 303, 307, 308].contains(response.statusCode)) {
+        if (response.statusCode < 200 || response.statusCode >= 300) {
+          throw const FormatException('Subtitle request failed.');
+        }
+        return utf8.decode(response.bodyBytes, allowMalformed: true);
+      }
+      final location = response.headers['location'];
+      if (location == null || redirects == 5) {
+        throw const FormatException('Invalid subtitle redirect.');
+      }
+      final next = await _networkDestinations.validateRedirect(
+        current,
+        location,
+        allowedSchemes: const {'https'},
+      );
+      final sameOrigin =
+          current.scheme == next.scheme &&
+          current.host.toLowerCase() == next.host.toLowerCase() &&
+          current.port == next.port;
+      if (!sameOrigin) {
+        headers.removeWhere(
+          (name, _) =>
+              !const {'accept', 'user-agent'}.contains(name.toLowerCase()),
+        );
+      }
+      current = next;
+    }
+    throw const FormatException('Too many subtitle redirects.');
   }
 
   void _hintFor(String text) {
@@ -626,6 +825,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
 
   @override
   void dispose() {
+    _discoverySubscription?.cancel();
     _initializationGeneration++;
     _saveProgress();
     _hide?.cancel();

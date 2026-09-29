@@ -7,7 +7,9 @@ void main() {
     SharedPreferences.setMockInitialValues({});
 
     await tester.pumpWidget(const ReelishApp());
-    await tester.pump(const Duration(seconds: 1));
+    // Let fail-closed startup network lookups reach their DNS timeout so the
+    // widget test does not finish with a pending timer.
+    await tester.pump(const Duration(seconds: 6));
 
     expect(find.text('Discover'), findsOneWidget);
     expect(find.text('Plugins'), findsOneWidget);

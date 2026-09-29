@@ -3,10 +3,13 @@ import 'package:http/http.dart' as http;
 import '../../tmdb_config.local.dart' as tmdb_config;
 import '../models/media_details.dart';
 import '../models/media_item.dart';
+import 'media_discovery_ranking.dart';
+import 'network_target_policy.dart';
 
 class TmdbService {
   static const _base = 'https://api.themoviedb.org/3';
   static const _key = tmdb_config.tmdbApiKey;
+  final NetworkDestinationValidator _network = NetworkDestinationValidator();
   final Map<String, MediaDetails> _detailsCache = {};
   final Map<String, String> _resolvedTmdbIds = {};
   final Map<String, List<Map<String, dynamic>>> _seasonsCache = {};
@@ -60,21 +63,22 @@ class TmdbService {
 
   Future<List<MediaItem>> newReleases() async {
     final today = DateTime.now().toUtc();
-    final from = today.subtract(const Duration(days: 180));
+    final from = today.subtract(MediaDiscoveryRanking.newReleaseWindow);
     String date(DateTime value) =>
         '${value.year.toString().padLeft(4, '0')}-'
         '${value.month.toString().padLeft(2, '0')}-'
         '${value.day.toString().padLeft(2, '0')}';
 
-    Future<List<Map<String, dynamic>>> discover(
-      String type,
-      String dateField,
-    ) async {
+    Future<List<Map<String, dynamic>>> discover({
+      required String type,
+      required Map<String, String> dateFilters,
+      required String sortField,
+    }) async {
       final data = await _get('/discover/$type', {
-        '$dateField.gte': date(from),
-        '$dateField.lte': date(today),
-        'sort_by': '$dateField.desc',
-        'vote_count.gte': '10',
+        ...dateFilters,
+        'sort_by': '$sortField.desc',
+        'vote_count.gte': '${MediaDiscoveryRanking.voteThreshold}',
+        'vote_average.gte': '${MediaDiscoveryRanking.ratingThreshold}',
         'page': '1',
       });
       return ((data['results'] as List?) ?? const [])
@@ -84,24 +88,55 @@ class TmdbService {
     }
 
     final results = await Future.wait([
-      discover('movie', 'primary_release_date'),
-      discover('tv', 'first_air_date'),
+      discover(
+        type: 'movie',
+        dateFilters: {
+          'primary_release_date.gte': date(from),
+          'primary_release_date.lte': date(today),
+        },
+        sortField: 'primary_release_date',
+      ),
+      discover(
+        type: 'tv',
+        dateFilters: {
+          'first_air_date.gte': date(from),
+          'first_air_date.lte': date(today),
+        },
+        sortField: 'first_air_date',
+      ),
+      // This separate query includes ongoing shows with episodes in the
+      // window, even when their first_air_date is much older. The API result
+      // omits the matched episode date, so retain the fact that it passed this
+      // server-side air-date filter for local ranking.
+      discover(
+        type: 'tv',
+        dateFilters: {'air_date.gte': date(from), 'air_date.lte': date(today)},
+        sortField: 'popularity',
+      ),
     ]);
-    final releases = <({MediaItem item, String releaseDate})>[];
+    final releases = <MediaItem>[];
     for (var index = 0; index < results.length; index++) {
       final type = index == 0 ? 'movie' : 'tv';
-      final dateField = index == 0 ? 'release_date' : 'first_air_date';
       for (final entry in results[index]) {
-        final releaseDate = '${entry[dateField] ?? ''}';
-        if (releaseDate.isEmpty) continue;
-        releases.add((
-          item: MediaItem.fromTmdb(entry, mediaType: type),
-          releaseDate: releaseDate,
-        ));
+        final normalized = index == 2
+            ? {...entry, 'hasRecentEpisode': true}
+            : entry;
+        releases.add(MediaItem.fromTmdb(normalized, mediaType: type));
       }
     }
-    releases.sort((a, b) => b.releaseDate.compareTo(a.releaseDate));
-    return releases.take(20).map((release) => release.item).toList();
+    return MediaDiscoveryRanking.newReleases(releases).take(20).toList();
+  }
+
+  List<MediaItem> spotlight(Iterable<MediaItem> candidates) {
+    final ranked = MediaDiscoveryRanking.spotlightCandidates(candidates);
+    final movies = ranked.where((item) => item.type == 'movie').take(6);
+    final series = ranked.where((item) => item.type == 'series').take(6);
+    final featured = <MediaItem>[];
+    for (var index = 0; index < 6; index++) {
+      if (index < movies.length) featured.add(movies.elementAt(index));
+      if (index < series.length) featured.add(series.elementAt(index));
+    }
+    return featured;
   }
 
   Future<MediaDetails> details(MediaItem item) async {
@@ -117,8 +152,9 @@ class TmdbService {
       'append_to_response': 'credits',
     });
     final details = MediaDetails.fromTmdb(data);
-    if (_detailsCache.length >= 100)
+    if (_detailsCache.length >= 100) {
       _detailsCache.remove(_detailsCache.keys.first);
+    }
     _detailsCache[cacheKey] = details;
     return details;
   }
@@ -133,8 +169,9 @@ class TmdbService {
   }
 
   Future<MediaItem> resolveIds(MediaItem item) async {
-    if (item.externalId.isNotEmpty || int.tryParse(item.id) == null)
+    if (item.externalId.isNotEmpty || int.tryParse(item.id) == null) {
       return item;
+    }
     final type = item.type == 'series' ? 'tv' : 'movie';
     try {
       final result = await _get(
@@ -218,12 +255,28 @@ class TmdbService {
 
   Future<List<Map<String, dynamic>>> allEpisodes(MediaItem item) async {
     final seasonsList = await seasons(item);
-    final output = <Map<String, dynamic>>[];
-    for (final season in seasonsList) {
-      output.addAll(
-        await episodes(item, (season['season_number'] as num).toInt()),
-      );
+    final episodesBySeason = List<List<Map<String, dynamic>>>.generate(
+      seasonsList.length,
+      (_) => <Map<String, dynamic>>[],
+    );
+    var nextSeason = 0;
+    Future<void> loadSeasonWorker() async {
+      while (nextSeason < seasonsList.length) {
+        final index = nextSeason++;
+        final seasonNumber = (seasonsList[index]['season_number'] as num)
+            .toInt();
+        try {
+          episodesBySeason[index] = await episodes(item, seasonNumber);
+        } catch (_) {
+          // One missing season should not block the other episodes from being
+          // selectable.
+        }
+      }
     }
+
+    final workerCount = seasonsList.length < 4 ? seasonsList.length : 4;
+    await Future.wait(List.generate(workerCount, (_) => loadSeasonWorker()));
+    final output = episodesBySeason.expand((season) => season).toList();
     return output;
   }
 
@@ -235,7 +288,27 @@ class TmdbService {
     final uri = Uri.parse(
       '$_base$path',
     ).replace(queryParameters: {'api_key': _key, ...params});
-    final response = await http.get(uri).timeout(const Duration(seconds: 12));
+    var current = uri;
+    late http.Response response;
+    for (var redirects = 0; redirects <= 3; redirects++) {
+      final request = http.Request('GET', current)..followRedirects = false;
+      response = await _network.sendForBytes(
+        request,
+        allowedSchemes: const {'https'},
+        maxResponseBytes: 5 * 1024 * 1024,
+        timeout: const Duration(seconds: 12),
+      );
+      if (![301, 302, 303, 307, 308].contains(response.statusCode)) break;
+      final location = response.headers['location'];
+      if (location == null || redirects == 3) {
+        throw const FormatException('Invalid TMDB redirect.');
+      }
+      current = await _network.validateRedirect(
+        current,
+        location,
+        allowedSchemes: const {'https'},
+      );
+    }
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception('TMDB request failed (${response.statusCode}).');
     }
