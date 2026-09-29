@@ -1,29 +1,44 @@
 import 'package:flutter/material.dart';
 
 abstract final class GlassTheme {
-  static const background = Color(0xFF080B12);
-  static const cyan = Color(0xFF72F2D0);
-  static const violet = Color(0xFF9582FF);
-  static const muted = Color(0xFF9BA5B7);
-  static const surface = Color(0xFF121722);
-  static const border = Color(0xFF252D3B);
-  static const gradient = LinearGradient(colors: [cyan, violet]);
+  static const primary = Color(0xFFFF4D6D);
+  static const coralBright = Color(0xFFFF6B85);
+  static const coralDark = Color(0xFFD93655);
+  static const coralGlow = Color(0x33FF4D6D);
+  static const background = Color(0xFF0B0B0F);
+  static const textPrimary = Color(0xFFF7F7F9);
+  static const muted = Color(0xFFA5A5B2);
+  static const disabled = Color(0xFF62626D);
+  static const surface = Color(0xFF15151C);
+  static const elevatedSurface = Color(0xFF202029);
+  static const border = Color(0x1AFFFFFF);
+  static const glassBackground = Color(0x0FFFFFFF);
+  static const glassStrong = Color(0x17FFFFFF);
+  static const gradient = LinearGradient(colors: [coralBright, primary]);
   static ThemeData get dark => ThemeData(
     brightness: Brightness.dark,
     fontFamily: 'Montserrat',
     scaffoldBackgroundColor: background,
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: cyan,
-      brightness: Brightness.dark,
-    ),
+    colorScheme:
+        ColorScheme.fromSeed(
+          seedColor: primary,
+          brightness: Brightness.dark,
+        ).copyWith(
+          primary: primary,
+          onPrimary: background,
+          secondary: coralBright,
+          onSecondary: textPrimary,
+          surface: surface,
+          onSurface: textPrimary,
+        ),
     useMaterial3: true,
     navigationBarTheme: NavigationBarThemeData(
-      backgroundColor: const Color(0xFF0D111A),
-      indicatorColor: cyan.withValues(alpha: .15),
+      backgroundColor: glassBackground,
+      indicatorColor: coralGlow,
       elevation: 0,
       labelTextStyle: WidgetStateProperty.resolveWith(
         (states) => TextStyle(
-          color: states.contains(WidgetState.selected) ? cyan : muted,
+          color: states.contains(WidgetState.selected) ? primary : muted,
           fontSize: 11,
           fontWeight: states.contains(WidgetState.selected)
               ? FontWeight.w700
@@ -33,9 +48,9 @@ abstract final class GlassTheme {
     ),
     snackBarTheme: const SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
-      backgroundColor: Color(0xFF202838),
+      backgroundColor: elevatedSurface,
       contentTextStyle: TextStyle(color: Colors.white),
-      actionTextColor: cyan,
+      actionTextColor: primary,
     ),
     appBarTheme: const AppBarTheme(
       backgroundColor: background,

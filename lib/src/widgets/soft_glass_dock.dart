@@ -32,9 +32,9 @@ class SoftGlassDock extends StatelessWidget {
           height: 72,
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
           decoration: BoxDecoration(
-            color: const Color(0x10111721),
+            color: GlassTheme.glassBackground,
             borderRadius: BorderRadius.circular(26),
-            border: Border.all(color: Colors.white.withValues(alpha: .12)),
+            border: Border.all(color: Colors.white.withValues(alpha: .10)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: .32),
@@ -101,7 +101,7 @@ class _DockItem extends StatelessWidget {
                 Icon(
                   selected ? selectedIcon : icon,
                   size: 22,
-                  color: selected ? GlassTheme.cyan : Colors.white70,
+                  color: selected ? GlassTheme.primary : Colors.white70,
                 ),
                 const SizedBox(height: 3),
                 Text(
@@ -109,7 +109,7 @@ class _DockItem extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 10,
                     height: 1,
-                    color: selected ? GlassTheme.cyan : GlassTheme.muted,
+                    color: selected ? GlassTheme.primary : GlassTheme.muted,
                     fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                   ),
                 ),

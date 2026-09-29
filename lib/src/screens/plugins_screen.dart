@@ -67,7 +67,7 @@ class PluginsScreen extends StatelessWidget {
                     Icon(
                       Icons.travel_explore_rounded,
                       size: 38,
-                      color: GlassTheme.cyan,
+                      color: GlassTheme.primary,
                     ),
                     SizedBox(height: 10),
                     Text(
@@ -94,7 +94,7 @@ class PluginsScreen extends StatelessWidget {
                     child: ExpansionTile(
                       leading: const Icon(
                         Icons.browse_gallery_rounded,
-                        color: GlassTheme.cyan,
+                        color: GlassTheme.primary,
                       ),
                       title: Text(
                         repo.name,

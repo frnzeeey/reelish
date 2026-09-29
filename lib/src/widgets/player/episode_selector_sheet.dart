@@ -90,7 +90,7 @@ class _EpisodeSelectorSheetState extends State<EpisodeSelectorSheet> {
                             ListTile(
                               leading: const Icon(
                                 Icons.play_circle_outline,
-                                color: GlassTheme.cyan,
+                                color: GlassTheme.primary,
                               ),
                               title: Text(
                                 'E${(e['episode_number'] as num).toInt().toString().padLeft(2, '0')}  ${e['name']}',

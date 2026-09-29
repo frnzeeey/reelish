@@ -59,7 +59,9 @@ class StreamSelectorSheet extends StatelessWidget {
                         s.url == selected.url
                             ? Icons.radio_button_checked
                             : Icons.play_circle_outline,
-                        color: s.url == selected.url ? GlassTheme.cyan : null,
+                        color: s.url == selected.url
+                            ? GlassTheme.primary
+                            : null,
                       ),
                       title: Text(s.name),
                       subtitle: Text(

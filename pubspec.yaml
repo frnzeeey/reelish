@@ -36,7 +36,9 @@ dependencies:
   cupertino_icons: ^1.0.8
   flutter_svg: ^2.3.0
   http: ^1.6.0
+  package_info_plus: ^10.2.1
   shared_preferences: ^2.5.5
+  url_launcher: ^6.3.2
   video_player: ^2.14.0
   video_player_media_kit:
     path: packages/video_player_media_kit
@@ -60,7 +62,7 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   image_path: assets/icons/reelish_icon.png
-  adaptive_icon_background: "#101112"
+  adaptive_icon_background: "#FF6B85"
   adaptive_icon_foreground: assets/icons/reelish_icon.png
   adaptive_icon_foreground_inset: 16
 
@@ -77,6 +79,7 @@ flutter:
   assets:
     - assets/js/cheerio_bundle.js
     - assets/fonts/Montserrat-OFL.txt
+    - assets/icons/reelish_icon.png
 
   fonts:
     - family: Montserrat

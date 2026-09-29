@@ -510,7 +510,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
         builder: (context) => Padding(
           padding: const EdgeInsets.all(14),
           child: Material(
-            color: const Color(0xFF171D29),
+            color: GlassTheme.surface,
             borderRadius: BorderRadius.circular(24),
             child: ListView(
               shrinkWrap: true,
@@ -760,7 +760,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
                         ],
                       ),
                     )
-                  : const CircularProgressIndicator(color: GlassTheme.cyan),
+                  : const CircularProgressIndicator(color: GlassTheme.primary),
             ),
           if (c != null &&
               _ready &&

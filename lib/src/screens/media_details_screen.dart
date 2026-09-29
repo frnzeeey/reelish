@@ -166,13 +166,13 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                             const Icon(
                               Icons.star_rounded,
                               size: 15,
-                              color: GlassTheme.cyan,
+                              color: GlassTheme.primary,
                             ),
                             const SizedBox(width: 3),
                             Text(
                               rating.toStringAsFixed(1),
                               style: const TextStyle(
-                                color: GlassTheme.cyan,
+                                color: GlassTheme.primary,
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
                               ),
@@ -201,7 +201,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                   padding: EdgeInsets.only(top: 24),
                   child: Icon(
                     Icons.play_circle_fill_rounded,
-                    color: GlassTheme.cyan,
+                    color: GlassTheme.primary,
                     size: 26,
                   ),
                 ),
@@ -254,10 +254,10 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
               fit: BoxFit.cover,
               cacheWidth: (size.width * pixelRatio).round(),
               errorBuilder: (_, __, ___) =>
-                  const ColoredBox(color: Color(0xFF202839)),
+                  ColoredBox(color: GlassTheme.elevatedSurface),
             )
           else
-            const ColoredBox(color: Color(0xFF202839)),
+            ColoredBox(color: GlassTheme.elevatedSurface),
           const DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -308,16 +308,16 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: GlassTheme.cyan.withValues(alpha: .16),
+                    color: GlassTheme.primary.withValues(alpha: .16),
                     borderRadius: BorderRadius.circular(30),
                     border: Border.all(
-                      color: GlassTheme.cyan.withValues(alpha: .35),
+                      color: GlassTheme.primary.withValues(alpha: .35),
                     ),
                   ),
                   child: Text(
                     item.type == 'series' ? 'SERIES' : 'MOVIE',
                     style: const TextStyle(
-                      color: GlassTheme.cyan,
+                      color: GlassTheme.primary,
                       fontSize: 10,
                       letterSpacing: 1.1,
                       fontWeight: FontWeight.w800,
@@ -375,19 +375,19 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
     decoration: BoxDecoration(
       color: highlight
-          ? GlassTheme.cyan.withValues(alpha: .15)
+          ? GlassTheme.primary.withValues(alpha: .15)
           : Colors.white.withValues(alpha: .10),
       borderRadius: BorderRadius.circular(24),
       border: Border.all(
         color: highlight
-            ? GlassTheme.cyan.withValues(alpha: .3)
+            ? GlassTheme.primary.withValues(alpha: .3)
             : Colors.white.withValues(alpha: .16),
       ),
     ),
     child: Text(
       text,
       style: TextStyle(
-        color: highlight ? GlassTheme.cyan : Colors.white70,
+        color: highlight ? GlassTheme.primary : Colors.white70,
         fontSize: 11,
         fontWeight: FontWeight.w700,
       ),
@@ -506,7 +506,9 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                   if (_loading) ...[
                     const SizedBox(height: 22),
                     const Center(
-                      child: CircularProgressIndicator(color: GlassTheme.cyan),
+                      child: CircularProgressIndicator(
+                        color: GlassTheme.primary,
+                      ),
                     ),
                   ],
                   if (_error != null) ...[
@@ -573,7 +575,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                         padding: EdgeInsets.symmetric(vertical: 24),
                         child: Center(
                           child: CircularProgressIndicator(
-                            color: GlassTheme.cyan,
+                            color: GlassTheme.primary,
                           ),
                         ),
                       )
@@ -619,8 +621,8 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                   height: 54,
                   child: FilledButton.icon(
                     style: FilledButton.styleFrom(
-                      backgroundColor: GlassTheme.cyan,
-                      foregroundColor: const Color(0xFF081018),
+                      backgroundColor: GlassTheme.primary,
+                      foregroundColor: GlassTheme.background,
                     ),
                     onPressed: () => widget.onPlay(context),
                     icon: const Icon(Icons.play_arrow_rounded),

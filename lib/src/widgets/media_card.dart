@@ -16,10 +16,7 @@ class MediaCard extends StatelessWidget {
   final double progress;
   final VoidCallback? onFavorite;
 
-  Widget _frosted({
-    required Widget child,
-    double radius = 14,
-  }) {
+  Widget _frosted({required Widget child, double radius = 14}) {
     final surface = DecoratedBox(
       decoration: BoxDecoration(
         color: const Color(0xA619202D),
@@ -63,7 +60,7 @@ class MediaCard extends StatelessWidget {
                 children: [
                   if (item.poster.isEmpty)
                     const ColoredBox(
-                      color: Color(0xFF202839),
+                      color: GlassTheme.elevatedSurface,
                       child: Icon(
                         Icons.movie_outlined,
                         size: 36,
@@ -76,7 +73,7 @@ class MediaCard extends StatelessWidget {
                       fit: BoxFit.cover,
                       cacheWidth: (146 * imagePixelRatio).round(),
                       errorBuilder: (_, __, ___) => const ColoredBox(
-                        color: Color(0xFF202839),
+                        color: GlassTheme.elevatedSurface,
                         child: Icon(Icons.movie_outlined),
                       ),
                     ),
@@ -184,7 +181,7 @@ class MediaCard extends StatelessWidget {
                                 child: LinearProgressIndicator(
                                   value: progress.clamp(0, 1),
                                   minHeight: 3,
-                                  color: GlassTheme.cyan,
+                                  color: GlassTheme.primary,
                                   backgroundColor: Colors.white24,
                                 ),
                               ),

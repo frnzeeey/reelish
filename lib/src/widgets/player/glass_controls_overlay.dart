@@ -192,7 +192,7 @@ class _ControlDock extends StatelessWidget {
           allowScrubbing: true,
           padding: const EdgeInsets.symmetric(vertical: 12),
           colors: const VideoProgressColors(
-            playedColor: GlassTheme.cyan,
+            playedColor: GlassTheme.primary,
             bufferedColor: Color(0x99FFFFFF),
             backgroundColor: Color(0x44FFFFFF),
           ),
@@ -372,7 +372,7 @@ class _RoundButton extends StatelessWidget {
     message: tooltip,
     child: Material(
       color: selected
-          ? GlassTheme.cyan.withValues(alpha: .16)
+          ? GlassTheme.primary.withValues(alpha: .16)
           : surface
           ? const Color(0x66101520)
           : Colors.transparent,
@@ -386,7 +386,7 @@ class _RoundButton extends StatelessWidget {
           child: Icon(
             icon,
             size: iconSize,
-            color: selected ? GlassTheme.cyan : Colors.white,
+            color: selected ? GlassTheme.primary : Colors.white,
           ),
         ),
       ),
@@ -423,7 +423,7 @@ class _PlayPauseButton extends StatelessWidget {
             gradient: GlassTheme.gradient,
             boxShadow: [
               BoxShadow(
-                color: GlassTheme.cyan.withValues(alpha: .3),
+                color: GlassTheme.coralGlow,
                 blurRadius: 20,
                 spreadRadius: 1,
               ),
@@ -435,14 +435,14 @@ class _PlayPauseButton extends StatelessWidget {
                     width: 21,
                     height: 21,
                     child: CircularProgressIndicator(
-                      color: Color(0xFF07100F),
+                      color: GlassTheme.background,
                       strokeWidth: 2.3,
                     ),
                   )
                 : Icon(
                     playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
                     size: 30,
-                    color: const Color(0xFF07100F),
+                    color: GlassTheme.background,
                   ),
           ),
         ),

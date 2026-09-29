@@ -1,6 +1,9 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/media_item.dart';
+import '../services/github_update_service.dart';
 import '../services/storage_service.dart';
 import '../services/tmdb_service.dart';
 import '../services/nuvio_plugin_service.dart';
@@ -23,7 +26,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final _nuvioPlugins = NuvioPluginService();
   final _storage = StorageService();
   final _tmdb = TmdbService();
@@ -46,13 +49,20 @@ class _HomeScreenState extends State<HomeScreen> {
   Key _libraryKey = const ValueKey('library');
   Timer? _debounce;
   Timer? _spotlightTimer;
+  bool _checkingForUpdate = false;
+  bool _updatePromptOpen = false;
+  DateTime? _lastUpdateCheckAt;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _nuvioPlugins.addListener(_onPluginChange);
     _startSpotlightTimer();
     _start();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_checkForUpdate());
+    });
   }
 
   void _startSpotlightTimer() {
@@ -78,6 +88,80 @@ class _HomeScreenState extends State<HomeScreen> {
     unawaited(_load());
     await _nuvioPlugins.load();
     await _loadHistory();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_checkForUpdate());
+    }
+  }
+
+  Future<void> _checkForUpdate() async {
+    if (defaultTargetPlatform != TargetPlatform.android) return;
+    final now = DateTime.now();
+    final lastCheck = _lastUpdateCheckAt;
+    if (_checkingForUpdate ||
+        _updatePromptOpen ||
+        (lastCheck != null &&
+            now.difference(lastCheck) < const Duration(hours: 6))) {
+      return;
+    }
+    _lastUpdateCheckAt = now;
+    _checkingForUpdate = true;
+    try {
+      final update = await GitHubUpdateService.checkForUpdate();
+      if (!mounted || update == null) return;
+      _updatePromptOpen = true;
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Update available'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Reelish ${update.version} is ready to download.'),
+                if (update.notes.trim().isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Text(update.notes.trim()),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Later'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                final messenger = ScaffoldMessenger.of(dialogContext);
+                Navigator.pop(dialogContext);
+                final opened = await launchUrl(
+                  update.downloadUri,
+                  mode: LaunchMode.externalApplication,
+                );
+                if (!opened && mounted) {
+                  messenger.showSnackBar(
+                    const SnackBar(
+                      content: Text('Could not open the APK link.'),
+                    ),
+                  );
+                }
+              },
+              child: const Text('Download APK'),
+            ),
+          ],
+        ),
+      );
+    } catch (_) {
+      // Update checks should never interrupt normal app use.
+    } finally {
+      _updatePromptOpen = false;
+      _checkingForUpdate = false;
+    }
   }
 
   void _onPluginChange() {
@@ -301,7 +385,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const CircularProgressIndicator(color: GlassTheme.cyan),
+                    const CircularProgressIndicator(color: GlassTheme.primary),
                     const SizedBox(width: 18),
                     Flexible(
                       child: Column(
@@ -457,6 +541,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _debounce?.cancel();
     _spotlightTimer?.cancel();
     _spotlightController.dispose();
@@ -569,22 +654,11 @@ class _HomeScreenState extends State<HomeScreen> {
     height: 36,
     decoration: BoxDecoration(
       borderRadius: BorderRadius.circular(12),
-      gradient: const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [GlassTheme.cyan, Color(0xFF70C8FF)],
-      ),
-      boxShadow: [
-        BoxShadow(
-          color: GlassTheme.cyan.withValues(alpha: .24),
-          blurRadius: 18,
-        ),
-      ],
+      boxShadow: const [BoxShadow(color: GlassTheme.coralGlow, blurRadius: 18)],
     ),
-    child: const Icon(
-      Icons.play_arrow_rounded,
-      color: Color(0xFF081018),
-      size: 26,
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: Image.asset('assets/icons/reelish_icon.png', fit: BoxFit.cover),
     ),
   );
 
@@ -594,12 +668,20 @@ class _HomeScreenState extends State<HomeScreen> {
       children: [
         _brandMark(),
         const SizedBox(width: 10),
-        const Text(
-          'reelish',
-          style: TextStyle(
-            fontSize: 25,
-            fontWeight: FontWeight.w900,
-            letterSpacing: -1.2,
+        const Text.rich(
+          TextSpan(
+            style: TextStyle(
+              fontSize: 25,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -1.2,
+            ),
+            children: [
+              TextSpan(text: 'reel'),
+              TextSpan(
+                text: 'ish',
+                style: TextStyle(color: Color(0xFFFF7889)),
+              ),
+            ],
           ),
         ),
         const Spacer(),
@@ -748,12 +830,12 @@ class _HomeScreenState extends State<HomeScreen> {
                         width: 44,
                         height: 44,
                         decoration: BoxDecoration(
-                          color: GlassTheme.cyan.withValues(alpha: .12),
+                          color: GlassTheme.primary.withValues(alpha: .12),
                           borderRadius: BorderRadius.circular(14),
                         ),
                         child: const Icon(
                           Icons.add_link_rounded,
-                          color: GlassTheme.cyan,
+                          color: GlassTheme.primary,
                         ),
                       ),
                       const SizedBox(width: 13),
@@ -856,7 +938,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     SizedBox(height: 14),
                     Center(
-                      child: CircularProgressIndicator(color: GlassTheme.cyan),
+                      child: CircularProgressIndicator(
+                        color: GlassTheme.primary,
+                      ),
                     ),
                   ],
                 ),
@@ -926,7 +1010,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   margin: const EdgeInsets.symmetric(horizontal: 3),
                   decoration: BoxDecoration(
                     color: index == _spotlightPage % items.length
-                        ? GlassTheme.cyan
+                        ? GlassTheme.primary
                         : Colors.white.withValues(alpha: .35),
                     borderRadius: BorderRadius.circular(10),
                   ),
@@ -948,10 +1032,10 @@ class _HomeScreenState extends State<HomeScreen> {
             item.background,
             fit: BoxFit.cover,
             errorBuilder: (_, __, ___) =>
-                const ColoredBox(color: Color(0xFF20283A)),
+                ColoredBox(color: GlassTheme.elevatedSurface),
           )
         else
-          const ColoredBox(color: Color(0xFF20283A)),
+          ColoredBox(color: GlassTheme.elevatedSurface),
         const DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -976,16 +1060,16 @@ class _HomeScreenState extends State<HomeScreen> {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: GlassTheme.cyan.withValues(alpha: .15),
+                  color: GlassTheme.primary.withValues(alpha: .15),
                   borderRadius: BorderRadius.circular(30),
                   border: Border.all(
-                    color: GlassTheme.cyan.withValues(alpha: .35),
+                    color: GlassTheme.primary.withValues(alpha: .35),
                   ),
                 ),
                 child: const Text(
                   'REELISH SPOTLIGHT',
                   style: TextStyle(
-                    color: GlassTheme.cyan,
+                    color: GlassTheme.primary,
                     fontSize: 9,
                     letterSpacing: 1.5,
                     fontWeight: FontWeight.w800,
@@ -1035,8 +1119,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   FilledButton.icon(
                     style: FilledButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: const Color(0xFF10131A),
+                      backgroundColor: GlassTheme.primary,
+                      foregroundColor: GlassTheme.background,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 18,
                         vertical: 12,
@@ -1119,7 +1203,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const CircularProgressIndicator(color: GlassTheme.cyan),
+                    const CircularProgressIndicator(color: GlassTheme.primary),
                     const SizedBox(height: 16),
                     Text(
                       'Searching providers…',
