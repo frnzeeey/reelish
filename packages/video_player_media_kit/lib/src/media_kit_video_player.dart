@@ -5,6 +5,7 @@
 /// Use of this source code is governed by MIT license that can be found in the LICENSE file.
 import 'dart:async';
 import 'dart:collection';
+import 'package:flutter/foundation.dart' show debugPrint, kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
@@ -263,6 +264,9 @@ class MediaKitVideoPlayer extends VideoPlayerPlatform {
       int? height;
       Duration? duration;
       var mediaOpened = false;
+      var videoDiagnosticsLogged = false;
+      var audioDiagnosticsLogged = false;
+      final diagnosticsClock = Stopwatch()..start();
 
       void notify() {
         if (!completer.isCompleted) {
@@ -299,6 +303,19 @@ class MediaKitVideoPlayer extends VideoPlayerPlatform {
           (event) {
             width = event.dw;
             height = event.dh;
+            if (!videoDiagnosticsLogged &&
+                (width ?? 0) > 0 &&
+                (height ?? 0) > 0) {
+              videoDiagnosticsLogged = true;
+              if (kDebugMode) {
+                debugPrint(
+                  '[MPV] video decoder output at ${diagnosticsClock.elapsedMilliseconds}ms: '
+                  '${event.w}x${event.h} display=${event.dw}x${event.dh} '
+                  'pixel=${event.pixelformat ?? 'unknown'} '
+                  'hardwarePixel=${event.hwPixelformat ?? 'unknown'}',
+                );
+              }
+            }
             if ((width ?? 0) > 0 && (height ?? 0) > 0) {
               notify();
             }
@@ -306,8 +323,37 @@ class MediaKitVideoPlayer extends VideoPlayerPlatform {
         ),
       );
       streamSubscriptions.add(
+        player.stream.audioParams.listen((event) {
+          if (audioDiagnosticsLogged || event.format == null) return;
+          audioDiagnosticsLogged = true;
+          if (kDebugMode) {
+            debugPrint(
+              '[MPV] audio decoder output at ${diagnosticsClock.elapsedMilliseconds}ms: '
+              'format=${event.format} rate=${event.sampleRate} '
+              'channels=${event.channels}',
+            );
+          }
+        }),
+      );
+      streamSubscriptions.add(
         player.stream.tracks.listen(
           (event) {
+            if (kDebugMode && !videoDiagnosticsLogged) {
+              final videoTracks = event.video
+                  .where((track) => track.id != 'auto' && track.id != 'no')
+                  .toList();
+              final audioTracks = event.audio
+                  .where((track) => track.id != 'auto' && track.id != 'no')
+                  .toList();
+              final video = videoTracks.isEmpty ? null : videoTracks.first;
+              final audio = audioTracks.isEmpty ? null : audioTracks.first;
+              debugPrint(
+                '[MPV] tracks discovered: '
+                'video=${video?.codec ?? 'none'} decoder=${video?.decoder ?? 'unknown'} '
+                '${video?.w ?? 0}x${video?.h ?? 0}; '
+                'audio=${audio?.codec ?? 'none'} decoder=${audio?.decoder ?? 'unknown'}',
+              );
+            }
             // No video track is available i.e. an audio file.
             if (event.video.length == 2 && event.audio.length > 2) {
               width = 0;

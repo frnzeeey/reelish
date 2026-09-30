@@ -1,3 +1,5 @@
+import 'stream_type.dart';
+
 class SubtitleTrack {
   const SubtitleTrack({
     required this.url,
@@ -27,9 +29,13 @@ class StreamSource {
     this.headers = const {},
     this.subtitles = const [],
     this.providerName = '',
+    this.providerId = '',
     this.sourceId = '',
     this.quality = '',
     this.container = '',
+    this.mimeType = '',
+    this.streamType,
+    this.isLive = false,
     this.codec = '',
     this.expiresAt,
     this.isDirect = true,
@@ -37,8 +43,10 @@ class StreamSource {
     this.fileIdx = -1,
     this.torrentSources = const [],
   });
-  final String name, url, description, providerName;
-  final String sourceId, quality, container, codec;
+  final String name, url, description, providerName, providerId;
+  final String sourceId, quality, container, codec, mimeType;
+  final StreamType? streamType;
+  final bool isLive;
   final DateTime? expiresAt;
   final bool isDirect;
   final String infoHash;
@@ -47,6 +55,9 @@ class StreamSource {
   bool get isTorrent =>
       url.toLowerCase().startsWith('magnet:') ||
       (url.isEmpty && infoHash.isNotEmpty);
+  StreamType get detectedStreamType =>
+      streamType ??
+      StreamTypeDetection.detect(url: url, mimeType: mimeType, hint: container);
   bool get isExpired =>
       expiresAt != null && !expiresAt!.isAfter(DateTime.now());
   bool get isPlayable =>
@@ -62,15 +73,41 @@ class StreamSource {
   final Map<String, String> headers;
   final List<SubtitleTrack> subtitles;
 
+  StreamSource copyWithProviderId(String value) => StreamSource(
+    name: name,
+    url: url,
+    description: description,
+    headers: headers,
+    subtitles: subtitles,
+    providerName: providerName,
+    providerId: value,
+    sourceId: sourceId,
+    quality: quality,
+    container: container,
+    codec: codec,
+    mimeType: mimeType,
+    streamType: streamType,
+    isLive: isLive,
+    expiresAt: expiresAt,
+    isDirect: isDirect,
+    infoHash: infoHash,
+    fileIdx: fileIdx,
+    torrentSources: torrentSources,
+  );
+
   Map<String, dynamic> toJson() => {
     'name': name,
     'url': url,
     'description': description,
     'headers': headers,
     'providerName': providerName,
+    'providerId': providerId,
     'sourceId': sourceId,
     'quality': quality,
     'container': container,
+    'mimeType': mimeType,
+    'streamType': streamType?.name,
+    'isLive': isLive,
     'codec': codec,
     'expiresAt': expiresAt?.toUtc().toIso8601String(),
     'isDirect': isDirect,
@@ -166,9 +203,13 @@ class StreamSource {
       url: url,
       description: '${j['description'] ?? j['quality'] ?? j['title'] ?? ''}',
       providerName: providerName,
+      providerId: '${j['providerId'] ?? ''}',
       sourceId: '${j['id'] ?? j['sourceId'] ?? ''}',
       quality: '${j['quality'] ?? j['resolution'] ?? ''}',
       container: '${j['container'] ?? j['type'] ?? ''}',
+      mimeType: '${j['mimeType'] ?? j['contentType'] ?? ''}',
+      streamType: _parseStreamType(j['streamType']),
+      isLive: j['isLive'] == true,
       codec: '${j['codec'] ?? ''}',
       expiresAt: _parseExpiration(
         j['expiresAt'] ?? j['expires'] ?? j['expiry'],
@@ -197,5 +238,18 @@ class StreamSource {
       seconds < 1000000000000 ? seconds * 1000 : seconds,
       isUtc: true,
     );
+  }
+
+  static StreamType? _parseStreamType(dynamic raw) {
+    if (raw == null) return null;
+    final normalized = '$raw'.toLowerCase();
+    return switch (normalized) {
+      'hls' || 'm3u8' => StreamType.hls,
+      'dash' || 'mpeg-dash' || 'mpd' => StreamType.dash,
+      'progressive' || 'direct' || 'file' => StreamType.progressive,
+      'torrent' || 'magnet' => StreamType.torrent,
+      'local' || 'proxy' => StreamType.local,
+      _ => null,
+    };
   }
 }

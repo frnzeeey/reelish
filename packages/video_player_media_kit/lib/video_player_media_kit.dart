@@ -59,4 +59,13 @@ class VideoPlayerMediaKit {
       MediaKitVideoPlayer.registerWith();
     }
   }
+
+  /// Registers MediaKit as the active `video_player` backend.
+  ///
+  /// This is useful when an app selects MediaKit at runtime alongside another
+  /// `VideoPlayerPlatform` implementation. Call [ensureInitialized] once
+  /// before selecting MediaKit.
+  static void registerWith() {
+    MediaKitVideoPlayer.registerWith();
+  }
 }

@@ -14,6 +14,7 @@ class PlayerScreen extends StatelessWidget {
     required this.sources,
     required this.storage,
     required this.playbackSettings,
+    this.sourceFromCache = false,
     this.streamCacheKey,
     this.discovery,
     this.onRefreshSources,
@@ -24,6 +25,7 @@ class PlayerScreen extends StatelessWidget {
   final List<StreamSource> sources;
   final StorageService storage;
   final PlaybackSettingsController playbackSettings;
+  final bool sourceFromCache;
   final String? streamCacheKey;
   final StreamDiscovery? discovery;
   final Future<List<StreamSource>> Function()? onRefreshSources;
@@ -39,6 +41,7 @@ class PlayerScreen extends StatelessWidget {
       subtitles: source.subtitles,
       storage: storage,
       playbackSettings: playbackSettings,
+      sourceFromCache: sourceFromCache,
       streamCacheKey: streamCacheKey,
       discovery: discovery,
       onRefreshSources: onRefreshSources,

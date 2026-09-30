@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:collection';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -14,18 +13,25 @@ import 'provider_fetch_bridge.dart';
 import 'network_target_policy.dart';
 import 'storage_service.dart';
 import 'stream_discovery.dart';
+import 'stream_normalizer.dart';
+import 'stream_validator.dart';
+import 'provider_execution_scheduler.dart';
 
 class NuvioPluginService extends ChangeNotifier {
   static Future<String>? _cheerioBundle;
-  static final _providerRuntimeSlots = _AsyncSemaphore(2);
-
-  NuvioPluginService({StorageService? storage})
-    : _storage = storage ?? StorageService();
+  NuvioPluginService({
+    StorageService? storage,
+    ProviderExecutionScheduler? scheduler,
+  }) : _storage = storage ?? StorageService(),
+       _scheduler = scheduler ?? ProviderExecutionScheduler();
 
   final StorageService _storage;
+  final ProviderExecutionScheduler _scheduler;
   final List<NuvioPluginRepository> repositories = [];
   final NetworkDestinationValidator _networkDestinations =
       NetworkDestinationValidator();
+  static const StreamNormalizer _streamNormalizer = StreamNormalizer();
+  static const StreamValidator _streamValidator = StreamValidator();
   final Map<String, String> errors = {};
   final Map<String, StreamDiscovery> _inflightDiscoveries = {};
   Map<String, bool> _enabledOverrides = {};
@@ -287,6 +293,7 @@ class NuvioPluginService extends ChangeNotifier {
     }
 
     lastLookupMessage = null;
+    final discoveryStartedAt = DateTime.now();
     final lookupErrors = <String, String>{};
     final results = <StreamSource>[];
     var nextProviderIndex = 0;
@@ -301,11 +308,18 @@ class NuvioPluginService extends ChangeNotifier {
         final (repo, plugin) = available[nextProviderIndex++];
         final errorKey = '${plugin.name} (${repo.name})';
         errors.remove(errorKey);
+        if (kDebugMode) {
+          // ignore: avoid_print
+          print(
+            '[Provider Perf] ${plugin.id} started at '
+            '${DateTime.now().difference(discoveryStartedAt).inMilliseconds}ms',
+          );
+        }
         try {
           final codeUrl = Uri.parse(repo.url).resolve(plugin.filename);
           final codeResponse = await _secureGet(
             codeUrl,
-            timeout: const Duration(seconds: 12),
+            timeout: const Duration(seconds: 20),
           );
           if (codeResponse.statusCode < 200 || codeResponse.statusCode >= 300) {
             throw Exception(
@@ -313,7 +327,7 @@ class NuvioPluginService extends ChangeNotifier {
             );
           }
           if (stopStartingProviders || (isCancelled?.call() ?? false)) return;
-          await _providerRuntimeSlots.acquire();
+          await _scheduler.acquireRuntime();
           QuickJsRuntime2? runtime;
           ProviderFetchBridge? fetchBridge;
           try {
@@ -323,6 +337,14 @@ class NuvioPluginService extends ChangeNotifier {
             final activeRuntime = QuickJsRuntime2(
               timeout: 20000,
               memoryLimit: 64 * 1024 * 1024,
+              hostPromiseRejectionHandler: (reason) {
+                if (!kDebugMode) return;
+                // ignore: avoid_print
+                print(
+                  '[Provider JS] ${plugin.id} unhandled rejection: '
+                  '${_safeProviderDiagnostic(reason)}',
+                );
+              },
             )..enableHandlePromises();
             runtime = activeRuntime;
             fetchBridge = ProviderFetchBridge(
@@ -435,7 +457,7 @@ class NuvioPluginService extends ChangeNotifier {
           ''');
             final value = await activeRuntime
                 .handlePromise(call)
-                .timeout(const Duration(seconds: 15));
+                .timeout(const Duration(seconds: 20));
             final decoded = jsonDecode(value.stringResult);
             final List<dynamic> streamEntries;
             if (decoded is List) {
@@ -447,12 +469,26 @@ class NuvioPluginService extends ChangeNotifier {
             } else {
               streamEntries = const [];
             }
+            if (kDebugMode) {
+              // ignore: avoid_print
+              print(
+                '[Provider Perf] ${plugin.id} returned ${streamEntries.length} candidates at '
+                '${DateTime.now().difference(discoveryStartedAt).inMilliseconds}ms',
+              );
+            }
             for (final entry in streamEntries.whereType<Map>()) {
               onCandidate?.call();
-              final source = StreamSource.fromJson(
+              final normalized = _streamNormalizer.normalize(
                 Map<String, dynamic>.from(entry),
+                providerId: plugin.id,
                 providerName: plugin.name,
               );
+              final source = normalized.source;
+              try {
+                _streamValidator.validate(source);
+              } catch (_) {
+                continue;
+              }
               if (source.isPlayable) {
                 if (!allowTorrents && source.isTorrent) continue;
                 results.add(source);
@@ -476,12 +512,19 @@ class NuvioPluginService extends ChangeNotifier {
                   }
                 }
               } finally {
-                _providerRuntimeSlots.release();
+                _scheduler.releaseRuntime();
               }
             }
           }
         } catch (error) {
           final message = _friendly(error);
+          if (kDebugMode) {
+            // ignore: avoid_print
+            print(
+              '[Provider Perf] ${plugin.id} failed: '
+              '${_safeProviderDiagnostic(message)}',
+            );
+          }
           errors[errorKey] = message;
           lookupErrors[errorKey] = message;
         }
@@ -489,8 +532,12 @@ class NuvioPluginService extends ChangeNotifier {
     }
 
     // Fetch scripts concurrently; the shared runtime gate bounds JS heaps.
-    final workerCount = available.length < 4 ? available.length : 4;
-    const searchTimeout = Duration(seconds: 30);
+    final workerCount = _scheduler.workersFor(available.length);
+    // Large repositories can contain dozens of providers, and each worker may
+    // encounter a slow script host or provider endpoint. Source selection is
+    // progressive, so this longer cap only affects lookups still finding no
+    // usable source.
+    const searchTimeout = Duration(seconds: 60);
     var searchTimedOut = false;
     try {
       await Future.wait(
@@ -665,30 +712,15 @@ class NuvioPluginService extends ChangeNotifier {
       '',
     );
   }
-}
 
-class _AsyncSemaphore {
-  _AsyncSemaphore(this._capacity);
-
-  final int _capacity;
-  final Queue<Completer<void>> _waiters = Queue<Completer<void>>();
-  int _active = 0;
-
-  Future<void> acquire() {
-    if (_active < _capacity) {
-      _active++;
-      return Future<void>.value();
-    }
-    final waiter = Completer<void>();
-    _waiters.addLast(waiter);
-    return waiter.future;
-  }
-
-  void release() {
-    if (_waiters.isNotEmpty) {
-      _waiters.removeFirst().complete();
-      return;
-    }
-    _active--;
+  String _safeProviderDiagnostic(Object? error) {
+    final message = '$error'.replaceAllMapped(
+      RegExp(r"""https?://[^\s"'<>]+""", caseSensitive: false),
+      (match) {
+        final host = Uri.tryParse(match.group(0)!)?.host;
+        return host == null || host.isEmpty ? '[URL]' : host;
+      },
+    );
+    return message.length > 400 ? '${message.substring(0, 397)}...' : message;
   }
 }

@@ -12,6 +12,8 @@ import '../../models/stream_source.dart';
 import '../../services/storage_service.dart';
 import '../../services/playback_settings_controller.dart';
 import '../../services/stream_discovery.dart';
+import '../../services/playback_coordinator.dart';
+import '../../services/player_engine.dart';
 import '../../services/network_target_policy.dart';
 import '../../services/open_subtitles_service.dart';
 import '../../theme/glass_theme.dart';
@@ -30,6 +32,7 @@ class CustomVideoPlayer extends StatefulWidget {
     required this.subtitles,
     required this.storage,
     required this.playbackSettings,
+    this.sourceFromCache = false,
     this.streamCacheKey,
     this.discovery,
     this.onRefreshSources,
@@ -41,6 +44,7 @@ class CustomVideoPlayer extends StatefulWidget {
   final List<SubtitleTrack> subtitles;
   final StorageService storage;
   final PlaybackSettingsController playbackSettings;
+  final bool sourceFromCache;
   final String? streamCacheKey;
   final StreamDiscovery? discovery;
   final Future<List<StreamSource>> Function()? onRefreshSources;
@@ -75,11 +79,14 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   String? _gestureHint;
   String? _errorMessage;
   int _initializationGeneration = 0;
+  Completer<void>? _openCancellation;
   int _lastProgressSaveBucket = -1;
-  final Set<String> _attemptedSourceKeys = {};
+  final PlaybackCoordinator _playbackCoordinator = PlaybackCoordinator();
+  late PlayerEngine _engine = PlayerEngineFactory.forCurrentPlatform();
   late List<StreamSource> _sources;
   final _openSubtitles = OpenSubtitlesService();
   bool _handlingFailure = false;
+  bool _cachedRefreshAttempted = false;
   StreamSubscription<StreamSource>? _discoverySubscription;
   final DateTime _playerStartedAt = DateTime.now();
   final NetworkDestinationValidator _networkDestinations =
@@ -90,15 +97,15 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     _playback = widget.playbackSettings.value;
     widget.playbackSettings.addListener(_onPlaybackSettingsChanged);
     _sources = List.of(widget.sources);
+    _playbackCoordinator.replaceCandidates(_sources);
     _source = widget.source;
     _discoverySubscription = widget.discovery?.updates.listen((source) {
       if (!mounted || !source.isPlayable) return;
-      final key = _sourceKey(source);
-      if (_sources.any((entry) => _sourceKey(entry) == key)) return;
+      if (!_playbackCoordinator.addCandidate(source)) return;
       setState(() => _sources.add(source));
-      if (_error && _attemptedSourceKeys.length < 5) {
-        final alternative = _nextAutomaticSource(
-          _sourceKey(_source ?? widget.source),
+      if (_error && _playbackCoordinator.attemptedCount < 5) {
+        final alternative = _playbackCoordinator.nextAfterFailure(
+          _source ?? widget.source,
         );
         if (alternative == null) return;
         setState(() {
@@ -116,8 +123,12 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     StreamSource source, {
     bool resetAttempts = true,
   }) async {
-    if (resetAttempts) _attemptedSourceKeys.clear();
-    final requestedSourceKey = _sourceKey(source);
+    final failedCandidate = source;
+    if (resetAttempts) _playbackCoordinator.reset();
+    _playbackCoordinator.beginAttempt(source, _engine.id);
+    _openCancellation?.complete();
+    final cancellation = Completer<void>();
+    _openCancellation = cancellation;
     final generation = ++_initializationGeneration;
     _handlingFailure = false;
     final old = _controller;
@@ -155,45 +166,41 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     try {
       final isTorrent = source.isTorrent;
       if (isTorrent) source = await _prepareTorrent(source);
-      if (!isTorrent) {
-        // media_kit/libmpv opens stream and playlist URLs in native code, so
-        // it cannot use the pinned Dart HTTP client. Resolve and reject unsafe
-        // destinations before handing them off. Dynamic provider hosts prevent
-        // a safe static Android cleartext allowlist; Android cleartext stays
-        // disabled globally while validated HTTP streams remain supported.
-        await _networkDestinations.resolveDestination(
-          Uri.parse(source.url),
-          allowedSchemes: const {
-            'https',
-            'http',
-            'rtmp',
-            'rtmps',
-            'rtsp',
-            'rtsps',
-            'rtp',
-            'udp',
-            'tcp',
-            'srt',
-            'mms',
-            'mmsh',
-          },
-        );
+      // MediaKit/libmpv performs native media requests, so source preparation
+      // preflights public hosts before the URL crosses into the native engine.
+      // The only bypass is the loopback URL created by Reelish's torrent
+      // streamer after validating its magnet and tracker inputs.
+      final opened = await _playbackCoordinator.prepareAndOpen(
+        source,
+        engine: _engine,
+        allowLoopback: isTorrent,
+        startupTimeout: Duration(
+          seconds: widget.sourceFromCache && !_cachedRefreshAttempted ? 7 : 20,
+        ),
+        cancellation: cancellation.future,
+      );
+      final playable = opened.source;
+      final c = opened.controller;
+      if (!mounted || generation != _initializationGeneration) {
+        await c.dispose();
+        return;
       }
-      if (!mounted || generation != _initializationGeneration) return;
-      NetworkDestinationValidator.validateHeaders(source.headers);
       if (kDebugMode) {
         // ignore: avoid_print
         print(
-          '[Stream] Player initialization started (TTP) in '
+          '[Playback Perf] source_prepared '
+          '${DateTime.now().difference(_playerStartedAt).inMilliseconds}ms '
+          'type=${playable.streamType.name} engine=${_engine.id.name}',
+        );
+      }
+      _controller = c;
+      if (kDebugMode) {
+        // ignore: avoid_print
+        print(
+          '[Playback Perf] player_open '
           '${DateTime.now().difference(_playerStartedAt).inMilliseconds}ms',
         );
       }
-      final c = VideoPlayerController.networkUrl(
-        Uri.parse(source.url),
-        httpHeaders: source.headers,
-      );
-      _controller = c;
-      await c.initialize().timeout(const Duration(seconds: 20));
       if (!mounted || generation != _initializationGeneration) {
         await c.dispose();
         return;
@@ -283,17 +290,30 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
           await _torrentSession?.stop();
         } catch (_) {}
         _torrentSession = null;
+        if (await _refreshAfterCachedFailure(failedCandidate)) return;
         final message = _safePlaybackError(error.toString());
-        _attemptedSourceKeys.add(requestedSourceKey);
-        final alternative = _nextAutomaticSource(requestedSourceKey);
-        if (alternative != null && _attemptedSourceKeys.length < 5) {
+        final failure = PlaybackFailure.classify(error);
+        final alternateEngine = PlayerEngineFactory.alternateFor(_engine);
+        if (alternateEngine != null &&
+            _playbackCoordinator.beginAttempt(
+              failedCandidate,
+              alternateEngine.id,
+            )) {
+          _engine = alternateEngine;
+          await _initialize(failedCandidate, resetAttempts: false);
+          return;
+        }
+        final alternative = failure.canTryAnotherSource
+            ? _playbackCoordinator.nextAfterFailure(failedCandidate)
+            : null;
+        if (alternative != null) {
           await _initialize(alternative, resetAttempts: false);
           return;
         }
         setState(() {
           _error = true;
-          final details = _attemptedSourceKeys.length > 1
-              ? 'Could not play ${_attemptedSourceKeys.length} sources. $message'
+          final details = _playbackCoordinator.attemptedCount > 1
+              ? 'Could not play ${_playbackCoordinator.attemptedCount} sources. $message'
               : message;
           _errorMessage = details.length > 280
               ? '${details.substring(0, 277)}…'
@@ -301,12 +321,6 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
         });
       }
     }
-  }
-
-  String _sourceKey(StreamSource source) {
-    final headers = source.headers.entries.toList()
-      ..sort((a, b) => a.key.toLowerCase().compareTo(b.key.toLowerCase()));
-    return '${source.url}|${jsonEncode(headers.map((e) => [e.key.toLowerCase(), e.value]).toList())}';
   }
 
   String _safePlaybackError(String error) {
@@ -392,37 +406,6 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     );
   }
 
-  StreamSource? _nextAutomaticSource(String failedSourceKey) {
-    final candidates = _sources
-        .where((source) => !_attemptedSourceKeys.contains(_sourceKey(source)))
-        .toList();
-    if (candidates.isEmpty) return null;
-
-    final failedSource =
-        _sources
-            .where((source) => _sourceKey(source) == failedSourceKey)
-            .firstOrNull ??
-        _source;
-    final failedProvider = failedSource?.providerName ?? '';
-    if (failedProvider.isEmpty) return candidates.first;
-
-    final differentProvider = candidates
-        .where((source) => source.providerName != failedProvider)
-        .firstOrNull;
-    if (differentProvider != null) return differentProvider;
-
-    final triedFromProvider = _sources
-        .where(
-          (source) =>
-              source.providerName == failedProvider &&
-              _attemptedSourceKeys.contains(_sourceKey(source)),
-        )
-        .length;
-    // Several links from one scraper often point to the same failing host.
-    // Give it one alternate, then let other providers finish and take over.
-    return triedFromProvider < 2 ? candidates.first : null;
-  }
-
   Future<void> _retryPlayback() async {
     final refresh = widget.onRefreshSources;
     if (refresh == null) {
@@ -434,7 +417,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
       _errorMessage = null;
     });
     try {
-      final freshSources = await refresh();
+      final freshSources = await _loadFreshSources();
       if (!mounted) return;
       final playable = freshSources
           .where((source) => source.isPlayable)
@@ -442,6 +425,9 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
       if (playable.isNotEmpty) {
         final previous = _source!;
         _sources = playable;
+        _playbackCoordinator
+          ..replaceCandidates(playable)
+          ..reset();
         final refreshed = playable
             .where(
               (source) =>
@@ -459,8 +445,37 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     if (mounted) await _initialize(_source!);
   }
 
+  Future<List<StreamSource>> _loadFreshSources() async {
+    final refresh = widget.onRefreshSources;
+    if (refresh == null) return const [];
+    final sources = await refresh();
+    return sources.where((source) => source.isPlayable).toList();
+  }
+
+  Future<bool> _refreshAfterCachedFailure(StreamSource failed) async {
+    if (!widget.sourceFromCache ||
+        _cachedRefreshAttempted ||
+        failed.url != widget.source.url) {
+      return false;
+    }
+    _cachedRefreshAttempted = true;
+    List<StreamSource> fresh;
+    try {
+      fresh = await _loadFreshSources();
+    } catch (_) {
+      return false;
+    }
+    if (fresh.isEmpty || !mounted) return false;
+    _sources = fresh;
+    _playbackCoordinator
+      ..replaceCandidates(fresh)
+      ..reset();
+    await _initialize(fresh.first);
+    return true;
+  }
+
   Future<void> _handleRuntimePlaybackFailure(
-    String failedSourceKey,
+    StreamSource failedSource,
     String error,
     int generation,
   ) async {
@@ -480,12 +495,18 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     _torrentSession = null;
     if (!mounted || generation != _initializationGeneration) return;
 
-    _attemptedSourceKeys.add(failedSourceKey);
-    // Keep automatic failover bounded; every remaining source is still
-    // available from Choose another.
-    const maxAutomaticSources = 5;
-    final alternative = _attemptedSourceKeys.length < maxAutomaticSources
-        ? _nextAutomaticSource(failedSourceKey)
+    if (await _refreshAfterCachedFailure(failedSource)) return;
+
+    final failure = PlaybackFailure.classify(error);
+    final alternateEngine = PlayerEngineFactory.alternateFor(_engine);
+    if (alternateEngine != null &&
+        _playbackCoordinator.beginAttempt(failedSource, alternateEngine.id)) {
+      _engine = alternateEngine;
+      await _initialize(failedSource, resetAttempts: false);
+      return;
+    }
+    final alternative = failure.canTryAnotherSource
+        ? _playbackCoordinator.nextAfterFailure(failedSource)
         : null;
     if (alternative != null) {
       await _initialize(alternative, resetAttempts: false);
@@ -496,8 +517,8 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     if (!mounted || generation != _initializationGeneration) return;
     setState(() {
       _error = true;
-      _errorMessage = _attemptedSourceKeys.length > 1
-          ? 'Could not play ${_attemptedSourceKeys.length} sources. $message'
+      _errorMessage = _playbackCoordinator.attemptedCount > 1
+          ? 'Could not play ${_playbackCoordinator.attemptedCount} sources. $message'
           : message;
     });
   }
@@ -1124,6 +1145,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     _discoverySubscription?.cancel();
     widget.playbackSettings.removeListener(_onPlaybackSettingsChanged);
     _initializationGeneration++;
+    _openCancellation?.complete();
     _saveProgress();
     _hide?.cancel();
     _save?.cancel();
@@ -1156,7 +1178,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     if (c.value.hasError) {
       unawaited(
         _handleRuntimePlaybackFailure(
-          _sourceKey(_source ?? widget.source),
+          _source ?? widget.source,
           c.value.errorDescription ?? 'The video source failed.',
           _initializationGeneration,
         ),
@@ -1469,9 +1491,8 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
                         ),
                       ),
                       TextButton(
-                        onPressed: () => setState(
-                          () => _nextEpisodePromptVisible = false,
-                        ),
+                        onPressed: () =>
+                            setState(() => _nextEpisodePromptVisible = false),
                         child: const Text('Not now'),
                       ),
                       FilledButton(

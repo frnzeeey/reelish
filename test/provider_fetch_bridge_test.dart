@@ -189,4 +189,131 @@ void main() {
       JavascriptRuntime.channelFunctionsRegistered.remove(runtimeId);
     }
   });
+
+  test('fetch preserves binary bodies and replays provider cookies', () async {
+    var count = 0;
+    final runtime = QuickJsRuntime2()..enableHandlePromises();
+    final client = MockClient((request) async {
+      if (request.url.path == '/compressed') {
+        return http.Response.bytes(
+          gzip.encode(utf8.encode('compressed text')),
+          200,
+          headers: {
+            'content-encoding': 'gzip',
+            'content-type': 'text/plain; charset=utf-8',
+          },
+          request: request,
+        );
+      }
+      count++;
+      if (count == 1) {
+        return http.Response(
+          '',
+          307,
+          headers: {
+            'location': '/continue',
+            'set-cookie': 'session=xyz; Path=/; Secure; HttpOnly',
+          },
+          request: request,
+        );
+      }
+      expect(request.url.path, '/continue');
+      expect(request.headers['cookie'], 'session=xyz');
+      expect(request.bodyBytes, [0, 255, 17, 128]);
+      return http.Response.bytes([0, 255, 17, 128], 200, request: request);
+    });
+    final validator = NetworkDestinationValidator(
+      lookup: (_) async => [InternetAddress('93.184.216.34')],
+    );
+    final bridge = ProviderFetchBridge(runtime, client, validator);
+
+    try {
+      final call = await runtime.evaluateAsync('''
+        (async function() {
+          const body = new Uint8Array([0, 255, 17, 128]);
+          const response = await fetch('https://provider.example.org/start', {
+            method: 'POST', body
+          });
+          const buffer = await response.arrayBuffer();
+          const result = new Uint8Array(buffer);
+          let values = '';
+          for (let index = 0; index < result.length; index++) {
+            values += (index ? ',' : '') + String(result[index]);
+          }
+          return JSON.stringify({length: buffer.byteLength, values});
+        })()
+      ''');
+      final value = await runtime
+          .handlePromise(call)
+          .timeout(const Duration(seconds: 5));
+      expect(value.stringResult, '{"length":4,"values":"0,255,17,128"}');
+      expect(count, 2);
+
+      final compressedCall = await runtime.evaluateAsync('''
+        fetch('https://provider.example.org/compressed')
+          .then(response => response.text())
+      ''');
+      final compressedValue = await runtime
+          .handlePromise(compressedCall)
+          .timeout(const Duration(seconds: 5));
+      expect(compressedValue.stringResult, 'compressed text');
+    } finally {
+      bridge.dispose();
+      client.close();
+      final runtimeId = runtime.getEngineInstanceId();
+      runtime.dispose();
+      JavascriptRuntime.channelFunctionsRegistered.remove(runtimeId);
+    }
+  });
+
+  test(
+    'fetch retries malformed compressed GET responses with identity',
+    () async {
+      var requestCount = 0;
+      final runtime = QuickJsRuntime2()..enableHandlePromises();
+      final client = MockClient((request) async {
+        requestCount++;
+        if (requestCount == 1) {
+          return http.Response.bytes(
+            [1, 2, 3, 4],
+            200,
+            headers: {
+              'content-encoding': 'gzip',
+              'content-type': 'application/json',
+            },
+            request: request,
+          );
+        }
+        expect(request.headers['accept-encoding'], 'identity');
+        return http.Response(
+          '{"ok":true}',
+          200,
+          headers: {'content-type': 'application/json'},
+          request: request,
+        );
+      });
+      final validator = NetworkDestinationValidator(
+        lookup: (_) async => [InternetAddress('93.184.216.34')],
+      );
+      final bridge = ProviderFetchBridge(runtime, client, validator);
+
+      try {
+        final call = await runtime.evaluateAsync('''
+        fetch('https://provider.example.org/data').then(response => response.json())
+          .then(value => JSON.stringify(value))
+      ''');
+        final value = await runtime
+            .handlePromise(call)
+            .timeout(const Duration(seconds: 5));
+        expect(value.stringResult, '{"ok":true}');
+        expect(requestCount, 2);
+      } finally {
+        bridge.dispose();
+        client.close();
+        final runtimeId = runtime.getEngineInstanceId();
+        runtime.dispose();
+        JavascriptRuntime.channelFunctionsRegistered.remove(runtimeId);
+      }
+    },
+  );
 }

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_js/javascript_runtime.dart';
 import 'package:http/http.dart' as http;
@@ -23,6 +24,8 @@ class ProviderFetchBridge {
     final setup = runtime.evaluate(_polyfill);
     if (setup.isError) throw StateError(setup.stringResult);
     runtime.onMessage('OnfeedFetch', _onFetch);
+    runtime.onMessage('OnfeedCancel', _onCancel);
+    runtime.onMessage('OnfeedTimer', _onTimer);
   }
 
   final JavascriptRuntime runtime;
@@ -31,8 +34,57 @@ class ProviderFetchBridge {
   bool _active = true;
   int _activeRequests = 0;
   final Queue<Map<String, dynamic>> _queuedRequests = Queue();
+  final _ProviderCookieJar _cookies = _ProviderCookieJar();
+  final Map<int, Timer> _timers = {};
+  final Set<int> _cancelledRequests = {};
 
-  void dispose() => _active = false;
+  void dispose() {
+    _active = false;
+    for (final timer in _timers.values) {
+      timer.cancel();
+    }
+    _timers.clear();
+  }
+
+  void _onCancel(dynamic raw) {
+    if (raw is Map) {
+      final id = int.tryParse('${raw['id']}');
+      if (id != null) {
+        _cancelledRequests.add(id);
+        final queuedCount = _queuedRequests.length;
+        _queuedRequests.removeWhere((request) => '${request['id']}' == '$id');
+        if (_queuedRequests.length != queuedCount) {
+          _cancelledRequests.remove(id);
+        }
+      }
+    }
+  }
+
+  void _onTimer(dynamic raw) {
+    if (!_active || raw is! Map) return;
+    final id = int.tryParse('${raw['id']}');
+    if (id == null) return;
+    if (raw['action'] == 'clear') {
+      _timers.remove(id)?.cancel();
+      return;
+    }
+    if (_timers.length >= 64 || _timers.containsKey(id)) return;
+    final delay = (raw['delay'] is num ? (raw['delay'] as num).toInt() : 0)
+        .clamp(0, 30000);
+    final interval = raw['interval'] == true;
+    void fire() {
+      if (!_active || !_timers.containsKey(id)) return;
+      if (!interval) _timers.remove(id);
+      runtime.evaluate('globalThis.__onfeedTimerFire($id);');
+    }
+
+    _timers[id] = interval
+        ? Timer.periodic(
+            Duration(milliseconds: delay < 1 ? 1 : delay),
+            (_) => fire(),
+          )
+        : Timer(Duration(milliseconds: delay), fire);
+  }
 
   void _onFetch(dynamic request) {
     if (!_active || request is! Map) return;
@@ -49,12 +101,15 @@ class ProviderFetchBridge {
   }
 
   void _startFetch(Map<String, dynamic> data) {
+    final id = int.tryParse('${data['id']}');
+    if (id != null && _cancelledRequests.remove(id)) return;
     _activeRequests++;
     unawaited(_fetch(data));
   }
 
   Future<void> _fetch(Map<String, dynamic> data) async {
     final id = data['id'];
+    final requestId = int.tryParse('$id');
     try {
       final uri = Uri.parse('${data['url'] ?? ''}');
       var method = '${data['method'] ?? 'GET'}'.toUpperCase();
@@ -76,11 +131,19 @@ class ProviderFetchBridge {
           headers.map((key, value) => MapEntry('$key', '$value')),
         );
       }
+      if (!requestHeaders.keys.any(
+        (key) => key.toLowerCase() == 'accept-encoding',
+      )) {
+        requestHeaders['Accept-Encoding'] = 'gzip, deflate';
+      }
       final body = data['body'];
-      String? requestBody;
+      List<int>? requestBody;
       if (body != null && method != 'GET' && method != 'HEAD') {
-        requestBody = body is String ? body : jsonEncode(body);
-        if (utf8.encode(requestBody).length > _maxRequestBodyBytes) {
+        final encoded = data['bodyBase64'];
+        requestBody = encoded is String
+            ? base64Decode(encoded)
+            : utf8.encode(body is String ? body : jsonEncode(body));
+        if (requestBody.length > _maxRequestBodyBytes) {
           throw const FormatException('Provider request body is too large.');
         }
       }
@@ -91,13 +154,25 @@ class ProviderFetchBridge {
                 ? (data['maxRedirects'] as num).toInt().clamp(0, 5)
                 : 5);
       var current = uri;
+      Uri? redirectReferer;
       late http.Response response;
+      late (List<int>, Map<String, String>) decodedResponse;
       var redirectCount = 0;
+      var retriedWithoutCompression = false;
       while (true) {
+        final cookie = _cookies.headerFor(current);
+        if (cookie.isNotEmpty &&
+            !requestHeaders.keys.any((key) => key.toLowerCase() == 'cookie')) {
+          requestHeaders['Cookie'] = cookie;
+        }
+        if (redirectReferer != null &&
+            !requestHeaders.keys.any((key) => key.toLowerCase() == 'referer')) {
+          requestHeaders['Referer'] = redirectReferer.toString();
+        }
         final request = http.Request(method, current)
           ..followRedirects = false
           ..headers.addAll(requestHeaders);
-        if (requestBody != null) request.body = requestBody;
+        if (requestBody != null) request.bodyBytes = requestBody;
         response = await _validator.sendForBytes(
           request,
           allowedSchemes: const {'https'},
@@ -105,67 +180,164 @@ class ProviderFetchBridge {
           maxResponseBytes: _maxResponseBodyBytes,
           timeout: const Duration(seconds: 20),
           testClient: _testClient,
+          // HttpClient's automatic gzip decoder can fail before we receive
+          // response headers, leaving provider scripts with an opaque stream
+          // error. Keep the wire bytes intact and decode below so we can
+          // retry malformed/unsupported compression with identity encoding.
+          autoUncompress: false,
         );
-        if (![301, 302, 303, 307, 308].contains(response.statusCode)) break;
+        _cookies.absorb(current, response.headers);
+        if ([301, 302, 303, 307, 308].contains(response.statusCode)) {
+          final location = response.headers['location'];
+          if (location == null || redirectCount >= maxRedirects) {
+            throw const FormatException('Invalid provider redirect.');
+          }
+          final next = await _validator.validateRedirect(
+            current,
+            location,
+            allowedSchemes: const {'https'},
+          );
+          final sameOrigin =
+              current.scheme == next.scheme &&
+              current.host.toLowerCase() == next.host.toLowerCase() &&
+              current.port == next.port;
+          if (!sameOrigin) {
+            requestHeaders.removeWhere(
+              (name, _) =>
+                  !const {'accept', 'user-agent'}.contains(name.toLowerCase()),
+            );
+          }
+          if ((response.statusCode == 303 && method != 'HEAD') ||
+              ((response.statusCode == 301 || response.statusCode == 302) &&
+                  method != 'GET' &&
+                  method != 'HEAD')) {
+            method = 'GET';
+            requestBody = null;
+            requestHeaders.removeWhere(
+              (name, _) =>
+                  name.toLowerCase() == 'content-length' ||
+                  name.toLowerCase() == 'content-type',
+            );
+          }
+          redirectReferer = current;
+          current = next;
+          redirectCount++;
+          continue;
+        }
 
-        final location = response.headers['location'];
-        if (location == null || redirectCount >= maxRedirects) {
-          throw const FormatException('Invalid provider redirect.');
-        }
-        final next = await _validator.validateRedirect(
-          current,
-          location,
-          allowedSchemes: const {'https'},
-        );
-        final sameOrigin =
-            current.scheme == next.scheme &&
-            current.host.toLowerCase() == next.host.toLowerCase() &&
-            current.port == next.port;
-        if (!sameOrigin) {
-          requestHeaders.removeWhere(
-            (name, _) =>
-                !const {'accept', 'user-agent'}.contains(name.toLowerCase()),
+        try {
+          decodedResponse = _decodeContentEncoding(
+            response.bodyBytes,
+            response.headers,
           );
+        } on FormatException {
+          final encoding = response.headers['content-encoding']
+              ?.trim()
+              .toLowerCase();
+          final canRetryUncompressed =
+              !retriedWithoutCompression &&
+              (method == 'GET' || method == 'HEAD') &&
+              encoding != null &&
+              encoding.isNotEmpty &&
+              encoding != 'identity';
+          if (!canRetryUncompressed) rethrow;
+          // Some origins send malformed or unsupported compressed data. Retry
+          // through the same validated redirect path with compression disabled.
+          retriedWithoutCompression = true;
+          requestHeaders['Accept-Encoding'] = 'identity';
+          continue;
         }
-        if (response.statusCode == 303 ||
-            ((response.statusCode == 301 || response.statusCode == 302) &&
-                method != 'GET' &&
-                method != 'HEAD')) {
-          method = 'GET';
-          requestBody = null;
-          requestHeaders.removeWhere(
-            (name, _) =>
-                name.toLowerCase() == 'content-length' ||
-                name.toLowerCase() == 'content-type',
-          );
-        }
-        current = next;
-        redirectCount++;
+        break;
       }
-
-      final bytes = response.bodyBytes;
-      if (!_active) return;
+      final bytes = decodedResponse.$1;
+      if (!_active ||
+          (requestId != null && _cancelledRequests.contains(requestId))) {
+        return;
+      }
       final responseUrl = response.request?.url ?? current;
       final payload = {
         'status': response.statusCode,
-        'statusText': _reasonPhrase(response.statusCode),
+        'statusText':
+            response.reasonPhrase ?? _reasonPhrase(response.statusCode),
         'url': responseUrl.toString(),
         'originalUrl': uri.toString(),
-        'headers': response.headers,
-        'body': utf8.decode(bytes, allowMalformed: true),
+        'headers': decodedResponse.$2,
+        // Keep the response bytes intact across the Dart/QuickJS bridge.
+        // `text()` decodes them on demand; `arrayBuffer()` stays binary-safe.
+        'bodyBase64': base64Encode(bytes),
+        'bodyText': _decodeText(bytes, response.headers['content-type']),
       };
       runtime.evaluate(
         'globalThis.__onfeedFetchResolve(${jsonEncode(id)}, ${jsonEncode(payload)});',
       );
     } catch (error) {
-      if (!_active) return;
+      if (!_active ||
+          (requestId != null && _cancelledRequests.contains(requestId))) {
+        return;
+      }
       _reject(id, error.toString());
     } finally {
       _activeRequests--;
       if (_active && _queuedRequests.isNotEmpty) {
         _startFetch(_queuedRequests.removeFirst());
       }
+      if (requestId != null) _cancelledRequests.remove(requestId);
     }
+  }
+
+  static String _decodeText(List<int> bytes, String? contentType) {
+    final charset = RegExp(
+      r"""charset\s*=\s*["']?([^;"']+)""",
+      caseSensitive: false,
+    ).firstMatch(contentType ?? '')?.group(1)?.trim().toLowerCase();
+    if (charset == null || charset == 'utf-8' || charset == 'utf8') {
+      return utf8.decode(bytes, allowMalformed: true);
+    }
+    if (charset == 'iso-8859-1' ||
+        charset == 'latin1' ||
+        charset == 'windows-1252') {
+      return latin1.decode(bytes);
+    }
+    // Dart's standard codecs do not include arbitrary legacy encodings.
+    // Preserve bytes in the payload regardless; unknown text encodings use UTF-8.
+    return utf8.decode(bytes, allowMalformed: true);
+  }
+
+  static (List<int>, Map<String, String>) _decodeContentEncoding(
+    List<int> bytes,
+    Map<String, String> rawHeaders,
+  ) {
+    final headers = Map<String, String>.of(rawHeaders);
+    final encoding = headers['content-encoding']?.trim().toLowerCase();
+    if (encoding == null || encoding.isEmpty || encoding == 'identity') {
+      return (bytes, Map.unmodifiable(headers));
+    }
+    List<int> decoded;
+    if (encoding == 'gzip' || encoding == 'x-gzip') {
+      decoded = gzip.decode(bytes);
+    } else if (encoding == 'deflate') {
+      try {
+        decoded = zlib.decode(bytes);
+      } on FormatException {
+        decoded = ZLibDecoder(raw: true).convert(bytes);
+      }
+    } else if (encoding == 'br') {
+      throw const FormatException(
+        'Provider response uses Brotli encoding, which this runtime cannot decode.',
+      );
+    } else {
+      throw FormatException(
+        'Unsupported provider content encoding: $encoding.',
+      );
+    }
+    if (decoded.length > _maxResponseBodyBytes) {
+      throw const FormatException(
+        'HTTP response is too large after decompression.',
+      );
+    }
+    headers.remove('content-encoding');
+    headers.remove('content-length');
+    return (decoded, Map.unmodifiable(headers));
   }
 
   void _reject(dynamic id, String message) {
@@ -330,15 +502,17 @@ class ProviderFetchBridge {
       }
       let nextFetchId = 0;
       const pendingFetches = Object.create(null);
+      let nextTimerId = 0;
+      const providerTimers = Object.create(null);
       function normalizeHeaders(input) {
         const output = {};
         if (!input) return output;
         if (typeof input.forEach === 'function') {
-          input.forEach((value, key) => output[String(key)] = String(value));
+          input.forEach((value, key) => output[String(key).toLowerCase()] = String(value));
         } else if (Array.isArray(input)) {
-          input.forEach(pair => output[String(pair[0])] = String(pair[1]));
+          input.forEach(pair => output[String(pair[0]).toLowerCase()] = String(pair[1]));
         } else {
-          Object.keys(input).forEach(key => output[key] = String(input[key]));
+          Object.keys(input).forEach(key => output[key.toLowerCase()] = String(input[key]));
         }
         return output;
       }
@@ -497,6 +671,40 @@ class ProviderFetchBridge {
           };
         };
       }
+      if (typeof globalThis.TextEncoder === 'undefined') {
+        globalThis.TextEncoder = function() {};
+        globalThis.TextEncoder.prototype.encode = function(value) {
+          return Buffer.from(String(value), 'utf8');
+        };
+      }
+      if (typeof globalThis.TextDecoder === 'undefined') {
+        globalThis.TextDecoder = function(encoding) {
+          this.encoding = String(encoding || 'utf-8').toLowerCase();
+        };
+        globalThis.TextDecoder.prototype.decode = function(input) {
+          const bytes = input == null ? new Uint8Array(0) :
+            (input instanceof ArrayBuffer ? new Uint8Array(input) :
+              new Uint8Array(input.buffer, input.byteOffset || 0, input.byteLength));
+          if (this.encoding === 'latin1' || this.encoding === 'iso-8859-1' || this.encoding === 'windows-1252') {
+            return Array.from(bytes, byte => String.fromCharCode(byte)).join('');
+          }
+          const escaped = Array.from(bytes, byte => '%' + byte.toString(16).padStart(2, '0')).join('');
+          try { return decodeURIComponent(escaped); }
+          catch (_) { return Buffer.from(bytes).toString('utf8'); }
+        };
+      }
+      if (typeof globalThis.Request === 'undefined') {
+        globalThis.Request = function(input, init) {
+          init = init || {};
+          const base = typeof input === 'string' || input instanceof URL ?
+            { url: String(input) } : input;
+          this.url = base.url || String(base);
+          this.method = String(init.method || base.method || 'GET').toUpperCase();
+          this.headers = new Headers(init.headers || base.headers || {});
+          this.body = init.body == null ? (base.body == null ? null : base.body) : init.body;
+          this.signal = init.signal || base.signal || null;
+        };
+      }
       function makeHeaders(input) {
         const normalized = {};
         Object.keys(input || {}).forEach(key => normalized[key.toLowerCase()] = input[key]);
@@ -510,20 +718,55 @@ class ProviderFetchBridge {
           [Symbol.iterator]: () => Object.entries(normalized)[Symbol.iterator]()
         };
       }
+      if (typeof globalThis.atob !== 'function') {
+        globalThis.atob = value => {
+          const binary = Buffer.from(String(value), 'base64');
+          return Array.from(binary, byte => String.fromCharCode(byte)).join('');
+        };
+      }
+      if (typeof globalThis.btoa !== 'function') {
+        globalThis.btoa = value => Buffer.from(String(value), 'binary').toString('base64');
+      }
+      function bytesFromBase64(value) {
+        if (typeof atob !== 'function') {
+          throw new Error('Base64 decoder is unavailable.');
+        }
+        const binary = atob(String(value || ''));
+        const bytes = new Uint8Array(binary.length);
+        for (let index = 0; index < binary.length; index++) bytes[index] = binary.charCodeAt(index);
+        return bytes;
+      }
+      function copyToArrayBuffer(bytes) {
+        const buffer = new ArrayBuffer(bytes.length);
+        const view = new Uint8Array(buffer);
+        for (let index = 0; index < bytes.length; index++) view[index] = bytes[index];
+        return buffer;
+      }
       function makeResponse(payload) {
-        const body = String(payload.body ?? '');
+        const bodyBytes = bytesFromBase64(payload.bodyBase64);
+        const body = String(payload.bodyText ?? '');
+        const headers = new Headers(payload.headers || {});
         return {
           ok: payload.status >= 200 && payload.status < 300,
           status: payload.status,
           statusText: payload.statusText || '',
           url: payload.url || '',
           redirected: payload.url !== payload.originalUrl,
-          headers: makeHeaders(payload.headers),
+          headers,
+          type: 'basic',
+          bodyUsed: false,
           text: () => Promise.resolve(body),
           json: () => {
             try { return Promise.resolve(JSON.parse(body)); }
             catch (error) { return Promise.reject(error); }
           },
+          arrayBuffer: () => Promise.resolve(copyToArrayBuffer(bodyBytes)),
+          blob: () => Promise.resolve({
+            size: bodyBytes.byteLength,
+            type: headers.get('content-type') || '',
+            arrayBuffer: () => Promise.resolve(copyToArrayBuffer(bodyBytes)),
+            text: () => Promise.resolve(body)
+          }),
           clone: () => makeResponse(payload)
         };
       }
@@ -543,21 +786,69 @@ class ProviderFetchBridge {
         init = init || {};
         const request = typeof input === 'string' || input instanceof URL
           ? { url: String(input) }
-          : { url: String(input.url), method: input.method, headers: input.headers };
+          : { url: String(input.url), method: input.method, headers: input.headers, body: input.body, signal: input.signal };
+        const bodyValue = init.body == null ? (request.body == null ? null : request.body) : init.body;
+        const requestHeaders = normalizeHeaders(init.headers || request.headers);
+        const isFormUrlEncoded = bodyValue instanceof URLSearchParams;
+        if (isFormUrlEncoded && !Object.keys(requestHeaders).some(key => key.toLowerCase() === 'content-type')) {
+          requestHeaders['Content-Type'] = 'application/x-www-form-urlencoded;charset=UTF-8';
+        }
+        const binaryBody = bodyValue instanceof ArrayBuffer || ArrayBuffer.isView(bodyValue);
+        const bodyBytes = binaryBody
+          ? (bodyValue instanceof ArrayBuffer
+              ? new Uint8Array(bodyValue)
+              : new Uint8Array(bodyValue.buffer, bodyValue.byteOffset, bodyValue.byteLength))
+          : null;
         const id = ++nextFetchId;
+        const signal = init.signal || request.signal;
         return new Promise((resolve, reject) => {
           pendingFetches[id] = { resolve, reject };
+          if (signal) {
+            if (signal.aborted) {
+              delete pendingFetches[id];
+              reject(new Error('The operation was aborted.'));
+              return;
+            }
+            signal.addEventListener('abort', () => {
+              if (!pendingFetches[id]) return;
+              delete pendingFetches[id];
+              sendMessage('OnfeedCancel', JSON.stringify({ id }));
+              reject(new Error('The operation was aborted.'));
+            });
+          }
           sendMessage('OnfeedFetch', JSON.stringify({
             id,
             url: request.url,
             method: init.method || request.method || 'GET',
-            headers: normalizeHeaders(init.headers || request.headers),
-            body: init.body == null ? null : String(init.body),
+            headers: requestHeaders,
+            body: bodyValue == null ? null : (binaryBody ? '[binary]' : (isFormUrlEncoded ? bodyValue.toString() : String(bodyValue))),
+            bodyBase64: binaryBody ? Buffer.from(bodyBytes).toString('base64') : null,
             followRedirects: init.redirect !== 'manual',
             maxRedirects: init.maxRedirects
           }));
         });
       };
+      globalThis.__onfeedTimerFire = id => {
+        const entry = providerTimers[id];
+        if (!entry) return;
+        if (!entry.interval) delete providerTimers[id];
+        entry.callback(...entry.args);
+      };
+      function scheduleProviderTimer(callback, delay, interval, args) {
+        if (typeof callback !== 'function') throw new TypeError('Timer callback must be a function.');
+        const id = ++nextTimerId;
+        providerTimers[id] = { callback, args, interval };
+        sendMessage('OnfeedTimer', JSON.stringify({ id, delay: Number(delay) || 0, interval }));
+        return id;
+      }
+      function clearProviderTimer(id) {
+        delete providerTimers[id];
+        sendMessage('OnfeedTimer', JSON.stringify({ id: Number(id), action: 'clear' }));
+      }
+      globalThis.setTimeout = (callback, delay, ...args) => scheduleProviderTimer(callback, delay, false, args);
+      globalThis.setInterval = (callback, delay, ...args) => scheduleProviderTimer(callback, delay, true, args);
+      globalThis.clearTimeout = clearProviderTimer;
+      globalThis.clearInterval = clearProviderTimer;
       globalThis.XMLHttpRequest = function() {
         this.readyState = 0;
         this.status = 0;
@@ -569,8 +860,15 @@ class ProviderFetchBridge {
         this.onreadystatechange = null;
         this.onload = null;
         this.onerror = null;
+        this.onabort = null;
+        this.ontimeout = null;
+        this.timeout = 0;
         this._headers = {};
         this._responseHeaders = {};
+        this._controller = null;
+        this._aborted = false;
+        this._timedOut = false;
+        this._timeoutId = null;
       };
       globalThis.XMLHttpRequest.DONE = 4;
       globalThis.XMLHttpRequest.prototype.open = function(method, url) {
@@ -590,25 +888,219 @@ class ProviderFetchBridge {
       };
       globalThis.XMLHttpRequest.prototype.send = function(body) {
         const xhr = this;
-        fetch(xhr._url, { method: xhr._method, headers: xhr._headers, body }).then(response => {
+        xhr._controller = new AbortController();
+        if (xhr.timeout > 0) {
+          xhr._timeoutId = setTimeout(() => {
+            xhr._timedOut = true;
+            xhr.abort();
+            if (xhr.ontimeout) xhr.ontimeout();
+          }, xhr.timeout);
+        }
+        fetch(xhr._url, {
+          method: xhr._method,
+          headers: xhr._headers,
+          body,
+          signal: xhr._controller.signal
+        }).then(response => {
           xhr.status = response.status;
           xhr.statusText = response.statusText;
           xhr.responseURL = response.url;
           response.headers.forEach((value, key) => xhr._responseHeaders[key] = value);
+          if (xhr.responseType === 'arraybuffer') return response.arrayBuffer();
+          if (xhr.responseType === 'blob') return response.blob();
           return response.text();
-        }).then(text => {
-          xhr.responseText = text;
-          xhr.response = xhr.responseType === 'json' ? JSON.parse(text) : text;
+        }).then(value => {
+          if (typeof value === 'string') xhr.responseText = value;
+          if (xhr.responseType === 'json') xhr.response = JSON.parse(value);
+          else xhr.response = value;
+          if (xhr._timeoutId != null) clearTimeout(xhr._timeoutId);
           xhr.readyState = 4;
           if (xhr.onreadystatechange) xhr.onreadystatechange();
           if (xhr.onload) xhr.onload();
         }).catch(error => {
+          if (xhr._timeoutId != null) clearTimeout(xhr._timeoutId);
+          if (xhr._aborted || xhr._timedOut) return;
           xhr.readyState = 4;
           if (xhr.onreadystatechange) xhr.onreadystatechange();
           if (xhr.onerror) xhr.onerror(error);
         });
       };
-      globalThis.XMLHttpRequest.prototype.abort = function() {};
+      globalThis.XMLHttpRequest.prototype.abort = function() {
+        if (this.readyState === 0 || this.readyState === 4) return;
+        this._aborted = true;
+        if (this._controller) this._controller.abort();
+        if (this._timeoutId != null) clearTimeout(this._timeoutId);
+        this.readyState = 0;
+        if (!this._timedOut && this.onabort) this.onabort();
+      };
     })();
   ''';
+}
+
+/// A provider-runtime-local cookie jar. Each bridge belongs to one isolated
+/// QuickJS context, so cookies never cross provider boundaries.
+class _ProviderCookieJar {
+  final Map<String, _ProviderCookie> _values = {};
+
+  String headerFor(Uri uri) {
+    final now = DateTime.now();
+    _values.removeWhere(
+      (_, cookie) =>
+          cookie.expiresAt != null && !cookie.expiresAt!.isAfter(now),
+    );
+    final host = uri.host.toLowerCase();
+    final path = uri.path.isEmpty ? '/' : uri.path;
+    final matching =
+        _values.values
+            .where(
+              (cookie) =>
+                  (host == cookie.domain ||
+                      (cookie.hostOnly == false &&
+                          host.endsWith('.${cookie.domain}'))) &&
+                  (path == cookie.path ||
+                      path.startsWith(
+                        cookie.path.endsWith('/')
+                            ? cookie.path
+                            : '${cookie.path}/',
+                      )) &&
+                  (!cookie.secure || uri.scheme.toLowerCase() == 'https'),
+            )
+            .toList()
+          ..sort((a, b) => b.path.length.compareTo(a.path.length));
+    final parts = <String>[];
+    var bytes = 0;
+    for (final cookie in matching) {
+      final part = '${cookie.name}=${cookie.value}';
+      if (bytes + part.length + (parts.isEmpty ? 0 : 2) > 8192) break;
+      parts.add(part);
+      bytes += part.length + (parts.length == 1 ? 0 : 2);
+    }
+    return parts.join('; ');
+  }
+
+  void absorb(Uri uri, Map<String, String> headers) {
+    final raw = headers.entries
+        .where((entry) => entry.key.toLowerCase() == 'set-cookie')
+        .map((entry) => entry.value)
+        .expand((value) => value.split(RegExp(r',(?=\s*[^;,=\s]+\s*=)')));
+    for (final line in raw) {
+      final parts = line.split(';');
+      if (parts.isEmpty) continue;
+      final pair = parts.first.trim();
+      final equals = pair.indexOf('=');
+      if (equals <= 0) continue;
+      final name = pair.substring(0, equals).trim();
+      final value = pair.substring(equals + 1).trim();
+      if (name.length > 256 ||
+          value.length > 4096 ||
+          !RegExp(r"^[!#$%&'*+.^_`|~0-9a-zA-Z-]+$").hasMatch(name)) {
+        continue;
+      }
+      var domain = uri.host.toLowerCase();
+      var hostOnly = true;
+      var path = _defaultPath(uri.path);
+      var secure = false;
+      DateTime? expiresAt;
+      var remove = value.isEmpty;
+      for (final attribute in parts.skip(1)) {
+        final index = attribute.indexOf('=');
+        final key = (index < 0 ? attribute : attribute.substring(0, index))
+            .trim()
+            .toLowerCase();
+        final attributeValue = index < 0
+            ? ''
+            : attribute.substring(index + 1).trim();
+        if (key == 'domain') {
+          final candidate = attributeValue.toLowerCase().replaceFirst(
+            RegExp(r'^\.'),
+            '',
+          );
+          final host = uri.host.toLowerCase();
+          const knownPublicSuffixes = {
+            'com',
+            'net',
+            'org',
+            'edu',
+            'gov',
+            'uk',
+            'co.uk',
+            'org.uk',
+            'ac.uk',
+            'com.au',
+            'net.au',
+            'org.au',
+            'co.jp',
+            'co.nz',
+          };
+          if (candidate.isEmpty ||
+              !candidate.contains('.') ||
+              knownPublicSuffixes.contains(candidate) ||
+              !(host == candidate || host.endsWith('.$candidate'))) {
+            remove = true;
+            domain = '';
+          } else {
+            domain = candidate;
+            hostOnly = false;
+          }
+        } else if (key == 'path') {
+          if (attributeValue.startsWith('/')) path = attributeValue;
+        } else if (key == 'secure') {
+          secure = true;
+        } else if (key == 'max-age') {
+          final seconds = int.tryParse(attributeValue);
+          if (seconds != null) {
+            expiresAt = DateTime.now().add(Duration(seconds: seconds));
+            if (seconds <= 0) remove = true;
+          }
+        } else if (key == 'expires') {
+          if (expiresAt == null) {
+            try {
+              expiresAt = HttpDate.parse(attributeValue);
+            } on FormatException {
+              // Ignore malformed expiry attributes.
+            }
+          }
+        }
+      }
+      if (domain.isEmpty) continue;
+      final key = '$domain|$path|$name';
+      if (remove || (expiresAt != null && !expiresAt.isAfter(DateTime.now()))) {
+        _values.remove(key);
+      } else {
+        if (_values.length >= 256 && !_values.containsKey(key)) {
+          _values.remove(_values.keys.first);
+        }
+        _values[key] = _ProviderCookie(
+          name,
+          value,
+          domain,
+          path,
+          secure,
+          hostOnly,
+          expiresAt,
+        );
+      }
+    }
+  }
+
+  static String _defaultPath(String path) {
+    if (!path.startsWith('/') || path == '/') return '/';
+    final slash = path.lastIndexOf('/');
+    return slash <= 0 ? '/' : path.substring(0, slash);
+  }
+}
+
+class _ProviderCookie {
+  const _ProviderCookie(
+    this.name,
+    this.value,
+    this.domain,
+    this.path,
+    this.secure,
+    this.hostOnly,
+    this.expiresAt,
+  );
+  final String name, value, domain, path;
+  final bool secure, hostOnly;
+  final DateTime? expiresAt;
 }

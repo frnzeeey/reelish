@@ -70,6 +70,7 @@ class NetworkDestinationValidator {
   Future<http.Client> createPinnedClient(
     Uri uri, {
     Set<String> allowedSchemes = const {'https'},
+    bool autoUncompress = true,
   }) async {
     final addresses = await resolveDestination(
       uri,
@@ -78,6 +79,7 @@ class NetworkDestinationValidator {
     final expectedHost = _normalizeHostname(uri.host);
     var nextAddress = 0;
     final client = HttpClient();
+    client.autoUncompress = autoUncompress;
     client.connectionTimeout = requestTimeout;
     client.findProxy = (requestUri) => 'DIRECT';
     client.maxConnectionsPerHost = 4;
@@ -122,6 +124,7 @@ class NetworkDestinationValidator {
     int maxResponseBytes = 2 * 1024 * 1024,
     Duration? timeout,
     http.Client? testClient,
+    bool autoUncompress = true,
   }) async {
     final uri = request.url;
     final effectiveTimeout = timeout ?? requestTimeout;
@@ -135,7 +138,11 @@ class NetworkDestinationValidator {
 
     final http.Client client;
     if (testClient == null) {
-      client = await createPinnedClient(uri, allowedSchemes: allowedSchemes);
+      client = await createPinnedClient(
+        uri,
+        allowedSchemes: allowedSchemes,
+        autoUncompress: autoUncompress,
+      );
     } else {
       // Tests may replace the socket client, but they must exercise the same
       // destination policy as production calls.

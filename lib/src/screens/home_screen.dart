@@ -568,6 +568,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           defaultTargetPlatform == TargetPlatform.android;
       StreamDiscovery? discovery;
       StreamSource? source;
+      var sourceFromCache = false;
       if (playback.reuseLastLink) {
         source = await _storage.lastStream(
           item,
@@ -575,6 +576,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           allowTorrents: allowTorrents,
           cacheKey: streamCacheKey,
         );
+        sourceFromCache = source != null;
       }
       if (source == null) {
         discovery = _nuvioPlugins.discoverStreams(
@@ -662,6 +664,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               discovery: discovery,
               storage: _storage,
               playbackSettings: _playbackSettings,
+              sourceFromCache: sourceFromCache,
               streamCacheKey: streamCacheKey,
               onRefreshSources: () => _nuvioPlugins.streams(
                 pluginItem,
