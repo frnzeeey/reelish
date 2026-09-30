@@ -39,6 +39,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final _search = TextEditingController();
   final _searchFocus = FocusNode();
   final _spotlightController = PageController();
+  final ValueNotifier<int> _spotlightPageValue = ValueNotifier(0);
   List<MediaItem> _items = [], _history = [];
   List<MediaItem> _spotlightItems = [];
   List<MediaItem> _recommendations = [];
@@ -55,7 +56,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _openingDetails = false;
   int _recommendationRequest = 0;
   int _spotlightPage = 0;
-  Key _libraryKey = const ValueKey('library');
+  int _libraryRefreshToken = 0;
   Timer? _debounce;
   Timer? _spotlightTimer;
   bool _checkingForUpdate = false;
@@ -78,6 +79,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _spotlightTimer?.cancel();
     _spotlightTimer = Timer.periodic(const Duration(seconds: 6), (_) {
       if (!mounted ||
+          MediaQuery.disableAnimationsOf(context) ||
+          _searchVisible ||
           _tab != 0 ||
           _category != 'For you' ||
           _search.text.trim().isNotEmpty ||
@@ -87,7 +90,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       }
       _spotlightController.animateToPage(
         _spotlightPage + 1,
-        duration: const Duration(milliseconds: 650),
+        duration: const Duration(milliseconds: 480),
         curve: Curves.easeInOutCubic,
       );
     });
@@ -104,6 +107,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       unawaited(_checkForUpdate());
+      if (mounted && ModalRoute.of(context)?.isCurrent == true) {
+        _startSpotlightTimer();
+      }
+    } else {
+      _spotlightTimer?.cancel();
+      _spotlightTimer = null;
     }
   }
 
@@ -776,7 +785,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   void _onSpotlightPageChanged(int page) {
     _spotlightPage = page;
-    if (mounted) setState(() {});
+    _spotlightPageValue.value = page;
   }
 
   @override
@@ -786,6 +795,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _spotlightTimer?.cancel();
     _playbackSettings.dispose();
     _spotlightController.dispose();
+    _spotlightPageValue.dispose();
     _search.dispose();
     _searchFocus.dispose();
     _nuvioPlugins.removeListener(_onPluginChange);
@@ -903,162 +913,191 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     ),
   );
 
-  Widget _brandHeader() => Padding(
-    padding: const EdgeInsets.fromLTRB(20, 10, 18, 12),
-    child: Row(
-      children: [
-        _brandMark(),
-        const SizedBox(width: 10),
-        const Text.rich(
-          TextSpan(
-            style: TextStyle(
-              fontSize: 25,
-              fontWeight: FontWeight.w900,
-              letterSpacing: -1.2,
-            ),
-            children: [
-              TextSpan(text: 'reel'),
-              TextSpan(
-                text: 'ish',
-                style: TextStyle(color: Color(0xFFFF7889)),
-              ),
-            ],
-          ),
-        ),
-        const Spacer(),
-        IconButton(
-          tooltip: 'Search',
-          onPressed: () {
-            setState(() => _searchVisible = true);
-            _searchFocus.requestFocus();
-          },
-          style: IconButton.styleFrom(
-            backgroundColor: Colors.white.withValues(alpha: .09),
-            foregroundColor: Colors.white,
-          ),
-          icon: const Icon(FeatherIcons.search),
-        ),
-        const SizedBox(width: 5),
-        IconButton(
-          tooltip: 'Your library',
-          onPressed: () => setState(() => _tab = 2),
-          style: IconButton.styleFrom(
-            backgroundColor: Colors.white.withValues(alpha: .09),
-            foregroundColor: Colors.white,
-          ),
-          icon: const Icon(FeatherIcons.user),
-        ),
-      ],
-    ),
-  );
-
-  Widget _filtersAndSearch() => Padding(
-    padding: const EdgeInsets.fromLTRB(18, 16, 18, 10),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        AnimatedSize(
-          duration: const Duration(milliseconds: 280),
-          curve: Curves.easeInOut,
-          alignment: Alignment.topCenter,
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 280),
-            switchInCurve: Curves.easeOut,
-            switchOutCurve: Curves.easeIn,
-            transitionBuilder: (child, animation) =>
-                FadeTransition(opacity: animation, child: child),
-            child: _searchVisible
-                ? Row(
-                    key: const ValueKey('search-visible'),
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _search,
-                          focusNode: _searchFocus,
-                          onChanged: (value) {
-                            setState(() {});
-                            _searchChanged(value);
-                          },
-                          decoration: InputDecoration(
-                            prefixIcon: const Icon(FeatherIcons.search),
-                            hintText: 'Find your next favorite',
-                            suffixIcon: _search.text.isEmpty
-                                ? null
-                                : IconButton(
-                                    tooltip: 'Clear search',
-                                    onPressed: () {
-                                      _search.clear();
-                                      setState(() {});
-                                      _searchChanged('');
-                                    },
-                                    icon: const Icon(FeatherIcons.x),
-                                  ),
-                          ),
+  Widget _brandHeader() {
+    final transitionDuration = MediaQuery.disableAnimationsOf(context)
+        ? Duration.zero
+        : const Duration(milliseconds: 220);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 10, 18, 12),
+      child: AnimatedSwitcher(
+        duration: transitionDuration,
+        switchInCurve: Curves.easeOutCubic,
+        switchOutCurve: Curves.easeInCubic,
+        transitionBuilder: (child, animation) {
+          // New header content rises in; the outgoing content reverses down.
+          final position = Tween<Offset>(
+            begin: const Offset(0, .12),
+            end: Offset.zero,
+          ).animate(animation);
+          return FadeTransition(
+            opacity: animation,
+            child: SlideTransition(position: position, child: child),
+          );
+        },
+        child: _searchVisible
+            ? Row(
+                key: const ValueKey('header-search'),
+                children: [
+                  Expanded(
+                    child: ValueListenableBuilder<TextEditingValue>(
+                      valueListenable: _search,
+                      builder: (context, value, _) => TextField(
+                        controller: _search,
+                        focusNode: _searchFocus,
+                        onChanged: _searchChanged,
+                        decoration: InputDecoration(
+                          prefixIcon: const Icon(FeatherIcons.search),
+                          hintText: 'Find your next favorite',
+                          suffixIcon: value.text.isEmpty
+                              ? null
+                              : IconButton(
+                                  tooltip: 'Clear search',
+                                  onPressed: () {
+                                    _search.clear();
+                                    _searchChanged('');
+                                  },
+                                  icon: const Icon(FeatherIcons.x),
+                                ),
                         ),
                       ),
-                      const SizedBox(width: 6),
-                      IconButton(
-                        tooltip: 'Close search',
-                        onPressed: _closeSearch,
-                        icon: const Icon(FeatherIcons.x),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  IconButton(
+                    tooltip: 'Close search',
+                    onPressed: _closeSearch,
+                    icon: const Icon(FeatherIcons.x),
+                  ),
+                ],
+              )
+            : Row(
+                key: const ValueKey('brand-header'),
+                children: [
+                  _brandMark(),
+                  const SizedBox(width: 10),
+                  const Text.rich(
+                    TextSpan(
+                      style: TextStyle(
+                        fontSize: 25,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -1.2,
                       ),
-                    ],
-                  )
-                : const SizedBox.shrink(key: ValueKey('search-hidden')),
+                      children: [
+                        TextSpan(text: 'reel'),
+                        TextSpan(
+                          text: 'ish',
+                          style: TextStyle(color: Color(0xFFFF7889)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    tooltip: 'Search',
+                    onPressed: () {
+                      setState(() => _searchVisible = true);
+                      _searchFocus.requestFocus();
+                    },
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.white.withValues(alpha: .09),
+                      foregroundColor: Colors.white,
+                    ),
+                    icon: const Icon(FeatherIcons.search),
+                  ),
+                  const SizedBox(width: 5),
+                  IconButton(
+                    tooltip: 'Your library',
+                    onPressed: () => setState(() => _tab = 2),
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.white.withValues(alpha: .09),
+                      foregroundColor: Colors.white,
+                    ),
+                    icon: const Icon(FeatherIcons.user),
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+
+  Widget _filtersAndSearch() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 8, 18, 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            height: 39,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                for (final category in [
+                  'For you',
+                  'Movies',
+                  'Series',
+                  'Trending',
+                  'Continue watching',
+                ])
+                  CategoryChip(
+                    label: category,
+                    selected: _category == category,
+                    onTap: () {
+                      setState(() => _category = category);
+                      if (category == 'Trending') _load();
+                    },
+                  ),
+              ],
+            ),
           ),
-        ),
-        SizedBox(height: _searchVisible ? 13 : 0),
-        SizedBox(
-          height: 39,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            children: [
-              for (final category in [
-                'For you',
-                'Movies',
-                'Series',
-                'Trending',
-                'Continue watching',
-              ])
-                CategoryChip(
-                  label: category,
-                  selected: _category == category,
-                  onTap: () {
-                    setState(() => _category = category);
-                    if (category == 'Trending') _load();
-                  },
-                ),
-            ],
-          ),
-        ),
-      ],
-    ),
-  );
+        ],
+      ),
+    );
+  }
 
   Widget _home() {
     final isSearch = _search.text.trim().isNotEmpty;
+    final searchActive = _searchVisible || isSearch;
+    final sectionCollapseDuration = MediaQuery.disableAnimationsOf(context)
+        ? Duration.zero
+        : const Duration(milliseconds: 220);
     final movies = _items.where((item) => item.type == 'movie').toList();
     final series = _items.where((item) => item.type == 'series').toList();
     final spotlights = _spotlightItems;
     final continueWatching = _history
         .where((item) => item.resumeMs > 0)
         .toList();
-    final showHero = !isSearch && _category == 'For you' && _items.isNotEmpty;
+    final showHero =
+        !searchActive && _category == 'For you' && _items.isNotEmpty;
 
     return RefreshIndicator(
       onRefresh: () => _load(query: isSearch ? _search.text : null),
       child: CustomScrollView(
         slivers: [
+          SliverToBoxAdapter(child: _brandHeader()),
           SliverToBoxAdapter(
-            child: showHero && spotlights.isNotEmpty
-                ? _featuredCarousel(spotlights)
-                : _brandHeader(),
+            child: AnimatedSize(
+              duration: sectionCollapseDuration,
+              curve: Curves.easeInOutCubic,
+              alignment: Alignment.topCenter,
+              child: showHero && spotlights.isNotEmpty
+                  ? _featuredCarousel(spotlights)
+                  : const SizedBox.shrink(),
+            ),
           ),
           SliverToBoxAdapter(child: _filtersAndSearch()),
-          if (continueWatching.isNotEmpty && _category != 'Continue watching')
-            SliverToBoxAdapter(
-              child: _section('Pick up where you left off', continueWatching),
+          SliverToBoxAdapter(
+            child: AnimatedSize(
+              duration: sectionCollapseDuration,
+              curve: Curves.easeInOutCubic,
+              alignment: Alignment.topCenter,
+              child:
+                  !searchActive &&
+                      continueWatching.isNotEmpty &&
+                      _category != 'Continue watching'
+                  ? _section('Pick up where you left off', continueWatching)
+                  : const SizedBox.shrink(),
             ),
+          ),
           if (_nuvioPlugins.repositories.isEmpty)
             SliverToBoxAdapter(
               child: Padding(
@@ -1285,37 +1324,46 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             controller: _spotlightController,
             itemCount: items.length > 1 ? null : items.length,
             onPageChanged: _onSpotlightPageChanged,
-            itemBuilder: (context, page) =>
-                _featured(items[page % items.length]),
+            itemBuilder: (context, page) => _featured(
+              items[page % items.length],
+              imageCacheHeight: (425 * MediaQuery.devicePixelRatioOf(context))
+                  .round(),
+            ),
           ),
         ),
         if (items.length > 1) ...[
           const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              for (var index = 0; index < items.length; index++)
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 240),
-                  curve: Curves.easeOut,
-                  width: index == _spotlightPage % items.length ? 16 : 5,
-                  height: 5,
-                  margin: const EdgeInsets.symmetric(horizontal: 3),
-                  decoration: BoxDecoration(
-                    color: index == _spotlightPage % items.length
-                        ? GlassTheme.primary
-                        : Colors.white.withValues(alpha: .35),
-                    borderRadius: BorderRadius.circular(10),
+          ValueListenableBuilder<int>(
+            valueListenable: _spotlightPageValue,
+            builder: (context, page, _) => Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                for (var index = 0; index < items.length; index++)
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    curve: Curves.easeOutCubic,
+                    width: index == page % items.length ? 16 : 5,
+                    height: 5,
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    decoration: BoxDecoration(
+                      color: index == page % items.length
+                          ? GlassTheme.primary
+                          : Colors.white.withValues(alpha: .35),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
         ],
       ],
     ),
   );
 
-  Widget _featured(MediaItem item) => ClipRRect(
+  Widget _featured(
+    MediaItem item, {
+    required int imageCacheHeight,
+  }) => ClipRRect(
     borderRadius: BorderRadius.circular(28),
     child: Stack(
       fit: StackFit.expand,
@@ -1324,6 +1372,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           Image.network(
             item.background,
             fit: BoxFit.cover,
+            cacheHeight: imageCacheHeight,
             errorBuilder: (_, __, ___) =>
                 ColoredBox(color: GlassTheme.elevatedSurface),
           )
@@ -1339,7 +1388,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ),
           ),
         ),
-        Positioned(top: 4, left: 0, right: 0, child: _brandHeader()),
         Positioned(
           left: 21,
           right: 21,
@@ -1479,9 +1527,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       TabPageTransition(
         active: _tab == 2,
         child: LibraryScreen(
-          key: _libraryKey,
           storage: _storage,
           onPlay: _showDetails,
+          refreshToken: _libraryRefreshToken,
         ),
       ),
       TabPageTransition(
@@ -1509,10 +1557,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               onSelected: (value) {
                 setState(() {
                   _tab = value;
+                  if (value == 2) _libraryRefreshToken++;
                 });
                 if (value == 2) {
-                  _loadHistory();
-                  _libraryKey = UniqueKey();
+                  unawaited(_loadHistory());
                 }
               },
             ),

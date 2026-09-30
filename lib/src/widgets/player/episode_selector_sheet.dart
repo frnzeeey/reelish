@@ -83,25 +83,26 @@ class _EpisodeSelectorSheetState extends State<EpisodeSelectorSheet> {
                           'No episode list is available for this title.',
                         ),
                       )
-                    : ListView(
-                        shrinkWrap: true,
-                        children: [
-                          for (final e in episodes)
-                            ListTile(
-                              leading: const Icon(
-                                Icons.play_circle_outline,
-                                color: GlassTheme.primary,
-                              ),
-                              title: Text(
-                                'E${(e['episode_number'] as num).toInt().toString().padLeft(2, '0')}  ${e['name']}',
-                              ),
-                              subtitle: Text('Season $_season'),
-                              onTap: () => Navigator.pop(context, (
-                                season: _season!,
-                                episode: (e['episode_number'] as num).toInt(),
-                              )),
+                    : ListView.builder(
+                        itemCount: episodes.length,
+                        itemBuilder: (context, index) {
+                          final episode = episodes[index];
+                          return ListTile(
+                            leading: const Icon(
+                              Icons.play_circle_outline,
+                              color: GlassTheme.primary,
                             ),
-                        ],
+                            title: Text(
+                              'E${(episode['episode_number'] as num).toInt().toString().padLeft(2, '0')}  ${episode['name']}',
+                            ),
+                            subtitle: Text('Season $_season'),
+                            onTap: () => Navigator.pop(context, (
+                              season: _season!,
+                              episode: (episode['episode_number'] as num)
+                                  .toInt(),
+                            )),
+                          );
+                        },
                       ),
               ),
             ],

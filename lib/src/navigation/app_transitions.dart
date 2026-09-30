@@ -17,13 +17,13 @@ class AppPageRoute<T> extends PageRouteBuilder<T> {
            milliseconds:
                (MediaQuery.maybeOf(context)?.disableAnimations ?? false)
                ? 1
-               : (details ? 300 : 280),
+               : (details ? 280 : 240),
          ),
          reverseTransitionDuration: Duration(
            milliseconds:
                (MediaQuery.maybeOf(context)?.disableAnimations ?? false)
                ? 1
-               : (details ? 250 : 240),
+               : (details ? 240 : 220),
          ),
        );
 
@@ -37,33 +37,19 @@ class AppPageRoute<T> extends PageRouteBuilder<T> {
     Animation<double> secondaryAnimation,
     Widget child,
   ) {
-    final curved = CurvedAnimation(
-      parent: animation,
-      curve: Curves.easeOutCubic,
-      reverseCurve: Curves.easeInCubic,
-    );
-    final scaleStart = _reducedMotion ? 1.0 : 0.985;
-    return AnimatedBuilder(
-      animation: animation,
-      child: child,
-      builder: (context, transitionedChild) {
-        final isExiting = animation.status == AnimationStatus.reverse;
-        final shouldSlide = !_reducedMotion && (_details || !isExiting);
-        final verticalDistance = _details ? 0.025 : 0.018;
-        return FadeTransition(
-          opacity: curved,
-          child: SlideTransition(
-            position: Tween<Offset>(
-              begin: shouldSlide ? Offset(0, verticalDistance) : Offset.zero,
-              end: Offset.zero,
-            ).animate(curved),
-            child: ScaleTransition(
-              scale: Tween<double>(begin: scaleStart, end: 1).animate(curved),
-              child: transitionedChild,
-            ),
-          ),
-        );
-      },
+    // The same ease-out curve runs backward on pop, which gives the exit a
+    // gentle start and a quicker finish without allocating a curve listener
+    // on every route animation frame.
+    final curved = animation.drive(CurveTween(curve: Curves.easeOutCubic));
+    final slide = _reducedMotion
+        ? const AlwaysStoppedAnimation<Offset>(Offset.zero)
+        : Tween<Offset>(
+            begin: Offset(0, _details ? .02 : .012),
+            end: Offset.zero,
+          ).animate(curved);
+    return FadeTransition(
+      opacity: curved,
+      child: SlideTransition(position: slide, child: child),
     );
   }
 }
@@ -86,7 +72,7 @@ class TabPageTransition extends StatefulWidget {
 class _TabPageTransitionState extends State<TabPageTransition>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
-  late final Animation<double> _opacity;
+  late final CurvedAnimation _opacity;
   late final Animation<Offset> _position;
   bool _reducedMotion = false;
 
@@ -133,6 +119,7 @@ class _TabPageTransitionState extends State<TabPageTransition>
 
   @override
   void dispose() {
+    _opacity.dispose();
     _controller.dispose();
     super.dispose();
   }

@@ -601,14 +601,25 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                       const Text(
                         'No episodes are available for this season.',
                         style: TextStyle(color: GlassTheme.muted),
-                      )
-                    else
-                      for (final episode in _episodes) _episodeCard(episode),
+                      ),
                   ],
                 ],
               ),
             ),
           ),
+          if (item.type == 'series' &&
+              !_loadingEpisodes &&
+              _episodeError == null &&
+              _episodes.isNotEmpty)
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) => _episodeCard(_episodes[index]),
+                  childCount: _episodes.length,
+                ),
+              ),
+            ),
         ],
       ),
       bottomNavigationBar: item.type == 'series'
