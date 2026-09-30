@@ -2,12 +2,14 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:feather_icon_font/feather_icon_font.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../models/media_item.dart';
+import '../models/stream_source.dart';
 import '../services/github_update_service.dart';
 import '../services/storage_service.dart';
+import '../services/stream_discovery.dart';
 import '../services/tmdb_service.dart';
 import '../services/nuvio_plugin_service.dart';
+import '../services/playback_settings_controller.dart';
 import '../theme/glass_theme.dart';
 import '../widgets/nuvio_plugin_installer_modal.dart';
 import '../widgets/category_chip.dart';
@@ -15,10 +17,12 @@ import '../widgets/glass_box.dart';
 import '../widgets/media_card.dart';
 import '../widgets/soft_glass_dock.dart';
 import '../widgets/player/episode_selector_sheet.dart';
+import '../widgets/player/stream_selector_sheet.dart';
 import 'plugins_screen.dart';
 import 'library_screen.dart';
 import 'player_screen.dart';
 import 'media_details_screen.dart';
+import 'playback_settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -29,6 +33,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final _nuvioPlugins = NuvioPluginService();
   final _storage = StorageService();
+  final _playbackSettings = PlaybackSettingsController();
   final _tmdb = TmdbService();
   final _search = TextEditingController();
   final _searchFocus = FocusNode();
@@ -46,6 +51,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _searchVisible = false;
   String _category = 'For you';
   int _tab = 0;
+  bool _showPlaybackSettings = false;
   int _recommendationRequest = 0;
   int _spotlightPage = 0;
   Key _libraryKey = const ValueKey('library');
@@ -87,6 +93,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _start() async {
+    await _playbackSettings.load();
     unawaited(_load());
     await _nuvioPlugins.load();
     await _loadHistory();
@@ -138,22 +145,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               child: const Text('Later'),
             ),
             FilledButton(
-              onPressed: () async {
-                final messenger = ScaffoldMessenger.of(dialogContext);
+              onPressed: () {
                 Navigator.pop(dialogContext);
-                final opened = await launchUrl(
-                  update.downloadUri,
-                  mode: LaunchMode.externalApplication,
-                );
-                if (!opened && mounted) {
-                  messenger.showSnackBar(
-                    const SnackBar(
-                      content: Text('Could not open the APK link.'),
-                    ),
-                  );
-                }
+                unawaited(_downloadAndInstallUpdate(update));
               },
-              child: const Text('Download APK'),
+              child: const Text('Download and install'),
             ),
           ],
         ),
@@ -163,6 +159,89 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     } finally {
       _updatePromptOpen = false;
       _checkingForUpdate = false;
+    }
+  }
+
+  Future<void> _downloadAndInstallUpdate(GitHubUpdate update) async {
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    var received = 0;
+    var total = 0;
+    StateSetter? setProgress;
+    var progressDialogOpen = true;
+
+    unawaited(
+      showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => StatefulBuilder(
+          builder: (context, updateDialogState) {
+            setProgress = updateDialogState;
+            final progress = total > 0 ? received / total : null;
+            return AlertDialog(
+              title: const Text('Downloading update'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  LinearProgressIndicator(value: progress),
+                  const SizedBox(height: 12),
+                  Text(
+                    total > 0
+                        ? '${(received / 1048576).toStringAsFixed(1)} / ${(total / 1048576).toStringAsFixed(1)} MB'
+                        : '${(received / 1048576).toStringAsFixed(1)} MB',
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+
+    void closeProgressDialog() {
+      if (progressDialogOpen && mounted) {
+        progressDialogOpen = false;
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+    }
+
+    try {
+      final apk = await GitHubUpdateService.downloadApk(
+        update,
+        onProgress: (downloaded, expected) {
+          received = downloaded;
+          total = expected;
+          setProgress?.call(() {});
+        },
+      );
+      closeProgressDialog();
+      final result = await GitHubUpdateService.installApk(apk);
+      if (!mounted) return;
+      if (result == 'permission_required') {
+        // Android returns here after the user enables installs from Reelish;
+        // allow another check immediately so the update prompt can retry.
+        _lastUpdateCheckAt = null;
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Allow installs from Reelish, then return to continue the update.',
+            ),
+          ),
+        );
+      } else if (result != 'installer_opened') {
+        messenger.showSnackBar(
+          const SnackBar(content: Text("Could not open Android's installer.")),
+        );
+      }
+    } catch (_) {
+      closeProgressDialog();
+      if (mounted) {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('Could not download the update. Try again later.'),
+          ),
+        );
+      }
     }
   }
 
@@ -465,15 +544,57 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           .resolveTmdbId(item)
           .timeout(const Duration(seconds: 3), onTimeout: () => '');
       final pluginItem = pluginId.isEmpty ? item : item.copyWith(id: pluginId);
-      final discovery = _nuvioPlugins.discoverStreams(
-        pluginItem,
-        season: season,
-        episode: episode,
-      );
-      final source = await discovery.firstSource;
+      final playback = _playbackSettings.value;
+      final streamCacheKey = item.type == 'series'
+          ? '${item.type}:${item.id}:s${season ?? 0}:e${episode ?? 0}'
+          : '${item.type}:${item.id}';
+      final allowTorrents =
+          playback.p2pStreaming &&
+          defaultTargetPlatform == TargetPlatform.android;
+      StreamDiscovery? discovery;
+      StreamSource? source;
+      if (playback.reuseLastLink) {
+        source = await _storage.lastStream(
+          item,
+          maxAge: Duration(hours: playback.lastLinkCacheHours),
+          allowTorrents: allowTorrents,
+          cacheKey: streamCacheKey,
+        );
+      }
+      if (source == null) {
+        discovery = _nuvioPlugins.discoverStreams(
+          pluginItem,
+          season: season,
+          episode: episode,
+          allowedPluginIds: playback.allowedProviderIds,
+          allowTorrents: allowTorrents,
+        );
+        source = await discovery.firstSource;
+        if (source != null && !playback.autoStreamSelection) {
+          await Future.any([
+            discovery.finished,
+            Future<void>.delayed(
+              Duration(seconds: playback.streamSelectionTimeoutSeconds),
+            ),
+          ]);
+          final available = discovery.sources;
+          if (available.isNotEmpty) {
+            dismissSearchDialog();
+            source = await StreamSelectorSheet.show(
+              presentationContext ?? context,
+              available,
+              available.first,
+            );
+            if (source == null) {
+              discovery.cancel();
+              return;
+            }
+          }
+        }
+      }
       dismissSearchDialog();
       if (!mounted) {
-        discovery.cancel();
+        discovery?.cancel();
         return;
       }
       final resolvedItem = await externalIdsFuture.timeout(
@@ -487,6 +608,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         setState(() => _resolvingStreams = false);
       }
       if (source == null) {
+        discovery?.cancel();
         ScaffoldMessenger.of(presentationContext ?? context).showSnackBar(
           SnackBar(
             duration: const Duration(seconds: 10),
@@ -507,8 +629,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         );
         return;
       }
+      final selectedSource = source;
       if (!mounted) {
-        discovery.cancel();
+        discovery?.cancel();
         return;
       }
       _spotlightTimer?.cancel();
@@ -518,20 +641,32 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           MaterialPageRoute(
             builder: (_) => PlayerScreen(
               item: playableItem,
-              source: source,
-              sources: discovery.sources,
+              source: selectedSource,
+              sources: discovery?.sources ?? [selectedSource],
               discovery: discovery,
               storage: _storage,
+              playbackSettings: _playbackSettings,
+              streamCacheKey: streamCacheKey,
               onRefreshSources: () => _nuvioPlugins.streams(
                 pluginItem,
                 season: season,
                 episode: episode,
+                allowedPluginIds: playback.allowedProviderIds,
+                allowTorrents: allowTorrents,
               ),
+              onNextEpisode: season == null || episode == null
+                  ? null
+                  : () => _playNextEpisode(
+                      item,
+                      season!,
+                      episode!,
+                      presentationContext: presentationContext,
+                    ),
             ),
           ),
         );
       } finally {
-        discovery.cancel();
+        discovery?.cancel();
         if (mounted && ModalRoute.of(context)?.isCurrent == true) {
           _startSpotlightTimer();
         }
@@ -541,6 +676,66 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       dismissSearchDialog();
       if (mounted && presentationContext == null && _resolvingStreams) {
         setState(() => _resolvingStreams = false);
+      }
+    }
+  }
+
+  Future<void> _playNextEpisode(
+    MediaItem item,
+    int season,
+    int episode, {
+    BuildContext? presentationContext,
+  }) async {
+    try {
+      final episodes = await _tmdb.allEpisodes(item);
+      episodes.sort((a, b) {
+        final seasonComparison =
+            ((a['season_number'] as num?) ?? 0).compareTo(
+              (b['season_number'] as num?) ?? 0,
+            );
+        if (seasonComparison != 0) return seasonComparison;
+        return ((a['episode_number'] as num?) ?? 0).compareTo(
+          (b['episode_number'] as num?) ?? 0,
+        );
+      });
+      final nextEpisode = episodes
+          .where((entry) {
+            final entrySeason = (entry['season_number'] as num?)?.toInt() ?? 0;
+            final entryEpisode =
+                (entry['episode_number'] as num?)?.toInt() ?? 0;
+            return entrySeason > season ||
+                (entrySeason == season && entryEpisode > episode);
+          })
+          .firstOrNull;
+      if (nextEpisode == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(presentationContext ?? context).showSnackBar(
+            const SnackBar(content: Text('There is no next episode available.')),
+          );
+        }
+        return;
+      }
+      final nextSeason = (nextEpisode['season_number'] as num?)?.toInt();
+      final nextNumber = (nextEpisode['episode_number'] as num?)?.toInt();
+      if (nextSeason == null || nextNumber == null || !mounted) return;
+      final detailContext = presentationContext?.mounted == true
+          ? presentationContext
+          : null;
+      Navigator.of(context).pop();
+      await Future<void>.delayed(Duration.zero);
+      if (mounted) {
+        await _openItem(
+          item,
+          presentationContext: detailContext,
+          selectedSeason: nextSeason,
+          selectedEpisode: nextNumber,
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(presentationContext ?? context).showSnackBar(
+          const SnackBar(content: Text('Could not find the next episode.')),
+        );
       }
     }
   }
@@ -565,6 +760,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     _debounce?.cancel();
     _spotlightTimer?.cancel();
+    _playbackSettings.dispose();
     _spotlightController.dispose();
     _search.dispose();
     _searchFocus.dispose();
@@ -1241,10 +1437,29 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   );
   @override
   Widget build(BuildContext context) {
+    final availablePlugins = [
+      for (final repository in _nuvioPlugins.repositories)
+        for (final plugin in repository.plugins)
+          (
+            id: '${repository.url}|${plugin.id}',
+            name: plugin.name,
+            repository: repository.name,
+          ),
+    ];
     final pages = [
       _home(),
       PluginsScreen(pluginService: _nuvioPlugins),
       LibraryScreen(key: _libraryKey, storage: _storage, onPlay: _showDetails),
+      _showPlaybackSettings
+          ? PlaybackSettingsScreen(
+              controller: _playbackSettings,
+              plugins: availablePlugins,
+              onBack: () => setState(() => _showPlaybackSettings = false),
+            )
+          : ProfileScreen(
+              onPlaybackSettings: () =>
+                  setState(() => _showPlaybackSettings = true),
+            ),
     ];
     return Scaffold(
       body: Stack(
@@ -1261,7 +1476,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             child: SoftGlassDock(
               selectedIndex: _tab,
               onSelected: (value) {
-                setState(() => _tab = value);
+                setState(() {
+                  _tab = value;
+                  if (value != 3) _showPlaybackSettings = false;
+                });
                 if (value == 2) {
                   _loadHistory();
                   _libraryKey = UniqueKey();

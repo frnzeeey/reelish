@@ -6,10 +6,11 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:video_player/video_player.dart';
 import 'package:flutter_go_torrent_streamer/flutter_go_torrent_streamer.dart';
-import 'package:path_provider/path_provider.dart';
 import '../../models/media_item.dart';
+import '../../models/playback_settings.dart';
 import '../../models/stream_source.dart';
 import '../../services/storage_service.dart';
+import '../../services/playback_settings_controller.dart';
 import '../../services/stream_discovery.dart';
 import '../../services/network_target_policy.dart';
 import '../../services/open_subtitles_service.dart';
@@ -28,16 +29,22 @@ class CustomVideoPlayer extends StatefulWidget {
     required this.sources,
     required this.subtitles,
     required this.storage,
+    required this.playbackSettings,
+    this.streamCacheKey,
     this.discovery,
     this.onRefreshSources,
+    this.onNextEpisode,
   });
   final MediaItem item;
   final StreamSource source;
   final List<StreamSource> sources;
   final List<SubtitleTrack> subtitles;
   final StorageService storage;
+  final PlaybackSettingsController playbackSettings;
+  final String? streamCacheKey;
   final StreamDiscovery? discovery;
   final Future<List<StreamSource>> Function()? onRefreshSources;
+  final Future<void> Function()? onNextEpisode;
   @override
   State<CustomVideoPlayer> createState() => _CustomVideoPlayerState();
 }
@@ -56,6 +63,13 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   List<VideoAudioTrack> _audioTracks = [];
   VideoTrack? _selectedVideoTrack;
   double _subtitleDelay = 0;
+  late PlaybackSettings _playback;
+  Timer? _pauseOverlayTimer;
+  bool _pauseOverlayVisible = false;
+  bool _nextEpisodePromptVisible = false;
+  bool _nextEpisodeHandled = false;
+  bool _startingNextEpisode = false;
+  double? _speedBeforeHold;
   TorrentStreamSession? _torrentSession;
   Timer? _hide, _save, _hint;
   String? _gestureHint;
@@ -73,6 +87,8 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   @override
   void initState() {
     super.initState();
+    _playback = widget.playbackSettings.value;
+    widget.playbackSettings.addListener(_onPlaybackSettingsChanged);
     _sources = List.of(widget.sources);
     _source = widget.source;
     _discoverySubscription = widget.discovery?.updates.listen((source) {
@@ -120,7 +136,10 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
       _error = false;
       _errorMessage = null;
       _visible = true;
+      _pauseOverlayVisible = false;
     });
+    _pauseOverlayTimer?.cancel();
+    _pauseOverlayTimer = null;
     _source = source;
     _videoTracks = [];
     _audioTracks = [];
@@ -209,6 +228,8 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
         loadVideoTracks(),
         loadAudioTracks(),
       ]).timeout(const Duration(seconds: 2), onTimeout: () => <void>[]);
+      await _applyPreferredAudio(c);
+      if (_subtitle == null) unawaited(_applyPreferredSubtitle());
       c.addListener(_tick);
       try {
         await c.setPlaybackSpeed(_speed).timeout(const Duration(seconds: 2));
@@ -241,6 +262,13 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
           );
         }
         setState(() => _ready = true);
+        unawaited(
+          widget.storage.saveLastStream(
+            widget.item,
+            _source ?? source,
+            cacheKey: widget.streamCacheKey,
+          ),
+        );
         _scheduleHide();
       }
     } catch (error) {
@@ -303,6 +331,64 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
         final uri = Uri.tryParse(match.group(0)!);
         return uri?.host.isNotEmpty == true ? uri!.host : 'the stream URL';
       },
+    );
+  }
+
+  Future<void> _beginHoldSpeed() async {
+    final controller = _controller;
+    if (!_playback.holdToSpeed || controller == null || !_ready) return;
+    if (_speedBeforeHold != null) return;
+    _speedBeforeHold = _speed;
+    try {
+      await controller.setPlaybackSpeed(_playback.holdSpeed);
+    } catch (_) {
+      _speedBeforeHold = null;
+    }
+  }
+
+  Future<void> _endHoldSpeed() async {
+    final controller = _controller;
+    final previousSpeed = _speedBeforeHold;
+    _speedBeforeHold = null;
+    if (controller == null || previousSpeed == null) return;
+    try {
+      await controller.setPlaybackSpeed(previousSpeed);
+    } catch (_) {}
+  }
+
+  Future<void> _startNextEpisode() async {
+    final callback = widget.onNextEpisode;
+    if (_startingNextEpisode || callback == null) return;
+    _startingNextEpisode = true;
+    if (mounted) setState(() => _nextEpisodePromptVisible = false);
+    await callback();
+  }
+
+  Widget _subtitleText(String text) {
+    final weight = _playback.subtitleBold ? FontWeight.w700 : FontWeight.w500;
+    final outline = TextStyle(
+      fontSize: _playback.subtitleSize,
+      fontWeight: weight,
+      foreground: Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3
+        ..color = Color(_playback.subtitleOutlineColor),
+    );
+    final fill = TextStyle(
+      fontSize: _playback.subtitleSize,
+      fontWeight: weight,
+      color: Color(_playback.subtitleTextColor),
+      shadows: const [Shadow(blurRadius: 5, color: Colors.black54)],
+    );
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        if (_playback.subtitleOutline)
+          ExcludeSemantics(
+            child: Text(text, textAlign: TextAlign.center, style: outline),
+          ),
+        Text(text, textAlign: TextAlign.center, style: fill),
+      ],
     );
   }
 
@@ -474,7 +560,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
       if (trackerUrls.isNotEmpty) 'tr': trackerUrls,
     };
     final magnet = Uri(scheme: 'magnet', queryParameters: query).toString();
-    final dir = await getApplicationDocumentsDirectory();
+    final dir = await widget.storage.torrentCacheDirectory();
     final session = await FlutterTorrentStreamer().startStream(
       magnet,
       dir.path,
@@ -616,8 +702,218 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     for (final track in [...widget.subtitles, ...?_source?.subtitles]) {
       if (track.url.isNotEmpty) unique.putIfAbsent(track.url, () => track);
     }
-    return unique.values.toList();
+    var tracks = unique.values.toList();
+    if (_playback.stripSdhSubtitles) {
+      tracks = tracks.where((track) => !_isSdh(track)).toList();
+    }
+    if (_playback.showOnlyPreferredLanguages) {
+      final preferred = {
+        _normalizedLanguage(_playback.preferredSubtitleLanguage),
+        _normalizedLanguage(_playback.secondarySubtitleLanguage),
+        if (_playback.useForcedSubtitles)
+          _normalizedLanguage(_selectedAudioLanguage),
+      }..remove('');
+      if (preferred.isNotEmpty) {
+        tracks = tracks
+            .where(
+              (track) => preferred.any(
+                (language) => _languageMatches(track.lang, language),
+              ),
+            )
+            .toList();
+      } else {
+        tracks = [];
+      }
+    }
+    return tracks;
   }
+
+  void _onPlaybackSettingsChanged() {
+    final previous = _playback;
+    _playback = widget.playbackSettings.value;
+    if (!mounted) return;
+    if (previous.holdToSpeed && !_playback.holdToSpeed) {
+      unawaited(_endHoldSpeed());
+    }
+    if (!previous.autoPlayNextEpisode &&
+        _playback.autoPlayNextEpisode &&
+        _nextEpisodePromptVisible) {
+      unawaited(_startNextEpisode());
+    }
+    if (previous.pauseOverlay && !_playback.pauseOverlay) {
+      _pauseOverlayTimer?.cancel();
+      _pauseOverlayTimer = null;
+      _pauseOverlayVisible = false;
+    }
+    setState(() {
+      if (_subtitle != null &&
+          !_availableSubtitles.any((track) => track.url == _subtitle!.url)) {
+        _subtitle = null;
+        _cues = [];
+      }
+    });
+    if (previous.preferredAudioLanguage != _playback.preferredAudioLanguage ||
+        previous.secondaryAudioLanguage != _playback.secondaryAudioLanguage) {
+      final controller = _controller;
+      if (controller != null) unawaited(_applyPreferredAudio(controller));
+    }
+    if (previous.preferredSubtitleLanguage !=
+            _playback.preferredSubtitleLanguage ||
+        previous.secondarySubtitleLanguage !=
+            _playback.secondarySubtitleLanguage ||
+        previous.stripSdhSubtitles != _playback.stripSdhSubtitles ||
+        previous.useForcedSubtitles != _playback.useForcedSubtitles) {
+      unawaited(_applyPreferredSubtitle());
+    }
+  }
+
+  Future<void> _applyPreferredAudio(VideoPlayerController controller) async {
+    if (_audioTracks.isEmpty || !controller.isAudioTrackSupportAvailable()) {
+      return;
+    }
+    final preferences = [
+      _playback.preferredAudioLanguage == 'device'
+          ? WidgetsBinding.instance.platformDispatcher.locale.languageCode
+          : _playback.preferredAudioLanguage,
+      _playback.secondaryAudioLanguage,
+    ].where((language) => language.isNotEmpty).toList();
+    for (final language in preferences) {
+      final track = _audioTracks
+          .where((entry) => entry.language?.isNotEmpty == true)
+          .where((entry) => _languageMatches(entry.language!, language))
+          .firstOrNull;
+      if (track == null) continue;
+      try {
+        await controller.selectAudioTrack(track.id);
+        if (mounted) {
+          setState(() {
+            _audioTracks = [
+              for (final entry in _audioTracks)
+                VideoAudioTrack(
+                  id: entry.id,
+                  label: entry.label,
+                  language: entry.language,
+                  isSelected: entry.id == track.id,
+                  bitrate: entry.bitrate,
+                  sampleRate: entry.sampleRate,
+                  channelCount: entry.channelCount,
+                  codec: entry.codec,
+                ),
+            ];
+          });
+        }
+      } catch (_) {
+        // Keep the engine's selected track if a backend rejects the request.
+      }
+      return;
+    }
+  }
+
+  Future<void> _applyPreferredSubtitle() async {
+    if (_playback.useForcedSubtitles) {
+      final audioLanguage = _selectedAudioLanguage;
+      final forced = _availableSubtitles
+          .where(_isForced)
+          .where(
+            (track) =>
+                audioLanguage.isNotEmpty &&
+                _languageMatches(track.lang, audioLanguage),
+          )
+          .firstOrNull;
+      if (forced == null) {
+        if (_subtitle != null) {
+          setState(() {
+            _subtitle = null;
+            _cues = [];
+          });
+        }
+        return;
+      }
+      await _selectSubtitle(forced);
+      return;
+    }
+    for (final language in [
+      _playback.preferredSubtitleLanguage,
+      _playback.secondarySubtitleLanguage,
+    ].where((value) => value.isNotEmpty)) {
+      final match = _availableSubtitles
+          .where((track) => _languageMatches(track.lang, language))
+          .firstOrNull;
+      if (match != null) {
+        await _selectSubtitle(match);
+        return;
+      }
+    }
+  }
+
+  String get _selectedAudioLanguage {
+    final selected = _audioTracks
+        .where((track) => track.isSelected)
+        .map((track) => track.language ?? '')
+        .firstOrNull;
+    if (selected?.isNotEmpty == true) return selected!;
+    return _playback.preferredAudioLanguage == 'device'
+        ? WidgetsBinding.instance.platformDispatcher.locale.languageCode
+        : _playback.preferredAudioLanguage;
+  }
+
+  Future<void> _selectSubtitle(SubtitleTrack track) async {
+    if (_subtitle?.url == track.url) return;
+    if (!mounted) return;
+    setState(() {
+      _subtitle = track;
+      _cues = [];
+    });
+    await _loadSubtitle(track);
+  }
+
+  String _normalizedLanguage(String language) {
+    final code = language.trim().toLowerCase().split(RegExp(r'[-_ ]')).first;
+    return const {
+          'eng': 'en',
+          'english': 'en',
+          'spa': 'es',
+          'spanish': 'es',
+          'fre': 'fr',
+          'fra': 'fr',
+          'french': 'fr',
+          'ger': 'de',
+          'deu': 'de',
+          'german': 'de',
+          'ita': 'it',
+          'italian': 'it',
+          'por': 'pt',
+          'portuguese': 'pt',
+          'jpn': 'ja',
+          'japanese': 'ja',
+          'kor': 'ko',
+          'korean': 'ko',
+          'chi': 'zh',
+          'zho': 'zh',
+          'chinese': 'zh',
+          'ara': 'ar',
+          'arabic': 'ar',
+          'rus': 'ru',
+          'russian': 'ru',
+        }[code] ??
+        code;
+  }
+
+  bool _languageMatches(String trackLanguage, String preferred) {
+    final track = _normalizedLanguage(trackLanguage);
+    final target = _normalizedLanguage(preferred);
+    return track.isNotEmpty && target.isNotEmpty && track == target;
+  }
+
+  bool _isForced(SubtitleTrack track) => RegExp(
+    r'forced|foreign|signs.?only',
+    caseSensitive: false,
+  ).hasMatch('${track.id} ${track.format} ${track.url}');
+
+  bool _isSdh(SubtitleTrack track) => RegExp(
+    r'\b(sdh|cc|hi)\b|hearing.?impaired|closed.?caption',
+    caseSensitive: false,
+  ).hasMatch('${track.id} ${track.lang} ${track.format} ${track.url}');
 
   Future<void> _pickSubtitles() async {
     final selected = await SubtitlePickerSheet.show(
@@ -826,11 +1122,13 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   @override
   void dispose() {
     _discoverySubscription?.cancel();
+    widget.playbackSettings.removeListener(_onPlaybackSettingsChanged);
     _initializationGeneration++;
     _saveProgress();
     _hide?.cancel();
     _save?.cancel();
     _hint?.cancel();
+    _pauseOverlayTimer?.cancel();
     _controller?.removeListener(_tick);
     _controller?.dispose();
     _torrentSession?.stop();
@@ -842,6 +1140,19 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   void _tick() {
     final c = _controller;
     if (c == null) return;
+    if (c.value.isPlaying) {
+      _pauseOverlayTimer?.cancel();
+      _pauseOverlayTimer = null;
+      if (_pauseOverlayVisible && mounted) {
+        setState(() => _pauseOverlayVisible = false);
+      }
+    } else if (_playback.pauseOverlay && _pauseOverlayTimer == null) {
+      _pauseOverlayTimer = Timer(const Duration(seconds: 5), () {
+        if (mounted && _controller?.value.isPlaying == false) {
+          setState(() => _pauseOverlayVisible = true);
+        }
+      });
+    }
     if (c.value.hasError) {
       unawaited(
         _handleRuntimePlaybackFailure(
@@ -851,6 +1162,20 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
         ),
       );
       return;
+    }
+    final duration = c.value.duration;
+    if (widget.item.type == 'series' &&
+        widget.onNextEpisode != null &&
+        !_nextEpisodeHandled &&
+        duration > Duration.zero &&
+        c.value.position.inMilliseconds * 100 >=
+            duration.inMilliseconds * _playback.nextEpisodeThresholdPercent) {
+      _nextEpisodeHandled = true;
+      if (_playback.autoPlayNextEpisode) {
+        unawaited(_startNextEpisode());
+      } else if (mounted) {
+        setState(() => _nextEpisodePromptVisible = true);
+      }
     }
     final progressBucket = c.value.position.inSeconds ~/ 5;
     if (progressBucket != _lastProgressSaveBucket) {
@@ -960,7 +1285,11 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
                         ],
                       ),
                     )
-                  : const CircularProgressIndicator(color: GlassTheme.primary),
+                  : (_playback.showLoadingOverlay
+                        ? const CircularProgressIndicator(
+                            color: GlassTheme.primary,
+                          )
+                        : const SizedBox.shrink()),
             ),
           if (c != null &&
               _ready &&
@@ -984,34 +1313,41 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
                 return cue == null
                     ? const SizedBox.shrink()
                     : Positioned(
-                        bottom: 88,
+                        bottom: 80 + _playback.subtitleVerticalOffset,
                         left: 24,
                         right: 24,
                         child: IgnorePointer(
-                          child: Text(
-                            cue.text,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 19,
-                              fontWeight: FontWeight.w600,
-                              shadows: [
-                                Shadow(blurRadius: 7, color: Colors.black),
-                                Shadow(blurRadius: 12, color: Colors.black),
-                              ],
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: Color(_playback.subtitleBackgroundColor),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 3,
+                                vertical: 1,
+                              ),
+                              child: _subtitleText(cue.text),
                             ),
                           ),
                         ),
                       );
               },
             ),
-          if (c != null && _ready)
+          if (c != null &&
+              _ready &&
+              (_playback.touchGestures || _playback.holdToSpeed))
             GestureTouchLayer(
               child: const SizedBox.expand(),
-              onTap: _toggleControls,
-              onDoubleTap: (right) => c.seekTo(
-                c.value.position + Duration(seconds: right ? 10 : -10),
-              ),
+              onTap: _playback.touchGestures ? _toggleControls : () {},
+              onDoubleTap: (right) {
+                if (!_playback.touchGestures) return;
+                c.seekTo(
+                  c.value.position + Duration(seconds: right ? 10 : -10),
+                );
+              },
               onSwipe: (right, amount) {
+                if (!_playback.touchGestures) return;
                 if (right) {
                   _volume = (_volume + amount).clamp(0, 1);
                   c.setVolume(_volume);
@@ -1027,6 +1363,12 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
                   _hintFor('Brightness ${(_brightness * 100).round()}%');
                 }
               },
+              onLongPressStart: _playback.holdToSpeed
+                  ? () => unawaited(_beginHoldSpeed())
+                  : null,
+              onLongPressEnd: _playback.holdToSpeed
+                  ? () => unawaited(_endHoldSpeed())
+                  : null,
             ),
           if (_gestureHint != null)
             Center(
@@ -1082,7 +1424,66 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
                 } catch (_) {}
               },
             ),
-          if (!_ready && !_error)
+          if (_pauseOverlayVisible && c != null && _ready && !c.value.isPlaying)
+            Center(
+              child: IgnorePointer(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: .72),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    widget.item.name,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+            ),
+          if (_nextEpisodePromptVisible && !_startingNextEpisode)
+            Positioned(
+              left: 20,
+              right: 20,
+              bottom: 108,
+              child: Material(
+                color: const Color(0xEE19191F),
+                borderRadius: BorderRadius.circular(18),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  child: Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'Play the next episode?',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => setState(
+                          () => _nextEpisodePromptVisible = false,
+                        ),
+                        child: const Text('Not now'),
+                      ),
+                      FilledButton(
+                        onPressed: () => unawaited(_startNextEpisode()),
+                        child: const Text('Play'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          if (!_ready && !_error && _playback.showLoadingStatus)
             const Align(
               alignment: Alignment.bottomCenter,
               child: Padding(

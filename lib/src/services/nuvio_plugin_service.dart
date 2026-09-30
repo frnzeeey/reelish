@@ -201,8 +201,18 @@ class NuvioPluginService extends ChangeNotifier {
           value['file'] != null ||
           value['script'] != null);
 
-  StreamDiscovery discoverStreams(MediaItem item, {int? season, int? episode}) {
-    final key = '${item.type}|${item.id}|${season ?? ''}|${episode ?? ''}';
+  StreamDiscovery discoverStreams(
+    MediaItem item, {
+    int? season,
+    int? episode,
+    Set<String>? allowedPluginIds,
+    bool allowTorrents = true,
+  }) {
+    final filterKey = allowedPluginIds == null
+        ? '*'
+        : (allowedPluginIds.toList()..sort()).join(',');
+    final key =
+        '${item.type}|${item.id}|${season ?? ''}|${episode ?? ''}|$filterKey|$allowTorrents';
     final existing = _inflightDiscoveries[key];
     if (existing != null && !existing.isCancelled) return existing;
 
@@ -214,6 +224,8 @@ class NuvioPluginService extends ChangeNotifier {
           item,
           season: season,
           episode: episode,
+          allowedPluginIds: allowedPluginIds,
+          allowTorrents: allowTorrents,
           onSource: discovery.add,
           onCandidate: discovery.recordCandidate,
           isCancelled: () => discovery.isCancelled,
@@ -234,6 +246,8 @@ class NuvioPluginService extends ChangeNotifier {
     MediaItem item, {
     int? season,
     int? episode,
+    Set<String>? allowedPluginIds,
+    bool allowTorrents = true,
     void Function(StreamSource source)? onSource,
     void Function()? onCandidate,
     bool Function()? isCancelled,
@@ -245,6 +259,11 @@ class NuvioPluginService extends ChangeNotifier {
     final enabled = providers.where((entry) => entry.$2.enabled).toList();
     final available =
         enabled
+            .where(
+              (entry) =>
+                  allowedPluginIds == null ||
+                  allowedPluginIds.contains('${entry.$1.url}|${entry.$2.id}'),
+            )
             .where((entry) => _supportsMediaType(entry.$2, mediaType))
             .toList()
           ..sort((a, b) {
@@ -261,8 +280,9 @@ class NuvioPluginService extends ChangeNotifier {
       return [];
     }
     if (available.isEmpty) {
-      lastLookupMessage =
-          'None of your enabled providers supports ${item.type == 'series' ? 'series' : 'movies'}.';
+      lastLookupMessage = allowedPluginIds != null && allowedPluginIds.isEmpty
+          ? 'No provider plugins are allowed for automatic stream selection. Update Allowed plugins in Playback settings.'
+          : 'None of your enabled providers supports ${item.type == 'series' ? 'series' : 'movies'}.';
       return [];
     }
 
@@ -434,6 +454,7 @@ class NuvioPluginService extends ChangeNotifier {
                 providerName: plugin.name,
               );
               if (source.isPlayable) {
+                if (!allowTorrents && source.isTorrent) continue;
                 results.add(source);
                 onSource?.call(source);
               }

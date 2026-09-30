@@ -1,7 +1,10 @@
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:path_provider/path_provider.dart';
 
 class GitHubUpdate {
   const GitHubUpdate({
@@ -19,6 +22,7 @@ abstract final class GitHubUpdateService {
   static const _releasesUri =
       'https://api.github.com/repos/frnzeeey/reelish/releases/latest';
   static const _apkAssetName = 'app-release.apk';
+  static const _installerChannel = MethodChannel('onfeed/app_update');
 
   static Future<GitHubUpdate?> checkForUpdate() async {
     try {
@@ -75,6 +79,71 @@ abstract final class GitHubUpdateService {
     } catch (_) {
       return null;
     }
+  }
+
+  /// Downloads the APK into the app's cache so the user never has to visit
+  /// GitHub to obtain the update. Android still presents its normal install UI.
+  static Future<File> downloadApk(
+    GitHubUpdate update, {
+    void Function(int received, int total)? onProgress,
+  }) async {
+    final directory = await getTemporaryDirectory();
+    final safeVersion = update.version.replaceAll(
+      RegExp(r'[^a-zA-Z0-9._-]'),
+      '_',
+    );
+    final file = File('${directory.path}/reelish-update-$safeVersion.apk');
+    if (await file.exists() && await file.length() > 0) return file;
+    if (await file.exists()) await file.delete();
+    final partialFile = File('${file.path}.part');
+
+    final request = http.Request('GET', update.downloadUri);
+    request.headers['User-Agent'] = 'ReelishApp';
+    final client = http.Client();
+    try {
+      final response = await client
+          .send(request)
+          .timeout(const Duration(minutes: 3));
+      if (response.statusCode != 200) {
+        throw HttpException('APK download failed (${response.statusCode}).');
+      }
+
+      final total = response.contentLength ?? 0;
+      var received = 0;
+      final sink = partialFile.openWrite();
+      try {
+        await for (final chunk in response.stream) {
+          sink.add(chunk);
+          received += chunk.length;
+          onProgress?.call(received, total);
+        }
+        await sink.flush();
+        await sink.close();
+        if (received == 0 || (total > 0 && received != total)) {
+          throw const HttpException('The APK download was incomplete.');
+        }
+        return await partialFile.rename(file.path);
+      } catch (_) {
+        await sink.close();
+        rethrow;
+      }
+    } catch (_) {
+      if (await partialFile.exists()) await partialFile.delete();
+      rethrow;
+    } finally {
+      client.close();
+    }
+  }
+
+  /// Opens Android's package installer for a previously downloaded APK.
+  /// Returns `permission_required` when Android first needs the user to allow
+  /// installs from Reelish, or `installer_opened` when installation can start.
+  static Future<String> installApk(File apk) async {
+    return await _installerChannel.invokeMethod<String>(
+          'installApk',
+          {'path': apk.path},
+        ) ??
+        'failed';
   }
 
   static List<int>? _parseVersion(String value) {

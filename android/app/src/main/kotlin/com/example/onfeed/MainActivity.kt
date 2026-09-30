@@ -7,9 +7,15 @@ import android.os.Build
 import android.app.PictureInPictureParams
 import android.util.Rational
 import android.view.WindowManager
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
+import androidx.core.content.FileProvider
+import java.io.File
 
 class MainActivity : FlutterActivity() {
     private val channelName = "onfeed/player"
+    private val updateChannelName = "onfeed/app_update"
     private var originalBrightness: Float? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -43,6 +49,43 @@ class MainActivity : FlutterActivity() {
                         result.success(enterPictureInPictureMode(PictureInPictureParams.Builder()
                             .setAspectRatio(Rational(width, height)).build()))
                     }
+                }
+                else -> result.notImplemented()
+            }
+        }
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, updateChannelName).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "installApk" -> {
+                    val path = call.argument<String>("path")
+                    if (path.isNullOrBlank()) {
+                        result.error("invalid_apk", "APK path is missing.", null)
+                        return@setMethodCallHandler
+                    }
+                    val apk = File(path)
+                    if (!apk.isFile) {
+                        result.error("missing_apk", "Downloaded APK was not found.", null)
+                        return@setMethodCallHandler
+                    }
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !packageManager.canRequestPackageInstalls()) {
+                        val settingsIntent = Intent(
+                            Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                            Uri.parse("package:$packageName")
+                        )
+                        startActivity(settingsIntent)
+                        result.success("permission_required")
+                        return@setMethodCallHandler
+                    }
+                    val apkUri = FileProvider.getUriForFile(
+                        this,
+                        "$packageName.fileprovider",
+                        apk
+                    )
+                    val installIntent = Intent(Intent.ACTION_VIEW).apply {
+                        setDataAndType(apkUri, "application/vnd.android.package-archive")
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    startActivity(installIntent)
+                    result.success("installer_opened")
                 }
                 else -> result.notImplemented()
             }

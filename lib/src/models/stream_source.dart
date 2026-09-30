@@ -62,6 +62,33 @@ class StreamSource {
   final Map<String, String> headers;
   final List<SubtitleTrack> subtitles;
 
+  Map<String, dynamic> toJson() => {
+    'name': name,
+    'url': url,
+    'description': description,
+    'headers': headers,
+    'providerName': providerName,
+    'sourceId': sourceId,
+    'quality': quality,
+    'container': container,
+    'codec': codec,
+    'expiresAt': expiresAt?.toUtc().toIso8601String(),
+    'isDirect': isDirect,
+    'infoHash': infoHash,
+    'fileIdx': fileIdx,
+    'sources': [for (final tracker in torrentSources) 'tracker:$tracker'],
+    'subtitles': [
+      for (final subtitle in subtitles)
+        {
+          'url': subtitle.url,
+          'lang': subtitle.lang,
+          'id': subtitle.id,
+          'format': subtitle.format,
+          'headers': subtitle.headers,
+        },
+    ],
+  };
+
   static bool _hasSupportedUrl(String raw) {
     final uri = Uri.tryParse(raw.trim());
     if (uri == null) return false;

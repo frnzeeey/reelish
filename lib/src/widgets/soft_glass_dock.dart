@@ -19,6 +19,7 @@ class SoftGlassDock extends StatelessWidget {
     (FeatherIcons.compass, FeatherIcons.compass, 'Discover'),
     (FeatherIcons.box, FeatherIcons.box, 'Plugins'),
     (FeatherIcons.bookmark, FeatherIcons.bookmark, 'Library'),
+    (FeatherIcons.user, FeatherIcons.user, 'Profile'),
   ];
 
   @override
