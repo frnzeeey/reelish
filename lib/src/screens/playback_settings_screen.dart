@@ -75,10 +75,7 @@ class PlaybackSettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => PopScope(
-    canPop: false,
-    onPopInvokedWithResult: (didPop, _) {
-      if (!didPop) onBack();
-    },
+    canPop: true,
     child: AnimatedBuilder(
       animation: controller,
       builder: (context, _) {
@@ -208,35 +205,34 @@ class PlaybackSettingsScreen extends StatelessWidget {
                       'The app has no segment timestamp provider or skip controller yet, so automatic skipping is not offered here.',
                     ),
                   ]),
-                _section('NEXT EPISODE', [
-                  _switchRow(
-                    'Auto-play next episode',
-                    'Start the next episode when the configured playback threshold is reached.',
-                    settings.autoPlayNextEpisode,
-                    (value) => _save(
-                      settings.copyWith(autoPlayNextEpisode: value),
+                  _section('NEXT EPISODE', [
+                    _switchRow(
+                      'Auto-play next episode',
+                      'Start the next episode when the configured playback threshold is reached.',
+                      settings.autoPlayNextEpisode,
+                      (value) =>
+                          _save(settings.copyWith(autoPlayNextEpisode: value)),
                     ),
-                  ),
-                  _sliderRow(
-                    'Next episode threshold',
-                    'Percentage of the current episode used to offer the next one.',
-                    settings.nextEpisodeThresholdPercent.toDouble(),
-                    min: 50,
-                    max: 100,
-                    divisions: 50,
-                    valueLabel: '${settings.nextEpisodeThresholdPercent}%',
-                    onChanged: (value) => _save(
-                      settings.copyWith(
-                        nextEpisodeThresholdPercent: value.round(),
+                    _sliderRow(
+                      'Next episode threshold',
+                      'Percentage of the current episode used to offer the next one.',
+                      settings.nextEpisodeThresholdPercent.toDouble(),
+                      min: 50,
+                      max: 100,
+                      divisions: 50,
+                      valueLabel: '${settings.nextEpisodeThresholdPercent}%',
+                      onChanged: (value) => _save(
+                        settings.copyWith(
+                          nextEpisodeThresholdPercent: value.round(),
+                        ),
                       ),
                     ),
-                  ),
-                  _infoRow(
-                    'Binge group options',
-                    'Unavailable in this build',
-                    'Providers do not expose a source profile or binge-group identifier, so source reuse between episodes is not available.',
-                  ),
-                ]),
+                    _infoRow(
+                      'Binge group options',
+                      'Unavailable in this build',
+                      'Providers do not expose a source profile or binge-group identifier, so source reuse between episodes is not available.',
+                    ),
+                  ]),
                   _section('SUBTITLE AND AUDIO', [
                     _choiceRow(
                       'Preferred audio language',

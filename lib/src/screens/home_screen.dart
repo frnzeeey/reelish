@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:feather_icon_font/feather_icon_font.dart';
 import '../models/media_item.dart';
 import '../models/stream_source.dart';
+import '../navigation/app_transitions.dart';
 import '../services/github_update_service.dart';
 import '../services/storage_service.dart';
 import '../services/stream_discovery.dart';
@@ -51,7 +52,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _searchVisible = false;
   String _category = 'For you';
   int _tab = 0;
-  bool _showPlaybackSettings = false;
+  bool _openingDetails = false;
   int _recommendationRequest = 0;
   int _spotlightPage = 0;
   Key _libraryKey = const ValueKey('library');
@@ -397,11 +398,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _showDetails(MediaItem item) async {
+    if (_openingDetails) return;
+    _openingDetails = true;
     _spotlightTimer?.cancel();
     try {
-      await Navigator.push(
+      await Navigator.push<void>(
         context,
-        MaterialPageRoute(
+        AppPageRoute<void>(
+          context: context,
+          details: true,
           builder: (_) => MediaDetailsScreen(
             item: item,
             tmdb: _tmdb,
@@ -417,6 +422,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ),
       );
     } finally {
+      _openingDetails = false;
       if (mounted && ModalRoute.of(context)?.isCurrent == true) {
         _startSpotlightTimer();
       }
@@ -636,9 +642,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       }
       _spotlightTimer?.cancel();
       try {
-        await Navigator.push(
+        await Navigator.push<void>(
           context,
-          MaterialPageRoute(
+          AppPageRoute<void>(
+            context: context,
             builder: (_) => PlayerScreen(
               item: playableItem,
               source: selectedSource,
@@ -680,6 +687,25 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
+  Future<void> _openPlaybackSettings(
+    List<({String id, String name, String repository})> plugins,
+  ) async {
+    await Navigator.push<void>(
+      context,
+      AppPageRoute<void>(
+        context: context,
+        builder: (settingsContext) => Scaffold(
+          backgroundColor: GlassTheme.background,
+          body: PlaybackSettingsScreen(
+            controller: _playbackSettings,
+            plugins: plugins,
+            onBack: () => Navigator.of(settingsContext).pop(),
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _playNextEpisode(
     MediaItem item,
     int season,
@@ -689,28 +715,26 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     try {
       final episodes = await _tmdb.allEpisodes(item);
       episodes.sort((a, b) {
-        final seasonComparison =
-            ((a['season_number'] as num?) ?? 0).compareTo(
-              (b['season_number'] as num?) ?? 0,
-            );
+        final seasonComparison = ((a['season_number'] as num?) ?? 0).compareTo(
+          (b['season_number'] as num?) ?? 0,
+        );
         if (seasonComparison != 0) return seasonComparison;
         return ((a['episode_number'] as num?) ?? 0).compareTo(
           (b['episode_number'] as num?) ?? 0,
         );
       });
-      final nextEpisode = episodes
-          .where((entry) {
-            final entrySeason = (entry['season_number'] as num?)?.toInt() ?? 0;
-            final entryEpisode =
-                (entry['episode_number'] as num?)?.toInt() ?? 0;
-            return entrySeason > season ||
-                (entrySeason == season && entryEpisode > episode);
-          })
-          .firstOrNull;
+      final nextEpisode = episodes.where((entry) {
+        final entrySeason = (entry['season_number'] as num?)?.toInt() ?? 0;
+        final entryEpisode = (entry['episode_number'] as num?)?.toInt() ?? 0;
+        return entrySeason > season ||
+            (entrySeason == season && entryEpisode > episode);
+      }).firstOrNull;
       if (nextEpisode == null) {
         if (mounted) {
           ScaffoldMessenger.of(presentationContext ?? context).showSnackBar(
-            const SnackBar(content: Text('There is no next episode available.')),
+            const SnackBar(
+              content: Text('There is no next episode available.'),
+            ),
           );
         }
         return;
@@ -1447,19 +1471,26 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
     ];
     final pages = [
-      _home(),
-      PluginsScreen(pluginService: _nuvioPlugins),
-      LibraryScreen(key: _libraryKey, storage: _storage, onPlay: _showDetails),
-      _showPlaybackSettings
-          ? PlaybackSettingsScreen(
-              controller: _playbackSettings,
-              plugins: availablePlugins,
-              onBack: () => setState(() => _showPlaybackSettings = false),
-            )
-          : ProfileScreen(
-              onPlaybackSettings: () =>
-                  setState(() => _showPlaybackSettings = true),
-            ),
+      TabPageTransition(active: _tab == 0, child: _home()),
+      TabPageTransition(
+        active: _tab == 1,
+        child: PluginsScreen(pluginService: _nuvioPlugins),
+      ),
+      TabPageTransition(
+        active: _tab == 2,
+        child: LibraryScreen(
+          key: _libraryKey,
+          storage: _storage,
+          onPlay: _showDetails,
+        ),
+      ),
+      TabPageTransition(
+        active: _tab == 3,
+        child: ProfileScreen(
+          onPlaybackSettings: () =>
+              unawaited(_openPlaybackSettings(availablePlugins)),
+        ),
+      ),
     ];
     return Scaffold(
       body: Stack(
@@ -1478,7 +1509,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               onSelected: (value) {
                 setState(() {
                   _tab = value;
-                  if (value != 3) _showPlaybackSettings = false;
                 });
                 if (value == 2) {
                   _loadHistory();
