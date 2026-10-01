@@ -4,6 +4,7 @@ import 'package:feather_icon_font/feather_icon_font.dart';
 import '../models/playback_settings.dart';
 import '../services/playback_settings_controller.dart';
 import '../theme/glass_theme.dart';
+import 'legal_information_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key, required this.onPlaybackSettings});
@@ -26,6 +27,42 @@ class ProfileScreen extends StatelessWidget {
         title: 'Playback',
         subtitle: 'Streams, gestures, subtitles and P2P playback',
         onTap: onPlaybackSettings,
+      ),
+      const SizedBox(height: 12),
+      _ProfileEntry(
+        icon: FeatherIcons.shield,
+        title: 'Privacy policy',
+        subtitle: 'What stays on your device and what is sent to services',
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) =>
+                const LegalInformationScreen(document: LegalDocument.privacy),
+          ),
+        ),
+      ),
+      const SizedBox(height: 12),
+      _ProfileEntry(
+        icon: FeatherIcons.fileText,
+        title: 'Terms of use',
+        subtitle: 'Rules for using the app, add-ons and media sources',
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) =>
+                const LegalInformationScreen(document: LegalDocument.terms),
+          ),
+        ),
+      ),
+      const SizedBox(height: 12),
+      _ProfileEntry(
+        icon: FeatherIcons.info,
+        title: 'Content & third-party notices',
+        subtitle: 'Service credits, external content and reporting issues',
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) =>
+                const LegalInformationScreen(document: LegalDocument.notices),
+          ),
+        ),
       ),
     ],
   );

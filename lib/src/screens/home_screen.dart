@@ -25,8 +25,14 @@ import 'player_screen.dart';
 import 'media_details_screen.dart';
 import 'playback_settings_screen.dart';
 
+enum _DeferredLoadState { idle, loading, loaded, failed }
+
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({super.key, this.tmdbService, this.updateChecker});
+
+  final TmdbService? tmdbService;
+  final Future<GitHubUpdate?> Function()? updateChecker;
+
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
@@ -35,7 +41,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final _nuvioPlugins = NuvioPluginService();
   final _storage = StorageService();
   final _playbackSettings = PlaybackSettingsController();
-  final _tmdb = TmdbService();
+  late final TmdbService _tmdb;
   final _search = TextEditingController();
   final _searchFocus = FocusNode();
   final _spotlightController = PageController();
@@ -45,16 +51,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   List<MediaItem> _recommendations = [];
   List<MediaItem> _newReleases = [];
   String? _catalogError;
-  final Map<String, List<MediaItem>> _recommendationCache = {};
-  bool _loading = true,
-      _loadingNewReleases = false,
-      _newReleasesLoaded = false,
-      _resolvingStreams = false;
+  bool _loading = true, _resolvingStreams = false;
+  _DeferredLoadState _newReleasesState = _DeferredLoadState.idle;
+  _DeferredLoadState _recommendationsState = _DeferredLoadState.idle;
   bool _searchVisible = false;
   String _category = 'For you';
   int _tab = 0;
   bool _openingDetails = false;
   int _recommendationRequest = 0;
+  int _catalogRequest = 0;
   int _spotlightPage = 0;
   int _libraryRefreshToken = 0;
   Timer? _debounce;
@@ -66,6 +71,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    _tmdb = widget.tmdbService ?? TmdbService();
     WidgetsBinding.instance.addObserver(this);
     _nuvioPlugins.addListener(_onPluginChange);
     _startSpotlightTimer();
@@ -129,7 +135,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _lastUpdateCheckAt = now;
     _checkingForUpdate = true;
     try {
-      final update = await GitHubUpdateService.checkForUpdate();
+      final update =
+          await (widget.updateChecker?.call() ??
+              GitHubUpdateService.checkForUpdate());
       if (!mounted || update == null) return;
       _updatePromptOpen = true;
       await showDialog<void>(
@@ -228,8 +236,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       final result = await GitHubUpdateService.installApk(apk);
       if (!mounted) return;
       if (result == 'permission_required') {
-        // Android returns here after the user enables installs from Reelish;
-        // allow another check immediately so the update prompt can retry.
+        // Let the user return from Android's install-source settings and retry.
         _lastUpdateCheckAt = null;
         messenger.showSnackBar(
           const SnackBar(
@@ -260,15 +267,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     setState(() {});
   }
 
-  Future<void> _load({String? query}) async {
+  Future<void> _load({String? query, bool forceRefresh = false}) async {
+    final request = ++_catalogRequest;
     if (mounted) {
       setState(() {
-        _loading = true;
+        _loading = _items.isEmpty;
         _catalogError = null;
       });
-    }
-    if (query == null && _category == 'For you') {
-      unawaited(_loadNewReleases());
     }
     Object? loadError;
     Future<List<MediaItem>> safe(Future<List<MediaItem>> future) async {
@@ -282,13 +287,40 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     final results = await Future.wait([
       if (query != null)
-        safe(_tmdb.search(query))
+        safe(
+          _tmdb.search(
+            query,
+            forceRefresh: forceRefresh,
+            onRevalidated: (items) =>
+                _applyCatalogResults(request, items, replaceAll: true),
+          ),
+        )
       else if (_category == 'Trending')
-        safe(_tmdb.trending())
+        safe(
+          _tmdb.trending(
+            forceRefresh: forceRefresh,
+            onRevalidated: (items) =>
+                _applyCatalogResults(request, items, replaceAll: true),
+          ),
+        )
       else
-        safe(_tmdb.popular('movie')),
+        safe(
+          _tmdb.popular(
+            'movie',
+            forceRefresh: forceRefresh,
+            onRevalidated: (items) =>
+                _applyCatalogResults(request, items, replaceType: 'movie'),
+          ),
+        ),
       if (query == null && _category != 'Trending')
-        safe(_tmdb.popular('series')),
+        safe(
+          _tmdb.popular(
+            'series',
+            forceRefresh: forceRefresh,
+            onRevalidated: (items) =>
+                _applyCatalogResults(request, items, replaceType: 'series'),
+          ),
+        ),
     ]);
     final combined = <String, MediaItem>{};
     for (final list in results) {
@@ -297,7 +329,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       }
     }
     final values = combined.values.toList();
-    if (!mounted) return;
+    if (!mounted || request != _catalogRequest) return;
     setState(() {
       _items = values;
       _spotlightItems = _tmdb.spotlight([..._newReleases, ...values]);
@@ -306,9 +338,48 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ? null
           : _catalogFailureMessage(loadError!);
     });
-    if (query == null && _category == 'For you') {
-      unawaited(_loadTopRecommendations(values));
+  }
+
+  Future<void> _refreshVisibleHome() async {
+    final isSearch = _search.text.trim().isNotEmpty;
+    final refreshes = <Future<void>>[
+      _load(query: isSearch ? _search.text.trim() : null, forceRefresh: true),
+    ];
+    if (_category == 'For you' && !isSearch) {
+      if (_recommendationsState == _DeferredLoadState.loaded) {
+        refreshes.add(_loadTopRecommendations(_items, forceRefresh: true));
+      }
+      if (_newReleasesState == _DeferredLoadState.loaded) {
+        refreshes.add(_loadNewReleases(forceRefresh: true));
+      }
     }
+    await Future.wait(refreshes);
+  }
+
+  void _applyCatalogResults(
+    int request,
+    List<MediaItem> updates, {
+    String? replaceType,
+    bool replaceAll = false,
+  }) {
+    if (!mounted || request != _catalogRequest) return;
+    final combined = <String, MediaItem>{};
+    if (!replaceAll) {
+      for (final item in _items) {
+        if (item.type != replaceType) {
+          combined['${item.type}:${item.id}'] = item;
+        }
+      }
+    }
+    for (final item in updates) {
+      combined['${item.type}:${item.id}'] = item;
+    }
+    setState(() {
+      _items = combined.values.toList();
+      _spotlightItems = _tmdb.spotlight([..._newReleases, ..._items]);
+      _loading = false;
+      _catalogError = null;
+    });
   }
 
   String _catalogFailureMessage(Object error) {
@@ -328,25 +399,50 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     return 'Could not load titles from TMDB. Check your connection and retry.';
   }
 
-  Future<void> _loadNewReleases() async {
-    if (_newReleasesLoaded || _loadingNewReleases) return;
-    if (mounted) setState(() => _loadingNewReleases = true);
+  Future<void> _loadNewReleases({bool forceRefresh = false}) async {
+    if (_newReleasesState == _DeferredLoadState.loading ||
+        (!forceRefresh && _newReleasesState == _DeferredLoadState.loaded)) {
+      return;
+    }
+    if (mounted && _newReleases.isEmpty) {
+      setState(() => _newReleasesState = _DeferredLoadState.loading);
+    }
     try {
-      final releases = await _tmdb.newReleases();
+      final releases = await _tmdb.newReleases(
+        forceRefresh: forceRefresh,
+        onRevalidated: _applyNewReleases,
+      );
       if (!mounted) return;
       setState(() {
         _newReleases = releases;
         _spotlightItems = _tmdb.spotlight([...releases, ..._items]);
-        _newReleasesLoaded = true;
-        _loadingNewReleases = false;
+        _newReleasesState = _DeferredLoadState.loaded;
       });
     } catch (_) {
       if (!mounted) return;
-      setState(() => _loadingNewReleases = false);
+      setState(() => _newReleasesState = _DeferredLoadState.failed);
     }
   }
 
-  Future<void> _loadTopRecommendations(List<MediaItem> items) async {
+  void _applyNewReleases(List<MediaItem> items) {
+    if (!mounted) return;
+    setState(() {
+      _newReleases = items;
+      _newReleasesState = _DeferredLoadState.loaded;
+      _spotlightItems = _tmdb.spotlight([...items, ..._items]);
+    });
+  }
+
+  Future<void> _loadTopRecommendations(
+    List<MediaItem> items, {
+    bool forceRefresh = false,
+  }) async {
+    if (!forceRefresh && _recommendationsState == _DeferredLoadState.loading) {
+      return;
+    }
+    if (!forceRefresh && _recommendationsState == _DeferredLoadState.loaded) {
+      return;
+    }
     final request = ++_recommendationRequest;
     final seeds = <MediaItem>[];
     for (final type in ['movie', 'series']) {
@@ -359,22 +455,61 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       if (candidates.isNotEmpty) seeds.add(candidates.first);
     }
     if (seeds.isEmpty) {
-      if (mounted) setState(() => _recommendations = []);
+      if (mounted) {
+        setState(() {
+          _recommendations = [];
+          _recommendationsState = _DeferredLoadState.loaded;
+        });
+      }
       return;
     }
-    final cacheKey =
-        'top:${seeds.map((item) => '${item.type}:${item.id}').join('|')}';
-    final cached = _recommendationCache[cacheKey];
-    if (cached != null) {
-      if (mounted) setState(() => _recommendations = cached);
-      return;
+    if (mounted && _recommendations.isEmpty) {
+      setState(() => _recommendationsState = _DeferredLoadState.loading);
     }
-    if (mounted) setState(() => _recommendations = []);
     try {
       final seedKeys = seeds.map((item) => '${item.type}:${item.id}').toSet();
-      final lists = await Future.wait(
-        seeds.map((item) => _tmdb.recommendations(item)),
-      );
+      final revalidated = <int, List<MediaItem>>{};
+      List<List<MediaItem>> initialLists = const [];
+      var initialListsReady = false;
+      void applyFreshRecommendations() {
+        if (!initialListsReady ||
+            !mounted ||
+            request != _recommendationRequest) {
+          return;
+        }
+        final current = <String, MediaItem>{};
+        for (var index = 0; index < seeds.length; index++) {
+          for (final item in revalidated[index] ?? initialLists[index]) {
+            if (!seedKeys.contains('${item.type}:${item.id}')) {
+              current['${item.type}:${item.id}'] = item;
+            }
+          }
+        }
+        final fresh = current.values.toList()
+          ..sort((a, b) {
+            final ratingA = double.tryParse(a.rating) ?? 0;
+            final ratingB = double.tryParse(b.rating) ?? 0;
+            return ratingB.compareTo(ratingA);
+          });
+        setState(() {
+          _recommendations = fresh.take(10).toList();
+          _recommendationsState = _DeferredLoadState.loaded;
+        });
+      }
+
+      final lists = await Future.wait([
+        for (var index = 0; index < seeds.length; index++)
+          _tmdb.recommendations(
+            seeds[index],
+            forceRefresh: forceRefresh,
+            onRevalidated: (fresh) {
+              revalidated[index] = fresh;
+              applyFreshRecommendations();
+            },
+          ),
+      ]);
+      initialLists = lists;
+      initialListsReady = true;
       final seen = <String>{};
       final recommendations =
           lists
@@ -390,12 +525,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               final ratingB = double.tryParse(b.rating) ?? 0;
               return ratingB.compareTo(ratingA);
             });
-      _recommendationCache[cacheKey] = recommendations;
       if (!mounted || request != _recommendationRequest) return;
-      setState(() => _recommendations = recommendations.take(10).toList());
+      setState(() {
+        _recommendations = recommendations.take(10).toList();
+        _recommendationsState = _DeferredLoadState.loaded;
+      });
+      if (revalidated.isNotEmpty) applyFreshRecommendations();
     } catch (_) {
       if (!mounted || request != _recommendationRequest) return;
-      setState(() => _recommendations = []);
+      setState(() {
+        _recommendationsState = _recommendations.isEmpty
+            ? _DeferredLoadState.failed
+            : _DeferredLoadState.loaded;
+      });
     }
   }
 
@@ -916,12 +1058,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     ),
   );
 
-  Widget _brandHeader() {
+  Widget _brandHeader({bool spotlight = false}) {
     final transitionDuration = MediaQuery.disableAnimationsOf(context)
         ? Duration.zero
         : const Duration(milliseconds: 220);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 10, 18, 12),
+      padding: spotlight
+          ? const EdgeInsets.fromLTRB(35, 26, 35, 12)
+          : const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       child: AnimatedSwitcher(
         duration: transitionDuration,
         switchInCurve: Curves.easeOutCubic,
@@ -1007,16 +1151,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     ),
                     icon: const Icon(FeatherIcons.search),
                   ),
-                  const SizedBox(width: 5),
-                  IconButton(
-                    tooltip: 'Your library',
-                    onPressed: () => setState(() => _tab = 2),
-                    style: IconButton.styleFrom(
-                      backgroundColor: Colors.white.withValues(alpha: .09),
-                      foregroundColor: Colors.white,
-                    ),
-                    icon: const Icon(FeatherIcons.user),
-                  ),
                 ],
               ),
       ),
@@ -1073,10 +1207,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         !searchActive && _category == 'For you' && _items.isNotEmpty;
 
     return RefreshIndicator(
-      onRefresh: () => _load(query: isSearch ? _search.text : null),
+      onRefresh: _refreshVisibleHome,
       child: CustomScrollView(
         slivers: [
-          SliverToBoxAdapter(child: _brandHeader()),
           SliverToBoxAdapter(
             child: AnimatedSize(
               duration: sectionCollapseDuration,
@@ -1084,7 +1217,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               alignment: Alignment.topCenter,
               child: showHero && spotlights.isNotEmpty
                   ? _featuredCarousel(spotlights)
-                  : const SizedBox.shrink(),
+                  : _brandHeader(),
             ),
           ),
           SliverToBoxAdapter(child: _filtersAndSearch()),
@@ -1247,42 +1380,34 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             SliverToBoxAdapter(
               child: _section('Continue watching', continueWatching),
             ),
-          if (_category == 'For you' &&
-              !isSearch &&
-              _recommendations.isNotEmpty)
-            SliverToBoxAdapter(
-              child: _section(
-                'Top 10 recommendations',
-                _recommendations.take(10).toList(),
-                showRanks: true,
-              ),
+          if (_category == 'For you' && !isSearch)
+            _deferredSectionGate(
+              enabled: _items.isNotEmpty,
+              onApproach: () => unawaited(_loadTopRecommendations(_items)),
+              child: _recommendations.isNotEmpty
+                  ? _section(
+                      'Top 10 recommendations',
+                      _recommendations.take(10).toList(),
+                      showRanks: true,
+                    )
+                  : _deferredSectionPlaceholder(
+                      'Top 10 recommendations',
+                      _recommendationsState,
+                      () => unawaited(_loadTopRecommendations(_items)),
+                    ),
             ),
-          if (_category == 'For you' && !isSearch && _loadingNewReleases)
-            const SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(18, 12, 18, 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
+          if (_category == 'For you' && !isSearch)
+            _deferredSectionGate(
+              enabled: _items.isNotEmpty,
+              onApproach: () => unawaited(_loadNewReleases()),
+              child: _newReleases.isNotEmpty
+                  ? _section('New releases', _newReleases)
+                  : _deferredSectionPlaceholder(
                       'New releases',
-                      style: TextStyle(
-                        fontSize: 19,
-                        fontWeight: FontWeight.w800,
-                      ),
+                      _newReleasesState,
+                      () => unawaited(_loadNewReleases()),
                     ),
-                    SizedBox(height: 14),
-                    Center(
-                      child: CircularProgressIndicator(
-                        color: GlassTheme.primary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
             ),
-          if (_category == 'For you' && !isSearch && _newReleases.isNotEmpty)
-            SliverToBoxAdapter(child: _section('New releases', _newReleases)),
           if ((_category == 'Movies' || _category == 'Trending') &&
               _shown.isNotEmpty)
             SliverToBoxAdapter(
@@ -1317,57 +1442,122 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  Widget _featuredCarousel(List<MediaItem> items) => Padding(
-    padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
-    child: Column(
-      children: [
-        SizedBox(
-          height: 425,
-          child: PageView.builder(
-            controller: _spotlightController,
-            itemCount: items.length > 1 ? null : items.length,
-            onPageChanged: _onSpotlightPageChanged,
-            itemBuilder: (context, page) => _featured(
-              items[page % items.length],
-              imageCacheHeight: (425 * MediaQuery.devicePixelRatioOf(context))
-                  .round(),
+  Widget _deferredSectionGate({
+    required bool enabled,
+    required VoidCallback onApproach,
+    required Widget child,
+  }) => SliverLayoutBuilder(
+    builder: (context, constraints) {
+      if (enabled && constraints.remainingPaintExtent > 0) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) onApproach();
+        });
+      }
+      return SliverToBoxAdapter(child: child);
+    },
+  );
+
+  Widget _deferredSectionPlaceholder(
+    String title,
+    _DeferredLoadState state,
+    VoidCallback onRetry,
+  ) {
+    if (state == _DeferredLoadState.idle ||
+        state == _DeferredLoadState.loaded) {
+      return const SizedBox.shrink();
+    }
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 8),
+      child: GlassBox(
+        radius: 18,
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(fontWeight: FontWeight.w800),
+              ),
             ),
-          ),
+            if (state == _DeferredLoadState.loading)
+              const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            else
+              TextButton.icon(
+                onPressed: onRetry,
+                icon: const Icon(FeatherIcons.refreshCw, size: 15),
+                label: const Text('Retry'),
+              ),
+          ],
         ),
-        if (items.length > 1) ...[
-          const SizedBox(height: 12),
-          ValueListenableBuilder<int>(
-            valueListenable: _spotlightPageValue,
-            builder: (context, page, _) => Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                for (var index = 0; index < items.length; index++)
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 180),
-                    curve: Curves.easeOutCubic,
-                    width: index == page % items.length ? 16 : 5,
-                    height: 5,
-                    margin: const EdgeInsets.symmetric(horizontal: 3),
-                    decoration: BoxDecoration(
-                      color: index == page % items.length
-                          ? GlassTheme.primary
-                          : Colors.white.withValues(alpha: .35),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-              ],
+      ),
+    );
+  }
+
+  Widget _featuredCarousel(List<MediaItem> items) => Stack(
+    children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+        child: Column(
+          children: [
+            SizedBox(
+              height: 483,
+              child: PageView.builder(
+                controller: _spotlightController,
+                itemCount: items.length > 1 ? null : items.length,
+                onPageChanged: _onSpotlightPageChanged,
+                itemBuilder: (context, page) => _featured(
+                  items[page % items.length],
+                  imageCacheHeight:
+                      (483 * MediaQuery.devicePixelRatioOf(context)).round(),
+                ),
+              ),
             ),
-          ),
-        ],
-      ],
-    ),
+            if (items.length > 1) ...[
+              const SizedBox(height: 12),
+              ValueListenableBuilder<int>(
+                valueListenable: _spotlightPageValue,
+                builder: (context, page, _) => Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    for (var index = 0; index < items.length; index++)
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 180),
+                        curve: Curves.easeOutCubic,
+                        width: index == page % items.length ? 16 : 5,
+                        height: 5,
+                        margin: const EdgeInsets.symmetric(horizontal: 3),
+                        decoration: BoxDecoration(
+                          color: index == page % items.length
+                              ? GlassTheme.primary
+                              : Colors.white.withValues(alpha: .35),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+      Positioned(
+        top: 0,
+        left: 0,
+        right: 0,
+        child: _brandHeader(spotlight: true),
+      ),
+    ],
   );
 
   Widget _featured(
     MediaItem item, {
     required int imageCacheHeight,
   }) => ClipRRect(
-    borderRadius: BorderRadius.circular(28),
+    borderRadius: BorderRadius.circular(24),
     child: Stack(
       fit: StackFit.expand,
       children: [
@@ -1440,8 +1630,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   if (item.rating.isNotEmpty) '${item.rating}/10',
                 ].where((value) => value.isNotEmpty).join('  |  '),
                 style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 12,
+                  color: Color(0xC7FFFFFF),
+                  fontSize: 14,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -1452,9 +1642,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    color: Colors.white70,
+                    color: Color(0xC7FFFFFF),
                     height: 1.35,
-                    fontSize: 12,
+                    fontSize: 13,
                   ),
                 ),
               ],
@@ -1465,9 +1655,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     style: FilledButton.styleFrom(
                       backgroundColor: GlassTheme.primary,
                       foregroundColor: GlassTheme.background,
+                      shape: const StadiumBorder(),
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 18,
-                        vertical: 12,
+                        horizontal: 22,
+                        vertical: 15,
                       ),
                     ),
                     onPressed: () => _showDetails(item),
@@ -1481,12 +1672,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.white,
+                      shape: const StadiumBorder(),
                       side: BorderSide(
                         color: Colors.white.withValues(alpha: .35),
                       ),
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 15,
-                        vertical: 12,
+                        horizontal: 19,
+                        vertical: 15,
                       ),
                     ),
                     onPressed: () async {

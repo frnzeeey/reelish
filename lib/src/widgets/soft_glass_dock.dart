@@ -16,10 +16,10 @@ class SoftGlassDock extends StatelessWidget {
   final ValueChanged<int> onSelected;
 
   static const _destinations = [
-    (FeatherIcons.compass, FeatherIcons.compass, 'Discover'),
+    (FeatherIcons.home, FeatherIcons.home, 'Home'),
     (FeatherIcons.box, FeatherIcons.box, 'Plugins'),
     (FeatherIcons.bookmark, FeatherIcons.bookmark, 'Library'),
-    (FeatherIcons.user, FeatherIcons.user, 'Profile'),
+    (FeatherIcons.settings, FeatherIcons.settings, 'Settings'),
   ];
 
   @override

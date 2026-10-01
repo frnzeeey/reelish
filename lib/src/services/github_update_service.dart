@@ -1,10 +1,13 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
+
+import 'storage_service.dart';
 
 class GitHubUpdate {
   const GitHubUpdate({
@@ -23,10 +26,42 @@ abstract final class GitHubUpdateService {
       'https://api.github.com/repos/frnzeeey/reelish/releases/latest';
   static const _apkAssetName = 'app-release.apk';
   static const _installerChannel = MethodChannel('onfeed/app_update');
+  static const _lastCheckKey = 'onfeed.update.github.lastCheckedAt.v1';
+  static const _lastResultKey = 'onfeed.update.github.lastResult.v1';
+  static const checkInterval = Duration(hours: 6);
 
-  static Future<GitHubUpdate?> checkForUpdate() async {
+  static Future<GitHubUpdate?> checkForUpdate({
+    bool forceRefresh = false,
+    StorageService? storage,
+    http.Client? client,
+    DateTime Function()? clock,
+    Future<String?> Function()? installedVersionLoader,
+  }) async {
+    final settings = storage ?? StorageService();
+    final now = (clock ?? DateTime.now)();
+    final installedVersion = _parseVersion(
+      await (installedVersionLoader ?? _installedVersion)() ?? '',
+    );
+    if (installedVersion == null) return null;
+
+    final cached = await _readCachedResult(settings, installedVersion);
+    final lastCheck = DateTime.tryParse(
+      await settings.readSetting(_lastCheckKey) ?? '',
+    );
+    if (!forceRefresh &&
+        lastCheck != null &&
+        now.difference(lastCheck) < checkInterval) {
+      if (kDebugMode) {
+        debugPrint('[UPDATE] GitHub check skipped; cached result reused.');
+      }
+      return cached;
+    }
+
+    // Persist before the request, so relaunches do not repeat a failing call.
+    await settings.saveSetting(_lastCheckKey, now.toUtc().toIso8601String());
+    final httpClient = client ?? http.Client();
     try {
-      final response = await http
+      final response = await httpClient
           .get(
             Uri.parse(_releasesUri),
             headers: const {
@@ -35,26 +70,24 @@ abstract final class GitHubUpdateService {
             },
           )
           .timeout(const Duration(seconds: 8));
-      if (response.statusCode != 200) return null;
+      if (response.statusCode != 200) return cached;
 
       final release = jsonDecode(response.body);
       if (release is! Map<String, dynamic> ||
           release['draft'] == true ||
           release['prerelease'] == true) {
+        await _saveCachedResult(settings, checkedAt: now, update: null);
         return null;
       }
 
       final tag = release['tag_name'];
       final assets = release['assets'];
-      if (tag is! String || assets is! List) return null;
+      if (tag is! String || assets is! List) return cached;
 
       final releaseVersion = _parseVersion(tag);
-      if (releaseVersion == null) return null;
-
-      final installedInfo = await PackageInfo.fromPlatform();
-      final installedVersion = _parseVersion(installedInfo.version);
-      if (installedVersion == null ||
+      if (releaseVersion == null ||
           _compareVersions(releaseVersion, installedVersion) <= 0) {
+        await _saveCachedResult(settings, checkedAt: now, update: null);
         return null;
       }
 
@@ -66,23 +99,86 @@ abstract final class GitHubUpdateService {
           if (downloadUri == null ||
               downloadUri.scheme != 'https' ||
               downloadUri.host != 'github.com') {
+            await _saveCachedResult(settings, checkedAt: now, update: null);
             return null;
           }
-          return GitHubUpdate(
+          final update = GitHubUpdate(
             version: tag,
             notes: release['body'] is String ? release['body'] as String : '',
             downloadUri: downloadUri,
           );
+          await _saveCachedResult(settings, checkedAt: now, update: update);
+          return update;
         }
       }
+      await _saveCachedResult(settings, checkedAt: now, update: null);
       return null;
+    } catch (_) {
+      return cached;
+    } finally {
+      if (client == null) httpClient.close();
+    }
+  }
+
+  static Future<String?> _installedVersion() async {
+    try {
+      return (await PackageInfo.fromPlatform()).version;
     } catch (_) {
       return null;
     }
   }
 
-  /// Downloads the APK into the app's cache so the user never has to visit
-  /// GitHub to obtain the update. Android still presents its normal install UI.
+  static Future<GitHubUpdate?> _readCachedResult(
+    StorageService storage,
+    List<int> installedVersion,
+  ) async {
+    try {
+      final raw = await storage.readSetting(_lastResultKey);
+      if (raw == null) return null;
+      final cached = jsonDecode(raw);
+      if (cached is! Map || cached['hasUpdate'] != true) return null;
+      final version = cached['version'];
+      final notes = cached['notes'];
+      final uriRaw = cached['downloadUri'];
+      if (version is! String || notes is! String || uriRaw is! String) {
+        return null;
+      }
+      final parsedVersion = _parseVersion(version);
+      final uri = Uri.tryParse(uriRaw);
+      if (parsedVersion == null ||
+          _compareVersions(parsedVersion, installedVersion) <= 0 ||
+          uri == null ||
+          uri.scheme != 'https' ||
+          uri.host != 'github.com') {
+        return null;
+      }
+      return GitHubUpdate(version: version, notes: notes, downloadUri: uri);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<void> _saveCachedResult(
+    StorageService storage, {
+    required DateTime checkedAt,
+    required GitHubUpdate? update,
+  }) async {
+    await storage.saveSetting(
+      _lastResultKey,
+      jsonEncode({
+        'checkedAt': checkedAt.toUtc().toIso8601String(),
+        'hasUpdate': update != null,
+        if (update != null) ...{
+          'version': update.version,
+          'notes': update.notes,
+          'downloadUri': update.downloadUri.toString(),
+        },
+      }),
+    );
+  }
+
+  /// Downloads the release APK into the app cache. Android still shows its
+  /// standard installation confirmation to the user.
   static Future<File> downloadApk(
     GitHubUpdate update, {
     void Function(int received, int total)? onProgress,
@@ -135,16 +231,13 @@ abstract final class GitHubUpdateService {
     }
   }
 
-  /// Opens Android's package installer for a previously downloaded APK.
-  /// Returns `permission_required` when Android first needs the user to allow
-  /// installs from Reelish, or `installer_opened` when installation can start.
-  static Future<String> installApk(File apk) async {
-    return await _installerChannel.invokeMethod<String>(
-          'installApk',
-          {'path': apk.path},
-        ) ??
-        'failed';
-  }
+  /// Opens Android's installer for the previously downloaded release APK.
+  /// Android can request the user to allow installs from this source first.
+  static Future<String> installApk(File apk) async =>
+      await _installerChannel.invokeMethod<String>('installApk', {
+        'path': apk.path,
+      }) ??
+      'failed';
 
   static List<int>? _parseVersion(String value) {
     final normalized = value.trim().replaceFirst(RegExp(r'^[vV]'), '');
