@@ -1022,13 +1022,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           maxLines: 1,
                           softWrap: false,
                           style: TextStyle(
-                            fontSize: index == 9 ? 138 : 190,
+                            fontSize: 190,
                             height: .82,
-                            letterSpacing: index == 9 ? -12 : -8,
+                            letterSpacing: index == 9 ? -24 : -8,
                             fontWeight: FontWeight.w900,
                             foreground: Paint()
                               ..style = PaintingStyle.stroke
-                              ..strokeWidth = 1
+                              ..strokeWidth = 3
                               ..color = Colors.white.withValues(alpha: .78),
                           ),
                         ),
@@ -1576,8 +1576,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [Color(0xAA080B12), Color(0x00080B12), Color(0xF2080B12)],
-              stops: [0, .32, 1],
+              colors: [
+                Color(0xAA000000),
+                Color(0x00000000),
+                Color(0xFF000000),
+              ],
+              stops: [0, .34, 1],
             ),
           ),
         ),
