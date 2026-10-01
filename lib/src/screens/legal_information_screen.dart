@@ -5,23 +5,63 @@ import '../theme/glass_theme.dart';
 
 enum LegalDocument { privacy, terms, notices }
 
-class LegalInformationScreen extends StatelessWidget {
-  const LegalInformationScreen({super.key, required this.document});
+class LegalInformationScreen extends StatefulWidget {
+  const LegalInformationScreen({
+    super.key,
+    required this.document,
+    this.requireReadToEnd = false,
+  });
 
   final LegalDocument document;
+  final bool requireReadToEnd;
 
   static const _projectUrl = 'https://github.com/frnzeeey/reelish';
   static const _effectiveDate = 'October 1, 2026';
 
-  String get _title => switch (document) {
+  @override
+  State<LegalInformationScreen> createState() => _LegalInformationScreenState();
+}
+
+class _LegalInformationScreenState extends State<LegalInformationScreen> {
+  final _scrollController = ScrollController();
+  bool _hasReadToEnd = false;
+
+  String get _title => switch (widget.document) {
     LegalDocument.privacy => 'Privacy policy',
     LegalDocument.terms => 'Terms of use',
     LegalDocument.notices => 'Content & third-party notices',
   };
 
   @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_checkReadProgress);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkReadProgress());
+  }
+
+  @override
+  void dispose() {
+    _scrollController
+      ..removeListener(_checkReadProgress)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _checkReadProgress() {
+    if (!widget.requireReadToEnd ||
+        !mounted ||
+        _hasReadToEnd ||
+        !_scrollController.hasClients) {
+      return;
+    }
+    if (_scrollController.position.extentAfter <= 0) {
+      setState(() => _hasReadToEnd = true);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final sections = switch (document) {
+    final sections = switch (widget.document) {
       LegalDocument.privacy => _privacySections,
       LegalDocument.terms => _termsSections,
       LegalDocument.notices => _noticeSections,
@@ -29,58 +69,90 @@ class LegalInformationScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(title: Text(_title)),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 36),
+      body: Column(
         children: [
-          Text(
-            'Onfeed (also shown as Reelish) · Updated $_effectiveDate',
-            style: const TextStyle(color: GlassTheme.muted, fontSize: 12),
-          ),
-          const SizedBox(height: 18),
-          for (final section in sections) ...[
-            Text(
-              section.$1,
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          Expanded(
+            child: ListView(
+              controller: _scrollController,
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 36),
+              children: [
+                Text(
+                  'Reelish · Updated ${LegalInformationScreen._effectiveDate}',
+                  style: const TextStyle(
+                    color: GlassTheme.muted,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                for (final section in sections) ...[
+                  Text(
+                    section.$1,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 7),
+                  Text(
+                    section.$2,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      height: 1.55,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final uri = Uri.parse(LegalInformationScreen._projectUrl);
+                    if (!await launchUrl(
+                          uri,
+                          mode: LaunchMode.externalApplication,
+                        ) &&
+                        context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Could not open the project page.'),
+                        ),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.open_in_new_rounded),
+                  label: const Text('Project page & support'),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'For privacy requests, use the developer contact published on the '
+                  'store listing. Do not post personal information in public issue '
+                  'trackers.',
+                  style: TextStyle(
+                    color: GlassTheme.muted,
+                    height: 1.45,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 7),
-            Text(
-              section.$2,
-              style: const TextStyle(
-                color: Colors.white70,
-                height: 1.55,
-                fontSize: 14,
+          ),
+          if (widget.requireReadToEnd)
+            SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: _hasReadToEnd
+                        ? () => Navigator.of(context).pop(true)
+                        : null,
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                      child: Text('Done reading'),
+                    ),
+                  ),
+                ),
               ),
             ),
-            const SizedBox(height: 20),
-          ],
-          OutlinedButton.icon(
-            onPressed: () async {
-              final uri = Uri.parse(_projectUrl);
-              if (!await launchUrl(uri, mode: LaunchMode.externalApplication) &&
-                  context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Could not open the project page.'),
-                  ),
-                );
-              }
-            },
-            icon: const Icon(Icons.open_in_new_rounded),
-            label: const Text('Project page & support'),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'For privacy requests, use the developer contact published on the '
-            'store listing. Do not post personal information in public issue '
-            'trackers.',
-            style: TextStyle(
-              color: GlassTheme.muted,
-              height: 1.45,
-              fontSize: 12,
-            ),
-          ),
         ],
       ),
     );
@@ -89,7 +161,7 @@ class LegalInformationScreen extends StatelessWidget {
   static const _privacySections = <(String, String)>[
     (
       'Who this applies to',
-      'This policy describes the Onfeed / Reelish app. The app does not ask '
+      'This policy describes the Reelish app. The app does not ask '
           'you to create an account and has no app-operated account service. '
           'Your device and the services you choose to use still process data as '
           'described below.',
@@ -156,7 +228,7 @@ class LegalInformationScreen extends StatelessWidget {
   static const _termsSections = <(String, String)>[
     (
       'Using the app',
-      'These terms cover your use of Onfeed (also shown as Reelish). By using '
+      'These terms cover your use of Reelish. By using '
           'the app, you agree to follow these terms and the laws that apply to '
           'you. If you do not agree, stop using the app. The app is a media '
           'catalog and playback client. It does not host or supply a library of '
