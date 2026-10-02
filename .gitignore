@@ -44,3 +44,8 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Release signing material must never be committed.
+*.jks
+*.keystore
+android/key.properties
