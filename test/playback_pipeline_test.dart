@@ -6,10 +6,12 @@ import 'package:onfeed/src/models/stream_source.dart';
 import 'package:onfeed/src/models/stream_type.dart';
 import 'package:onfeed/src/services/network_target_policy.dart';
 import 'package:onfeed/src/services/playback_coordinator.dart';
+import 'package:onfeed/src/services/playback_source_policy.dart';
 import 'package:onfeed/src/services/player_engine.dart';
 import 'package:onfeed/src/services/provider_execution_scheduler.dart';
 import 'package:onfeed/src/services/source_preparer.dart';
 import 'package:onfeed/src/services/stream_normalizer.dart';
+import 'package:onfeed/src/services/video_quality_selector.dart';
 
 void main() {
   test('normalization preserves provider identity and media headers', () {
@@ -95,5 +97,59 @@ void main() {
     expect(scheduler.workersFor(90), 4);
     expect(scheduler.runtimeLimit, 2);
     expect(scheduler.workersFor(1), 1);
+  });
+
+  test('video quality preference selects the closest supported rendition', () {
+    expect(selectPreferredVideoHeight([2160, 1080, 720], 1080), 1080);
+    expect(selectPreferredVideoHeight([2160, 1440], 1080), 1440);
+    expect(selectPreferredVideoHeight([1080, 720, 480], 900), 720);
+    expect(selectPreferredVideoHeight([null, null], 1080), isNull);
+    expect(selectPreferredVideoHeight([1080, 720], 0), isNull);
+  });
+
+  test('source policy enforces provider and torrent settings', () {
+    final providerStream = StreamSource(
+      name: 'Provider stream',
+      url: 'https://video.example/stream.m3u8',
+      providerId: 'repo-a|provider-a',
+    );
+    final torrentStream = StreamSource(
+      name: 'Torrent stream',
+      url: 'magnet:?xt=urn:btih:${'a' * 40}',
+      providerId: 'repo-a|provider-a',
+    );
+
+    expect(
+      isPlaybackSourceAllowed(
+        providerStream,
+        allowedProviderIds: {'repo-a|provider-a'},
+        allowTorrents: true,
+      ),
+      isTrue,
+    );
+    expect(
+      isPlaybackSourceAllowed(
+        providerStream,
+        allowedProviderIds: {'repo-b|provider-b'},
+        allowTorrents: true,
+      ),
+      isFalse,
+    );
+    expect(
+      isPlaybackSourceAllowed(
+        torrentStream,
+        allowedProviderIds: {'repo-a|provider-a'},
+        allowTorrents: true,
+      ),
+      isTrue,
+    );
+    expect(
+      isPlaybackSourceAllowed(
+        torrentStream,
+        allowedProviderIds: {'repo-a|provider-a'},
+        allowTorrents: false,
+      ),
+      isFalse,
+    );
   });
 }

@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/media_item.dart';
 import '../models/stream_source.dart';
+import 'playback_source_policy.dart';
 
 class StorageService {
   static const _nuvioPlugins = 'onfeed.nuvio.plugin.repositories',
@@ -93,6 +94,7 @@ class StorageService {
     MediaItem item, {
     required Duration maxAge,
     required bool allowTorrents,
+    Set<String>? allowedProviderIds,
     String? cacheKey,
   }) async {
     final raw = (await SharedPreferences.getInstance()).getString(
@@ -115,7 +117,12 @@ class StorageService {
         Map<String, dynamic>.from(sourceJson),
         providerName: '${sourceJson['providerName'] ?? ''}',
       );
-      if (!source.isPlayable || (!allowTorrents && source.isTorrent)) {
+      if (!source.isPlayable ||
+          !isPlaybackSourceAllowed(
+            source,
+            allowedProviderIds: allowedProviderIds,
+            allowTorrents: allowTorrents,
+          )) {
         return null;
       }
       return source;

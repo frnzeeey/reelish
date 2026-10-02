@@ -480,7 +480,9 @@ class NuvioPluginService extends ChangeNotifier {
               onCandidate?.call();
               final normalized = _streamNormalizer.normalize(
                 Map<String, dynamic>.from(entry),
-                providerId: plugin.id,
+                // Match the provider key used by PlaybackSettings and retain
+                // repository identity when two repos reuse the same plugin id.
+                providerId: '${repo.url}|${plugin.id}',
                 providerName: plugin.name,
               );
               final source = normalized.source;

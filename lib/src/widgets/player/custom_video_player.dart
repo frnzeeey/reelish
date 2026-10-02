@@ -14,6 +14,8 @@ import '../../services/playback_settings_controller.dart';
 import '../../services/stream_discovery.dart';
 import '../../services/playback_coordinator.dart';
 import '../../services/player_engine.dart';
+import '../../services/playback_source_policy.dart';
+import '../../services/video_quality_selector.dart';
 import '../../services/network_target_policy.dart';
 import '../../services/open_subtitles_service.dart';
 import '../../theme/glass_theme.dart';
@@ -60,7 +62,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   double _volume = 1, _brightness = 1;
   BoxFit _fit = BoxFit.contain;
   double _ratio = 0;
-  double _speed = 1;
+  late double _speed;
   SubtitleTrack? _subtitle;
   List<_Cue> _cues = [];
   List<VideoTrack> _videoTracks = [];
@@ -95,12 +97,13 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   void initState() {
     super.initState();
     _playback = widget.playbackSettings.value;
+    _speed = _playback.defaultPlaybackSpeed;
     widget.playbackSettings.addListener(_onPlaybackSettingsChanged);
     _sources = List.of(widget.sources);
     _playbackCoordinator.replaceCandidates(_sources);
     _source = widget.source;
     _discoverySubscription = widget.discovery?.updates.listen((source) {
-      if (!mounted || !source.isPlayable) return;
+      if (!mounted || !source.isPlayable || !_isSourceAllowed(source)) return;
       if (!_playbackCoordinator.addCandidate(source)) return;
       setState(() => _sources.add(source));
       if (_error && _playbackCoordinator.attemptedCount < 5) {
@@ -215,6 +218,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
           if (generation != _initializationGeneration) return;
           _videoTracks = tracks
             ..sort((a, b) => (b.height ?? 0).compareTo(a.height ?? 0));
+          await _applyPreferredVideoTrack(c, generation);
         } catch (_) {
           if (generation == _initializationGeneration) _videoTracks = [];
         }
@@ -655,7 +659,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   }
 
   Future<void> _pickStream() async {
-    final streams = _sources;
+    final streams = _sources.where(_isSourceAllowed).toList();
     if (streams.length < 2) return;
     final picked = await StreamSelectorSheet.show(context, streams, _source!);
     if (picked != null) {
@@ -713,6 +717,9 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
           ];
         });
       }
+      if (_playback.useForcedSubtitles) {
+        await _applyPreferredSubtitle();
+      }
     }
     if (_subtitle != null) await _loadSubtitle(_subtitle!);
     _show();
@@ -753,6 +760,23 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     final previous = _playback;
     _playback = widget.playbackSettings.value;
     if (!mounted) return;
+    if (!setEquals(previous.allowedProviderIds, _playback.allowedProviderIds) ||
+        previous.p2pStreaming != _playback.p2pStreaming) {
+      final candidates = <String, StreamSource>{};
+      for (final source in [
+        ..._sources,
+        ...?widget.discovery?.sources,
+        widget.source,
+        ?_source,
+      ]) {
+        candidates.putIfAbsent(
+          _playbackCoordinator.sourceKey(source),
+          () => source,
+        );
+      }
+      _sources = candidates.values.where(_isSourceAllowed).toList();
+      _playbackCoordinator.replaceCandidates(_sources);
+    }
     if (previous.holdToSpeed && !_playback.holdToSpeed) {
       unawaited(_endHoldSpeed());
     }
@@ -788,46 +812,97 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     }
   }
 
+  bool _isSourceAllowed(StreamSource source) => isPlaybackSourceAllowed(
+    source,
+    allowedProviderIds: _playback.allowedProviderIds,
+    allowTorrents:
+        _playback.p2pStreaming &&
+        defaultTargetPlatform == TargetPlatform.android,
+  );
+
   Future<void> _applyPreferredAudio(VideoPlayerController controller) async {
-    if (_audioTracks.isEmpty || !controller.isAudioTrackSupportAvailable()) {
-      return;
-    }
-    final preferences = [
-      _playback.preferredAudioLanguage == 'device'
-          ? WidgetsBinding.instance.platformDispatcher.locale.languageCode
-          : _playback.preferredAudioLanguage,
-      _playback.secondaryAudioLanguage,
-    ].where((language) => language.isNotEmpty).toList();
-    for (final language in preferences) {
-      final track = _audioTracks
-          .where((entry) => entry.language?.isNotEmpty == true)
-          .where((entry) => _languageMatches(entry.language!, language))
-          .firstOrNull;
-      if (track == null) continue;
-      try {
-        await controller.selectAudioTrack(track.id);
-        if (mounted) {
-          setState(() {
-            _audioTracks = [
-              for (final entry in _audioTracks)
-                VideoAudioTrack(
-                  id: entry.id,
-                  label: entry.label,
-                  language: entry.language,
-                  isSelected: entry.id == track.id,
-                  bitrate: entry.bitrate,
-                  sampleRate: entry.sampleRate,
-                  channelCount: entry.channelCount,
-                  codec: entry.codec,
-                ),
-            ];
-          });
+    if (_audioTracks.isNotEmpty && controller.isAudioTrackSupportAvailable()) {
+      final preferences = [
+        _playback.preferredAudioLanguage == 'device'
+            ? WidgetsBinding.instance.platformDispatcher.locale.languageCode
+            : _playback.preferredAudioLanguage,
+        _playback.secondaryAudioLanguage,
+      ].where((language) => language.isNotEmpty).toList();
+      for (final language in preferences) {
+        final track = _audioTracks
+            .where((entry) => entry.language?.isNotEmpty == true)
+            .where((entry) => _languageMatches(entry.language!, language))
+            .firstOrNull;
+        if (track == null) continue;
+        try {
+          await controller.selectAudioTrack(track.id);
+          if (mounted) {
+            setState(() {
+              _audioTracks = [
+                for (final entry in _audioTracks)
+                  VideoAudioTrack(
+                    id: entry.id,
+                    label: entry.label,
+                    language: entry.language,
+                    isSelected: entry.id == track.id,
+                    bitrate: entry.bitrate,
+                    sampleRate: entry.sampleRate,
+                    channelCount: entry.channelCount,
+                    codec: entry.codec,
+                  ),
+              ];
+            });
+          }
+        } catch (_) {
+          // Keep the engine's selected track if a backend rejects the request.
         }
-      } catch (_) {
-        // Keep the engine's selected track if a backend rejects the request.
+        break;
       }
+    }
+    if (_playback.useForcedSubtitles) {
+      await _applyPreferredSubtitle();
+    }
+  }
+
+  Future<void> _applyPreferredVideoTrack(
+    VideoPlayerController controller,
+    int generation,
+  ) async {
+    final height = selectPreferredVideoHeight(
+      _videoTracks.map(
+        (track) => track.height ?? _heightFromLabel(track.label),
+      ),
+      _playback.preferredVideoHeight,
+    );
+    if (height == null ||
+        generation != _initializationGeneration ||
+        !controller.isVideoTrackSupportAvailable()) {
       return;
     }
+    final track = _videoTracks
+        .where(
+          (candidate) =>
+              (candidate.height ?? _heightFromLabel(candidate.label)) == height,
+        )
+        .firstOrNull;
+    if (track == null) return;
+    try {
+      await controller.selectVideoTrack(track);
+      if (!mounted || generation != _initializationGeneration) return;
+      _selectedVideoTrack = track;
+      setState(() {});
+    } catch (_) {
+      // Quality selection is optional; leave the backend's automatic choice.
+    }
+  }
+
+  int? _heightFromLabel(String? label) {
+    if (label == null) return null;
+    final match = RegExp(
+      r'(?<!\d)(\d{3,4})\s*p?',
+      caseSensitive: false,
+    ).firstMatch(label);
+    return int.tryParse(match?.group(1) ?? '');
   }
 
   Future<void> _applyPreferredSubtitle() async {

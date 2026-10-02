@@ -716,6 +716,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           item,
           maxAge: Duration(hours: playback.lastLinkCacheHours),
           allowTorrents: allowTorrents,
+          allowedProviderIds: playback.allowedProviderIds,
           cacheKey: streamCacheKey,
         );
         sourceFromCache = source != null;
@@ -808,13 +809,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               playbackSettings: _playbackSettings,
               sourceFromCache: sourceFromCache,
               streamCacheKey: streamCacheKey,
-              onRefreshSources: () => _nuvioPlugins.streams(
-                pluginItem,
-                season: season,
-                episode: episode,
-                allowedPluginIds: playback.allowedProviderIds,
-                allowTorrents: allowTorrents,
-              ),
+              onRefreshSources: () {
+                // Recovery can happen after the user changes source
+                // preferences while the player is open. Read the controller
+                // here instead of capturing the initial discovery snapshot.
+                final current = _playbackSettings.value;
+                return _nuvioPlugins.streams(
+                  pluginItem,
+                  season: season,
+                  episode: episode,
+                  allowedPluginIds: current.allowedProviderIds,
+                  allowTorrents:
+                      current.p2pStreaming &&
+                      defaultTargetPlatform == TargetPlatform.android,
+                );
+              },
               onNextEpisode: season == null || episode == null
                   ? null
                   : () => _playNextEpisode(
@@ -1576,11 +1585,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [
-                Color(0xAA000000),
-                Color(0x00000000),
-                Color(0xFF000000),
-              ],
+              colors: [Color(0xAA000000), Color(0x00000000), Color(0xFF000000)],
               stops: [0, .34, 1],
             ),
           ),

@@ -198,6 +198,46 @@ class PlaybackSettingsScreen extends StatelessWidget {
                         }
                       },
                     ),
+                    _choiceRow(
+                      'Default playback speed',
+                      'Starting speed for newly opened videos. In-player speed changes stay with the current video.',
+                      '${settings.defaultPlaybackSpeed}×',
+                      () async {
+                        const speeds = [.5, .75, 1.0, 1.25, 1.5, 2.0];
+                        final value = await _choose<double>(
+                          context,
+                          'Default playback speed',
+                          speeds,
+                          settings.defaultPlaybackSpeed,
+                          label: (speed) => '$speed×',
+                        );
+                        if (value != null) {
+                          await _save(
+                            settings.copyWith(defaultPlaybackSpeed: value),
+                          );
+                        }
+                      },
+                    ),
+                    _choiceRow(
+                      'Preferred video quality',
+                      'Preferred resolution for new videos when the stream exposes selectable video tracks.',
+                      _qualityLabel(settings.preferredVideoHeight),
+                      () async {
+                        const heights = [0, 480, 720, 1080, 1440, 2160];
+                        final value = await _choose<int>(
+                          context,
+                          'Preferred video quality',
+                          heights,
+                          settings.preferredVideoHeight,
+                          label: _qualityLabel,
+                        );
+                        if (value != null) {
+                          await _save(
+                            settings.copyWith(preferredVideoHeight: value),
+                          );
+                        }
+                      },
+                    ),
                   ]),
                   _section('STREAM AUTO-PLAY', [
                     _switchRow(
@@ -230,16 +270,16 @@ class PlaybackSettingsScreen extends StatelessWidget {
                   ]),
                   _section('DECODER', [
                     _infoRow(
-                      'Playback engine',
-                      'Internal · libmpv on Android',
-                      'This build registers one playback engine. The video player adapter does not expose hardware decoder, renderer, Dolby Vision fallback, or tunneled playback configuration.',
+                      'Decoder configuration',
+                      'Platform managed',
+                      'Android uses Media3 with a MediaKit fallback; other platforms use their registered video_player backend. These adapters do not expose decoder, renderer, Dolby Vision, or tunneled playback controls.',
                     ),
                   ]),
                   _section('SKIP SEGMENTS', [
                     _infoRow(
                       'Intro and outro detection',
                       'Unavailable in this build',
-                      'The app has no segment timestamp provider or skip controller yet, so automatic skipping is not offered here.',
+                      'Episode data and stream providers do not supply intro or outro timestamps, so automatic segment skipping is unavailable.',
                     ),
                   ]),
                   _section('NEXT EPISODE', [
@@ -267,7 +307,7 @@ class PlaybackSettingsScreen extends StatelessWidget {
                     _infoRow(
                       'Binge group options',
                       'Unavailable in this build',
-                      'Providers do not expose a source profile or binge-group identifier, so source reuse between episodes is not available.',
+                      'The episode catalog has no binge-group metadata or grouping behavior to configure.',
                     ),
                   ]),
                   _section('SUBTITLE AND AUDIO', [
@@ -432,9 +472,9 @@ class PlaybackSettingsScreen extends StatelessWidget {
                       () => _confirmClearTorrentCache(context),
                     ),
                     _infoRow(
-                      'Torrent profile and cache size',
-                      'Managed by the torrent engine',
-                      'The installed torrent plugin does not expose cache limits or download profiles.',
+                      'Torrent cache limit',
+                      'Unsupported by the torrent plugin',
+                      'The plugin accepts a cache directory but exposes no size limit or eviction API. Manual full-cache clearing is available.',
                     ),
                   ]),
                   _section('STREAM SELECTION', [
@@ -924,6 +964,8 @@ class PlaybackSettingsScreen extends StatelessWidget {
     'ru' => 'Russian',
     _ => value,
   };
+
+  String _qualityLabel(int height) => height == 0 ? 'Auto' : '${height}p';
 
   String _durationLabel(int hours) => hours >= 24
       ? '${hours ~/ 24} day${hours >= 48 ? 's' : ''}'

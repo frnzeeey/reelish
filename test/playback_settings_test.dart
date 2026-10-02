@@ -16,6 +16,8 @@ void main() {
       expect(settings.autoStreamSelection, isTrue);
       expect(settings.streamSelectionTimeoutSeconds, 3);
       expect(settings.holdSpeed, 2);
+      expect(settings.defaultPlaybackSpeed, 1);
+      expect(settings.preferredVideoHeight, 0);
       expect(settings.subtitleSize, 18);
       expect(settings.subtitleVerticalOffset, 20);
       expect(settings.allowedProviderIds, isNull);
@@ -30,6 +32,8 @@ void main() {
           subtitleTextColor: 0xFFABCDEF,
           subtitleBackgroundColor: 0x66000000,
           holdSpeed: 2.5,
+          defaultPlaybackSpeed: 1.5,
+          preferredVideoHeight: 1080,
         );
 
         final restored = PlaybackSettings.fromJson(settings.toJson());
@@ -42,6 +46,8 @@ void main() {
           settings.subtitleBackgroundColor,
         );
         expect(restored.holdSpeed, 2.5);
+        expect(restored.defaultPlaybackSpeed, 1.5);
+        expect(restored.preferredVideoHeight, 1080);
       },
     );
 
@@ -52,6 +58,8 @@ void main() {
         'subtitleSize': 2,
         'subtitleVerticalOffset': 300,
         'lastLinkCacheHours': 0,
+        'defaultPlaybackSpeed': 10,
+        'preferredVideoHeight': 1234,
       });
 
       expect(settings.holdSpeed, 4);
@@ -59,6 +67,8 @@ void main() {
       expect(settings.subtitleSize, 12);
       expect(settings.subtitleVerticalOffset, 80);
       expect(settings.lastLinkCacheHours, 1);
+      expect(settings.defaultPlaybackSpeed, 2);
+      expect(settings.preferredVideoHeight, 0);
     });
   });
 
@@ -102,6 +112,36 @@ void main() {
 
       expect(restored, isNull);
     });
+
+    test('does not reuse a cached source from a disallowed provider', () async {
+      final storage = StorageService();
+      final providerSource = source.copyWithProviderId('repo-a|provider-a');
+      await storage.saveLastStream(item, providerSource);
+
+      final restored = await storage.lastStream(
+        item,
+        maxAge: const Duration(days: 1),
+        allowTorrents: true,
+        allowedProviderIds: {'repo-b|provider-b'},
+      );
+
+      expect(restored, isNull);
+    });
+
+    test('reuses a cached source when its provider is allowed', () async {
+      final storage = StorageService();
+      final providerSource = source.copyWithProviderId('repo-a|provider-a');
+      await storage.saveLastStream(item, providerSource);
+
+      final restored = await storage.lastStream(
+        item,
+        maxAge: const Duration(days: 1),
+        allowTorrents: true,
+        allowedProviderIds: {'repo-a|provider-a'},
+      );
+
+      expect(restored?.providerId, 'repo-a|provider-a');
+    });
   });
 
   test('playback settings controller persists and reloads changes', () async {
@@ -109,7 +149,12 @@ void main() {
     final controller = PlaybackSettingsController();
     await controller.load();
     await controller.update(
-      controller.value.copyWith(autoStreamSelection: false, subtitleSize: 24),
+      controller.value.copyWith(
+        autoStreamSelection: false,
+        subtitleSize: 24,
+        defaultPlaybackSpeed: 1.5,
+        preferredVideoHeight: 720,
+      ),
     );
     controller.dispose();
 
@@ -118,6 +163,8 @@ void main() {
 
     expect(restored.value.autoStreamSelection, isFalse);
     expect(restored.value.subtitleSize, 24);
+    expect(restored.value.defaultPlaybackSpeed, 1.5);
+    expect(restored.value.preferredVideoHeight, 720);
     restored.dispose();
   });
 
@@ -148,6 +195,22 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(controller.value.touchGestures, isFalse);
+
+    await tester.ensureVisible(find.text('Default playback speed'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Default playback speed'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('1.5×'));
+    await tester.pumpAndSettle();
+    expect(controller.value.defaultPlaybackSpeed, 1.5);
+
+    await tester.ensureVisible(find.text('Preferred video quality'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Preferred video quality'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('720p'));
+    await tester.pumpAndSettle();
+    expect(controller.value.preferredVideoHeight, 720);
     controller.dispose();
   });
 }

@@ -3,6 +3,8 @@ class PlaybackSettings {
     this.touchGestures = true,
     this.holdToSpeed = true,
     this.holdSpeed = 2,
+    this.defaultPlaybackSpeed = 1,
+    this.preferredVideoHeight = 0,
     this.showLoadingOverlay = true,
     this.showLoadingStatus = true,
     this.pauseOverlay = true,
@@ -33,6 +35,10 @@ class PlaybackSettings {
   final bool touchGestures;
   final bool holdToSpeed;
   final double holdSpeed;
+
+  /// Default speed for newly opened player sessions. 0 video height means Auto.
+  final double defaultPlaybackSpeed;
+  final int preferredVideoHeight;
   final bool showLoadingOverlay;
   final bool showLoadingStatus;
   final bool pauseOverlay;
@@ -65,6 +71,8 @@ class PlaybackSettings {
     bool? touchGestures,
     bool? holdToSpeed,
     double? holdSpeed,
+    double? defaultPlaybackSpeed,
+    int? preferredVideoHeight,
     bool? showLoadingOverlay,
     bool? showLoadingStatus,
     bool? pauseOverlay,
@@ -95,6 +103,8 @@ class PlaybackSettings {
     touchGestures: touchGestures ?? this.touchGestures,
     holdToSpeed: holdToSpeed ?? this.holdToSpeed,
     holdSpeed: holdSpeed ?? this.holdSpeed,
+    defaultPlaybackSpeed: defaultPlaybackSpeed ?? this.defaultPlaybackSpeed,
+    preferredVideoHeight: preferredVideoHeight ?? this.preferredVideoHeight,
     showLoadingOverlay: showLoadingOverlay ?? this.showLoadingOverlay,
     showLoadingStatus: showLoadingStatus ?? this.showLoadingStatus,
     pauseOverlay: pauseOverlay ?? this.pauseOverlay,
@@ -137,6 +147,8 @@ class PlaybackSettings {
     'touchGestures': touchGestures,
     'holdToSpeed': holdToSpeed,
     'holdSpeed': holdSpeed,
+    'defaultPlaybackSpeed': defaultPlaybackSpeed,
+    'preferredVideoHeight': preferredVideoHeight,
     'showLoadingOverlay': showLoadingOverlay,
     'showLoadingStatus': showLoadingStatus,
     'pauseOverlay': pauseOverlay,
@@ -164,49 +176,61 @@ class PlaybackSettings {
     'subtitleOutlineColor': subtitleOutlineColor,
   };
 
-  factory PlaybackSettings.fromJson(Map<String, dynamic> json) =>
-      PlaybackSettings(
-        touchGestures: json['touchGestures'] != false,
-        holdToSpeed: json['holdToSpeed'] != false,
-        holdSpeed: _double(json['holdSpeed'], 2).clamp(1.25, 4),
-        showLoadingOverlay: json['showLoadingOverlay'] != false,
-        showLoadingStatus: json['showLoadingStatus'] != false,
-        pauseOverlay: json['pauseOverlay'] != false,
-        autoPlayNextEpisode: json['autoPlayNextEpisode'] == true,
-        nextEpisodeThresholdPercent:
-            _int(json['nextEpisodeThresholdPercent'], 99).clamp(50, 100),
-        autoStreamSelection: json['autoStreamSelection'] != false,
-        streamSelectionTimeoutSeconds: _int(
-          json['streamSelectionTimeoutSeconds'],
-          3,
-        ).clamp(1, 15),
-        allowedProviderIds: json['allowedProviderIds'] is List
-            ? (json['allowedProviderIds'] as List).whereType<String>().toSet()
-            : null,
-        p2pStreaming: json['p2pStreaming'] != false,
-        reuseLastLink: json['reuseLastLink'] == true,
-        lastLinkCacheHours: _int(json['lastLinkCacheHours'], 24).clamp(1, 168),
-        preferredAudioLanguage: '${json['preferredAudioLanguage'] ?? 'device'}',
-        secondaryAudioLanguage: '${json['secondaryAudioLanguage'] ?? ''}',
-        preferredSubtitleLanguage: '${json['preferredSubtitleLanguage'] ?? ''}',
-        secondarySubtitleLanguage: '${json['secondarySubtitleLanguage'] ?? ''}',
-        stripSdhSubtitles: json['stripSdhSubtitles'] == true,
-        useForcedSubtitles: json['useForcedSubtitles'] == true,
-        showOnlyPreferredLanguages: json['showOnlyPreferredLanguages'] == true,
-        subtitleSize: _double(json['subtitleSize'], 18).clamp(12, 40),
-        subtitleVerticalOffset: _double(
-          json['subtitleVerticalOffset'],
-          20,
-        ).clamp(0, 80),
-        subtitleBold: json['subtitleBold'] == true,
-        subtitleTextColor: _int(json['subtitleTextColor'], 0xFFFFFFFF),
-        subtitleBackgroundColor: _int(
-          json['subtitleBackgroundColor'],
-          0x00000000,
-        ),
-        subtitleOutline: json['subtitleOutline'] != false,
-        subtitleOutlineColor: _int(json['subtitleOutlineColor'], 0xFF000000),
-      );
+  factory PlaybackSettings.fromJson(
+    Map<String, dynamic> json,
+  ) => PlaybackSettings(
+    touchGestures: json['touchGestures'] != false,
+    holdToSpeed: json['holdToSpeed'] != false,
+    holdSpeed: _double(json['holdSpeed'], 2).clamp(1.25, 4),
+    defaultPlaybackSpeed: _double(json['defaultPlaybackSpeed'], 1).clamp(.5, 2),
+    preferredVideoHeight:
+        const {
+          0,
+          480,
+          720,
+          1080,
+          1440,
+          2160,
+        }.contains(_int(json['preferredVideoHeight'], 0))
+        ? _int(json['preferredVideoHeight'], 0)
+        : 0,
+    showLoadingOverlay: json['showLoadingOverlay'] != false,
+    showLoadingStatus: json['showLoadingStatus'] != false,
+    pauseOverlay: json['pauseOverlay'] != false,
+    autoPlayNextEpisode: json['autoPlayNextEpisode'] == true,
+    nextEpisodeThresholdPercent: _int(
+      json['nextEpisodeThresholdPercent'],
+      99,
+    ).clamp(50, 100),
+    autoStreamSelection: json['autoStreamSelection'] != false,
+    streamSelectionTimeoutSeconds: _int(
+      json['streamSelectionTimeoutSeconds'],
+      3,
+    ).clamp(1, 15),
+    allowedProviderIds: json['allowedProviderIds'] is List
+        ? (json['allowedProviderIds'] as List).whereType<String>().toSet()
+        : null,
+    p2pStreaming: json['p2pStreaming'] != false,
+    reuseLastLink: json['reuseLastLink'] == true,
+    lastLinkCacheHours: _int(json['lastLinkCacheHours'], 24).clamp(1, 168),
+    preferredAudioLanguage: '${json['preferredAudioLanguage'] ?? 'device'}',
+    secondaryAudioLanguage: '${json['secondaryAudioLanguage'] ?? ''}',
+    preferredSubtitleLanguage: '${json['preferredSubtitleLanguage'] ?? ''}',
+    secondarySubtitleLanguage: '${json['secondarySubtitleLanguage'] ?? ''}',
+    stripSdhSubtitles: json['stripSdhSubtitles'] == true,
+    useForcedSubtitles: json['useForcedSubtitles'] == true,
+    showOnlyPreferredLanguages: json['showOnlyPreferredLanguages'] == true,
+    subtitleSize: _double(json['subtitleSize'], 18).clamp(12, 40),
+    subtitleVerticalOffset: _double(
+      json['subtitleVerticalOffset'],
+      20,
+    ).clamp(0, 80),
+    subtitleBold: json['subtitleBold'] == true,
+    subtitleTextColor: _int(json['subtitleTextColor'], 0xFFFFFFFF),
+    subtitleBackgroundColor: _int(json['subtitleBackgroundColor'], 0x00000000),
+    subtitleOutline: json['subtitleOutline'] != false,
+    subtitleOutlineColor: _int(json['subtitleOutlineColor'], 0xFF000000),
+  );
 
   static int _int(dynamic value, int fallback) =>
       value is num ? value.toInt() : int.tryParse('$value') ?? fallback;
