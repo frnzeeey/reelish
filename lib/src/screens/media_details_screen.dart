@@ -163,7 +163,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                         const SizedBox(height: 5),
                         Row(
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.star_rounded,
                               size: 15,
                               color: GlassTheme.primary,
@@ -171,7 +171,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                             const SizedBox(width: 3),
                             Text(
                               rating.toStringAsFixed(1),
-                              style: const TextStyle(
+                              style: TextStyle(
                                 color: GlassTheme.primary,
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
@@ -197,7 +197,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                   ),
                 ),
                 const SizedBox(width: 5),
-                const Padding(
+                Padding(
                   padding: EdgeInsets.only(top: 24),
                   child: Icon(
                     Icons.play_circle_fill_rounded,
@@ -316,7 +316,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                   ),
                   child: Text(
                     item.type == 'series' ? 'SERIES' : 'MOVIE',
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: GlassTheme.primary,
                       fontSize: 10,
                       letterSpacing: 1.1,
@@ -505,7 +505,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                   ],
                   if (_loading) ...[
                     const SizedBox(height: 22),
-                    const Center(
+                    Center(
                       child: CircularProgressIndicator(
                         color: GlassTheme.primary,
                       ),
@@ -571,7 +571,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                       ],
                     ),
                     if (_loadingEpisodes)
-                      const Padding(
+                      Padding(
                         padding: EdgeInsets.symmetric(vertical: 24),
                         child: Center(
                           child: CircularProgressIndicator(

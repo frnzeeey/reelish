@@ -135,7 +135,7 @@ class _NuvioPluginInstallerModalState extends State<NuvioPluginInstallerModal> {
                 const SizedBox(height: 10),
                 Text(
                   _success!,
-                  style: const TextStyle(color: GlassTheme.primary),
+                  style: TextStyle(color: GlassTheme.primary),
                 ),
               ],
               const SizedBox(height: 14),

@@ -291,7 +291,7 @@ class _MediaCardState extends State<MediaCard> {
                                     if (item.rating.isNotEmpty) ...[
                                       if (item.year.isNotEmpty)
                                         const SizedBox(width: 7),
-                                      const Icon(
+                                      Icon(
                                         FeatherIcons.star,
                                         size: 10,
                                         color: GlassTheme.primary,

@@ -88,7 +88,7 @@ class _EpisodeSelectorSheetState extends State<EpisodeSelectorSheet> {
                         itemBuilder: (context, index) {
                           final episode = episodes[index];
                           return ListTile(
-                            leading: const Icon(
+                            leading: Icon(
                               Icons.play_circle_outline,
                               color: GlassTheme.primary,
                             ),

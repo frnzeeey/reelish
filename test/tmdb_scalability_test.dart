@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:onfeed/src/screens/home_screen.dart';
+import 'package:onfeed/src/services/accent_settings_controller.dart';
 import 'package:onfeed/src/services/network_target_policy.dart';
 import 'package:onfeed/src/services/tmdb_response_cache.dart';
 import 'package:onfeed/src/services/tmdb_service.dart';
@@ -148,10 +149,16 @@ void main() {
       return http.Response(popularBody, 200);
     });
     final tmdb = service(client);
+    final accentSettings = AccentSettingsController();
+    addTearDown(accentSettings.dispose);
 
     await tester.pumpWidget(
       MaterialApp(
-        home: HomeScreen(tmdbService: tmdb, updateChecker: () async => null),
+        home: HomeScreen(
+          accentSettings: accentSettings,
+          tmdbService: tmdb,
+          updateChecker: () async => null,
+        ),
       ),
     );
     for (var i = 0; i < 30; i++) {

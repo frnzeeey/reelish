@@ -2,20 +2,28 @@ import 'package:flutter/material.dart';
 import 'package:feather_icon_font/feather_icon_font.dart';
 
 import '../models/playback_settings.dart';
+import '../services/accent_settings_controller.dart';
 import '../services/playback_settings_controller.dart';
 import '../theme/glass_theme.dart';
 import 'legal_information_screen.dart';
 
-class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({super.key, required this.onPlaybackSettings});
+class SettingsScreen extends StatelessWidget {
+  const SettingsScreen({
+    super.key,
+    required this.onPlaybackSettings,
+    required this.onAppearanceSettings,
+    required this.accentSettings,
+  });
 
   final VoidCallback onPlaybackSettings;
+  final VoidCallback onAppearanceSettings;
+  final AccentSettingsController accentSettings;
 
   @override
   Widget build(BuildContext context) => ListView(
     padding: const EdgeInsets.fromLTRB(20, 28, 20, 120),
     children: [
-      Text('Profile', style: Theme.of(context).textTheme.headlineLarge),
+      Text('Settings', style: Theme.of(context).textTheme.headlineLarge),
       const SizedBox(height: 8),
       const Text(
         'App preferences and playback controls.',
@@ -24,13 +32,26 @@ class ProfileScreen extends StatelessWidget {
       const SizedBox(height: 24),
       _ProfileEntry(
         icon: FeatherIcons.playCircle,
+        eyebrow: 'PLAYER',
         title: 'Playback',
         subtitle: 'Streams, gestures, subtitles and P2P playback',
         onTap: onPlaybackSettings,
       ),
       const SizedBox(height: 12),
+      AnimatedBuilder(
+        animation: accentSettings,
+        builder: (context, _) => _ProfileEntry(
+          icon: FeatherIcons.monitor,
+          eyebrow: 'PERSONALIZE',
+          title: 'Appearance',
+          subtitle: '${accentSettings.value.label} accent color',
+          onTap: onAppearanceSettings,
+        ),
+      ),
+      const SizedBox(height: 12),
       _ProfileEntry(
         icon: FeatherIcons.shield,
+        eyebrow: 'PRIVACY',
         title: 'Privacy policy',
         subtitle: 'What stays on your device and what is sent to services',
         onTap: () => Navigator.of(context).push(
@@ -43,6 +64,7 @@ class ProfileScreen extends StatelessWidget {
       const SizedBox(height: 12),
       _ProfileEntry(
         icon: FeatherIcons.fileText,
+        eyebrow: 'LEGAL',
         title: 'Terms of use',
         subtitle: 'Rules for using the app, add-ons and media sources',
         onTap: () => Navigator.of(context).push(
@@ -55,6 +77,7 @@ class ProfileScreen extends StatelessWidget {
       const SizedBox(height: 12),
       _ProfileEntry(
         icon: FeatherIcons.info,
+        eyebrow: 'ABOUT',
         title: 'Content & third-party notices',
         subtitle: 'Service credits, external content and reporting issues',
         onTap: () => Navigator.of(context).push(
@@ -68,15 +91,270 @@ class ProfileScreen extends StatelessWidget {
   );
 }
 
+class AppearanceSettingsScreen extends StatelessWidget {
+  const AppearanceSettingsScreen({
+    super.key,
+    required this.controller,
+    required this.onBack,
+  });
+
+  final AccentSettingsController controller;
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(10, 8, 20, 4),
+        child: Row(
+          children: [
+            IconButton(
+              tooltip: 'Back to settings',
+              onPressed: onBack,
+              icon: const Icon(Icons.arrow_back_rounded),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Appearance',
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
+      Expanded(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(18, 12, 18, 132),
+          children: [
+            AnimatedBuilder(
+              animation: controller,
+              builder: (context, _) => _AppearanceSettings(
+                selected: controller.value,
+                onSelected: (accent) => controller.update(accent),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ],
+  );
+}
+
+class _AppearanceSettings extends StatelessWidget {
+  const _AppearanceSettings({required this.selected, required this.onSelected});
+
+  final AccentPalette selected;
+  final ValueChanged<AccentPalette> onSelected;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: GlassTheme.surface,
+    borderRadius: BorderRadius.circular(20),
+    child: Padding(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: selected.primary.withValues(alpha: .14),
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: Icon(FeatherIcons.monitor, color: selected.primary),
+              ),
+              const SizedBox(width: 14),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'APPEARANCE',
+                      style: TextStyle(
+                        color: GlassTheme.muted,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                    SizedBox(height: 3),
+                    Text(
+                      'Accent color',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                decoration: BoxDecoration(
+                  color: selected.primary.withValues(alpha: .12),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: selected.primary,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      selected.label,
+                      style: TextStyle(
+                        color: selected.bright,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Choose a color for highlights and controls.',
+            style: TextStyle(color: GlassTheme.muted, fontSize: 12),
+          ),
+          const SizedBox(height: 14),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              const spacing = 8.0;
+              final itemWidth = (constraints.maxWidth - spacing * 3) / 4;
+              return Wrap(
+                spacing: spacing,
+                runSpacing: spacing,
+                children: [
+                  for (final accent in GlassTheme.accents)
+                    _AccentChoice(
+                      accent: accent,
+                      selected: accent.id == selected.id,
+                      width: itemWidth,
+                      onTap: () => onSelected(accent),
+                    ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+class _AccentChoice extends StatelessWidget {
+  const _AccentChoice({
+    required this.accent,
+    required this.selected,
+    required this.width,
+    required this.onTap,
+  });
+
+  final AccentPalette accent;
+  final bool selected;
+  final double width;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    selected: selected,
+    label: '${accent.label} accent color',
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(15),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        width: width,
+        height: 72,
+        decoration: BoxDecoration(
+          color: selected
+              ? accent.primary.withValues(alpha: .12)
+              : GlassTheme.elevatedSurface,
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(
+            color: selected ? accent.primary : GlassTheme.border,
+            width: selected ? 1.5 : 1,
+          ),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                  width: 23,
+                  height: 23,
+                  decoration: BoxDecoration(
+                    color: accent.primary,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: accent.primary.withValues(alpha: .35),
+                        blurRadius: 10,
+                      ),
+                    ],
+                  ),
+                ),
+                if (selected)
+                  Positioned(
+                    right: -5,
+                    top: -5,
+                    child: Container(
+                      width: 15,
+                      height: 15,
+                      decoration: BoxDecoration(
+                        color: GlassTheme.background,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: accent.primary),
+                      ),
+                      child: Icon(
+                        Icons.check_rounded,
+                        size: 10,
+                        color: accent.bright,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              accent.label,
+              style: TextStyle(
+                color: selected ? accent.bright : GlassTheme.textPrimary,
+                fontSize: 10,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
 class _ProfileEntry extends StatelessWidget {
   const _ProfileEntry({
     required this.icon,
+    required this.eyebrow,
     required this.title,
     required this.subtitle,
     required this.onTap,
   });
 
   final IconData icon;
+  final String eyebrow;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
@@ -87,8 +365,38 @@ class _ProfileEntry extends StatelessWidget {
     borderRadius: BorderRadius.circular(20),
     child: ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-      leading: Icon(icon, color: GlassTheme.primary),
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+      leading: Container(
+        width: 46,
+        height: 46,
+        decoration: BoxDecoration(
+          color: GlassTheme.primary.withValues(alpha: .14),
+          borderRadius: BorderRadius.circular(15),
+        ),
+        child: Icon(icon, color: GlassTheme.primary),
+      ),
+      title: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: GlassTheme.primary.withValues(alpha: .12),
+              borderRadius: BorderRadius.circular(5),
+            ),
+            child: Text(
+              eyebrow,
+              style: TextStyle(
+                color: GlassTheme.primary,
+                fontSize: 8,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1,
+              ),
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+        ],
+      ),
       subtitle: Text(subtitle),
       trailing: const Icon(Icons.chevron_right_rounded),
       onTap: onTap,
@@ -829,7 +1137,7 @@ class PlaybackSettingsScreen extends StatelessWidget {
             ListTile(
               title: Text(label?.call(option) ?? '$option'),
               trailing: option == current
-                  ? const Icon(Icons.check_rounded, color: GlassTheme.primary)
+                  ? Icon(Icons.check_rounded, color: GlassTheme.primary)
                   : null,
               onTap: () => Navigator.pop(context, option),
             ),

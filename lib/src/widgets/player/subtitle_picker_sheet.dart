@@ -54,7 +54,7 @@ class SubtitlePickerSheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 18),
-          const Row(
+          Row(
             children: [
               Icon(Icons.closed_caption_rounded, color: GlassTheme.primary),
               SizedBox(width: 10),
@@ -156,7 +156,7 @@ class _SubtitleTile extends StatelessWidget {
                 style: const TextStyle(color: GlassTheme.muted, fontSize: 12),
               ),
         trailing: selected
-            ? const Icon(Icons.check_circle_rounded, color: GlassTheme.primary)
+            ? Icon(Icons.check_circle_rounded, color: GlassTheme.primary)
             : null,
         onTap: onTap,
       ),

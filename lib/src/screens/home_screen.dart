@@ -11,6 +11,7 @@ import '../services/stream_discovery.dart';
 import '../services/tmdb_service.dart';
 import '../services/nuvio_plugin_service.dart';
 import '../services/playback_settings_controller.dart';
+import '../services/accent_settings_controller.dart';
 import '../theme/glass_theme.dart';
 import '../widgets/nuvio_plugin_installer_modal.dart';
 import '../widgets/category_chip.dart';
@@ -28,8 +29,14 @@ import 'playback_settings_screen.dart';
 enum _DeferredLoadState { idle, loading, loaded, failed }
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key, this.tmdbService, this.updateChecker});
+  const HomeScreen({
+    super.key,
+    required this.accentSettings,
+    this.tmdbService,
+    this.updateChecker,
+  });
 
+  final AccentSettingsController accentSettings;
   final TmdbService? tmdbService;
   final Future<GitHubUpdate?> Function()? updateChecker;
 
@@ -652,7 +659,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const CircularProgressIndicator(color: GlassTheme.primary),
+                    CircularProgressIndicator(color: GlassTheme.primary),
                     const SizedBox(width: 18),
                     Flexible(
                       child: Column(
@@ -869,6 +876,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
+  Future<void> _openAppearanceSettings() async {
+    await Navigator.push<void>(
+      context,
+      AppPageRoute<void>(
+        context: context,
+        builder: (settingsContext) => Scaffold(
+          backgroundColor: GlassTheme.background,
+          body: AppearanceSettingsScreen(
+            controller: widget.accentSettings,
+            onBack: () => Navigator.of(settingsContext).pop(),
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _playNextEpisode(
     MediaItem item,
     int season,
@@ -1059,7 +1082,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     height: 36,
     decoration: BoxDecoration(
       borderRadius: BorderRadius.circular(12),
-      boxShadow: const [BoxShadow(color: GlassTheme.coralGlow, blurRadius: 18)],
+      boxShadow: [BoxShadow(color: GlassTheme.coralGlow, blurRadius: 18)],
     ),
     child: ClipRRect(
       borderRadius: BorderRadius.circular(12),
@@ -1258,7 +1281,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           color: GlassTheme.primary.withValues(alpha: .12),
                           borderRadius: BorderRadius.circular(14),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           FeatherIcons.link,
                           color: GlassTheme.primary,
                         ),
@@ -1609,7 +1632,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     color: GlassTheme.primary.withValues(alpha: .35),
                   ),
                 ),
-                child: const Text(
+                child: Text(
                   'REELISH SPOTLIGHT',
                   style: TextStyle(
                     color: GlassTheme.primary,
@@ -1738,7 +1761,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ),
       TabPageTransition(
         active: _tab == 3,
-        child: ProfileScreen(
+        child: SettingsScreen(
+          accentSettings: widget.accentSettings,
+          onAppearanceSettings: () =>
+              unawaited(_openAppearanceSettings()),
           onPlaybackSettings: () =>
               unawaited(_openPlaybackSettings(availablePlugins)),
         ),
@@ -1776,7 +1802,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const CircularProgressIndicator(color: GlassTheme.primary),
+                    CircularProgressIndicator(color: GlassTheme.primary),
                     const SizedBox(height: 16),
                     Text(
                       'Searching providers…',

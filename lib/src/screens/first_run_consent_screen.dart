@@ -99,7 +99,7 @@ class _FirstRunConsentScreenState extends State<FirstRunConsentScreen> {
                             color: GlassTheme.coralGlow,
                             borderRadius: BorderRadius.circular(16),
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.policy_outlined,
                             color: GlassTheme.coralBright,
                           ),

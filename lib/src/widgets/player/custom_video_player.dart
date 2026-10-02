@@ -1383,7 +1383,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
                       ),
                     )
                   : (_playback.showLoadingOverlay
-                        ? const CircularProgressIndicator(
+                        ? CircularProgressIndicator(
                             color: GlassTheme.primary,
                           )
                         : const SizedBox.shrink()),

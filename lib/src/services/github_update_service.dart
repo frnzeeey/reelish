@@ -29,6 +29,9 @@ abstract final class GitHubUpdateService {
   static const _lastCheckKey = 'onfeed.update.github.lastCheckedAt.v1';
   static const _lastResultKey = 'onfeed.update.github.lastResult.v1';
   static const checkInterval = Duration(hours: 6);
+  // Keep the updater from consuming unbounded app-cache storage if a release
+  // asset is misconfigured or the server omits Content-Length.
+  static const maxApkDownloadBytes = 512 * 1024 * 1024;
 
   static Future<GitHubUpdate?> checkForUpdate({
     bool forceRefresh = false,
@@ -205,10 +208,18 @@ abstract final class GitHubUpdateService {
       }
 
       final total = response.contentLength ?? 0;
+      if (total > maxApkDownloadBytes) {
+        throw const HttpException('The APK download exceeds the size limit.');
+      }
       var received = 0;
       final sink = partialFile.openWrite();
       try {
         await for (final chunk in response.stream) {
+          if (chunk.length > maxApkDownloadBytes - received) {
+            throw const HttpException(
+              'The APK download exceeds the size limit.',
+            );
+          }
           sink.add(chunk);
           received += chunk.length;
           onProgress?.call(received, total);

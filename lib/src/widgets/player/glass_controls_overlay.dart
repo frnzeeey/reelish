@@ -191,7 +191,7 @@ class _ControlDock extends StatelessWidget {
           controller,
           allowScrubbing: true,
           padding: const EdgeInsets.symmetric(vertical: 12),
-          colors: const VideoProgressColors(
+          colors: VideoProgressColors(
             playedColor: GlassTheme.primary,
             bufferedColor: Color(0x99FFFFFF),
             backgroundColor: Color(0x44FFFFFF),

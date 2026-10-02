@@ -1,10 +1,71 @@
 import 'package:flutter/material.dart';
 
 abstract final class GlassTheme {
-  static const primary = Color(0xFFFF4D6D);
-  static const coralBright = Color(0xFFFF6B85);
-  static const coralDark = Color(0xFFD93655);
-  static const coralGlow = Color(0x33FF4D6D);
+  static const coral = AccentPalette(
+    id: 'coral',
+    label: 'Coral',
+    primary: Color(0xFFFF4D6D),
+    bright: Color(0xFFFF6B85),
+    dark: Color(0xFFD93655),
+  );
+  static const violet = AccentPalette(
+    id: 'violet',
+    label: 'Violet',
+    primary: Color(0xFF9B7BFF),
+    bright: Color(0xFFB39BFF),
+    dark: Color(0xFF7555D9),
+  );
+  static const blue = AccentPalette(
+    id: 'blue',
+    label: 'Blue',
+    primary: Color(0xFF4DA3FF),
+    bright: Color(0xFF78B9FF),
+    dark: Color(0xFF347ACC),
+  );
+  static const green = AccentPalette(
+    id: 'green',
+    label: 'Green',
+    primary: Color(0xFF42CFA0),
+    bright: Color(0xFF70E0B8),
+    dark: Color(0xFF2BA77D),
+  );
+  static const amber = AccentPalette(
+    id: 'amber',
+    label: 'Amber',
+    primary: Color(0xFFFFB547),
+    bright: Color(0xFFFFCA73),
+    dark: Color(0xFFD98D24),
+  );
+  static const orange = AccentPalette(
+    id: 'orange',
+    label: 'Orange',
+    primary: Color(0xFFFF7849),
+    bright: Color(0xFFFF966F),
+    dark: Color(0xFFD9572A),
+  );
+  static const teal = AccentPalette(
+    id: 'teal',
+    label: 'Teal',
+    primary: Color(0xFF27C4C1),
+    bright: Color(0xFF62DAD5),
+    dark: Color(0xFF169A98),
+  );
+  static const indigo = AccentPalette(
+    id: 'indigo',
+    label: 'Indigo',
+    primary: Color(0xFF6577FF),
+    bright: Color(0xFF8997FF),
+    dark: Color(0xFF4859D9),
+  );
+  static const accents = [coral, violet, blue, green, amber, orange, teal, indigo];
+  static AccentPalette _accent = coral;
+  static AccentPalette get accent => _accent;
+  static void setAccent(AccentPalette value) => _accent = value;
+
+  static Color get primary => _accent.primary;
+  static Color get coralBright => _accent.bright;
+  static Color get coralDark => _accent.dark;
+  static Color get coralGlow => _accent.primary.withValues(alpha: .2);
   static const background = Color(0xFF0B0B0F);
   static const textPrimary = Color(0xFFF7F7F9);
   static const muted = Color(0xFFA5A5B2);
@@ -14,7 +75,8 @@ abstract final class GlassTheme {
   static const border = Color(0x1AFFFFFF);
   static const glassBackground = Color(0x0FFFFFFF);
   static const glassStrong = Color(0x17FFFFFF);
-  static const gradient = LinearGradient(colors: [coralBright, primary]);
+  static LinearGradient get gradient =>
+      LinearGradient(colors: [coralBright, primary]);
   static ThemeData get dark => ThemeData(
     brightness: Brightness.dark,
     fontFamily: 'Montserrat',
@@ -46,7 +108,7 @@ abstract final class GlassTheme {
         ),
       ),
     ),
-    snackBarTheme: const SnackBarThemeData(
+    snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
       backgroundColor: elevatedSurface,
       contentTextStyle: TextStyle(color: Colors.white),
@@ -69,4 +131,20 @@ abstract final class GlassTheme {
       ),
     ),
   );
+}
+
+class AccentPalette {
+  const AccentPalette({
+    required this.id,
+    required this.label,
+    required this.primary,
+    required this.bright,
+    required this.dark,
+  });
+
+  final String id;
+  final String label;
+  final Color primary;
+  final Color bright;
+  final Color dark;
 }
