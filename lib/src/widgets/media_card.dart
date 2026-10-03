@@ -83,9 +83,11 @@ class _MediaCardState extends State<MediaCard> {
 
   Widget _frosted({required Widget child, double radius = 14}) {
     return LiquidGlass(
-      quality: LiquidGlassQuality.low,
-      opacity: .9,
+      quality: LiquidGlassQuality.balanced,
+      blurSigma: 10,
+      opacity: .62,
       borderRadius: radius,
+      tintColor: const Color(0xFF242833),
       showShadow: false,
       child: child,
     );
@@ -108,9 +110,9 @@ class _MediaCardState extends State<MediaCard> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Colors.white.withValues(alpha: .42),
-              Colors.white.withValues(alpha: .12),
-              const Color(0x66FF7889),
+              Colors.white.withValues(alpha: .28),
+              Colors.white.withValues(alpha: .07),
+              GlassTheme.primary.withValues(alpha: .22),
             ],
             stops: const [0, .58, 1],
           ),
