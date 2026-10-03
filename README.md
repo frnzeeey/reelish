@@ -16,9 +16,13 @@ Reelish is an open-source Flutter app for discovering movies and TV series and w
 
 ## Images
 
-<p align="center">
-  <img src="assets/icons/reelish_icon.png" alt="Reelish app icon" width="180">
-</p>
+| Home | Title details |
+|:---:|:---:|
+| <img src="assets/images/reelish-1.png" alt="Reelish home screen showing featured titles and recommendations" width="360"> | <img src="assets/images/reelish-2.png" alt="Reelish title details screen with synopsis, genres, and cast" width="360"> |
+
+| Provider plugins | Personal library |
+|:---:|:---:|
+| <img src="assets/images/reelish-3.png" alt="Reelish provider plugins screen" width="360"> | <img src="assets/images/reelish-4.png" alt="Reelish personal library with continue watching, favorites, and history" width="360"> |
 
 ## Providers
 
