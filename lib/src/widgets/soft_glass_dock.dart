@@ -17,7 +17,7 @@ class SoftGlassDock extends StatelessWidget {
 
   static const _destinations = [
     (FeatherIcons.home, FeatherIcons.home, 'Home'),
-    (FeatherIcons.box, FeatherIcons.box, 'Plugins'),
+    (FeatherIcons.grid, FeatherIcons.grid, 'Plugins'),
     (FeatherIcons.bookmark, FeatherIcons.bookmark, 'Library'),
     (FeatherIcons.settings, FeatherIcons.settings, 'Settings'),
   ];
