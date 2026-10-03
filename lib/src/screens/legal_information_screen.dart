@@ -29,7 +29,7 @@ class _LegalInformationScreenState extends State<LegalInformationScreen> {
   String get _title => switch (widget.document) {
     LegalDocument.privacy => 'Privacy policy',
     LegalDocument.terms => 'Terms of use',
-    LegalDocument.notices => 'Content & third-party notices',
+    LegalDocument.notices => 'Credits & third-party notices',
   };
 
   @override
@@ -74,7 +74,7 @@ class _LegalInformationScreenState extends State<LegalInformationScreen> {
           Expanded(
             child: ListView(
               controller: _scrollController,
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 36),
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 36),
               children: [
                 Text(
                   'Reelish · Updated ${LegalInformationScreen._effectiveDate}',
@@ -83,24 +83,37 @@ class _LegalInformationScreenState extends State<LegalInformationScreen> {
                     fontSize: 12,
                   ),
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 16),
                 for (final section in sections) ...[
-                  Text(
-                    section.$1,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
+                  Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: GlassTheme.surface,
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: GlassTheme.border),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          section.$1,
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -.15,
+                          ),
+                        ),
+                        const SizedBox(height: 9),
+                        Text(
+                          section.$2,
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Colors.white.withValues(alpha: .78),
+                            height: 1.6,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 7),
-                  Text(
-                    section.$2,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      height: 1.55,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 10),
                 ],
                 OutlinedButton.icon(
                   onPressed: () async {

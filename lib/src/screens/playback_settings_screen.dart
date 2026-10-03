@@ -5,7 +5,85 @@ import '../models/playback_settings.dart';
 import '../services/accent_settings_controller.dart';
 import '../services/playback_settings_controller.dart';
 import '../theme/glass_theme.dart';
+import 'app_information_screens.dart';
 import 'legal_information_screen.dart';
+
+Widget _settingsGroupLabel(BuildContext context, String label) => Padding(
+  padding: const EdgeInsets.only(left: 4),
+  child: Text(
+    label,
+    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+      color: GlassTheme.muted,
+      fontWeight: FontWeight.w800,
+      letterSpacing: 1.2,
+    ),
+  ),
+);
+
+class _SettingsPageHeader extends StatelessWidget {
+  const _SettingsPageHeader({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.onBack,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) => SafeArea(
+    bottom: false,
+    child: Padding(
+      padding: const EdgeInsets.fromLTRB(12, 4, 16, 10),
+      child: Row(
+        children: [
+          IconButton(
+            tooltip: 'Back to settings',
+            onPressed: onBack,
+            icon: const Icon(Icons.arrow_back_rounded),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -.3,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: GlassTheme.muted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: GlassTheme.primary.withValues(alpha: .12),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(icon, color: GlassTheme.primary, size: 21),
+          ),
+        ],
+      ),
+    ),
+  );
+}
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({
@@ -21,15 +99,26 @@ class SettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListView(
-    padding: const EdgeInsets.fromLTRB(20, 28, 20, 120),
+    padding: const EdgeInsets.fromLTRB(20, 30, 20, 120),
     children: [
-      Text('Settings', style: Theme.of(context).textTheme.headlineLarge),
-      const SizedBox(height: 8),
-      const Text(
-        'App preferences and playback controls.',
-        style: TextStyle(color: GlassTheme.muted),
+      Text(
+        'Settings',
+        style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+          fontWeight: FontWeight.w800,
+          letterSpacing: -.8,
+        ),
       ),
-      const SizedBox(height: 24),
+      const SizedBox(height: 6),
+      Text(
+        'Make Reelish work the way you like.',
+        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+          color: GlassTheme.muted,
+          height: 1.4,
+        ),
+      ),
+      const SizedBox(height: 26),
+      _settingsGroupLabel(context, 'PREFERENCES'),
+      const SizedBox(height: 10),
       _ProfileEntry(
         icon: FeatherIcons.playCircle,
         eyebrow: 'PLAYER',
@@ -48,7 +137,9 @@ class SettingsScreen extends StatelessWidget {
           onTap: onAppearanceSettings,
         ),
       ),
-      const SizedBox(height: 12),
+      const SizedBox(height: 22),
+      _settingsGroupLabel(context, 'INFORMATION'),
+      const SizedBox(height: 10),
       _ProfileEntry(
         icon: FeatherIcons.shield,
         eyebrow: 'PRIVACY',
@@ -78,12 +169,34 @@ class SettingsScreen extends StatelessWidget {
       _ProfileEntry(
         icon: FeatherIcons.info,
         eyebrow: 'ABOUT',
-        title: 'Content & third-party notices',
-        subtitle: 'Service credits, external content and reporting issues',
+        title: 'About',
+        subtitle: 'App information and version',
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const AboutScreen()),
+        ),
+      ),
+      const SizedBox(height: 12),
+      _ProfileEntry(
+        icon: FeatherIcons.fileText,
+        eyebrow: 'ACKNOWLEDGEMENTS',
+        title: 'Credits',
+        subtitle: 'Services, content and third-party notices',
         onTap: () => Navigator.of(context).push(
           MaterialPageRoute<void>(
             builder: (_) =>
                 const LegalInformationScreen(document: LegalDocument.notices),
+          ),
+        ),
+      ),
+      const SizedBox(height: 12),
+      _ProfileEntry(
+        icon: FeatherIcons.heart,
+        eyebrow: 'OPTIONAL',
+        title: 'Support development',
+        subtitle: 'Help with continued development and server costs',
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => const SupportDevelopmentScreen(),
           ),
         ),
       ),
@@ -104,29 +217,15 @@ class AppearanceSettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Column(
     children: [
-      Padding(
-        padding: const EdgeInsets.fromLTRB(10, 8, 20, 4),
-        child: Row(
-          children: [
-            IconButton(
-              tooltip: 'Back to settings',
-              onPressed: onBack,
-              icon: const Icon(Icons.arrow_back_rounded),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              'Appearance',
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: Colors.white,
-              ),
-            ),
-          ],
-        ),
+      _SettingsPageHeader(
+        title: 'Appearance',
+        subtitle: 'Choose the accent used across the app.',
+        icon: Icons.palette_outlined,
+        onBack: onBack,
       ),
       Expanded(
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(18, 12, 18, 132),
+          padding: const EdgeInsets.fromLTRB(18, 8, 18, 132),
           children: [
             AnimatedBuilder(
               animation: controller,
@@ -364,10 +463,11 @@ class _ProfileEntry extends StatelessWidget {
     color: GlassTheme.surface,
     borderRadius: BorderRadius.circular(20),
     child: ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+      minVerticalPadding: 12,
       leading: Container(
-        width: 46,
-        height: 46,
+        width: 48,
+        height: 48,
         decoration: BoxDecoration(
           color: GlassTheme.primary.withValues(alpha: .14),
           borderRadius: BorderRadius.circular(15),
@@ -394,11 +494,36 @@ class _ProfileEntry extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 2),
-          Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+          Text(
+            title,
+            style: const TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 15,
+              letterSpacing: -.1,
+            ),
+          ),
         ],
       ),
-      subtitle: Text(subtitle),
-      trailing: const Icon(Icons.chevron_right_rounded),
+      subtitle: Padding(
+        padding: const EdgeInsets.only(top: 3),
+        child: Text(
+          subtitle,
+          style: const TextStyle(
+            color: GlassTheme.muted,
+            fontSize: 12,
+            height: 1.35,
+          ),
+        ),
+      ),
+      trailing: Container(
+        width: 30,
+        height: 30,
+        decoration: BoxDecoration(
+          color: GlassTheme.elevatedSurface,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: const Icon(Icons.chevron_right_rounded, size: 19, color: GlassTheme.muted),
+      ),
       onTap: onTap,
     ),
   );
@@ -427,29 +552,15 @@ class PlaybackSettingsScreen extends StatelessWidget {
         final settings = controller.value;
         return Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(10, 8, 20, 4),
-              child: Row(
-                children: [
-                  IconButton(
-                    tooltip: 'Back to profile',
-                    onPressed: onBack,
-                    icon: const Icon(Icons.arrow_back_rounded),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Playback',
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
+            _SettingsPageHeader(
+              title: 'Playback',
+              subtitle: 'Fine tune streams, subtitles and controls.',
+              icon: Icons.play_circle_outline_rounded,
+              onBack: onBack,
             ),
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(18, 12, 18, 132),
+                padding: const EdgeInsets.fromLTRB(18, 8, 18, 132),
                 children: [
                   _section('PLAYER', [
                     _switchRow(
@@ -832,16 +943,17 @@ class PlaybackSettingsScreen extends StatelessWidget {
             title,
             style: const TextStyle(
               color: GlassTheme.muted,
-              fontSize: 12,
-              letterSpacing: 1.4,
-              fontWeight: FontWeight.w700,
+              fontSize: 11,
+              letterSpacing: 1.1,
+              fontWeight: FontWeight.w800,
             ),
           ),
         ),
         Container(
           decoration: BoxDecoration(
-            color: const Color(0xFF19191F),
-            borderRadius: BorderRadius.circular(22),
+            color: GlassTheme.surface,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: GlassTheme.border),
           ),
           child: Column(
             children: [
@@ -1310,14 +1422,20 @@ class _SettingRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: const TextStyle(fontSize: 15)),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   const SizedBox(height: 4),
                   Text(
                     description,
                     style: const TextStyle(
                       color: GlassTheme.muted,
                       fontSize: 12,
-                      height: 1.35,
+                      height: 1.45,
                     ),
                   ),
                   if (value != null && trailing == null) ...[
