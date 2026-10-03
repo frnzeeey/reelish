@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:feather_icon_font/feather_icon_font.dart';
@@ -13,12 +12,14 @@ class MediaCard extends StatefulWidget {
     required this.onTap,
     this.progress = 0,
     this.onFavorite,
+    this.isFavorite = false,
   });
 
   final MediaItem item;
   final FutureOr<void> Function() onTap;
   final double progress;
   final VoidCallback? onFavorite;
+  final bool isFavorite;
 
   @override
   State<MediaCard> createState() => _MediaCardState();
@@ -26,11 +27,27 @@ class MediaCard extends StatefulWidget {
 
 class _MediaCardState extends State<MediaCard> {
   bool _navigating = false;
+  late bool _isFavorite;
   DateTime? _lastActivationAt;
   final ValueNotifier<bool> _pressed = ValueNotifier(false);
   final ValueNotifier<int> _heartPressCount = ValueNotifier(0);
 
+  @override
+  void initState() {
+    super.initState();
+    _isFavorite = widget.isFavorite;
+  }
+
+  @override
+  void didUpdateWidget(covariant MediaCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isFavorite != widget.isFavorite) {
+      _isFavorite = widget.isFavorite;
+    }
+  }
+
   void _onFavoritePressed() {
+    setState(() => _isFavorite = !_isFavorite);
     if (!MediaQuery.disableAnimationsOf(context)) {
       _heartPressCount.value++;
     }
@@ -219,27 +236,28 @@ class _MediaCardState extends State<MediaCard> {
                                     }
                                     return TweenAnimationBuilder<double>(
                                       key: ValueKey(pressCount),
-                                      tween: Tween(begin: 0, end: 1),
+                                      tween: Tween(begin: .72, end: 1),
                                       duration: const Duration(
-                                        milliseconds: 320,
+                                        milliseconds: 420,
                                       ),
-                                      curve: Curves.easeOut,
+                                      curve: Curves.elasticOut,
                                       builder: (context, progress, child) {
-                                        final angle =
-                                            math.sin(progress * math.pi * 6) *
-                                            .11 *
-                                            (1 - progress);
-                                        return Transform.rotate(
-                                          angle: angle,
+                                        return Transform.scale(
+                                          scale: progress,
                                           child: child,
                                         );
                                       },
                                       child: child,
                                     );
                                   },
-                                  child: const Icon(
-                                    FeatherIcons.heart,
-                                    size: 17,
+                                  child: Icon(
+                                    _isFavorite
+                                        ? Icons.favorite_rounded
+                                        : Icons.favorite_border_rounded,
+                                    size: 18,
+                                    color: _isFavorite
+                                        ? GlassTheme.primary
+                                        : Colors.white,
                                   ),
                                 ),
                               ),

@@ -446,6 +446,7 @@ class _MediaSection extends StatelessWidget {
                   children: [
                     MediaCard(
                       item: item,
+                      isFavorite: favorite,
                       onTap: () => onPlay(item),
                       onFavorite: favorite && onFavorite != null
                           ? () => onFavorite!(item)

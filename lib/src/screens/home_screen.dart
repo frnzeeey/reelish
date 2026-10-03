@@ -54,6 +54,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final _spotlightController = PageController();
   final ValueNotifier<int> _spotlightPageValue = ValueNotifier(0);
   List<MediaItem> _items = [], _history = [];
+  Set<String> _favoriteKeys = {};
   List<MediaItem> _spotlightItems = [];
   List<MediaItem> _recommendations = [];
   List<MediaItem> _newReleases = [];
@@ -83,6 +84,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _nuvioPlugins.addListener(_onPluginChange);
     _startSpotlightTimer();
     _start();
+    unawaited(_loadFavorites());
     WidgetsBinding.instance.addPostFrameCallback((_) {
       unawaited(_checkForUpdate());
     });
@@ -592,6 +594,23 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (mounted) setState(() => _history = value);
   }
 
+  String _favoriteKey(MediaItem item) => '${item.type}:${item.id}';
+
+  Future<void> _loadFavorites() async {
+    final value = await _storage.favorites();
+    if (!mounted) return;
+    setState(() => _favoriteKeys = value.map(_favoriteKey).toSet());
+  }
+
+  Future<bool> _toggleFavorite(MediaItem item) async {
+    await _storage.toggleFavorite(item);
+    final favorites = await _storage.favorites();
+    if (!mounted) return false;
+    final keys = favorites.map(_favoriteKey).toSet();
+    setState(() => _favoriteKeys = keys);
+    return keys.contains(_favoriteKey(item));
+  }
+
   void _searchChanged(String value) {
     _debounce?.cancel();
     _debounce = Timer(
@@ -1023,14 +1042,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               final item = items[index];
               final card = MediaCard(
                 item: item,
+                isFavorite: _favoriteKeys.contains(_favoriteKey(item)),
                 progress: item.resumeMs > 0 ? .36 : 0,
                 onTap: () => _showDetails(item),
                 onFavorite: () async {
-                  await _storage.toggleFavorite(item);
+                  final isFavorite = await _toggleFavorite(item);
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('${item.name} saved to your list'),
+                        content: Text(
+                          isFavorite
+                              ? '${item.name} saved to your list'
+                              : '${item.name} removed from your list',
+                        ),
                       ),
                     );
                   }
@@ -1608,8 +1632,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [Color(0xAA000000), Color(0x00000000), Color(0xFF000000)],
-              stops: [0, .34, 1],
+              colors: [
+                Color(0x77000000),
+                Color(0x26000000),
+                Color(0x00000000),
+                Color(0xD90B0B0F),
+                GlassTheme.background,
+              ],
+              stops: [0, .2, .46, .82, 1],
             ),
           ),
         ),
@@ -1714,11 +1744,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       ),
                     ),
                     onPressed: () async {
-                      await _storage.toggleFavorite(item);
+                      final isFavorite = await _toggleFavorite(item);
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text('${item.name} saved to your list'),
+                            content: Text(
+                              isFavorite
+                                  ? '${item.name} saved to your list'
+                                  : '${item.name} removed from your list',
+                            ),
                           ),
                         );
                       }
@@ -1792,6 +1826,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 if (value == 2) {
                   unawaited(_loadHistory());
                 }
+                if (value == 0) unawaited(_loadFavorites());
               },
             ),
           ),
