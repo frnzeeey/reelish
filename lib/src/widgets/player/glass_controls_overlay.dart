@@ -1,9 +1,8 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../theme/glass_theme.dart';
+import '../liquid_glass.dart';
 
 class GlassControlsOverlay extends StatelessWidget {
   const GlassControlsOverlay({
@@ -42,98 +41,97 @@ class GlassControlsOverlay extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) =>
-      ValueListenableBuilder<VideoPlayerValue>(
-        valueListenable: controller,
-        builder: (context, value, _) => SafeArea(
-          child: Stack(
-            fit: StackFit.expand,
+  Widget build(BuildContext context) => SafeArea(
+    child: Stack(
+      fit: StackFit.expand,
+      children: [
+        const IgnorePointer(
+          child: Column(
             children: [
-              const IgnorePointer(
-                child: Column(
-                  children: [
-                    _Scrim(height: .27, top: true),
-                    Spacer(),
-                    _Scrim(height: .52, top: false),
-                  ],
-                ),
+              _Scrim(height: .27, top: true),
+              Spacer(),
+              _Scrim(height: .52, top: false),
+            ],
+          ),
+        ),
+        Positioned(
+          top: 8,
+          left: 14,
+          right: 14,
+          child: Row(
+            children: [
+              _RoundButton(
+                icon: Icons.arrow_back_rounded,
+                tooltip: 'Back',
+                onPressed: onBack,
+                surface: true,
               ),
-              Positioned(
-                top: 8,
-                left: 14,
-                right: 14,
-                child: Row(
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _RoundButton(
-                      icon: Icons.arrow_back_rounded,
-                      tooltip: 'Back',
-                      onPressed: onBack,
-                      surface: true,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              shadows: [
-                                Shadow(color: Colors.black54, blurRadius: 12),
-                              ],
-                            ),
-                          ),
-                          if (sourceLabel.isNotEmpty) ...[
-                            const SizedBox(height: 2),
-                            Text(
-                              sourceLabel,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: Colors.white70,
-                                fontSize: 11,
-                                shadows: [
-                                  Shadow(color: Colors.black54, blurRadius: 8),
-                                ],
-                              ),
-                            ),
-                          ],
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        shadows: [
+                          Shadow(color: Colors.black54, blurRadius: 12),
                         ],
                       ),
                     ),
+                    if (sourceLabel.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        sourceLabel,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 11,
+                          shadows: [
+                            Shadow(color: Colors.black54, blurRadius: 8),
+                          ],
+                        ),
+                      ),
+                    ],
                   ],
-                ),
-              ),
-              Positioned(
-                left: 14,
-                right: 14,
-                bottom: 10,
-                child: _ControlDock(
-                  position: value.position,
-                  duration: value.duration,
-                  playing: value.isPlaying,
-                  buffering: value.isBuffering,
-                  subtitleEnabled: subtitleEnabled,
-                  playbackSpeed: value.playbackSpeed,
-                  controller: controller,
-                  time: _time,
-                  onToggle: onToggle,
-                  onSeek: onSeek,
-                  onStreams: onStreams,
-                  onSettings: onSettings,
-                  onSubtitles: onSubtitles,
-                  onPip: onPip,
                 ),
               ),
             ],
           ),
         ),
-      );
+        Positioned(
+          left: 14,
+          right: 14,
+          bottom: 10,
+          child: ValueListenableBuilder<VideoPlayerValue>(
+            valueListenable: controller,
+            builder: (context, value, _) => _ControlDock(
+              position: value.position,
+              duration: value.duration,
+              playing: value.isPlaying,
+              buffering: value.isBuffering,
+              subtitleEnabled: subtitleEnabled,
+              playbackSpeed: value.playbackSpeed,
+              controller: controller,
+              time: _time,
+              onToggle: onToggle,
+              onSeek: onSeek,
+              onStreams: onStreams,
+              onSettings: onSettings,
+              onSubtitles: onSubtitles,
+              onPip: onPip,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class _ControlDock extends StatelessWidget {
@@ -170,7 +168,11 @@ class _ControlDock extends StatelessWidget {
   final VoidCallback onPip;
 
   @override
-  Widget build(BuildContext context) => _GlassPanel(
+  Widget build(BuildContext context) => LiquidGlass(
+    quality: LiquidGlassQuality.balanced,
+    blurSigma: 8,
+    opacity: .94,
+    borderRadius: 22,
     padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
     child: Column(
       mainAxisSize: MainAxisSize.min,
@@ -311,72 +313,8 @@ class _SpeedBadge extends StatelessWidget {
       borderRadius: BorderRadius.circular(20),
     ),
     child: Text(
-      '${speed}×',
+      '$speed×',
       style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
-    ),
-  );
-}
-
-class _GlassPanel extends StatelessWidget {
-  const _GlassPanel({required this.child, required this.padding});
-
-  final Widget child;
-  final EdgeInsetsGeometry padding;
-
-  @override
-  Widget build(BuildContext context) => ClipRRect(
-    borderRadius: BorderRadius.circular(22),
-    child: BackdropFilter(
-      filter: ImageFilter.blur(sigmaX: 26, sigmaY: 26),
-      child: Container(
-        padding: padding,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              const Color(0xD9101520),
-              const Color(0xCC101520),
-              const Color(0xB3101520),
-            ],
-            stops: const [0, .36, 1],
-          ),
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: Colors.white.withValues(alpha: .22)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: .3),
-              blurRadius: 32,
-              offset: const Offset(0, 12),
-            ),
-          ],
-        ),
-        child: Stack(
-          children: [
-            child,
-            Positioned(
-              top: 0,
-              left: 20,
-              right: 20,
-              height: 1,
-              child: IgnorePointer(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Colors.white.withValues(alpha: 0),
-                        Colors.white.withValues(alpha: .58),
-                        Colors.white.withValues(alpha: .08),
-                        Colors.white.withValues(alpha: 0),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     ),
   );
 }

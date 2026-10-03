@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:feather_icon_font/feather_icon_font.dart';
 import '../models/media_item.dart';
 import '../theme/glass_theme.dart';
+import 'liquid_glass.dart';
 
 class MediaCard extends StatefulWidget {
   const MediaCard({
@@ -81,49 +82,12 @@ class _MediaCardState extends State<MediaCard> {
   }
 
   Widget _frosted({required Widget child, double radius = 14}) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(radius),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Colors.white.withValues(alpha: .16),
-              GlassTheme.primary.withValues(alpha: .055),
-              const Color(0xB30D111A),
-            ],
-            stops: const [0, .4, 1],
-          ),
-          borderRadius: BorderRadius.circular(radius),
-          border: Border.all(color: Colors.white.withValues(alpha: .25)),
-        ),
-        child: Stack(
-          children: [
-            child,
-            Positioned(
-              top: 0,
-              left: 9,
-              right: 9,
-              height: 1,
-              child: IgnorePointer(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Colors.white.withValues(alpha: 0),
-                        Colors.white.withValues(alpha: .58),
-                        Colors.white.withValues(alpha: .08),
-                        Colors.white.withValues(alpha: 0),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+    return LiquidGlass(
+      quality: LiquidGlassQuality.low,
+      opacity: .9,
+      borderRadius: radius,
+      showShadow: false,
+      child: child,
     );
   }
 
@@ -205,7 +169,7 @@ class _MediaCardState extends State<MediaCard> {
                           item.poster,
                           fit: BoxFit.cover,
                           cacheWidth: (146 * imagePixelRatio).round(),
-                          errorBuilder: (_, __, ___) => const ColoredBox(
+                          errorBuilder: (_, _, _) => const ColoredBox(
                             color: GlassTheme.elevatedSurface,
                             child: Icon(FeatherIcons.film),
                           ),
