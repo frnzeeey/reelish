@@ -24,7 +24,7 @@ class GitHubUpdate {
 abstract final class GitHubUpdateService {
   static const _releasesUri =
       'https://api.github.com/repos/frnzeeey/reelish/releases/latest';
-  static const _apkAssetName = 'app-release.apk';
+  static const _apkAssetNames = ['reelish.apk', 'app-release.apk'];
   static const _installerChannel = MethodChannel('onfeed/app_update');
   static const _lastCheckKey = 'onfeed.update.github.lastCheckedAt.v1';
   static const _lastResultKey = 'onfeed.update.github.lastResult.v1';
@@ -94,24 +94,26 @@ abstract final class GitHubUpdateService {
         return null;
       }
 
-      for (final asset in assets) {
-        if (asset is Map<String, dynamic> &&
-            asset['name'] == _apkAssetName &&
-            asset['browser_download_url'] is String) {
-          final downloadUri = Uri.tryParse(asset['browser_download_url']);
-          if (downloadUri == null ||
-              downloadUri.scheme != 'https' ||
-              downloadUri.host != 'github.com') {
-            await _saveCachedResult(settings, checkedAt: now, update: null);
-            return null;
+      for (final assetName in _apkAssetNames) {
+        for (final asset in assets) {
+          if (asset is Map<String, dynamic> &&
+              asset['name'] == assetName &&
+              asset['browser_download_url'] is String) {
+            final downloadUri = Uri.tryParse(asset['browser_download_url']);
+            if (downloadUri == null ||
+                downloadUri.scheme != 'https' ||
+                downloadUri.host != 'github.com') {
+              await _saveCachedResult(settings, checkedAt: now, update: null);
+              return null;
+            }
+            final update = GitHubUpdate(
+              version: tag,
+              notes: release['body'] is String ? release['body'] as String : '',
+              downloadUri: downloadUri,
+            );
+            await _saveCachedResult(settings, checkedAt: now, update: update);
+            return update;
           }
-          final update = GitHubUpdate(
-            version: tag,
-            notes: release['body'] is String ? release['body'] as String : '',
-            downloadUri: downloadUri,
-          );
-          await _saveCachedResult(settings, checkedAt: now, update: update);
-          return update;
         }
       }
       await _saveCachedResult(settings, checkedAt: now, update: null);

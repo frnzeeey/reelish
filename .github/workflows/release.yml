@@ -8,6 +8,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: android-release
+  cancel-in-progress: false
+
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -54,6 +58,7 @@ jobs:
           ONFEED_RELEASE_KEY_ALIAS: ${{ secrets.ONFEED_RELEASE_KEY_ALIAS }}
           ONFEED_RELEASE_KEY_PASSWORD: ${{ secrets.ONFEED_RELEASE_KEY_PASSWORD }}
         run: |
+          set -euo pipefail
           VERSION="${GITHUB_REF_NAME#v}"
           if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "Release tag must use vMAJOR.MINOR.PATCH (for example v1.0.5)."
@@ -74,9 +79,19 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            gh release upload "$GITHUB_REF_NAME" build/app/outputs/flutter-apk/app-release.apk --clobber
+          set -euo pipefail
+          cp build/app/outputs/flutter-apk/app-release.apk "$RUNNER_TEMP/reelish.apk"
+          if gh release view "$GITHUB_REF_NAME" --json isDraft,isPrerelease > "$RUNNER_TEMP/release.json" 2>/dev/null; then
+            if jq -e '.isDraft == true or .isPrerelease == true' "$RUNNER_TEMP/release.json" >/dev/null; then
+              echo "Refusing to publish the app APK to a draft or prerelease."
+              exit 1
+            fi
+            gh release upload "$GITHUB_REF_NAME" "$RUNNER_TEMP/reelish.apk" --clobber
           else
-            gh release create "$GITHUB_REF_NAME" build/app/outputs/flutter-apk/app-release.apk \
-              --title "$GITHUB_REF_NAME" --generate-notes
+            gh release create "$GITHUB_REF_NAME" "$RUNNER_TEMP/reelish.apk" \
+              --verify-tag --title "$GITHUB_REF_NAME" --generate-notes
+          fi
+          if ! gh release view "$GITHUB_REF_NAME" --json assets --jq '.assets | any(.name == "reelish.apk" and .size > 0)' | grep -qx true; then
+            echo "The GitHub release is missing a non-empty reelish.apk asset."
+            exit 1
           fi
