@@ -14,7 +14,7 @@ Reelish is an open-source Flutter app for discovering movies and TV series and w
 - Choose an accent color and customize playback, subtitle appearance, language preferences, and gestures.
 - Read the privacy policy, terms of use, and third-party credits in the app.
 
-## App icon
+## Images
 
 <p align="center">
   <img src="assets/icons/reelish_icon.png" alt="Reelish app icon" width="180">
