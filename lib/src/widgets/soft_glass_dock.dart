@@ -34,14 +34,28 @@ class SoftGlassDock extends StatelessWidget {
           height: 72,
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
           decoration: BoxDecoration(
-            color: GlassTheme.glassBackground,
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.white.withValues(alpha: .15),
+                GlassTheme.primary.withValues(alpha: .065),
+                const Color(0xA50B0B0F),
+              ],
+              stops: const [0, .42, 1],
+            ),
             borderRadius: BorderRadius.circular(26),
-            border: Border.all(color: Colors.white.withValues(alpha: .10)),
+            border: Border.all(color: Colors.white.withValues(alpha: .22)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: .32),
-                blurRadius: 28,
-                offset: const Offset(0, 10),
+                color: Colors.black.withValues(alpha: .38),
+                blurRadius: 30,
+                offset: const Offset(0, 12),
+              ),
+              BoxShadow(
+                color: Colors.black.withValues(alpha: .16),
+                blurRadius: 20,
+                spreadRadius: -7,
               ),
             ],
           ),
@@ -101,10 +115,30 @@ class _DockItem extends StatelessWidget {
               curve: Curves.easeOutCubic,
               margin: const EdgeInsets.symmetric(horizontal: 5),
               decoration: BoxDecoration(
-                color: selected
-                    ? Colors.white.withValues(alpha: .055)
-                    : Colors.transparent,
+                gradient: selected
+                    ? LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Colors.white.withValues(alpha: .17),
+                          GlassTheme.primary.withValues(alpha: .10),
+                          Colors.white.withValues(alpha: .035),
+                        ],
+                      )
+                    : null,
                 borderRadius: BorderRadius.circular(20),
+                border: selected
+                    ? Border.all(color: Colors.white.withValues(alpha: .2))
+                    : null,
+                boxShadow: selected
+                    ? [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: .12),
+                          blurRadius: 12,
+                          spreadRadius: -4,
+                        ),
+                      ]
+                    : null,
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,

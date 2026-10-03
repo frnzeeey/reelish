@@ -327,13 +327,22 @@ class _GlassPanel extends StatelessWidget {
   Widget build(BuildContext context) => ClipRRect(
     borderRadius: BorderRadius.circular(22),
     child: BackdropFilter(
-      filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+      filter: ImageFilter.blur(sigmaX: 26, sigmaY: 26),
       child: Container(
         padding: padding,
         decoration: BoxDecoration(
-          color: const Color(0xD9101520),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              const Color(0xD9101520),
+              const Color(0xCC101520),
+              const Color(0xB3101520),
+            ],
+            stops: const [0, .36, 1],
+          ),
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: Colors.white.withValues(alpha: .14)),
+          border: Border.all(color: Colors.white.withValues(alpha: .22)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: .3),
@@ -342,7 +351,31 @@ class _GlassPanel extends StatelessWidget {
             ),
           ],
         ),
-        child: child,
+        child: Stack(
+          children: [
+            child,
+            Positioned(
+              top: 0,
+              left: 20,
+              right: 20,
+              height: 1,
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.white.withValues(alpha: 0),
+                        Colors.white.withValues(alpha: .58),
+                        Colors.white.withValues(alpha: .08),
+                        Colors.white.withValues(alpha: 0),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     ),
   );

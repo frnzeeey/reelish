@@ -18,13 +18,34 @@ class GlassBox extends StatelessWidget {
   Widget build(BuildContext context) => ClipRRect(
     borderRadius: BorderRadius.circular(radius),
     child: BackdropFilter(
-      filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+      filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
       child: Container(
         padding: padding,
         decoration: BoxDecoration(
-          color: GlassTheme.surface,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.white.withValues(alpha: .105),
+              GlassTheme.primary.withValues(alpha: .035),
+              Colors.white.withValues(alpha: .025),
+            ],
+            stops: const [0, .48, 1],
+          ),
           borderRadius: BorderRadius.circular(radius),
-          border: Border.all(color: GlassTheme.border),
+          border: Border.all(color: Colors.white.withValues(alpha: .19)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: .24),
+              blurRadius: 24,
+              offset: const Offset(0, 10),
+            ),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: .12),
+              blurRadius: 18,
+              spreadRadius: -8,
+            ),
+          ],
         ),
         child: Material(
           color: Colors.transparent,
