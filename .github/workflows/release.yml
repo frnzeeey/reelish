@@ -72,15 +72,16 @@ jobs:
           BUILD_NUMBER="$((10#$MAJOR * 1000000 + 10#$MINOR * 1000 + 10#$PATCH))"
           flutter pub get
           flutter build apk --release --build-name="$VERSION" --build-number="$BUILD_NUMBER"
+          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/reelish.apk
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)"
-          "$APKSIGNER" verify --verbose build/app/outputs/flutter-apk/app-release.apk
+          "$APKSIGNER" verify --verbose build/app/outputs/flutter-apk/reelish.apk
 
       - name: Publish APK to GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          cp build/app/outputs/flutter-apk/app-release.apk "$RUNNER_TEMP/reelish.apk"
+          cp build/app/outputs/flutter-apk/reelish.apk "$RUNNER_TEMP/reelish.apk"
           if gh release view "$GITHUB_REF_NAME" --json isDraft,isPrerelease > "$RUNNER_TEMP/release.json" 2>/dev/null; then
             if jq -e '.isDraft == true or .isPrerelease == true' "$RUNNER_TEMP/release.json" >/dev/null; then
               echo "Refusing to publish the app APK to a draft or prerelease."

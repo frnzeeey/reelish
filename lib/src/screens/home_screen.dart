@@ -114,8 +114,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _start() async {
     await _playbackSettings.load();
     unawaited(_load());
+    // History is local data and does not depend on plugin repository loading.
+    // Start it now so remote manifest requests cannot delay the resume row.
+    unawaited(_loadHistory());
     await _nuvioPlugins.load();
-    await _loadHistory();
   }
 
   @override
