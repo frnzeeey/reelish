@@ -1818,18 +1818,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             left: 0,
             right: 0,
             bottom: 0,
-            child: SoftGlassDock(
-              selectedIndex: _tab,
-              onSelected: (value) {
-                setState(() {
-                  _tab = value;
-                  if (value == 2) _libraryRefreshToken++;
-                });
-                if (value == 2) {
-                  unawaited(_loadHistory());
-                }
-                if (value == 0) unawaited(_loadFavorites());
-              },
+            child: RepaintBoundary(
+              child: SoftGlassDock(
+                selectedIndex: _tab,
+                onSelected: (value) {
+                  setState(() {
+                    _tab = value;
+                    if (value == 2) _libraryRefreshToken++;
+                  });
+                  if (value == 2) {
+                    unawaited(_loadHistory());
+                  }
+                  if (value == 0) unawaited(_loadFavorites());
+                },
+              ),
             ),
           ),
           if (_resolvingStreams)

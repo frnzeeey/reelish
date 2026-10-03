@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:feather_icon_font/feather_icon_font.dart';
 
@@ -28,51 +26,48 @@ class SoftGlassDock extends StatelessWidget {
     minimum: const EdgeInsets.fromLTRB(22, 6, 22, 10),
     child: ClipRRect(
       borderRadius: BorderRadius.circular(26),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
-        child: Container(
-          height: 72,
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Colors.white.withValues(alpha: .15),
-                GlassTheme.primary.withValues(alpha: .065),
-                const Color(0xA50B0B0F),
-              ],
-              stops: const [0, .42, 1],
+      child: Container(
+        height: 72,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.white.withValues(alpha: .15),
+              GlassTheme.primary.withValues(alpha: .065),
+              const Color(0xA50B0B0F),
+            ],
+            stops: const [0, .42, 1],
+          ),
+          borderRadius: BorderRadius.circular(26),
+          border: Border.all(color: Colors.white.withValues(alpha: .22)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: .38),
+              blurRadius: 30,
+              offset: const Offset(0, 12),
             ),
-            borderRadius: BorderRadius.circular(26),
-            border: Border.all(color: Colors.white.withValues(alpha: .22)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: .38),
-                blurRadius: 30,
-                offset: const Offset(0, 12),
-              ),
-              BoxShadow(
-                color: Colors.black.withValues(alpha: .16),
-                blurRadius: 20,
-                spreadRadius: -7,
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              for (var i = 0; i < _destinations.length; i++)
-                Expanded(
-                  child: _DockItem(
-                    icon: _destinations[i].$1,
-                    selectedIcon: _destinations[i].$2,
-                    label: _destinations[i].$3,
-                    selected: selectedIndex == i,
-                    onTap: () => onSelected(i),
-                  ),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: .16),
+              blurRadius: 20,
+              spreadRadius: -7,
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            for (var i = 0; i < _destinations.length; i++)
+              Expanded(
+                child: _DockItem(
+                  icon: _destinations[i].$1,
+                  selectedIcon: _destinations[i].$2,
+                  label: _destinations[i].$3,
+                  selected: selectedIndex == i,
+                  onTap: () => onSelected(i),
                 ),
-            ],
-          ),
+              ),
+          ],
         ),
       ),
     ),
