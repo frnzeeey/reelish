@@ -52,6 +52,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final _search = TextEditingController();
   final _searchFocus = FocusNode();
   final _spotlightController = PageController();
+  final _homeScrollController = ScrollController();
   final ValueNotifier<int> _spotlightPageValue = ValueNotifier(0);
   List<MediaItem> _items = [], _history = [];
   Set<String> _favoriteKeys = {};
@@ -100,7 +101,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           _category != 'For you' ||
           _search.text.trim().isNotEmpty ||
           _spotlightItems.length < 2 ||
-          !_spotlightController.hasClients) {
+          !_spotlightController.hasClients ||
+          (_homeScrollController.hasClients &&
+              (_homeScrollController.position.pixels > 0 ||
+                  _homeScrollController.position.isScrollingNotifier.value))) {
         return;
       }
       _spotlightController.animateToPage(
@@ -993,6 +997,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _spotlightTimer?.cancel();
     _playbackSettings.dispose();
     _spotlightController.dispose();
+    _homeScrollController.dispose();
     _spotlightPageValue.dispose();
     _search.dispose();
     _searchFocus.dispose();
@@ -1267,6 +1272,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     return RefreshIndicator(
       onRefresh: _refreshVisibleHome,
       child: CustomScrollView(
+        controller: _homeScrollController,
         slivers: [
           SliverToBoxAdapter(
             child: AnimatedSize(
