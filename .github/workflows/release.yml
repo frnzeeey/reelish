@@ -1,9 +1,13 @@
 name: Android APK release
 
+# The only way a Reelish APK reaches a GitHub Release. Pushing a vX.Y.Z tag
+# builds that exact commit on a fresh runner, proves the APK came from it,
+# and publishes the release. Never upload APKs to releases by hand.
+
 on:
   push:
     tags:
-      - 'v*'
+      - 'v[0-9]*.[0-9]*.[0-9]*'
 
 permissions:
   contents: write
@@ -12,10 +16,17 @@ concurrency:
   group: android-release-${{ github.ref }}
   cancel-in-progress: false
 
+env:
+  # Pinned so a tag always rebuilds with the same toolchain. Keep in step with
+  # the Flutter version used locally (`flutter --version`).
+  FLUTTER_VERSION: '3.44.8'
+  APK_PATH: build/app/outputs/flutter-apk/app-release.apk
+
 jobs:
   release:
     name: Build and publish tagged APK
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - name: Check out the tagged commit
         uses: actions/checkout@v4
@@ -24,47 +35,96 @@ jobs:
           fetch-depth: 0
           clean: true
 
-      - name: Prove checkout and identify source
+      - name: Verify tag, commit, branch, and version
+        id: source
         env:
+          GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
           set -euo pipefail
-          echo "github.ref=$GITHUB_REF"
-          echo "github.ref_name=$GITHUB_REF_NAME"
-          echo "github.sha=$GITHUB_SHA"
-          echo "github.repository=$GITHUB_REPOSITORY"
-          echo "github.workflow=$GITHUB_WORKFLOW"
-          echo "github.run_id=$GITHUB_RUN_ID"
-          echo "github.run_number=$GITHUB_RUN_NUMBER"
-          echo "github.event_name=$GITHUB_EVENT_NAME"
+          HEAD_SHA="$(git rev-parse HEAD)"
+          TAG_SHA="$(git rev-parse "refs/tags/${RELEASE_TAG}^{commit}")"
+          echo "event sha:  $GITHUB_SHA"
+          echo "checkout:   $HEAD_SHA"
+          echo "tag commit: $TAG_SHA"
+          echo "source tree: $(git rev-parse 'HEAD^{tree}')"
+          git log -1 --format='commit: %H%nauthor date: %ci%nsubject: %s'
+          git describe --tags --exact-match HEAD
 
-          echo "--- git status ---"
-          git status --short --branch
+          if [[ "$HEAD_SHA" != "$GITHUB_SHA" || "$TAG_SHA" != "$GITHUB_SHA" ]]; then
+            echo "::error::Checkout, tag, and triggering event name different commits."
+            exit 1
+          fi
           if [[ -n "$(git status --porcelain)" ]]; then
-            echo "The checked out source tree is not clean."
-            exit 1
-          fi
-          echo "git branch --show-current: $(git branch --show-current)"
-          echo "git rev-parse HEAD: $(git rev-parse HEAD)"
-          git log -1 --format='git log -1: %H %ci %s'
-          git remote -v
-
-          CHECKED_OUT_COMMIT="$(git rev-parse HEAD)"
-          TAG_COMMIT="$(git rev-parse "${RELEASE_TAG}^{commit}")"
-          if [[ "$CHECKED_OUT_COMMIT" != "$GITHUB_SHA" || "$TAG_COMMIT" != "$GITHUB_SHA" ]]; then
-            echo "Tag, checkout, and GitHub event do not identify the same commit."
-            echo "checkout=$CHECKED_OUT_COMMIT tag=$TAG_COMMIT event=$GITHUB_SHA"
+            echo "::error::Checked-out source tree is not clean."
             exit 1
           fi
 
-          echo "--- source file SHA-256 ---"
-          sha256sum \
-            lib/main.dart \
-            lib/src/screens/app_information_screens.dart \
-            lib/src/screens/home_screen.dart \
-            lib/src/widgets/liquid_glass.dart \
-            lib/src/widgets/media_card.dart \
-            lib/src/widgets/soft_glass_dock.dart
+          # Releases come from main. Tagging another branch (or tagging before
+          # pushing main) is how an older source was released in the past.
+          if ! git merge-base --is-ancestor "$HEAD_SHA" origin/main; then
+            echo "::error::$RELEASE_TAG ($HEAD_SHA) is not on origin/main. Push main, then tag a main commit."
+            exit 1
+          fi
+          echo "origin/main: $(git rev-parse origin/main)"
+          if [[ "$HEAD_SHA" != "$(git rev-parse origin/main)" ]]; then
+            echo "::warning::$RELEASE_TAG is not the tip of main; newer main commits are not in this release."
+          fi
+
+          if [[ ! "$RELEASE_TAG" =~ ^v(0|[1-9][0-9]{0,3})\.(0|[1-9][0-9]{0,2})\.(0|[1-9][0-9]{0,2})$ ]]; then
+            echo "::error::Release tag must be vMAJOR.MINOR.PATCH without leading zeroes."
+            exit 1
+          fi
+          VERSION="${RELEASE_TAG#v}"
+          IFS=. read -r MAJOR MINOR PATCH <<< "$VERSION"
+          BUILD_NUMBER="$((MAJOR * 1000000 + MINOR * 1000 + PATCH))"
+          if (( BUILD_NUMBER < 1 || BUILD_NUMBER > 2100000000 )); then
+            echo "::error::$RELEASE_TAG gives Android version code $BUILD_NUMBER, outside 1-2100000000."
+            exit 1
+          fi
+
+          # A new release must be the highest version; reusing or going below
+          # an existing version would ship an APK Android cannot update to.
+          HIGHEST_OTHER="$(git tag -l 'v*.*.*' | grep -Ev "^${RELEASE_TAG}\$" | sort -V | tail -n 1 || true)"
+          if [[ -n "$HIGHEST_OTHER" ]] && \
+             [[ "$(printf '%s\n%s\n' "$HIGHEST_OTHER" "$RELEASE_TAG" | sort -V | tail -n 1)" != "$RELEASE_TAG" ]]; then
+            echo "::error::$RELEASE_TAG is not newer than existing tag $HIGHEST_OTHER."
+            exit 1
+          fi
+
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo "::error::A GitHub Release for $RELEASE_TAG already exists. Inspect and delete it before rebuilding, or release a new version."
+            exit 1
+          fi
+
+          {
+            echo "version=$VERSION"
+            echo "build_number=$BUILD_NUMBER"
+          } >> "$GITHUB_OUTPUT"
+          echo "Building $RELEASE_TAG: versionName $VERSION, versionCode $BUILD_NUMBER"
+
+      - name: Restore signing keystore
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.ONFEED_RELEASE_KEYSTORE_BASE64 }}
+          RELEASE_STORE_PASSWORD: ${{ secrets.ONFEED_RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.ONFEED_RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.ONFEED_RELEASE_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for name in RELEASE_KEYSTORE_BASE64 RELEASE_STORE_PASSWORD RELEASE_KEY_ALIAS RELEASE_KEY_PASSWORD; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::Required GitHub Actions secret is missing: ONFEED_${name}"
+              exit 1
+            fi
+          done
+          KEYSTORE_PATH="$RUNNER_TEMP/onfeed-release.jks"
+          printf '%s' "$RELEASE_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
+          chmod 600 "$KEYSTORE_PATH"
+          if [[ ! -s "$KEYSTORE_PATH" ]]; then
+            echo "::error::ONFEED_RELEASE_KEYSTORE_BASE64 decoded to an empty keystore."
+            exit 1
+          fi
+          echo "ONFEED_RELEASE_STORE_FILE=$KEYSTORE_PATH" >> "$GITHUB_ENV"
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -76,254 +136,166 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: false
 
-      - name: Record Flutter version
-        id: flutter
-        run: |
-          set -euo pipefail
-          flutter --version > "$RUNNER_TEMP/flutter-version.txt"
-          cat "$RUNNER_TEMP/flutter-version.txt"
-          echo "version=$(head -n 1 "$RUNNER_TEMP/flutter-version.txt")" >> "$GITHUB_OUTPUT"
-
-      - name: Derive app version and Android build number
-        id: version
-        env:
-          RELEASE_TAG: ${{ github.ref_name }}
-        run: |
-          set -euo pipefail
-          if [[ ! "$RELEASE_TAG" =~ ^v(0|[1-9][0-9]{0,3})\.(0|[1-9][0-9]{0,2})\.(0|[1-9][0-9]{0,2})$ ]]; then
-            echo "Release tag must use vMAJOR.MINOR.PATCH without leading zeroes."
-            exit 1
-          fi
-
-          VERSION="${RELEASE_TAG#v}"
-          IFS=. read -r MAJOR MINOR PATCH <<< "$VERSION"
-          BUILD_NUMBER="$((10#$MAJOR * 1000000 + 10#$MINOR * 1000 + 10#$PATCH))"
-          if (( BUILD_NUMBER < 1 || BUILD_NUMBER > 2100000000 )); then
-            echo "Tag $RELEASE_TAG produces an Android version code outside 1-2100000000."
-            exit 1
-          fi
-
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "build_number=$BUILD_NUMBER" >> "$GITHUB_OUTPUT"
-          echo "Building version $VERSION with Android version code $BUILD_NUMBER"
-
-      - name: Validate signing secrets and restore keystore
-        env:
-          RELEASE_KEYSTORE_BASE64: ${{ secrets.ONFEED_RELEASE_KEYSTORE_BASE64 }}
-          RELEASE_STORE_PASSWORD: ${{ secrets.ONFEED_RELEASE_STORE_PASSWORD }}
-          RELEASE_KEY_ALIAS: ${{ secrets.ONFEED_RELEASE_KEY_ALIAS }}
-          RELEASE_KEY_PASSWORD: ${{ secrets.ONFEED_RELEASE_KEY_PASSWORD }}
-        run: |
-          set -euo pipefail
-          for name in RELEASE_KEYSTORE_BASE64 RELEASE_STORE_PASSWORD RELEASE_KEY_ALIAS RELEASE_KEY_PASSWORD; do
-            if [[ -z "${!name}" ]]; then
-              echo "Required GitHub Actions secret is missing: ONFEED_${name}"
-              exit 1
-            fi
-          done
-
-          KEYSTORE_PATH="$RUNNER_TEMP/onfeed-release.jks"
-          printf '%s' "$RELEASE_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
-          chmod 600 "$KEYSTORE_PATH"
-          if [[ ! -s "$KEYSTORE_PATH" ]]; then
-            echo "The restored release keystore is empty."
-            exit 1
-          fi
-          echo "ONFEED_RELEASE_STORE_FILE=$KEYSTORE_PATH" >> "$GITHUB_ENV"
-
-      - name: Remove old APKs and clean Flutter outputs
-        run: |
-          set -euo pipefail
-          rm -f \
-            build/app/outputs/flutter-apk/app-release.apk \
-            release/reelish.apk \
-            reelish.apk
-          flutter clean
-
-          echo "APK files present before build (must be empty):"
-          mapfile -t APK_FILES < <(find . -type f -iname '*.apk' -not -path './.git/*' -print | sort)
-          printf '%s\n' "${APK_FILES[@]}"
-          if (( ${#APK_FILES[@]} != 0 )); then
-            echo "Unexpected APK files remain after cleaning; refusing to build."
-            exit 1
-          fi
-
-      - name: Resolve dependencies and build release APK
+      - name: Build release APK
         id: build
         env:
           ONFEED_RELEASE_STORE_PASSWORD: ${{ secrets.ONFEED_RELEASE_STORE_PASSWORD }}
           ONFEED_RELEASE_KEY_ALIAS: ${{ secrets.ONFEED_RELEASE_KEY_ALIAS }}
           ONFEED_RELEASE_KEY_PASSWORD: ${{ secrets.ONFEED_RELEASE_KEY_PASSWORD }}
           RELEASE_TAG: ${{ github.ref_name }}
-          VERSION: ${{ steps.version.outputs.version }}
-          BUILD_NUMBER: ${{ steps.version.outputs.build_number }}
+          VERSION: ${{ steps.source.outputs.version }}
+          BUILD_NUMBER: ${{ steps.source.outputs.build_number }}
         run: |
           set -euo pipefail
-          flutter pub get
+          flutter --version
 
-          BUILD_STARTED_UTC="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          # The runner is fresh and nothing is restored from a cache, so no
+          # APK can exist yet. Prove it rather than assume it.
+          if [[ -n "$(find . -type f -iname '*.apk' -not -path './.git/*' -print -quit)" ]]; then
+            echo "::error::APK files exist before the build; refusing to continue."
+            find . -type f -iname '*.apk' -not -path './.git/*'
+            exit 1
+          fi
+
+          flutter pub get
           BUILD_STARTED_EPOCH="$(date -u +%s)"
+          echo "started_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
           flutter build apk --release \
             --build-name="$VERSION" \
             --build-number="$BUILD_NUMBER" \
             --dart-define="REELISH_GIT_SHA=$GITHUB_SHA" \
-            --dart-define="REELISH_BUILD_TAG=$RELEASE_TAG" \
-            --dart-define="REELISH_BUILD_NUMBER=$BUILD_NUMBER"
+            --dart-define="REELISH_BUILD_TAG=$RELEASE_TAG"
 
-          APK_PATH="build/app/outputs/flutter-apk/app-release.apk"
           if [[ ! -s "$APK_PATH" ]]; then
-            echo "Flutter did not produce a non-empty release APK at $APK_PATH."
+            echo "::error::Flutter did not produce $APK_PATH."
+            exit 1
+          fi
+          if (( $(stat -c %Y "$APK_PATH") < BUILD_STARTED_EPOCH )); then
+            echo "::error::$APK_PATH predates this build."
             exit 1
           fi
 
-          APK_SIZE="$(stat -c %s "$APK_PATH")"
-          APK_MTIME_EPOCH="$(stat -c %Y "$APK_PATH")"
-          APK_MTIME_UTC="$(stat -c %y "$APK_PATH")"
-          if (( APK_SIZE <= 0 || APK_MTIME_EPOCH < BUILD_STARTED_EPOCH )); then
-            echo "APK is empty or predates this workflow build."
+      - name: Verify APK identity
+        id: verify
+        env:
+          VERSION: ${{ steps.source.outputs.version }}
+          BUILD_NUMBER: ${{ steps.source.outputs.build_number }}
+        run: |
+          set -euo pipefail
+          BUILD_TOOLS="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
+          AAPT2="$BUILD_TOOLS/aapt2"
+          APKSIGNER="$BUILD_TOOLS/apksigner"
+          if [[ ! -x "$AAPT2" || ! -x "$APKSIGNER" ]]; then
+            echo "::error::aapt2/apksigner not found in $BUILD_TOOLS; cannot verify the APK."
             exit 1
           fi
 
-          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
-          if [[ -z "$APKSIGNER" ]]; then
-            echo "Android SDK build-tools did not provide apksigner."
-            exit 1
-          fi
-          "$APKSIGNER" verify --verbose --print-certs "$APK_PATH"
-
+          BADGING="$("$AAPT2" dump badging "$APK_PATH")"
+          PACKAGE_LINE="$(grep -m1 '^package:' <<< "$BADGING")"
+          echo "$PACKAGE_LINE"
+          APP_ID="$(sed -n "s/^package: name='\([^']*\)'.*/\1/p" <<< "$PACKAGE_LINE")"
+          APK_VERSION_CODE="$(sed -n "s/.* versionCode='\([^']*\)'.*/\1/p" <<< "$PACKAGE_LINE")"
+          APK_VERSION_NAME="$(sed -n "s/.* versionName='\([^']*\)'.*/\1/p" <<< "$PACKAGE_LINE")"
           EXPECTED_APP_ID="$(sed -nE 's/^[[:space:]]*applicationId = "([^"]+)".*/\1/p' android/app/build.gradle.kts | head -n 1)"
-          if [[ -z "$EXPECTED_APP_ID" ]]; then
-            echo "Could not read the applicationId from android/app/build.gradle.kts."
-            exit 1
-          fi
-
-          APK_APPLICATION_ID="unknown"
-          APK_VERSION_NAME="$VERSION"
-          APK_VERSION_CODE="$BUILD_NUMBER"
-          APKANALYZER="$(find "$ANDROID_HOME" -type f -name apkanalyzer | sort -V | tail -n 1)"
-          if [[ -n "$APKANALYZER" ]]; then
-            APK_APPLICATION_ID="$("$APKANALYZER" manifest application-id "$APK_PATH")"
-            APK_VERSION_NAME="$("$APKANALYZER" manifest version-name "$APK_PATH")"
-            APK_VERSION_CODE="$("$APKANALYZER" manifest version-code "$APK_PATH")"
-          else
-            AAPT="$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -n 1)"
-            if [[ -n "$AAPT" ]]; then
-              BADGING="$("$AAPT" dump badging "$APK_PATH")"
-              APK_APPLICATION_ID="$(sed -n "s/^package: name='\([^']*\)'.*/\1/p" <<< "$BADGING" | head -n 1)"
-              APK_VERSION_CODE="$(sed -n "s/^package:.*versionCode='\([^']*\)'.*/\1/p" <<< "$BADGING" | head -n 1)"
-              APK_VERSION_NAME="$(sed -n "s/^package:.*versionName='\([^']*\)'.*/\1/p" <<< "$BADGING" | head -n 1)"
-            fi
-          fi
-
-          echo "APK package=$APK_APPLICATION_ID versionName=$APK_VERSION_NAME versionCode=$APK_VERSION_CODE size=$APK_SIZE modified=$APK_MTIME_UTC"
-          if [[ "$APK_APPLICATION_ID" != unknown && "$APK_APPLICATION_ID" != "$EXPECTED_APP_ID" ]]; then
-            echo "APK application ID differs from android/app/build.gradle.kts."
+          if [[ -z "$EXPECTED_APP_ID" || "$APP_ID" != "$EXPECTED_APP_ID" ]]; then
+            echo "::error::APK application ID '$APP_ID' does not match build.gradle.kts '$EXPECTED_APP_ID'."
             exit 1
           fi
           if [[ "$APK_VERSION_NAME" != "$VERSION" || "$APK_VERSION_CODE" != "$BUILD_NUMBER" ]]; then
-            echo "APK version metadata differs from the release tag."
+            echo "::error::APK is $APK_VERSION_NAME ($APK_VERSION_CODE); expected $VERSION ($BUILD_NUMBER)."
             exit 1
           fi
 
-          echo "started_utc=$BUILD_STARTED_UTC" >> "$GITHUB_OUTPUT"
-          echo "apk_size=$APK_SIZE" >> "$GITHUB_OUTPUT"
-          echo "apk_mtime_utc=$APK_MTIME_UTC" >> "$GITHUB_OUTPUT"
-          echo "apk_application_id=$APK_APPLICATION_ID" >> "$GITHUB_OUTPUT"
-          echo "apk_sha256=$(sha256sum "$APK_PATH" | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
+          # The commit SHA is compiled into the Dart AOT snapshot; finding it
+          # proves the APK was compiled from this checkout.
+          LIBAPP="$RUNNER_TEMP/libapp.so"
+          unzip -p "$APK_PATH" lib/arm64-v8a/libapp.so > "$LIBAPP"
+          if ! grep -qaF "$GITHUB_SHA" "$LIBAPP"; then
+            echo "::error::APK does not embed commit $GITHUB_SHA."
+            exit 1
+          fi
+          rm -f "$LIBAPP"
 
-      - name: Stage APK, prove checksum, and write build provenance
+          "$APKSIGNER" verify --verbose --print-certs "$APK_PATH"
+
+          {
+            echo "app_id=$APP_ID"
+            echo "size=$(stat -c %s "$APK_PATH")"
+            echo "sha256=$(sha256sum "$APK_PATH" | cut -d ' ' -f 1)"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Stage release assets
         env:
-          FLUTTER_VERSION: ${{ steps.flutter.outputs.version }}
-          RELEASE_VERSION: ${{ steps.version.outputs.version }}
-          RELEASE_BUILD_NUMBER: ${{ steps.version.outputs.build_number }}
-          BUILT_APK_SIZE: ${{ steps.build.outputs.apk_size }}
-          BUILT_APK_MTIME_UTC: ${{ steps.build.outputs.apk_mtime_utc }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          VERSION: ${{ steps.source.outputs.version }}
+          BUILD_NUMBER: ${{ steps.source.outputs.build_number }}
+          APP_ID: ${{ steps.verify.outputs.app_id }}
+          APK_SIZE: ${{ steps.verify.outputs.size }}
+          APK_SHA256: ${{ steps.verify.outputs.sha256 }}
           BUILD_STARTED_UTC: ${{ steps.build.outputs.started_utc }}
-          APK_APPLICATION_ID: ${{ steps.build.outputs.apk_application_id }}
-          BUILT_APK_SHA256: ${{ steps.build.outputs.apk_sha256 }}
         run: |
           set -euo pipefail
-          SOURCE_APK="build/app/outputs/flutter-apk/app-release.apk"
-          STAGED_APK="release/reelish.apk"
-
-          if [[ ! -s "$SOURCE_APK" ]]; then
-            echo "Fresh Flutter APK is missing or empty: $SOURCE_APK"
+          rm -rf release
+          mkdir release
+          cp -- "$APK_PATH" release/reelish.apk
+          if [[ "$(sha256sum release/reelish.apk | cut -d ' ' -f 1)" != "$APK_SHA256" ]]; then
+            echo "::error::Staged APK differs from the verified build output."
             exit 1
           fi
+          printf '%s  reelish.apk\n' "$APK_SHA256" > release/reelish.apk.sha256
 
-          mkdir -p release
-          rm -f release/reelish.apk release/reelish.apk.sha256 release/build-info.txt
-          cp -- "$SOURCE_APK" "$STAGED_APK"
-          if [[ ! -s "$STAGED_APK" ]] || ! cmp -s -- "$SOURCE_APK" "$STAGED_APK"; then
-            echo "Staged APK is missing, empty, or differs from the fresh Flutter output."
-            exit 1
-          fi
-
-          SOURCE_SHA256="$(sha256sum "$SOURCE_APK" | cut -d ' ' -f 1)"
-          STAGED_SHA256="$(sha256sum "$STAGED_APK" | cut -d ' ' -f 1)"
-          if [[ "$SOURCE_SHA256" != "$STAGED_SHA256" || "$SOURCE_SHA256" != "$BUILT_APK_SHA256" ]]; then
-            echo "Canonical APK, staged APK, and build-step checksums do not match."
-            exit 1
-          fi
-          printf '%s  reelish.apk\n' "$STAGED_SHA256" > release/reelish.apk.sha256
-          (cd release && sha256sum --check reelish.apk.sha256)
-
-          mapfile -t APK_FILES < <(find . -type f -iname '*.apk' -not -path './.git/*' -print | sort)
-          printf 'APK files before release upload:\n%s\n' "${APK_FILES[@]}"
-          if (( ${#APK_FILES[@]} != 2 )) || \
-             [[ "${APK_FILES[0]}" != "./build/app/outputs/flutter-apk/app-release.apk" ]] || \
-             [[ "${APK_FILES[1]}" != "./release/reelish.apk" ]]; then
-            echo "Unexpected APK inventory; refusing to publish."
-            exit 1
-          fi
-
-          COMMIT_MESSAGE="$(git log -1 --format=%s)"
-          COMMIT_BRANCH="$(git branch --show-current)"
-          [[ -n "$COMMIT_BRANCH" ]] || COMMIT_BRANCH="detached tag checkout"
-          BUILD_TIMESTAMP="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          printf 'Reelish Release Build\n\nTag: %s\nCommit SHA: %s\nCommit message: %s\nChecked out branch: %s\nGitHub repository: %s\nGitHub workflow: %s\nGitHub run ID: %s\nGitHub run number: %s\nGitHub event: %s\nFlutter version: %s\nAPK SHA-256: %s\nAPK size bytes: %s\nAPK modified UTC: %s\nBuild started UTC: %s\nBuild timestamp UTC: %s\nVersion name: %s\nVersion code: %s\nApplication ID: %s\n' \
-            "$GITHUB_REF_NAME" \
-            "$GITHUB_SHA" \
-            "$COMMIT_MESSAGE" \
-            "$COMMIT_BRANCH" \
-            "$GITHUB_REPOSITORY" \
-            "$GITHUB_WORKFLOW" \
-            "$GITHUB_RUN_ID" \
-            "$GITHUB_RUN_NUMBER" \
-            "$GITHUB_EVENT_NAME" \
-            "$FLUTTER_VERSION" \
-            "$STAGED_SHA256" \
-            "$BUILT_APK_SIZE" \
-            "$BUILT_APK_MTIME_UTC" \
-            "$BUILD_STARTED_UTC" \
-            "$BUILD_TIMESTAMP" \
-            "$RELEASE_VERSION" \
-            "$RELEASE_BUILD_NUMBER" \
-            "$APK_APPLICATION_ID" > release/build-info.txt
-          cat release/reelish.apk.sha256
+          {
+            echo "Reelish release build"
+            echo
+            echo "Tag: $RELEASE_TAG"
+            echo "Commit: $GITHUB_SHA"
+            echo "Commit subject: $(git log -1 --format=%s)"
+            echo "Commit date: $(git log -1 --format=%cI)"
+            echo "Source tree: $(git rev-parse 'HEAD^{tree}')"
+            echo "Application ID: $APP_ID"
+            echo "Version name: $VERSION"
+            echo "Version code: $BUILD_NUMBER"
+            echo "APK SHA-256: $APK_SHA256"
+            echo "APK size bytes: $APK_SIZE"
+            echo "Flutter: $(flutter --version | head -n 1)"
+            echo "Build started UTC: $BUILD_STARTED_UTC"
+            echo "Workflow run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID (attempt $GITHUB_RUN_ATTEMPT)"
+          } > release/build-info.txt
           cat release/build-info.txt
 
-      - name: Create draft release and publish verified assets
+      - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          APK_SHA256: ${{ steps.verify.outputs.sha256 }}
         run: |
           set -euo pipefail
-          gh release create "$GITHUB_REF_NAME" \
+          # Upload as a draft first, so users and the in-app updater never see
+          # a release until its APK is proven to be the one built here.
+          gh release create "$RELEASE_TAG" \
             release/reelish.apk \
             release/reelish.apk.sha256 \
             release/build-info.txt \
+            --repo "$GITHUB_REPOSITORY" \
             --verify-tag \
-            --title "Reelish $GITHUB_REF_NAME" \
+            --title "Reelish $RELEASE_TAG" \
             --generate-notes \
             --draft
 
-          gh release view "$GITHUB_REF_NAME" --json assets --jq \
-            '.assets | (any(.name == "reelish.apk" and .size > 0) and any(.name == "reelish.apk.sha256" and .size > 0) and any(.name == "build-info.txt" and .size > 0))' \
-            | grep -qx true
+          gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
+            --pattern reelish.apk --dir "$RUNNER_TEMP/uploaded"
+          UPLOADED_SHA256="$(sha256sum "$RUNNER_TEMP/uploaded/reelish.apk" | cut -d ' ' -f 1)"
+          if [[ "$UPLOADED_SHA256" != "$APK_SHA256" ]]; then
+            echo "::error::Uploaded reelish.apk ($UPLOADED_SHA256) is not the verified build ($APK_SHA256). Draft left unpublished."
+            exit 1
+          fi
 
-          gh release edit "$GITHUB_REF_NAME" --draft=false
+          gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --draft=false --latest
+          echo "Published $RELEASE_TAG with reelish.apk sha256 $APK_SHA256"
 
-      - name: Remove temporary signing keystore
+      - name: Remove signing keystore
         if: always()
         run: rm -f "$RUNNER_TEMP/onfeed-release.jks"

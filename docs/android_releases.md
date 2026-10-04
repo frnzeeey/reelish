@@ -1,107 +1,115 @@
 # Android releases
 
-## Fresh release baseline
+## How releases are made
 
-The GitHub release list and remote version tags have been cleared. The new
-release line starts at `v1.0.0`, built from the repaired source on `main`.
-This tag builds version `1.0.0` with Android build number `1000000`.
+`.github/workflows/release.yml` is the only supported way to publish a Reelish
+APK. Pushing a `vMAJOR.MINOR.PATCH` tag runs it:
 
-This is a fresh baseline for new installs. Reelish's in-app updater compares
-version tags, and Android prevents installing a lower version code over a
-higher one. Someone with an earlier `1.0.13` installation must uninstall it
-before installing `1.0.0`; Android will erase that app's local data. To offer
-existing users a normal update, publish a version higher than `1.0.13` instead.
-
-## Root cause found
-
-The previous release was built from the wrong Git ref, not from a stale APK
-cache. At the time of the audit, GitHub `main` and the old `v1.0.13` tag pointed
-to commit `1996509` (`improved liquid glass`). The newer, already-pushed Reelish
-source was on `new_feature` at `d26a969`, with newer changes in the liquid-glass
-and media-card widgets. The tag workflow checked out its tag correctly, so it
-built the older source named by that tag.
-
-Deleting a GitHub tag does not delete the same tag in local clones. The local
-`v1.0.13` tag had remained at `1996509`; pushing it again recreated a release
-from that old commit. Old local version tags have now been removed. Before
-publishing, verify that the new tag resolves to the intended commit:
-
-```bash
-git rev-parse HEAD
-git rev-parse v1.0.0
+```text
+push main → tag that main commit → push tag
+  → checkout exact tag (fresh runner, no caches)
+  → verify: checkout == tag == event SHA, clean tree, commit is on origin/main,
+            tag is the highest version, no release exists yet, secrets present
+  → flutter build apk (version from tag, commit SHA compiled in)
+  → verify APK: built this run, applicationId, versionName/versionCode,
+                commit SHA embedded, signature
+  → draft release with reelish.apk, reelish.apk.sha256, build-info.txt
+  → re-download uploaded APK, compare SHA-256 → publish as Latest
 ```
 
-The workflow now records and checks out the tag commit, verifies it equals
-`github.sha`, prints source-file checksums, and embeds the full commit SHA in
-the APK. This proves what source was built; it cannot decide which branch the
-maintainer intended to release, so create the tag from the intended branch.
+Any failed check stops the job before anything is published. Never upload an
+APK to a GitHub Release by hand: a manual upload bypasses every check above.
 
-## Release flow
+## Root cause of the stale v1.0.0 release (2026-10-04)
 
-The single production workflow is `.github/workflows/release.yml`. A pushed
-`vMAJOR.MINOR.PATCH` tag triggers checkout of that exact tag. The job removes
-old APK outputs, runs `flutter clean` and `flutter pub get`, then builds the
-release APK with the tag, version, and full source SHA embedded. It verifies
-the manifest version and application ID when Android inspection tools are
-available, verifies the signature, copies only the canonical Flutter output
-to `release/reelish.apk`, and requires the source and staged APK checksums to
-match. It also lists all APKs before upload and publishes `build-info.txt` and
-`reelish.apk.sha256` alongside the APK.
+The `v1.0.0` GitHub Release was not built by CI. Both workflow runs for the
+`v1.0.0`/`v1.0.1` tags failed at the signing step because the repository had
+no `ONFEED_RELEASE_*` Actions secrets. The release was then published by hand
+with a local file, `build/app/outputs/flutter-apk/reelish.apk`, built at 09:00
+that morning before the `ui update` commit and everything after it. The
+published asset and that local file have the same SHA-256
+(`e8550e01…c29d42b`), and the APK reports `versionName 1.0.12`,
+`versionCode 1000012` with no embedded commit or tag.
 
-To release the repaired source:
+An earlier incident had a different cause: the old `v1.0.13` tag pointed at a
+`main` commit, while the newer source sat only on `new_feature`. The workflow
+now refuses tags whose commit is not on `origin/main`.
+
+## Releasing
+
+Set up the signing secrets once (see below), then:
 
 ```bash
 git switch main
-git push origin HEAD
-git tag v1.0.0 HEAD
-git push origin refs/tags/v1.0.0
+git pull --ff-only
+git status                      # must be clean; commit everything first
+git push origin main
+
+git tag -a v1.1.0 -m "Reelish v1.1.0"
+git rev-parse HEAD v1.1.0^{commit}   # both lines must be identical
+git push origin v1.1.0
 ```
 
-The remote `v1.0.0` tag and release must be absent before the first push. For
-later releases, use a new version tag. The workflow refuses to overwrite a
-GitHub Release that already exists for a tag; a failed draft must be inspected
-and deleted before retrying.
+Watch it with `gh run watch`. Each release needs a new version higher than
+every existing tag; the workflow refuses an existing or lower version, and it
+refuses to replace an existing GitHub Release. If a run fails after creating
+a draft, inspect and delete the draft (`gh release delete vX.Y.Z`) before
+re-running the job.
 
-The tag is the version source. The build name is the tag without its leading
-`v`. Android's version code remains
-`MAJOR * 1,000,000 + MINOR * 1,000 + PATCH`; for example, `v1.0.0` builds as
-version `1.0.0` and build number `1000000`. Minor and patch components must be
-below 1000, and the result must fit Android's supported range.
+Android's version code is `MAJOR * 1,000,000 + MINOR * 1,000 + PATCH`; for
+example, `v1.1.0` builds as `1.1.0` with code `1001000`. Minor and patch must
+be below 1000. The `version:` in `pubspec.yaml` is only used for local builds.
 
-## Build identity in Reelish
+## Verifying a release
 
-Open **Settings > About** in the installed app to see its version, Android
-build number, release tag, and full source commit. The commit and tag are
-compiled into the app with Dart defines. The release also contains
-`build-info.txt` with the commit, tag, GitHub run, Flutter version, APK
-metadata, build time, and checksum.
+- `build-info.txt` on the release lists the tag, commit, version, APK SHA-256,
+  Flutter version, and workflow run link. The commit must equal
+  `git rev-parse vX.Y.Z^{commit}`.
+- Check the downloaded APK against the published checksum:
+  `gh release download vX.Y.Z -p 'reelish.apk*' && sha256sum -c reelish.apk.sha256`
+- In the installed app, **Settings > About** shows the version, tag and full
+  commit, which are compiled in at build time.
+- The release's author is `github-actions[bot]`. A release authored by a person
+  was not produced by this workflow.
 
-## Signing and Android configuration
+## Signing secrets
 
-The workflow uses the existing signing contract in
-`android/app/build.gradle.kts`. Configure these repository Actions secrets with
-the production signing key already used for Reelish:
+The workflow uses the signing contract in `android/app/build.gradle.kts`.
+Add these under **Settings > Secrets and variables > Actions**, using the
+production key that signed earlier Reelish releases:
 
-- `ONFEED_RELEASE_KEYSTORE_BASE64`: base64-encoded JKS or PKCS12 keystore.
+- `ONFEED_RELEASE_KEYSTORE_BASE64`: the keystore file, base64-encoded.
 - `ONFEED_RELEASE_STORE_PASSWORD`
 - `ONFEED_RELEASE_KEY_ALIAS`
 - `ONFEED_RELEASE_KEY_PASSWORD`
 
-The keystore is reconstructed in the runner's temporary directory, passed to
-Gradle through the existing `ONFEED_RELEASE_*` variables, and removed at job
-end. It is never uploaded. Keep the existing production key backed up; a
-replacement key cannot update installations signed with the original key.
+With the GitHub CLI, from a local shell where the keystore exists:
 
-The Android application ID is currently `com.example.onfeed`; it is not
-changed by the release workflow. There is one app entry point (`lib/main.dart`),
-no product flavors or Git submodules, and the additional Flutter packages are
-tracked local path dependencies. The repository does not pin Flutter with FVM
-or a version file, so the workflow uses the stable channel. It does not cache
-build outputs or use artifacts from another run. Generated APKs and the
-`release/` staging directory are ignored by Git.
+```bash
+base64 -w0 /path/to/onfeed-upload.jks | gh secret set ONFEED_RELEASE_KEYSTORE_BASE64
+gh secret set ONFEED_RELEASE_STORE_PASSWORD   # prompts for the value
+gh secret set ONFEED_RELEASE_KEY_ALIAS
+gh secret set ONFEED_RELEASE_KEY_PASSWORD
+gh secret list                                # all four must be listed
+```
 
-On Android, Reelish checks the latest stable release on startup and when the
-app returns to the foreground, at most once every six hours. When the release
-tag is newer than the installed app, the user can choose to download the APK
-and open Android's installer. Android still asks the user to confirm
-installation. iOS and desktop builds do not use this APK updater.
+The keystore is written to the runner's temp directory, passed to Gradle via
+`ONFEED_RELEASE_STORE_FILE`, and deleted at job end. It is never uploaded.
+Keep the key backed up; installs signed with it cannot be updated by an APK
+signed with a different key.
+
+## Toolchain and build environment
+
+Flutter is pinned by `FLUTTER_VERSION` in the workflow (currently `3.44.8`);
+update it when the local Flutter version changes. Java is Temurin 17. The
+workflow restores no caches and downloads no artifacts from other runs, so
+every APK comes from a fresh build. It checks that no APK exists before
+building. The Android application ID is `com.example.onfeed`.
+
+## In-app updater
+
+On Android, Reelish checks `releases/latest` on startup and when the app
+returns to the foreground, at most every six hours, and offers `reelish.apk`
+when the release tag is newer than the installed version. Android still asks
+the user to confirm installation and refuses an APK with a lower version code
+than the installed one.
