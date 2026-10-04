@@ -103,15 +103,16 @@ jobs:
           } >> "$GITHUB_OUTPUT"
           echo "Building $RELEASE_TAG: versionName $VERSION, versionCode $BUILD_NUMBER"
 
-      - name: Restore signing keystore
+      - name: Restore signing keystore and TMDB config
         env:
           RELEASE_KEYSTORE_BASE64: ${{ secrets.ONFEED_RELEASE_KEYSTORE_BASE64 }}
           RELEASE_STORE_PASSWORD: ${{ secrets.ONFEED_RELEASE_STORE_PASSWORD }}
           RELEASE_KEY_ALIAS: ${{ secrets.ONFEED_RELEASE_KEY_ALIAS }}
           RELEASE_KEY_PASSWORD: ${{ secrets.ONFEED_RELEASE_KEY_PASSWORD }}
+          TMDB_API_KEY: ${{ secrets.ONFEED_TMDB_API_KEY }}
         run: |
           set -euo pipefail
-          for name in RELEASE_KEYSTORE_BASE64 RELEASE_STORE_PASSWORD RELEASE_KEY_ALIAS RELEASE_KEY_PASSWORD; do
+          for name in RELEASE_KEYSTORE_BASE64 RELEASE_STORE_PASSWORD RELEASE_KEY_ALIAS RELEASE_KEY_PASSWORD TMDB_API_KEY; do
             if [[ -z "${!name}" ]]; then
               echo "::error::Required GitHub Actions secret is missing: ONFEED_${name}"
               exit 1
@@ -125,6 +126,14 @@ jobs:
             exit 1
           fi
           echo "ONFEED_RELEASE_STORE_FILE=$KEYSTORE_PATH" >> "$GITHUB_ENV"
+
+          # The app imports this ignored file (see README). The key ships in
+          # the APK anyway; the charset check keeps it a plain Dart literal.
+          if [[ ! "$TMDB_API_KEY" =~ ^[A-Za-z0-9._-]+$ ]]; then
+            echo "::error::ONFEED_TMDB_API_KEY contains unexpected characters."
+            exit 1
+          fi
+          printf "const tmdbApiKey = '%s';\n" "$TMDB_API_KEY" > lib/tmdb_config.local.dart
 
       - name: Set up Java
         uses: actions/setup-java@v4

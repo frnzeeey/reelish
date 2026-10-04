@@ -9,7 +9,8 @@ APK. Pushing a `vMAJOR.MINOR.PATCH` tag runs it:
 push main → tag that main commit → push tag
   → checkout exact tag (fresh runner, no caches)
   → verify: checkout == tag == event SHA, clean tree, commit is on origin/main,
-            tag is the highest version, no release exists yet, secrets present
+            tag is the highest version, no release exists yet
+  → restore signing keystore and TMDB config from secrets
   → flutter build apk (version from tag, commit SHA compiled in)
   → verify APK: built this run, applicationId, versionName/versionCode,
                 commit SHA embedded, signature
@@ -29,7 +30,10 @@ with a local file, `build/app/outputs/flutter-apk/reelish.apk`, built at 09:00
 that morning before the `ui update` commit and everything after it. The
 published asset and that local file have the same SHA-256
 (`e8550e01…c29d42b`), and the APK reports `versionName 1.0.12`,
-`versionCode 1000012` with no embedded commit or tag.
+`versionCode 1000012` with no embedded commit or tag. With the signing secrets added, the first CI
+build (`v1.1.0`) then failed to compile because the ignored
+`lib/tmdb_config.local.dart` did not exist on the runner; CI now generates it
+from `ONFEED_TMDB_API_KEY`.
 
 An earlier incident had a different cause: the old `v1.0.13` tag pointed at a
 `main` commit, while the newer source sat only on `new_feature`. The workflow
@@ -82,6 +86,8 @@ production key that signed earlier Reelish releases:
 - `ONFEED_RELEASE_STORE_PASSWORD`
 - `ONFEED_RELEASE_KEY_ALIAS`
 - `ONFEED_RELEASE_KEY_PASSWORD`
+- `ONFEED_TMDB_API_KEY`: the TMDB key. CI writes it to the ignored
+  `lib/tmdb_config.local.dart` (see README), which the app needs to compile.
 
 With the GitHub CLI, from a local shell where the keystore exists:
 
@@ -90,7 +96,8 @@ base64 -w0 /path/to/onfeed-upload.jks | gh secret set ONFEED_RELEASE_KEYSTORE_BA
 gh secret set ONFEED_RELEASE_STORE_PASSWORD   # prompts for the value
 gh secret set ONFEED_RELEASE_KEY_ALIAS
 gh secret set ONFEED_RELEASE_KEY_PASSWORD
-gh secret list                                # all four must be listed
+gh secret set ONFEED_TMDB_API_KEY
+gh secret list                                # all five must be listed
 ```
 
 The keystore is written to the runner's temp directory, passed to Gradle via
