@@ -125,6 +125,7 @@ class NetworkDestinationValidator {
     Duration? timeout,
     http.Client? testClient,
     bool autoUncompress = true,
+    http.Client? pinnedClient,
   }) async {
     final uri = request.url;
     final effectiveTimeout = timeout ?? requestTimeout;
@@ -137,7 +138,14 @@ class NetworkDestinationValidator {
     validateHeaders(request.headers);
 
     final http.Client client;
-    if (testClient == null) {
+    // A caller-owned client from [createPinnedClient] for this request's
+    // origin is reused so keep-alive connections survive between requests.
+    // It only connects to the addresses validated when it was created and
+    // rejects any other host, so no new lookup is needed here.
+    final ownsClient = testClient == null && pinnedClient == null;
+    if (pinnedClient != null) {
+      client = pinnedClient;
+    } else if (testClient == null) {
       client = await createPinnedClient(
         uri,
         allowedSchemes: allowedSchemes,
@@ -168,7 +176,7 @@ class NetworkDestinationValidator {
         reasonPhrase: streamed.reasonPhrase,
       );
     } finally {
-      if (testClient == null) client.close();
+      if (ownsClient) client.close();
     }
   }
 
@@ -231,6 +239,23 @@ class NetworkDestinationValidator {
     }
     if (address.type != InternetAddressType.IPv6 || bytes.length != 16) {
       return false;
+    }
+
+    // IPv6-only mobile networks (DNS64/NAT64, often with 464XLAT on Android)
+    // synthesize AAAA records in the well-known prefix 64:ff9b::/96 for
+    // IPv4-only hosts. Validate the embedded IPv4 address instead of
+    // rejecting every destination on those networks.
+    if (bytes[0] == 0x00 &&
+        bytes[1] == 0x64 &&
+        bytes[2] == 0xff &&
+        bytes[3] == 0x9b &&
+        bytes.sublist(4, 12).every((byte) => byte == 0)) {
+      return _isPublic(
+        InternetAddress.fromRawAddress(
+          bytes.sublist(12),
+          type: InternetAddressType.IPv4,
+        ),
+      );
     }
 
     // Only global-unicast 2000::/3 is accepted. This excludes unspecified,

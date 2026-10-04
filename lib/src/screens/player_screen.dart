@@ -17,7 +17,7 @@ class PlayerScreen extends StatelessWidget {
     this.sourceFromCache = false,
     this.streamCacheKey,
     this.discovery,
-    this.onRefreshSources,
+    this.onRediscover,
     this.onNextEpisode,
   });
   final MediaItem item;
@@ -28,7 +28,7 @@ class PlayerScreen extends StatelessWidget {
   final bool sourceFromCache;
   final String? streamCacheKey;
   final StreamDiscovery? discovery;
-  final Future<List<StreamSource>> Function()? onRefreshSources;
+  final StreamDiscovery Function()? onRediscover;
   final Future<void> Function()? onNextEpisode;
 
   @override
@@ -44,7 +44,7 @@ class PlayerScreen extends StatelessWidget {
       sourceFromCache: sourceFromCache,
       streamCacheKey: streamCacheKey,
       discovery: discovery,
-      onRefreshSources: onRefreshSources,
+      onRediscover: onRediscover,
       onNextEpisode: onNextEpisode,
     ),
   );

@@ -29,9 +29,18 @@ class MediaKitVideoPlayer extends VideoPlayerPlatform {
   final _streamControllers = HashMap<int, StreamController<VideoEvent>>();
   final _streamSubscriptions = HashMap<int, List<StreamSubscription>>();
 
+  static MediaKitVideoPlayer? _shared;
+
   /// Registers this class as the default instance of [VideoPlayerPlatform].
+  ///
+  /// One instance is shared and re-registering it is a no-op. package:
+  /// video_player routes every controller call (including dispose) through
+  /// the current instance, so replacing it while a player is open or still
+  /// opening would leave that native player unreachable and never disposed.
   static void registerWith() {
-    VideoPlayerPlatform.instance = MediaKitVideoPlayer();
+    final shared = _shared ??= MediaKitVideoPlayer();
+    if (identical(VideoPlayerPlatform.instance, shared)) return;
+    VideoPlayerPlatform.instance = shared;
   }
 
   /// Initializes the platform interface and disposes all existing players.
@@ -39,11 +48,13 @@ class MediaKitVideoPlayer extends VideoPlayerPlatform {
   /// This method is called when the plugin is first initialized and on every full restart.
   @override
   Future<void> init() async {
-    for (final textureId in _players.keys) {
+    // Copy the keys: dispose() removes entries while this loop runs.
+    for (final textureId in _players.keys.toList()) {
       await dispose(textureId);
     }
 
     _players.clear();
+    _completers.clear();
     _videoControllers.clear();
     _streamControllers.clear();
     _streamSubscriptions.clear();
@@ -60,6 +71,7 @@ class MediaKitVideoPlayer extends VideoPlayerPlatform {
     );
 
     _players.remove(textureId);
+    _completers.remove(textureId);
     _videoControllers.remove(textureId);
     _streamControllers.remove(textureId);
     _streamSubscriptions.remove(textureId);

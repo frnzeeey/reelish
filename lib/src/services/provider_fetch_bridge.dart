@@ -38,12 +38,68 @@ class ProviderFetchBridge {
   final Map<int, Timer> _timers = {};
   final Set<int> _cancelledRequests = {};
 
+  /// Pinned clients per origin for this provider run, so repeated requests to
+  /// one host reuse keep-alive connections instead of paying DNS, TCP and TLS
+  /// setup on every fetch.
+  final Map<String, Future<http.Client>> _clients = {};
+
   void dispose() {
     _active = false;
     for (final timer in _timers.values) {
       timer.cancel();
     }
     _timers.clear();
+    for (final client in _clients.values) {
+      unawaited(client.then((value) => value.close(), onError: (_) {}));
+    }
+    _clients.clear();
+  }
+
+  Future<http.Client> _clientFor(Uri uri) {
+    final origin =
+        '${uri.scheme.toLowerCase()}://${uri.host.toLowerCase()}:${uri.port}';
+    final client = _clients[origin] ??= _validator.createPinnedClient(
+      uri,
+      autoUncompress: false,
+    );
+    // A failed lookup must not be cached for later requests.
+    return client.catchError((Object error) {
+      if (identical(_clients[origin], client)) _clients.remove(origin);
+      throw error;
+    });
+  }
+
+  /// Request headers kept when following a redirect from [from] to [to].
+  ///
+  /// Matches OkHttp, which React Native (and so Nuvio) uses on Android: all
+  /// provider headers are kept except `Authorization` on a cross-origin hop,
+  /// and body headers when the method becomes GET. A provider-supplied
+  /// `Cookie` is not sent to another origin; the runtime's cookie jar supplies
+  /// that host's cookies instead. `Referer` is set to the previous URL when
+  /// the provider did not supply one.
+  static Map<String, String> redirectHeaders(
+    Map<String, String> headers, {
+    required Uri from,
+    required Uri to,
+    required bool changesToGet,
+  }) {
+    final sameOrigin =
+        from.scheme.toLowerCase() == to.scheme.toLowerCase() &&
+        from.host.toLowerCase() == to.host.toLowerCase() &&
+        from.port == to.port;
+    final retained = Map<String, String>.of(headers)
+      ..removeWhere((name, _) {
+        final key = name.toLowerCase();
+        if (!sameOrigin && (key == 'authorization' || key == 'cookie')) {
+          return true;
+        }
+        return changesToGet &&
+            (key == 'content-length' || key == 'content-type');
+      });
+    if (!retained.keys.any((key) => key.toLowerCase() == 'referer')) {
+      retained['Referer'] = from.toString();
+    }
+    return retained;
   }
 
   void _onCancel(dynamic raw) {
@@ -148,30 +204,31 @@ class ProviderFetchBridge {
         }
       }
 
-      final maxRedirects = data['followRedirects'] == false
+      // `redirect: 'manual'` returns the 3xx response itself (so a provider
+      // can read its Location header), matching fetch in Node and browsers.
+      final manualRedirects = data['followRedirects'] == false;
+      final maxRedirects = manualRedirects
           ? 0
           : (data['maxRedirects'] is num
                 ? (data['maxRedirects'] as num).toInt().clamp(0, 5)
                 : 5);
       var current = uri;
-      Uri? redirectReferer;
       late http.Response response;
       late (List<int>, Map<String, String>) decodedResponse;
       var redirectCount = 0;
       var retriedWithoutCompression = false;
       while (true) {
+        // Jar cookies are computed per hop so one host's cookies are never
+        // carried into a request for another host.
+        final hopHeaders = Map<String, String>.of(requestHeaders);
         final cookie = _cookies.headerFor(current);
         if (cookie.isNotEmpty &&
-            !requestHeaders.keys.any((key) => key.toLowerCase() == 'cookie')) {
-          requestHeaders['Cookie'] = cookie;
-        }
-        if (redirectReferer != null &&
-            !requestHeaders.keys.any((key) => key.toLowerCase() == 'referer')) {
-          requestHeaders['Referer'] = redirectReferer.toString();
+            !hopHeaders.keys.any((key) => key.toLowerCase() == 'cookie')) {
+          hopHeaders['Cookie'] = cookie;
         }
         final request = http.Request(method, current)
           ..followRedirects = false
-          ..headers.addAll(requestHeaders);
+          ..headers.addAll(hopHeaders);
         if (requestBody != null) request.bodyBytes = requestBody;
         response = await _validator.sendForBytes(
           request,
@@ -180,6 +237,7 @@ class ProviderFetchBridge {
           maxResponseBytes: _maxResponseBodyBytes,
           timeout: const Duration(seconds: 20),
           testClient: _testClient,
+          pinnedClient: _testClient == null ? await _clientFor(current) : null,
           // HttpClient's automatic gzip decoder can fail before we receive
           // response headers, leaving provider scripts with an opaque stream
           // error. Keep the wire bytes intact and decode below so we can
@@ -187,39 +245,38 @@ class ProviderFetchBridge {
           autoUncompress: false,
         );
         _cookies.absorb(current, response.headers);
-        if ([301, 302, 303, 307, 308].contains(response.statusCode)) {
+        if ([301, 302, 303, 307, 308].contains(response.statusCode) &&
+            !manualRedirects) {
           final location = response.headers['location'];
-          if (location == null || redirectCount >= maxRedirects) {
-            throw const FormatException('Invalid provider redirect.');
+          if (location == null) {
+            throw const FormatException('Provider redirect has no location.');
+          }
+          if (redirectCount >= maxRedirects) {
+            throw const FormatException('Too many provider redirects.');
           }
           final next = await _validator.validateRedirect(
             current,
             location,
             allowedSchemes: const {'https'},
           );
-          final sameOrigin =
-              current.scheme == next.scheme &&
-              current.host.toLowerCase() == next.host.toLowerCase() &&
-              current.port == next.port;
-          if (!sameOrigin) {
-            requestHeaders.removeWhere(
-              (name, _) =>
-                  !const {'accept', 'user-agent'}.contains(name.toLowerCase()),
-            );
-          }
-          if ((response.statusCode == 303 && method != 'HEAD') ||
+          final changesToGet =
+              (response.statusCode == 303 && method != 'HEAD') ||
               ((response.statusCode == 301 || response.statusCode == 302) &&
                   method != 'GET' &&
-                  method != 'HEAD')) {
+                  method != 'HEAD');
+          final retained = redirectHeaders(
+            requestHeaders,
+            from: current,
+            to: next,
+            changesToGet: changesToGet,
+          );
+          requestHeaders
+            ..clear()
+            ..addAll(retained);
+          if (changesToGet) {
             method = 'GET';
             requestBody = null;
-            requestHeaders.removeWhere(
-              (name, _) =>
-                  name.toLowerCase() == 'content-length' ||
-                  name.toLowerCase() == 'content-type',
-            );
           }
-          redirectReferer = current;
           current = next;
           redirectCount++;
           continue;
@@ -743,7 +800,10 @@ class ProviderFetchBridge {
         return buffer;
       }
       function makeResponse(payload) {
-        const bodyBytes = bytesFromBase64(payload.bodyBase64);
+        // Base64 decoding runs in interpreted JS on the UI isolate, so only
+        // do it when a provider asks for binary data. Most call text()/json().
+        let decodedBytes = null;
+        const bodyBytesOf = () => decodedBytes || (decodedBytes = bytesFromBase64(payload.bodyBase64));
         const body = String(payload.bodyText ?? '');
         const headers = new Headers(payload.headers || {});
         return {
@@ -760,13 +820,16 @@ class ProviderFetchBridge {
             try { return Promise.resolve(JSON.parse(body)); }
             catch (error) { return Promise.reject(error); }
           },
-          arrayBuffer: () => Promise.resolve(copyToArrayBuffer(bodyBytes)),
-          blob: () => Promise.resolve({
-            size: bodyBytes.byteLength,
-            type: headers.get('content-type') || '',
-            arrayBuffer: () => Promise.resolve(copyToArrayBuffer(bodyBytes)),
-            text: () => Promise.resolve(body)
-          }),
+          arrayBuffer: () => Promise.resolve(copyToArrayBuffer(bodyBytesOf())),
+          blob: () => {
+            const bytes = bodyBytesOf();
+            return Promise.resolve({
+              size: bytes.byteLength,
+              type: headers.get('content-type') || '',
+              arrayBuffer: () => Promise.resolve(copyToArrayBuffer(bytes)),
+              text: () => Promise.resolve(body)
+            });
+          },
           clone: () => makeResponse(payload)
         };
       }

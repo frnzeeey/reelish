@@ -704,12 +704,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               playbackSettings: _playbackSettings,
               sourceFromCache: sourceFromCache,
               streamCacheKey: streamCacheKey,
-              onRefreshSources: () {
+              onRediscover: () {
                 // Recovery can happen after the user changes source
                 // preferences while the player is open. Read the controller
                 // here instead of capturing the initial discovery snapshot.
                 final current = _playbackSettings.value;
-                return _nuvioPlugins.streams(
+                return _nuvioPlugins.discoverStreams(
                   pluginItem,
                   season: season,
                   episode: episode,

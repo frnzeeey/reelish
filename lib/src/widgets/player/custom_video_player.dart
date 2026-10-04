@@ -37,7 +37,7 @@ class CustomVideoPlayer extends StatefulWidget {
     this.sourceFromCache = false,
     this.streamCacheKey,
     this.discovery,
-    this.onRefreshSources,
+    this.onRediscover,
     this.onNextEpisode,
   });
   final MediaItem item;
@@ -49,7 +49,10 @@ class CustomVideoPlayer extends StatefulWidget {
   final bool sourceFromCache;
   final String? streamCacheKey;
   final StreamDiscovery? discovery;
-  final Future<List<StreamSource>> Function()? onRefreshSources;
+
+  /// Starts a fresh progressive provider lookup for this title, used by
+  /// Retry and when a cached link has expired.
+  final StreamDiscovery Function()? onRediscover;
   final Future<void> Function()? onNextEpisode;
   @override
   State<CustomVideoPlayer> createState() => _CustomVideoPlayerState();
@@ -84,12 +87,27 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   Completer<void>? _openCancellation;
   int _lastProgressSaveBucket = -1;
   final PlaybackCoordinator _playbackCoordinator = PlaybackCoordinator();
-  late PlayerEngine _engine = PlayerEngineFactory.forCurrentPlatform();
+
+  /// The engine new sources start on. It changes for the rest of the session
+  /// once the other engine plays a source the preferred one could not.
+  PlayerEngine _preferredEngine = PlayerEngineFactory.forCurrentPlatform();
+
+  /// The engine used by the current attempt.
+  late PlayerEngine _engine = _preferredEngine;
   late List<StreamSource> _sources;
   final _openSubtitles = OpenSubtitlesService();
   bool _handlingFailure = false;
   bool _cachedRefreshAttempted = false;
   StreamSubscription<StreamSource>? _discoverySubscription;
+  StreamDiscovery? _rediscovery;
+
+  /// Last playback position of this session, so a source switch or recovery
+  /// resumes where the viewer was rather than at the original resume point.
+  Duration? _lastPosition;
+
+  /// Recent automatic reconnects per source, to bound retries after the
+  /// stream drops during playback.
+  final Map<String, List<DateTime>> _runtimeRetries = {};
   final DateTime _playerStartedAt = DateTime.now();
   final NetworkDestinationValidator _networkDestinations =
       NetworkDestinationValidator();
@@ -102,15 +120,29 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     _sources = List.of(widget.sources);
     _playbackCoordinator.replaceCandidates(_sources);
     _source = widget.source;
-    _discoverySubscription = widget.discovery?.updates.listen((source) {
+    final discovery = widget.discovery;
+    if (discovery != null) _listenForSources(discovery);
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    _initialize(widget.source);
+  }
+
+  /// Adds sources from [discovery] as fallback candidates while it runs, and
+  /// resumes playback with one when every earlier candidate has failed.
+  void _listenForSources(StreamDiscovery discovery) {
+    unawaited(_discoverySubscription?.cancel());
+    _discoverySubscription = discovery.updates.listen((source) {
       if (!mounted || !source.isPlayable || !_isSourceAllowed(source)) return;
       if (!_playbackCoordinator.addCandidate(source)) return;
       setState(() => _sources.add(source));
-      if (_error && _playbackCoordinator.attemptedCount < 5) {
+      if (_error) {
         final alternative = _playbackCoordinator.nextAfterFailure(
           _source ?? widget.source,
         );
         if (alternative == null) return;
+        PlaybackLog.log(
+          'Fallback',
+          'new source arrived after failure -> ${PlaybackLog.describe(alternative)}',
+        );
         setState(() {
           _error = false;
           _errorMessage = null;
@@ -118,18 +150,39 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
         unawaited(_initialize(alternative, resetAttempts: false));
       }
     });
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-    _initialize(widget.source);
   }
+
+  /// Engine for the first attempt of [source]. Torrents play from the
+  /// streamer's loopback HTTP URL, which only libmpv may open on Android.
+  PlayerEngine _engineFor(StreamSource source) =>
+      source.isTorrent && defaultTargetPlatform == TargetPlatform.android
+      ? const MpvPlayerEngine()
+      : PlayerEngineFactory.forSource(source.url, _preferredEngine);
 
   Future<void> _initialize(
     StreamSource source, {
     bool resetAttempts = true,
+    PlayerEngine? engine,
+    Duration? startupTimeout,
+    bool engineFallback = false,
   }) async {
     final failedCandidate = source;
     if (resetAttempts) _playbackCoordinator.reset();
-    _playbackCoordinator.beginAttempt(source, _engine.id);
-    _openCancellation?.complete();
+    final attemptEngine = engine ?? _engineFor(source);
+    _engine = attemptEngine;
+    _playbackCoordinator.beginAttempt(source, attemptEngine.id);
+    final attemptClock = Stopwatch()..start();
+    PlaybackLog.log(
+      'Player',
+      'opening engine=${attemptEngine.id.name} '
+          'candidate=${_playbackCoordinator.attemptedCount} '
+          '${PlaybackLog.describe(source)}',
+    );
+    if (!mounted) return;
+    final previousOpen = _openCancellation;
+    if (previousOpen != null && !previousOpen.isCompleted) {
+      previousOpen.complete();
+    }
     final cancellation = Completer<void>();
     _openCancellation = cancellation;
     final generation = ++_initializationGeneration;
@@ -175,11 +228,15 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
       // streamer after validating its magnet and tracker inputs.
       final opened = await _playbackCoordinator.prepareAndOpen(
         source,
-        engine: _engine,
+        engine: attemptEngine,
         allowLoopback: isTorrent,
-        startupTimeout: Duration(
-          seconds: widget.sourceFromCache && !_cachedRefreshAttempted ? 7 : 20,
-        ),
+        startupTimeout:
+            startupTimeout ??
+            Duration(
+              seconds: widget.sourceFromCache && !_cachedRefreshAttempted
+                  ? 7
+                  : 20,
+            ),
         cancellation: cancellation.future,
       );
       final playable = opened.source;
@@ -188,26 +245,14 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
         await c.dispose();
         return;
       }
-      if (kDebugMode) {
-        // ignore: avoid_print
-        print(
-          '[Playback Perf] source_prepared '
-          '${DateTime.now().difference(_playerStartedAt).inMilliseconds}ms '
-          'type=${playable.streamType.name} engine=${_engine.id.name}',
-        );
-      }
+      PlaybackLog.log(
+        'Player',
+        'initialized in ${attemptClock.elapsedMilliseconds}ms '
+            '(${DateTime.now().difference(_playerStartedAt).inMilliseconds}ms '
+            'since screen open) type=${playable.streamType.name} '
+            'engine=${attemptEngine.id.name}',
+      );
       _controller = c;
-      if (kDebugMode) {
-        // ignore: avoid_print
-        print(
-          '[Playback Perf] player_open '
-          '${DateTime.now().difference(_playerStartedAt).inMilliseconds}ms',
-        );
-      }
-      if (!mounted || generation != _initializationGeneration) {
-        await c.dispose();
-        return;
-      }
       // Track menus are optional. Query both concurrently and never make
       // playback wait indefinitely for a backend that does not expose tracks.
       Future<void> loadVideoTracks() async {
@@ -242,35 +287,42 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
       await _applyPreferredAudio(c);
       if (_subtitle == null) unawaited(_applyPreferredSubtitle());
       c.addListener(_tick);
-      try {
-        await c.setPlaybackSpeed(_speed).timeout(const Duration(seconds: 2));
-      } catch (_) {
-        // Playback at normal speed can proceed if the backend is slow here.
+      // Engines start at 1x, so only a non-default speed needs a round trip.
+      if (_speed != 1) {
+        try {
+          await c.setPlaybackSpeed(_speed).timeout(const Duration(seconds: 2));
+        } catch (_) {
+          // Playback at normal speed can proceed if the backend is slow here.
+        }
       }
-      if (widget.item.resumeMs > 0) {
-        final resume = Duration(milliseconds: widget.item.resumeMs);
+      final resume =
+          _lastPosition ?? Duration(milliseconds: widget.item.resumeMs);
+      if (resume > Duration.zero) {
         final duration = c.value.duration;
         final safeResume =
             duration > const Duration(seconds: 1) && resume >= duration
             ? duration - const Duration(seconds: 1)
             : resume;
-        if (safeResume > Duration.zero) {
-          try {
-            await c.seekTo(safeResume).timeout(const Duration(seconds: 2));
-          } catch (_) {
-            // Some live streams do not support seeking; playback can continue.
-          }
+        try {
+          await c.seekTo(safeResume).timeout(const Duration(seconds: 2));
+        } catch (_) {
+          // Some live streams do not support seeking; playback can continue.
         }
       }
       if (!mounted || generation != _initializationGeneration) return;
       await c.play();
       if (mounted && generation == _initializationGeneration) {
-        if (kDebugMode) {
-          // ignore: avoid_print
-          print(
-            '[Stream] Playback command accepted in '
-            '${DateTime.now().difference(_playerStartedAt).inMilliseconds}ms',
-          );
+        PlaybackLog.log(
+          'Player',
+          'play accepted after ${attemptClock.elapsedMilliseconds}ms '
+              '(${DateTime.now().difference(_playerStartedAt).inMilliseconds}ms '
+              'since screen open)',
+        );
+        _awaitFirstFrame(c, generation, attemptClock);
+        if (engineFallback && attemptEngine.id != _preferredEngine.id) {
+          // The other engine played what the preferred one could not; try it
+          // first for the rest of this session.
+          _preferredEngine = attemptEngine;
         }
         setState(() => _ready = true);
         unawaited(
@@ -283,48 +335,171 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
         _scheduleHide();
       }
     } catch (error) {
-      if (mounted &&
-          generation == _initializationGeneration &&
-          !_handlingFailure) {
-        _handlingFailure = true;
-        final failedController = _controller;
-        _controller = null;
-        try {
-          await failedController?.dispose();
-          await _torrentSession?.stop();
-        } catch (_) {}
-        _torrentSession = null;
-        if (await _refreshAfterCachedFailure(failedCandidate)) return;
-        final message = _safePlaybackError(error.toString());
-        final failure = PlaybackFailure.classify(error);
-        final alternateEngine = PlayerEngineFactory.alternateFor(_engine);
-        if (alternateEngine != null &&
-            _playbackCoordinator.beginAttempt(
-              failedCandidate,
-              alternateEngine.id,
-            )) {
-          _engine = alternateEngine;
-          await _initialize(failedCandidate, resetAttempts: false);
-          return;
-        }
-        final alternative = failure.canTryAnotherSource
-            ? _playbackCoordinator.nextAfterFailure(failedCandidate)
-            : null;
-        if (alternative != null) {
-          await _initialize(alternative, resetAttempts: false);
-          return;
-        }
-        setState(() {
-          _error = true;
-          final details = _playbackCoordinator.attemptedCount > 1
-              ? 'Could not play ${_playbackCoordinator.attemptedCount} sources. $message'
-              : message;
-          _errorMessage = details.length > 280
-              ? '${details.substring(0, 277)}…'
-              : details;
-        });
-      }
+      await _handleFailure(failedCandidate, error, generation);
     }
+  }
+
+  /// Logs when the first frame is actually presented: the position starts
+  /// advancing after play. Development builds only.
+  void _awaitFirstFrame(
+    VideoPlayerController controller,
+    int generation,
+    Stopwatch attemptClock,
+  ) {
+    if (!kDebugMode) return;
+    final start = controller.value.position;
+    late VoidCallback listener;
+    listener = () {
+      final value = controller.value;
+      if (generation != _initializationGeneration || value.hasError) {
+        controller.removeListener(listener);
+        return;
+      }
+      if (value.isPlaying && value.position > start) {
+        controller.removeListener(listener);
+        PlaybackLog.log(
+          'Player',
+          'first frame after ${attemptClock.elapsedMilliseconds}ms '
+              '(${DateTime.now().difference(_playerStartedAt).inMilliseconds}ms '
+              'since screen open)',
+        );
+      }
+    };
+    controller.addListener(listener);
+  }
+
+  /// Single failure policy for open and mid-playback errors.
+  ///
+  /// 1. A source that was playing and then dropped is reconnected on the same
+  ///    engine with a short backoff (at most twice in two minutes).
+  /// 2. Engine-specific failures (format, decoder, rendering, or Media3's
+  ///    unspecific "source error") retry the same URL once on the other
+  ///    engine. Network, HTTP, DNS and timeout failures do not, because the
+  ///    other engine would reach the same server.
+  /// 3. Otherwise the next ranked source is tried, up to the coordinator's
+  ///    budget of distinct sources, resuming at the current position.
+  Future<void> _handleFailure(
+    StreamSource failedCandidate,
+    Object error,
+    int generation,
+  ) async {
+    if (!mounted ||
+        generation != _initializationGeneration ||
+        _handlingFailure) {
+      return;
+    }
+    _handlingFailure = true;
+    final wasPlaying = _ready;
+    final failedEngine = _engine;
+    final failedController = _controller;
+    _controller = null;
+    failedController?.removeListener(_tick);
+    try {
+      await failedController?.dispose();
+      await _torrentSession?.stop();
+    } catch (_) {}
+    _torrentSession = null;
+    if (!mounted || generation != _initializationGeneration) return;
+
+    final failure = PlaybackFailure.classify(error);
+    PlaybackLog.log(
+      'Failure',
+      'kind=${failure.kind.name}'
+          '${failure.statusCode == null ? '' : ' status=${failure.statusCode}'} '
+          'engine=${failedEngine.id.name} wasPlaying=$wasPlaying '
+          '${PlaybackLog.describe(failedCandidate)} '
+          'detail="${_safePlaybackError(error.toString())}"',
+    );
+    if (failure.kind == PlaybackFailureKind.cancelled) return;
+
+    if (wasPlaying && _allowReconnect(failedCandidate)) {
+      final attempt = _runtimeRetries[_sourceKey(failedCandidate)]!.length;
+      final delay = Duration(seconds: attempt == 1 ? 1 : 3);
+      PlaybackLog.log(
+        'Fallback',
+        'reconnecting same source in ${delay.inSeconds}s (attempt $attempt)',
+      );
+      setState(() => _ready = false);
+      await Future<void>.delayed(delay);
+      if (!mounted || generation != _initializationGeneration) return;
+      await _initialize(
+        failedCandidate,
+        resetAttempts: false,
+        engine: failedEngine,
+      );
+      return;
+    }
+
+    if (await _refreshAfterCachedFailure(failedCandidate)) return;
+    // Rediscovery can take seconds; the viewer may have left or picked
+    // another source meanwhile.
+    if (!mounted || generation != _initializationGeneration) return;
+
+    final alternateEngine = PlayerEngineFactory.alternateFor(failedEngine);
+    if (!wasPlaying &&
+        failure.canTryAnotherEngine &&
+        alternateEngine != null &&
+        PlayerEngineFactory.canOpen(alternateEngine, failedCandidate.url) &&
+        _playbackCoordinator.beginAttempt(
+          failedCandidate,
+          alternateEngine.id,
+        )) {
+      PlaybackLog.log(
+        'Fallback',
+        'engine ${failedEngine.id.name} -> ${alternateEngine.id.name} '
+            'for the same source',
+      );
+      await _initialize(
+        failedCandidate,
+        resetAttempts: false,
+        engine: alternateEngine,
+        engineFallback: true,
+        // A server problem fails fast on either engine; only a slow first
+        // open needs the full startup allowance.
+        startupTimeout: const Duration(seconds: 12),
+      );
+      return;
+    }
+
+    _playbackCoordinator.recordFailure(failedCandidate);
+    final alternative = failure.canTryAnotherSource
+        ? _playbackCoordinator.nextAfterFailure(failedCandidate)
+        : null;
+    if (alternative != null) {
+      PlaybackLog.log(
+        'Fallback',
+        'candidate=${_playbackCoordinator.attemptedCount} -> '
+            'candidate=${_playbackCoordinator.attemptedCount + 1} '
+            '${PlaybackLog.describe(alternative)}',
+      );
+      await _initialize(alternative, resetAttempts: false);
+      return;
+    }
+
+    if (!mounted || generation != _initializationGeneration) return;
+    final attempted = _playbackCoordinator.attemptedCount;
+    setState(() {
+      _error = true;
+      _errorMessage = attempted > 1
+          ? 'Could not play $attempted sources. ${failure.userMessage}'
+          : failure.userMessage;
+    });
+  }
+
+  String _sourceKey(StreamSource source) =>
+      _playbackCoordinator.sourceKey(source);
+
+  /// Allows at most two automatic reconnects per source in two minutes, so a
+  /// stream that keeps dropping moves on instead of retrying forever.
+  bool _allowReconnect(StreamSource source) {
+    final now = DateTime.now();
+    final recent = (_runtimeRetries[_sourceKey(source)] ?? [])
+      ..removeWhere(
+        (time) => now.difference(time) > const Duration(minutes: 2),
+      );
+    if (recent.length >= 2) return false;
+    _runtimeRetries[_sourceKey(source)] = recent..add(now);
+    return true;
   }
 
   String _safePlaybackError(String error) {
@@ -411,51 +586,55 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   }
 
   Future<void> _retryPlayback() async {
-    final refresh = widget.onRefreshSources;
-    if (refresh == null) {
-      await _initialize(_source!);
-      return;
-    }
     setState(() {
       _error = false;
       _errorMessage = null;
     });
-    try {
-      final freshSources = await _loadFreshSources();
-      if (!mounted) return;
-      final playable = freshSources
-          .where((source) => source.isPlayable)
-          .toList();
-      if (playable.isNotEmpty) {
-        final previous = _source!;
-        _sources = playable;
-        _playbackCoordinator
-          ..replaceCandidates(playable)
-          ..reset();
-        final refreshed = playable
-            .where(
-              (source) =>
-                  source.name == previous.name &&
-                  source.providerName == previous.providerName &&
-                  source.description == previous.description,
-            )
-            .firstOrNull;
-        await _initialize(refreshed ?? playable.first);
-        return;
-      }
-    } catch (_) {
-      // If refresh fails, retry the last known URL.
-    }
+    // Fresh provider links replace expired ones; the first fresh source plays
+    // as soon as it arrives instead of waiting for every provider.
+    if (await _rediscoverAndPlay(prefer: _source)) return;
     if (mounted) await _initialize(_source!);
   }
 
-  Future<List<StreamSource>> _loadFreshSources() async {
-    final refresh = widget.onRefreshSources;
-    if (refresh == null) return const [];
-    final sources = await refresh();
-    return sources.where((source) => source.isPlayable).toList();
+  /// Runs provider discovery again and starts the first returned source, or
+  /// the one matching [prefer]. Returns false when no source was found.
+  Future<bool> _rediscoverAndPlay({StreamSource? prefer}) async {
+    final rediscover = widget.onRediscover;
+    if (rediscover == null) return false;
+    final StreamDiscovery discovery;
+    final StreamSource? first;
+    try {
+      discovery = rediscover();
+      _rediscovery = discovery;
+      first = await discovery.firstSource;
+    } catch (_) {
+      return false;
+    }
+    if (!mounted || first == null) return false;
+    final fresh = discovery.sources.where(_isSourceAllowed).toList();
+    if (fresh.isEmpty) return false;
+    PlaybackLog.log('Resolve', 'rediscovery found ${fresh.length} source(s)');
+    _sources = fresh;
+    _playbackCoordinator
+      ..replaceCandidates(fresh)
+      ..reset();
+    _listenForSources(discovery);
+    final match = prefer == null
+        ? null
+        : fresh
+              .where(
+                (source) =>
+                    source.name == prefer.name &&
+                    source.providerName == prefer.providerName &&
+                    source.description == prefer.description,
+              )
+              .firstOrNull;
+    await _initialize(match ?? fresh.first);
+    return true;
   }
 
+  /// A cached link that fails is usually an expired signed URL. Replace it
+  /// with fresh provider results once per session.
   Future<bool> _refreshAfterCachedFailure(StreamSource failed) async {
     if (!widget.sourceFromCache ||
         _cachedRefreshAttempted ||
@@ -463,68 +642,8 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
       return false;
     }
     _cachedRefreshAttempted = true;
-    List<StreamSource> fresh;
-    try {
-      fresh = await _loadFreshSources();
-    } catch (_) {
-      return false;
-    }
-    if (fresh.isEmpty || !mounted) return false;
-    _sources = fresh;
-    _playbackCoordinator
-      ..replaceCandidates(fresh)
-      ..reset();
-    await _initialize(fresh.first);
-    return true;
-  }
-
-  Future<void> _handleRuntimePlaybackFailure(
-    StreamSource failedSource,
-    String error,
-    int generation,
-  ) async {
-    if (!mounted ||
-        generation != _initializationGeneration ||
-        _handlingFailure) {
-      return;
-    }
-    _handlingFailure = true;
-    final failedController = _controller;
-    _controller = null;
-    failedController?.removeListener(_tick);
-    try {
-      await failedController?.dispose();
-      await _torrentSession?.stop();
-    } catch (_) {}
-    _torrentSession = null;
-    if (!mounted || generation != _initializationGeneration) return;
-
-    if (await _refreshAfterCachedFailure(failedSource)) return;
-
-    final failure = PlaybackFailure.classify(error);
-    final alternateEngine = PlayerEngineFactory.alternateFor(_engine);
-    if (alternateEngine != null &&
-        _playbackCoordinator.beginAttempt(failedSource, alternateEngine.id)) {
-      _engine = alternateEngine;
-      await _initialize(failedSource, resetAttempts: false);
-      return;
-    }
-    final alternative = failure.canTryAnotherSource
-        ? _playbackCoordinator.nextAfterFailure(failedSource)
-        : null;
-    if (alternative != null) {
-      await _initialize(alternative, resetAttempts: false);
-      return;
-    }
-
-    final message = _safePlaybackError(error);
-    if (!mounted || generation != _initializationGeneration) return;
-    setState(() {
-      _error = true;
-      _errorMessage = _playbackCoordinator.attemptedCount > 1
-          ? 'Could not play ${_playbackCoordinator.attemptedCount} sources. $message'
-          : message;
-    });
+    PlaybackLog.log('Fallback', 'cached link failed; rediscovering sources');
+    return _rediscoverAndPlay();
   }
 
   Future<StreamSource> _prepareTorrent(StreamSource source) async {
@@ -651,11 +770,13 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
 
   Future<void> _saveProgress() {
     final c = _controller;
-    if (c == null || !c.value.isInitialized) return Future.value();
-    return widget.storage.saveProgress(
-      widget.item,
-      c.value.position.inMilliseconds,
-    );
+    // While a failed source is being replaced there is no controller; keep
+    // the last position the viewer reached.
+    final position = c != null && c.value.isInitialized && _ready
+        ? c.value.position
+        : _lastPosition;
+    if (position == null) return Future.value();
+    return widget.storage.saveProgress(widget.item, position.inMilliseconds);
   }
 
   Future<void> _pickStream() async {
@@ -860,7 +981,8 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
       }
     }
     if (_playback.useForcedSubtitles) {
-      await _applyPreferredSubtitle();
+      // Subtitle download must not hold back the start of playback.
+      unawaited(_applyPreferredSubtitle());
     }
   }
 
@@ -1218,9 +1340,14 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   @override
   void dispose() {
     _discoverySubscription?.cancel();
+    // Stop starting further providers for a lookup this screen started.
+    _rediscovery?.cancel();
     widget.playbackSettings.removeListener(_onPlaybackSettingsChanged);
     _initializationGeneration++;
-    _openCancellation?.complete();
+    final openCancellation = _openCancellation;
+    if (openCancellation != null && !openCancellation.isCompleted) {
+      openCancellation.complete();
+    }
     _saveProgress();
     _hide?.cancel();
     _save?.cancel();
@@ -1252,13 +1379,16 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     }
     if (c.value.hasError) {
       unawaited(
-        _handleRuntimePlaybackFailure(
+        _handleFailure(
           _source ?? widget.source,
           c.value.errorDescription ?? 'The video source failed.',
           _initializationGeneration,
         ),
       );
       return;
+    }
+    if (_ready && c.value.isInitialized && c.value.position > Duration.zero) {
+      _lastPosition = c.value.position;
     }
     final duration = c.value.duration;
     if (widget.item.type == 'series' &&

@@ -16,6 +16,7 @@ import 'stream_discovery.dart';
 import 'stream_normalizer.dart';
 import 'stream_validator.dart';
 import 'provider_execution_scheduler.dart';
+import 'provider_script_cache.dart';
 
 class NuvioPluginService extends ChangeNotifier {
   static Future<String>? _cheerioBundle;
@@ -34,11 +35,13 @@ class NuvioPluginService extends ChangeNotifier {
   static const StreamValidator _streamValidator = StreamValidator();
   final Map<String, String> errors = {};
   final Map<String, StreamDiscovery> _inflightDiscoveries = {};
+  final ProviderScriptCache _scripts = ProviderScriptCache();
   Map<String, bool> _enabledOverrides = {};
   String? lastLookupMessage;
 
   Future<void> load() async {
     repositories.clear();
+    _scripts.clear();
     errors.clear();
     _enabledOverrides = await _storage.nuvioPluginEnabledOverrides();
     for (final url in await _storage.nuvioPluginRepositoryUrls()) {
@@ -61,6 +64,7 @@ class NuvioPluginService extends ChangeNotifier {
       throw Exception('The repository manifest contains no valid providers.');
     }
     repositories.add(repository);
+    _scripts.clear();
     await _storage.saveNuvioPluginRepositoryUrls(
       repositories.map((repo) => repo.url).toList(),
     );
@@ -70,6 +74,7 @@ class NuvioPluginService extends ChangeNotifier {
 
   Future<void> remove(NuvioPluginRepository repo) async {
     repositories.removeWhere((entry) => entry.url == repo.url);
+    _scripts.clear();
     _enabledOverrides.removeWhere((key, _) => key.startsWith('${repo.url}|'));
     await _storage.saveNuvioPluginEnabledOverrides(_enabledOverrides);
     await _storage.saveNuvioPluginRepositoryUrls(
@@ -317,15 +322,19 @@ class NuvioPluginService extends ChangeNotifier {
         }
         try {
           final codeUrl = Uri.parse(repo.url).resolve(plugin.filename);
-          final codeResponse = await _secureGet(
-            codeUrl,
-            timeout: const Duration(seconds: 20),
-          );
-          if (codeResponse.statusCode < 200 || codeResponse.statusCode >= 300) {
-            throw Exception(
-              'Provider script request failed (${codeResponse.statusCode}).',
+          final providerCode = await _scripts.get(codeUrl.toString(), () async {
+            final codeResponse = await _secureGet(
+              codeUrl,
+              timeout: const Duration(seconds: 20),
             );
-          }
+            if (codeResponse.statusCode < 200 ||
+                codeResponse.statusCode >= 300) {
+              throw Exception(
+                'Provider script request failed (${codeResponse.statusCode}).',
+              );
+            }
+            return codeResponse.body;
+          });
           if (stopStartingProviders || (isCancelled?.call() ?? false)) return;
           await _scheduler.acquireRuntime();
           QuickJsRuntime2? runtime;
@@ -357,7 +366,7 @@ class NuvioPluginService extends ChangeNotifier {
             // requests such as `require(packageName)`. Detect the package
             // references anywhere in the source and install the compatible
             // modules before evaluating the provider.
-            final normalizedProviderCode = codeResponse.body.toLowerCase();
+            final normalizedProviderCode = providerCode.toLowerCase();
             final needsCheerio = normalizedProviderCode.contains('cheerio');
             // Providers sometimes join "crypto" and "js" at runtime, so a
             // literal "crypto-js" search is not enough to find the import.
@@ -434,7 +443,7 @@ class NuvioPluginService extends ChangeNotifier {
           ''');
             if (setup.isError) throw Exception(setup.stringResult);
             final loaded = activeRuntime.evaluate(
-              '(function() {\n${codeResponse.body}\n})();',
+              '(function() {\n$providerCode\n})();',
               sourceUrl: codeUrl.toString(),
             );
             if (loaded.isError) throw Exception(loaded.stringResult);
