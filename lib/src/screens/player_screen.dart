@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../models/episode_context.dart';
 import '../models/media_item.dart';
 import '../models/stream_source.dart';
 import '../services/storage_service.dart';
@@ -19,6 +20,11 @@ class PlayerScreen extends StatelessWidget {
     this.discovery,
     this.onRediscover,
     this.onNextEpisode,
+    this.episodeLabel = '',
+    this.episodeContext,
+    this.season,
+    this.episode,
+    this.imdbId,
   });
   final MediaItem item;
   final StreamSource source;
@@ -30,6 +36,11 @@ class PlayerScreen extends StatelessWidget {
   final StreamDiscovery? discovery;
   final StreamDiscovery Function()? onRediscover;
   final Future<void> Function()? onNextEpisode;
+  final String episodeLabel;
+  final Future<EpisodeContext?>? episodeContext;
+  final int? season;
+  final int? episode;
+  final Future<String>? imdbId;
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -46,6 +57,11 @@ class PlayerScreen extends StatelessWidget {
       discovery: discovery,
       onRediscover: onRediscover,
       onNextEpisode: onNextEpisode,
+      episodeLabel: episodeLabel,
+      episodeContext: episodeContext,
+      season: season,
+      episode: episode,
+      imdbId: imdbId,
     ),
   );
 }

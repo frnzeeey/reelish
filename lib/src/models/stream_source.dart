@@ -1,5 +1,9 @@
 import 'stream_type.dart';
 
+/// Where a subtitle comes from. Embedded tracks are inside the video and are
+/// rendered by the engine; the others are files Reelish downloads.
+enum SubtitleSource { provider, addon, embedded }
+
 class SubtitleTrack {
   const SubtitleTrack({
     required this.url,
@@ -7,9 +11,28 @@ class SubtitleTrack {
     this.id = '',
     this.format = '',
     this.headers = const {},
+    this.source = SubtitleSource.provider,
+    this.detail = '',
+    this.hearingImpaired = false,
+    this.addonName = '',
   });
   final String url, lang, id, format;
   final Map<String, String> headers;
+  final SubtitleSource source;
+
+  /// Secondary text such as the release or file name.
+  final String detail;
+  final bool hearingImpaired;
+
+  /// The subtitle addon, for addon results (for example `OpenSubtitles v3`).
+  final String addonName;
+
+  /// Stable identity, as Nuvio's selection key: URL, addon and id.
+  String get key => [
+    if (url.isNotEmpty) url,
+    if (addonName.isNotEmpty) addonName,
+    if (id.isNotEmpty) id,
+  ].join(':');
   factory SubtitleTrack.fromJson(Map<String, dynamic> j) => SubtitleTrack(
     url: '${j['url'] ?? ''}',
     lang: '${j['lang'] ?? j['language'] ?? 'Unknown'}',

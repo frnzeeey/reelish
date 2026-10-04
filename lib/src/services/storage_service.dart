@@ -88,6 +88,49 @@ class StorageService {
   Future<bool> isFavorite(MediaItem item) async =>
       (await favorites()).any((e) => e.id == item.id && e.type == item.type);
 
+  static const _subtitlePreferencesKey = 'onfeed.player.subtitleChoice.v1';
+
+  /// The viewer's last subtitle choice for a title (a movie or a whole
+  /// series), as Nuvio remembers it per show: Off, or a language with its
+  /// source. Null when nothing is remembered or the entry is unreadable.
+  Future<RememberedSubtitle?> rememberedSubtitle(String titleKey) async {
+    final raw = (await SharedPreferences.getInstance()).getString(
+      _subtitlePreferencesKey,
+    );
+    if (raw == null) return null;
+    try {
+      final decoded = jsonDecode(raw);
+      return decoded is Map
+          ? RememberedSubtitle.fromJson(decoded[titleKey])
+          : null;
+    } on FormatException {
+      return null;
+    }
+  }
+
+  Future<void> rememberSubtitle(
+    String titleKey,
+    RememberedSubtitle choice,
+  ) async {
+    final preferences = await SharedPreferences.getInstance();
+    var values = <String, dynamic>{};
+    try {
+      final decoded = jsonDecode(
+        preferences.getString(_subtitlePreferencesKey) ?? '{}',
+      );
+      if (decoded is Map) values = Map<String, dynamic>.from(decoded);
+    } on FormatException {
+      // Start over from an unreadable value.
+    }
+    values
+      ..remove(titleKey)
+      ..[titleKey] = choice.toJson();
+    while (values.length > 200) {
+      values.remove(values.keys.first);
+    }
+    await preferences.setString(_subtitlePreferencesKey, jsonEncode(values));
+  }
+
   Future<String?> readSetting(String key) async =>
       (await SharedPreferences.getInstance()).getString(key);
 
@@ -176,5 +219,59 @@ class StorageService {
   Future<void> clearTorrentCache() async {
     final directory = await torrentCacheDirectory(create: false);
     if (await directory.exists()) await directory.delete(recursive: true);
+  }
+}
+
+/// A remembered subtitle choice for one title.
+class RememberedSubtitle {
+  const RememberedSubtitle.off()
+    : off = true,
+      language = '',
+      source = SubtitleSource.provider,
+      addonName = '',
+      hearingImpaired = false;
+
+  RememberedSubtitle.of(SubtitleTrack track)
+    : off = false,
+      language = track.lang,
+      source = track.source,
+      addonName = track.addonName,
+      hearingImpaired = track.hearingImpaired;
+
+  const RememberedSubtitle._(
+    this.off,
+    this.language,
+    this.source,
+    this.addonName,
+    this.hearingImpaired,
+  );
+
+  final bool off;
+  final String language;
+  final SubtitleSource source;
+  final String addonName;
+  final bool hearingImpaired;
+
+  Map<String, Object?> toJson() => {
+    'off': off,
+    'language': language,
+    'source': source.name,
+    'addonName': addonName,
+    'hearingImpaired': hearingImpaired,
+  };
+
+  static RememberedSubtitle? fromJson(Object? json) {
+    if (json is! Map) return null;
+    if (json['off'] == true) return const RememberedSubtitle.off();
+    final language = json['language'];
+    if (language is! String || language.isEmpty) return null;
+    return RememberedSubtitle._(
+      false,
+      language,
+      SubtitleSource.values.asNameMap()[json['source']] ??
+          SubtitleSource.provider,
+      '${json['addonName'] ?? ''}',
+      json['hearingImpaired'] == true,
+    );
   }
 }

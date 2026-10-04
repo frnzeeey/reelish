@@ -7,6 +7,7 @@ import '../services/playback_settings_controller.dart';
 import '../theme/glass_theme.dart';
 import 'app_information_screens.dart';
 import 'legal_information_screen.dart';
+import 'subtitle_addons_screen.dart';
 
 Widget _settingsGroupLabel(BuildContext context, String label) => Padding(
   padding: const EdgeInsets.only(left: 4),
@@ -802,6 +803,16 @@ class PlaybackSettingsScreen extends StatelessWidget {
                       settings.showOnlyPreferredLanguages,
                       (value) => _save(
                         settings.copyWith(showOnlyPreferredLanguages: value),
+                      ),
+                    ),
+                    _choiceRow(
+                      'Subtitle addons',
+                      'Stremio subtitle addons searched while you watch.',
+                      'Manage',
+                      () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const SubtitleAddonsScreen(),
+                        ),
                       ),
                     ),
                   ]),

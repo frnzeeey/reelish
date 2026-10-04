@@ -88,6 +88,7 @@ class MediaKitVideoPlayer extends VideoPlayerPlatform {
     final streamSubscriptions = <StreamSubscription>[];
 
     final textureId = player.hashCode;
+    _latestPlayerId = textureId;
 
     _players[textureId] = player;
     _completers[textureId] = completer;
@@ -206,6 +207,10 @@ class MediaKitVideoPlayer extends VideoPlayerPlatform {
       controls: NoVideoControls,
       fill: const Color(0x00000000),
       pauseUponEnteringBackgroundMode: false,
+      // The app renders subtitle text itself (see subtitleLines) so every
+      // subtitle source uses the same style and can be turned off.
+      subtitleViewConfiguration:
+          const SubtitleViewConfiguration(visible: false),
       resumeUponEnteringForegroundMode: false,
     );
   }
@@ -254,6 +259,98 @@ class MediaKitVideoPlayer extends VideoPlayerPlatform {
 
   @override
   bool isAudioTrackSupportAvailable() => true;
+
+  /// The shared instance, for the embedded-subtitle API below, which
+  /// package:video_player's platform interface does not cover.
+  static MediaKitVideoPlayer? get shared => _shared;
+
+  int? _latestPlayerId;
+
+  /// The most recently created player, while it is alive. Apps that keep one
+  /// player at a time use it to reach that player (package:video_player keeps
+  /// its player id private).
+  int? get activePlayerId {
+    final id = _latestPlayerId;
+    return id != null && _players.containsKey(id) ? id : null;
+  }
+
+  /// Subtitle tracks inside the media (not external files), once mpv has
+  /// read them. Empty for an unknown player.
+  List<EmbeddedSubtitleTrack> embeddedSubtitles(int playerId) {
+    final player = _players[playerId];
+    if (player == null) return const [];
+    return [
+      for (final track in player.state.tracks.subtitle)
+        if (track.id != 'auto' && track.id != 'no' && !track.uri && !track.data)
+          EmbeddedSubtitleTrack(
+            id: track.id,
+            title: track.title ?? '',
+            language: track.language ?? '',
+          ),
+    ];
+  }
+
+  /// The embedded track mpv is showing, or null for none.
+  String? selectedEmbeddedSubtitle(int playerId) {
+    final track = _players[playerId]?.state.track.subtitle;
+    if (track == null ||
+        track.id == 'auto' ||
+        track.id == 'no' ||
+        track.uri ||
+        track.data) {
+      return null;
+    }
+    return track.id;
+  }
+
+  /// Shows embedded track [trackId], or turns embedded subtitles off when
+  /// null. Playback continues; only mpv's subtitle selection changes.
+  Future<void> selectEmbeddedSubtitle(int playerId, String? trackId) async {
+    final player = _players[playerId];
+    if (player == null) return;
+    if (trackId == null) {
+      await player.setSubtitleTrack(SubtitleTrack.no());
+      return;
+    }
+    for (final track in player.state.tracks.subtitle) {
+      if (track.id == trackId) {
+        await player.setSubtitleTrack(track);
+        return;
+      }
+    }
+  }
+
+  /// Notifies when the track list or the selected track changes.
+  Stream<void> subtitleTracksChanged(int playerId) {
+    final player = _players[playerId];
+    if (player == null) return const Stream.empty();
+    StreamSubscription<void>? tracks, selection;
+    late final StreamController<void> changes;
+    changes = StreamController<void>(
+      onListen: () {
+        tracks = player.stream.tracks.listen((_) => changes.add(null));
+        selection = player.stream.track.listen((_) => changes.add(null));
+      },
+      onCancel: () async {
+        await tracks?.cancel();
+        await selection?.cancel();
+      },
+    );
+    return changes.stream;
+  }
+
+  /// Text of the current embedded subtitle, drawn by the app so it can use
+  /// its own subtitle style (media_kit's own subtitle view is disabled).
+  Stream<List<String>> subtitleLines(int playerId) =>
+      _players[playerId]?.stream.subtitle ?? const Stream.empty();
+
+  /// Shifts embedded subtitles by [seconds] (mpv `sub-delay`).
+  Future<void> setSubtitleDelay(int playerId, double seconds) async {
+    final platform = _players[playerId]?.platform;
+    if (platform is NativePlayer) {
+      await platform.setProperty('sub-delay', seconds.toStringAsFixed(3));
+    }
+  }
 
   /// Initialize the [Stream]s for a given textureId.
   VoidCallback _initialize(int textureId) {
@@ -463,4 +560,17 @@ class MediaKitVideoPlayer extends VideoPlayerPlatform {
 
     return () {};
   }
+}
+
+/// A subtitle track inside the media itself.
+class EmbeddedSubtitleTrack {
+  const EmbeddedSubtitleTrack({
+    required this.id,
+    required this.title,
+    required this.language,
+  });
+
+  final String id;
+  final String title;
+  final String language;
 }

@@ -88,7 +88,7 @@ class PlayerSettingsSheet extends StatelessWidget {
               Wrap(
                 spacing: 6,
                 children: [
-                  for (final s in [.5, .75, 1.0, 1.25, 1.5, 2.0])
+                  for (final s in [.5, .75, 1.0, 1.25, 1.5, 1.75, 2.0])
                     ChoiceChip(
                       label: Text('${s}×'),
                       selected: value.speed == s,

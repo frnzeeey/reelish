@@ -8,6 +8,9 @@ import 'package:universal_platform/universal_platform.dart';
 
 import 'package:video_player_media_kit/src/media_kit_video_player.dart';
 
+export 'package:video_player_media_kit/src/media_kit_video_player.dart'
+    show MediaKitVideoPlayer, EmbeddedSubtitleTrack;
+
 /// {@template video_player_media_kit}
 ///
 /// VideoPlayerMediaKit

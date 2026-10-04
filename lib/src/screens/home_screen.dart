@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:feather_icon_font/feather_icon_font.dart';
 import '../models/app_update.dart';
+import '../models/episode_context.dart';
 import '../models/media_item.dart';
 import '../models/stream_source.dart';
 import '../navigation/app_transitions.dart';
@@ -741,6 +742,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         discovery?.cancel();
         return;
       }
+      // Titles for the player and whether a next episode exists; resolved in
+      // the background from the (usually cached) TMDB episode list.
+      final episodeContext = season != null && episode != null
+          ? _episodeContext(item, season, episode)
+          : null;
+      // IMDb id for OpenSubtitles; the player searches subtitles once it plays.
+      final imdbId = externalIdsFuture.then(
+        (value) => value.externalId,
+        onError: (Object _) => '',
+      );
       beforePlayerOpens();
       PerfTimeline.end('PLAY_PRESSED', 'PLAYER_OPEN');
       _spotlightTimer?.cancel();
@@ -773,6 +784,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       defaultTargetPlatform == TargetPlatform.android,
                 );
               },
+              episodeLabel: season == null || episode == null
+                  ? ''
+                  : 'Season $season · Episode $episode',
+              episodeContext: episodeContext,
+              season: season,
+              episode: episode,
+              imdbId: imdbId,
               onNextEpisode: season == null || episode == null
                   ? null
                   : () => _playNextEpisode(
@@ -834,6 +852,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
+  Future<EpisodeContext?> _episodeContext(
+    MediaItem item,
+    int season,
+    int episode,
+  ) async {
+    try {
+      return EpisodeContext.fromTmdb(
+        await _tmdb.allEpisodes(item),
+        season: season,
+        episode: episode,
+      );
+    } catch (_) {
+      return null; // The player falls back to season and episode numbers.
+    }
+  }
+
   Future<void> _playNextEpisode(
     MediaItem item,
     int season,
@@ -841,22 +875,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     BuildContext? presentationContext,
   }) async {
     try {
-      final episodes = await _tmdb.allEpisodes(item);
-      episodes.sort((a, b) {
-        final seasonComparison = ((a['season_number'] as num?) ?? 0).compareTo(
-          (b['season_number'] as num?) ?? 0,
-        );
-        if (seasonComparison != 0) return seasonComparison;
-        return ((a['episode_number'] as num?) ?? 0).compareTo(
-          (b['episode_number'] as num?) ?? 0,
-        );
-      });
-      final nextEpisode = episodes.where((entry) {
-        final entrySeason = (entry['season_number'] as num?)?.toInt() ?? 0;
-        final entryEpisode = (entry['episode_number'] as num?)?.toInt() ?? 0;
-        return entrySeason > season ||
-            (entrySeason == season && entryEpisode > episode);
-      }).firstOrNull;
+      // Same rule as the player's offer: the following listed episode, and
+      // only once it has aired.
+      final nextEpisode = EpisodeContext.fromTmdb(
+        await _tmdb.allEpisodes(item),
+        season: season,
+        episode: episode,
+      )?.next;
       if (nextEpisode == null) {
         if (mounted) {
           ScaffoldMessenger.of(presentationContext ?? context).showSnackBar(
@@ -867,9 +892,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         }
         return;
       }
-      final nextSeason = (nextEpisode['season_number'] as num?)?.toInt();
-      final nextNumber = (nextEpisode['episode_number'] as num?)?.toInt();
-      if (nextSeason == null || nextNumber == null || !mounted) return;
+      final nextSeason = nextEpisode.season;
+      final nextNumber = nextEpisode.episode;
+      if (!mounted) return;
       final detailContext = presentationContext?.mounted == true
           ? presentationContext
           : null;
