@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:onfeed/src/models/app_update.dart';
 import 'package:onfeed/src/screens/home_screen.dart';
 import 'package:onfeed/src/services/accent_settings_controller.dart';
 import 'package:onfeed/src/services/network_target_policy.dart';
@@ -157,7 +158,8 @@ void main() {
         home: HomeScreen(
           accentSettings: accentSettings,
           tmdbService: tmdb,
-          updateChecker: () async => null,
+          updateChecker: () async =>
+              const UpdateCheckResult(UpdateCheckStatus.upToDate),
         ),
       ),
     );

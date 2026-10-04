@@ -3,6 +3,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../theme/glass_theme.dart';
+import '../widgets/app_update_flow.dart';
 
 const _releaseGitSha = String.fromEnvironment(
   'REELISH_GIT_SHA',
@@ -82,6 +83,23 @@ class AboutScreen extends StatelessWidget {
             );
           },
         ),
+        if (AppUpdateFlow.isSupported) ...[
+          const SizedBox(height: 14),
+          SizedBox(
+            height: 54,
+            child: FilledButton.tonalIcon(
+              onPressed: () => AppUpdateFlow.checkManually(context),
+              icon: const Icon(Icons.system_update_rounded),
+              label: const Text('Check for updates'),
+              style: FilledButton.styleFrom(
+                textStyle: const TextStyle(fontWeight: FontWeight.w700),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+            ),
+          ),
+        ],
       ],
     ),
   );

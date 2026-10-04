@@ -2,10 +2,10 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:feather_icon_font/feather_icon_font.dart';
+import '../models/app_update.dart';
 import '../models/media_item.dart';
 import '../models/stream_source.dart';
 import '../navigation/app_transitions.dart';
-import '../services/github_update_service.dart';
 import '../services/storage_service.dart';
 import '../services/stream_discovery.dart';
 import '../services/tmdb_service.dart';
@@ -14,6 +14,7 @@ import '../services/playback_settings_controller.dart';
 import '../services/accent_settings_controller.dart';
 import '../theme/glass_theme.dart';
 import '../widgets/nuvio_plugin_installer_modal.dart';
+import '../widgets/app_update_flow.dart';
 import '../widgets/category_chip.dart';
 import '../widgets/glass_box.dart';
 import '../widgets/media_card.dart';
@@ -38,7 +39,7 @@ class HomeScreen extends StatefulWidget {
 
   final AccentSettingsController accentSettings;
   final TmdbService? tmdbService;
-  final Future<GitHubUpdate?> Function()? updateChecker;
+  final Future<UpdateCheckResult> Function()? updateChecker;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -73,9 +74,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   int _libraryRefreshToken = 0;
   Timer? _debounce;
   Timer? _spotlightTimer;
-  bool _checkingForUpdate = false;
-  bool _updatePromptOpen = false;
-  DateTime? _lastUpdateCheckAt;
 
   @override
   void initState() {
@@ -137,145 +135,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _checkForUpdate() async {
-    if (defaultTargetPlatform != TargetPlatform.android) return;
-    final now = DateTime.now();
-    final lastCheck = _lastUpdateCheckAt;
-    if (_checkingForUpdate ||
-        _updatePromptOpen ||
-        (lastCheck != null &&
-            now.difference(lastCheck) < const Duration(hours: 6))) {
-      return;
-    }
-    _lastUpdateCheckAt = now;
-    _checkingForUpdate = true;
-    try {
-      final update =
-          await (widget.updateChecker?.call() ??
-              GitHubUpdateService.checkForUpdate());
-      if (!mounted || update == null) return;
-      _updatePromptOpen = true;
-      await showDialog<void>(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('Update available'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Reelish ${update.version} is ready to download.'),
-                if (update.notes.trim().isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  Text(update.notes.trim()),
-                ],
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Later'),
-            ),
-            FilledButton(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-                unawaited(_downloadAndInstallUpdate(update));
-              },
-              child: const Text('Download and install'),
-            ),
-          ],
-        ),
-      );
-    } catch (_) {
-      // Update checks should never interrupt normal app use.
-    } finally {
-      _updatePromptOpen = false;
-      _checkingForUpdate = false;
-    }
-  }
-
-  Future<void> _downloadAndInstallUpdate(GitHubUpdate update) async {
-    if (!mounted) return;
-    final messenger = ScaffoldMessenger.of(context);
-    var received = 0;
-    var total = 0;
-    StateSetter? setProgress;
-    var progressDialogOpen = true;
-
-    unawaited(
-      showDialog<void>(
-        context: context,
-        barrierDismissible: false,
-        builder: (dialogContext) => StatefulBuilder(
-          builder: (context, updateDialogState) {
-            setProgress = updateDialogState;
-            final progress = total > 0 ? received / total : null;
-            return AlertDialog(
-              title: const Text('Downloading update'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  LinearProgressIndicator(value: progress),
-                  const SizedBox(height: 12),
-                  Text(
-                    total > 0
-                        ? '${(received / 1048576).toStringAsFixed(1)} / ${(total / 1048576).toStringAsFixed(1)} MB'
-                        : '${(received / 1048576).toStringAsFixed(1)} MB',
-                  ),
-                ],
-              ),
-            );
-          },
-        ),
-      ),
-    );
-
-    void closeProgressDialog() {
-      if (progressDialogOpen && mounted) {
-        progressDialogOpen = false;
-        Navigator.of(context, rootNavigator: true).pop();
-      }
-    }
-
-    try {
-      final apk = await GitHubUpdateService.downloadApk(
-        update,
-        onProgress: (downloaded, expected) {
-          received = downloaded;
-          total = expected;
-          setProgress?.call(() {});
-        },
-      );
-      closeProgressDialog();
-      final result = await GitHubUpdateService.installApk(apk);
-      if (!mounted) return;
-      if (result == 'permission_required') {
-        // Let the user return from Android's install-source settings and retry.
-        _lastUpdateCheckAt = null;
-        messenger.showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Allow installs from Reelish, then return to continue the update.',
-            ),
-          ),
-        );
-      } else if (result != 'installer_opened') {
-        messenger.showSnackBar(
-          const SnackBar(content: Text("Could not open Android's installer.")),
-        );
-      }
-    } catch (_) {
-      closeProgressDialog();
-      if (mounted) {
-        messenger.showSnackBar(
-          const SnackBar(
-            content: Text('Could not download the update. Try again later.'),
-          ),
-        );
-      }
-    }
-  }
+  /// Runs in the background on start and resume; it shows nothing unless a
+  /// newer release exists. Throttling and caching live in the update service.
+  Future<void> _checkForUpdate() =>
+      AppUpdateFlow.checkAutomatically(context, checker: widget.updateChecker);
 
   void _onPluginChange() {
     if (!mounted) return;

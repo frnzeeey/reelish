@@ -81,3 +81,20 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+// `flutter build apk --release` always names its output app-release.apk.
+// Also publish it as flutter-apk/reelish.apk, the asset name the in-app
+// updater looks for on GitHub Releases. This is a plain file copy on purpose:
+// a Copy task would declare flutter-apk/ as its output and Gradle's stale
+// output cleanup would delete Flutter's own APK from that directory.
+val agpReleaseApk = layout.buildDirectory.file("outputs/apk/release/app-release.apk")
+val reelishReleaseApk = layout.buildDirectory.file("outputs/flutter-apk/reelish.apk")
+
+tasks.named { it == "assembleRelease" }.configureEach {
+    doLast {
+        val source = agpReleaseApk.get().asFile
+        if (source.isFile) {
+            source.copyTo(reelishReleaseApk.get().asFile, overwrite = true)
+        }
+    }
+}
