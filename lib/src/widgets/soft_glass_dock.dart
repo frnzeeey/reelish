@@ -28,8 +28,10 @@ class SoftGlassDock extends StatelessWidget {
     child: LiquidGlass(
       quality: LiquidGlassQuality.balanced,
       blurSigma: 9,
-      opacity: .9,
+      opacity: .82,
       borderRadius: 26,
+      showBorder: false,
+      showTopHighlight: false,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       child: SizedBox(
         height: 72,
@@ -81,34 +83,31 @@ class _DockItem extends StatelessWidget {
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(18),
             onTap: onTap,
             child: AnimatedContainer(
               duration: duration,
               curve: Curves.easeOutCubic,
-              margin: const EdgeInsets.symmetric(horizontal: 5),
+              margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
               decoration: BoxDecoration(
                 gradient: selected
                     ? LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                         colors: [
-                          Colors.white.withValues(alpha: .17),
-                          GlassTheme.primary.withValues(alpha: .10),
-                          Colors.white.withValues(alpha: .035),
+                          GlassTheme.primary.withValues(alpha: .22),
+                          GlassTheme.primary.withValues(alpha: .09),
+                          Colors.white.withValues(alpha: .025),
                         ],
                       )
                     : null,
-                borderRadius: BorderRadius.circular(20),
-                border: selected
-                    ? Border.all(color: Colors.white.withValues(alpha: .2))
-                    : null,
+                borderRadius: BorderRadius.circular(18),
                 boxShadow: selected
                     ? [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: .12),
-                          blurRadius: 12,
-                          spreadRadius: -4,
+                          color: GlassTheme.primary.withValues(alpha: .12),
+                          blurRadius: 14,
+                          spreadRadius: -5,
                         ),
                       ]
                     : null,
@@ -137,6 +136,27 @@ class _DockItem extends StatelessWidget {
                       fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                     ),
                     child: Text(label),
+                  ),
+                  const SizedBox(height: 5),
+                  AnimatedContainer(
+                    duration: duration,
+                    curve: Curves.easeOutCubic,
+                    width: selected ? 12 : 3,
+                    height: 3,
+                    decoration: BoxDecoration(
+                      color: selected
+                          ? GlassTheme.primary
+                          : Colors.white.withValues(alpha: .16),
+                      borderRadius: BorderRadius.circular(3),
+                      boxShadow: selected
+                          ? [
+                              BoxShadow(
+                                color: GlassTheme.primary.withValues(alpha: .6),
+                                blurRadius: 7,
+                              ),
+                            ]
+                          : null,
+                    ),
                   ),
                 ],
               ),

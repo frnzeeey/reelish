@@ -23,6 +23,8 @@ class LiquidGlass extends StatelessWidget {
     this.tintColor = const Color(0xFF111722),
     this.accentColor,
     this.showShadow = true,
+    this.showBorder = true,
+    this.showTopHighlight = true,
   }) : assert(blurSigma >= 0),
        assert(opacity >= 0 && opacity <= 1);
 
@@ -35,6 +37,8 @@ class LiquidGlass extends StatelessWidget {
   final Color tintColor;
   final Color? accentColor;
   final bool showShadow;
+  final bool showBorder;
+  final bool showTopHighlight;
 
   double get _effectiveBlur => switch (quality) {
     LiquidGlassQuality.low => 0,
@@ -73,35 +77,36 @@ class LiquidGlass extends StatelessWidget {
           stops: const [0, .38, 1],
         ),
         borderRadius: radius,
-        border: Border.all(
-          color: Colors.white.withValues(alpha: .22 * opacity),
-        ),
+        border: showBorder
+            ? Border.all(color: Colors.white.withValues(alpha: .22 * opacity))
+            : null,
       ),
       child: Padding(
         padding: padding,
         child: Stack(
           children: [
             child,
-            Positioned(
-              top: 0,
-              left: 12,
-              right: 12,
-              height: 1,
-              child: IgnorePointer(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Colors.white.withValues(alpha: 0),
-                        Colors.white.withValues(alpha: .48 * opacity),
-                        Colors.white.withValues(alpha: .08 * opacity),
-                        Colors.white.withValues(alpha: 0),
-                      ],
+            if (showTopHighlight)
+              Positioned(
+                top: 0,
+                left: 12,
+                right: 12,
+                height: 1,
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.white.withValues(alpha: 0),
+                          Colors.white.withValues(alpha: .48 * opacity),
+                          Colors.white.withValues(alpha: .08 * opacity),
+                          Colors.white.withValues(alpha: 0),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
           ],
         ),
       ),
