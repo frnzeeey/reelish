@@ -4,6 +4,15 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../theme/glass_theme.dart';
 
+const _releaseGitSha = String.fromEnvironment(
+  'REELISH_GIT_SHA',
+  defaultValue: 'unknown',
+);
+const _releaseBuildTag = String.fromEnvironment(
+  'REELISH_BUILD_TAG',
+  defaultValue: 'local',
+);
+
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
 
@@ -57,12 +66,21 @@ class AboutScreen extends StatelessWidget {
         const SizedBox(height: 14),
         FutureBuilder<PackageInfo>(
           future: PackageInfo.fromPlatform(),
-          builder: (context, snapshot) => _InfoCard(
-            title: 'App version',
-            detail: snapshot.hasData
-                ? '${snapshot.data!.version} (${snapshot.data!.buildNumber})'
-                : 'Loading…',
-          ),
+          builder: (context, snapshot) {
+            final details = snapshot.hasData
+                ? [
+                    'Version: ${snapshot.data!.version}',
+                    'Build: ${snapshot.data!.buildNumber}',
+                    if (_releaseBuildTag != 'local') 'Tag: $_releaseBuildTag',
+                    'Commit: $_releaseGitSha',
+                  ].join('\n')
+                : 'Loading…';
+            return _InfoCard(
+              title: 'Build identity',
+              detail: details,
+              selectable: true,
+            );
+          },
         ),
       ],
     ),
@@ -75,10 +93,7 @@ class SupportDevelopmentScreen extends StatelessWidget {
   static final _coffeeUri = Uri.https('www.buymeacoffee.com', '/frnzegl');
 
   Future<void> _openCoffeePage(BuildContext context) async {
-    if (!await launchUrl(
-      _coffeeUri,
-      mode: LaunchMode.externalApplication,
-    ) &&
+    if (!await launchUrl(_coffeeUri, mode: LaunchMode.externalApplication) &&
         context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Could not open the support page.')),
@@ -118,10 +133,15 @@ class SupportDevelopmentScreen extends StatelessWidget {
 }
 
 class _InfoCard extends StatelessWidget {
-  const _InfoCard({required this.title, required this.detail});
+  const _InfoCard({
+    required this.title,
+    required this.detail,
+    this.selectable = false,
+  });
 
   final String title;
   final String detail;
+  final bool selectable;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -142,13 +162,21 @@ class _InfoCard extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 9),
-        Text(
-          detail,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: GlassTheme.muted,
-            height: 1.55,
-          ),
-        ),
+        selectable
+            ? SelectableText(
+                detail,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: GlassTheme.muted,
+                  height: 1.55,
+                ),
+              )
+            : Text(
+                detail,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: GlassTheme.muted,
+                  height: 1.55,
+                ),
+              ),
       ],
     ),
   );
