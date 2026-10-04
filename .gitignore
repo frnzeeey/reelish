@@ -31,7 +31,6 @@ migrate_working_dir/
 .pub-cache/
 .pub/
 /build/
-/release/
 *.apk
 /coverage/
 lib/tmdb_config.local.dart

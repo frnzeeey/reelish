@@ -57,7 +57,7 @@ flutter run
 
 ## Android releases
 
-Release builds are published on [GitHub Releases](https://github.com/frnzeeey/reelish/releases). Android can check for a newer stable release and offer to download its APK; installation is confirmed through Android's package installer. See [docs/android_releases.md](docs/android_releases.md) for maintainer release setup.
+Release builds are published on [GitHub Releases](https://github.com/frnzeeey/reelish/releases). Android can check for a newer stable release and offer to download its APK; installation is confirmed through Android's package installer. See [docs/releasing.md](docs/releasing.md) for how releases are made.
 
 ## Privacy and terms
 
