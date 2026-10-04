@@ -25,6 +25,7 @@ class LiquidGlass extends StatelessWidget {
     this.showShadow = true,
     this.showBorder = true,
     this.showTopHighlight = true,
+    this.groupBackdrop = false,
   }) : assert(blurSigma >= 0),
        assert(opacity >= 0 && opacity <= 1);
 
@@ -39,6 +40,11 @@ class LiquidGlass extends StatelessWidget {
   final bool showShadow;
   final bool showBorder;
   final bool showTopHighlight;
+
+  /// Shares one backdrop capture with other grouped glass under the nearest
+  /// [BackdropGroup]. Only for surfaces that never overlap each other, such
+  /// as the panels on cards in one row; without a group it has no effect.
+  final bool groupBackdrop;
 
   double get _effectiveBlur => switch (quality) {
     LiquidGlassQuality.low => 0,
@@ -112,20 +118,20 @@ class LiquidGlass extends StatelessWidget {
       ),
     );
 
+    final filter = ImageFilter.blur(
+      sigmaX: blur,
+      sigmaY: blur,
+      tileMode: TileMode.clamp,
+    );
     return DecoratedBox(
       decoration: shadow,
       child: ClipRRect(
         borderRadius: radius,
         child: blur == 0
             ? surface
-            : BackdropFilter(
-                filter: ImageFilter.blur(
-                  sigmaX: blur,
-                  sigmaY: blur,
-                  tileMode: TileMode.clamp,
-                ),
-                child: surface,
-              ),
+            : groupBackdrop
+            ? BackdropFilter.grouped(filter: filter, child: surface)
+            : BackdropFilter(filter: filter, child: surface),
       ),
     );
   }

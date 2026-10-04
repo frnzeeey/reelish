@@ -13,6 +13,19 @@ import 'package:onfeed/src/services/network_target_policy.dart';
 import 'package:onfeed/src/services/tmdb_response_cache.dart';
 import 'package:onfeed/src/services/tmdb_service.dart';
 
+/// Waits in real time until [condition] holds. TmdbService reads its disk
+/// cache before calling the client, so a request does not reach the client
+/// within a single event-loop turn.
+Future<void> _until(bool Function() condition) async {
+  final deadline = DateTime.now().add(const Duration(seconds: 5));
+  while (!condition()) {
+    if (DateTime.now().isAfter(deadline)) {
+      throw TimeoutException('Condition was not met in time.');
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 5));
+  }
+}
+
 void main() {
   const popularBody =
       '{"results":[{"id":1,"media_type":"movie",'
@@ -30,7 +43,16 @@ void main() {
   });
 
   tearDown(() async {
-    if (await cacheRoot.exists()) await cacheRoot.delete(recursive: true);
+    // The cache writes responses in the background after returning them;
+    // on Windows the directory stays locked until that write finishes.
+    for (var attempt = 0; await cacheRoot.exists(); attempt++) {
+      try {
+        await cacheRoot.delete(recursive: true);
+      } on FileSystemException {
+        if (attempt >= 20) rethrow;
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      }
+    }
   });
 
   TmdbService service(
@@ -60,7 +82,9 @@ void main() {
     final first = tmdb.popular('movie');
     final second = tmdb.popular('movie');
     final third = tmdb.popular('movie');
-    await Future<void>.delayed(Duration.zero);
+    await _until(() => requests > 0);
+    // Give a duplicate request time to start if coalescing were broken.
+    await Future<void>.delayed(const Duration(milliseconds: 50));
     expect(requests, 1);
     responseCompleter.complete(http.Response(popularBody, 200));
     final results = await Future.wait([first, second, third]);
@@ -75,7 +99,10 @@ void main() {
       requests++;
       return http.Response(popularBody, 200);
     });
-    await service(firstClient).popular('movie');
+    final firstCache = TmdbResponseCache(directory: cacheRoot);
+    await service(firstClient, cache: firstCache).popular('movie');
+    // The disk copy is written in the background after the response returns.
+    await firstCache.flush();
     firstClient.close();
 
     final secondClient = MockClient((_) async {
@@ -117,23 +144,31 @@ void main() {
   test('bounds simultaneous distinct TMDB requests', () async {
     var active = 0;
     var peak = 0;
+    // Hold every response until the cap has been reached, so the test does
+    // not depend on how quickly requests get past the disk cache.
+    final release = Completer<void>();
     final client = MockClient((request) async {
       active++;
       if (active > peak) peak = active;
-      await Future<void>.delayed(const Duration(milliseconds: 3));
+      await release.future;
       active--;
       return http.Response(popularBody, 200);
     });
     final tmdb = service(client, maxConcurrentRequests: 2);
 
-    await Future.wait([
+    final all = Future.wait([
       tmdb.popular('movie'),
       tmdb.popular('series'),
       tmdb.trending(),
       tmdb.search('different title'),
     ]);
+    await _until(() => active == 2);
+    // A third request would start here if the cap were not enforced.
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    expect(active, 2);
+    release.complete();
+    await all;
 
-    expect(peak, lessThanOrEqualTo(2));
     expect(peak, 2);
     client.close();
   });
@@ -142,7 +177,9 @@ void main() {
     tester,
   ) async {
     SharedPreferences.setMockInitialValues({});
-    tester.view.physicalSize = const Size(400, 500);
+    // Short enough that the deferred sections start beyond the viewport plus
+    // the scroll view's 250 px cache extent with this one-item catalog.
+    tester.view.physicalSize = const Size(400, 200);
     tester.view.devicePixelRatio = 1;
     final paths = <String>[];
     final client = MockClient((request) async {
@@ -163,9 +200,18 @@ void main() {
         ),
       ),
     );
-    for (var i = 0; i < 30; i++) {
-      await tester.pump(const Duration(milliseconds: 20));
+    // The TMDB disk cache uses real file I/O, which cannot complete inside
+    // the widget test's fake-async zone; let it run in real time.
+    Future<void> settle() async {
+      for (var i = 0; i < 30; i++) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 20)),
+        );
+        await tester.pump(const Duration(milliseconds: 20));
+      }
     }
+
+    await settle();
 
     expect(paths, containsAll(['/3/movie/popular', '/3/tv/popular']));
     expect(paths.where((path) => path.contains('recommendations')), isEmpty);
@@ -178,9 +224,7 @@ void main() {
       );
       await tester.pump(const Duration(milliseconds: 60));
     }
-    for (var i = 0; i < 30; i++) {
-      await tester.pump(const Duration(milliseconds: 20));
-    }
+    await settle();
     expect(paths.where((path) => path.contains('recommendations')), isNotEmpty);
     expect(paths.where((path) => path.contains('/discover/')), isNotEmpty);
 

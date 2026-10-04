@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/media_details.dart';
 import '../models/media_item.dart';
+import '../services/perf_timeline.dart';
 import '../services/tmdb_service.dart';
 import '../theme/glass_theme.dart';
 
@@ -221,6 +222,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
     try {
       final details = await widget.tmdb.details(widget.item);
       if (!mounted) return;
+      PerfTimeline.end('DETAIL_OPEN', 'DETAIL_READY', finish: true);
       setState(() {
         _details = details;
         _loading = false;

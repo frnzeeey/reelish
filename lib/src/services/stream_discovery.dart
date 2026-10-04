@@ -20,6 +20,28 @@ class StreamDiscovery {
   List<StreamSource> get sources => List.unmodifiable(_sources);
   Stream<StreamSource> get updates => _replaySources();
   Future<StreamSource?> get firstSource => _firstSource.future;
+
+  /// The source to start playback with. Usually [firstSource]; when that is a
+  /// torrent, which needs metadata before playback can start, a direct stream
+  /// arriving within [grace] is preferred. Direct first results never wait.
+  Future<StreamSource?> startingSource({
+    Duration grace = const Duration(seconds: 2),
+  }) async {
+    final first = await firstSource;
+    if (first == null || !first.isTorrent) return first;
+    final direct = _sources.where((source) => !source.isTorrent).firstOrNull;
+    if (direct != null) return direct;
+    try {
+      return await updates
+          .firstWhere((source) => !source.isTorrent)
+          .timeout(grace);
+    } on TimeoutException {
+      return first;
+    } on StateError {
+      // Discovery finished without a direct stream.
+      return first;
+    }
+  }
   Future<void> get finished => _finished.future;
   bool get isCancelled => _cancelled;
 

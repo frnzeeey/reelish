@@ -6,6 +6,7 @@ import '../models/app_update.dart';
 import '../models/media_item.dart';
 import '../models/stream_source.dart';
 import '../navigation/app_transitions.dart';
+import '../services/perf_timeline.dart';
 import '../services/storage_service.dart';
 import '../services/stream_discovery.dart';
 import '../services/tmdb_service.dart';
@@ -85,6 +86,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _start();
     unawaited(_loadFavorites());
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      PerfTimeline.markOnce('HOME_USABLE');
       unawaited(_checkForUpdate());
     });
   }
@@ -216,6 +218,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ? null
           : _catalogFailureMessage(loadError!);
     });
+    _markContentVisible();
   }
 
   Future<void> _refreshVisibleHome() async {
@@ -258,6 +261,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _loading = false;
       _catalogError = null;
     });
+    _markContentVisible();
   }
 
   String _catalogFailureMessage(Object error) {
@@ -429,6 +433,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _showDetails(MediaItem item) async {
     if (_openingDetails) return;
     _openingDetails = true;
+    PerfTimeline.begin('DETAIL_OPEN');
     _spotlightTimer?.cancel();
     try {
       await Navigator.push<void>(
@@ -480,7 +485,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     return keys.contains(_favoriteKey(item));
   }
 
+  void _markContentVisible() {
+    if (_items.isEmpty) return;
+    PerfTimeline.markOnce('HOME_CONTENT_VISIBLE');
+    PerfTimeline.end('SEARCH_TYPED', 'RESULTS_VISIBLE', finish: true);
+  }
+
   void _searchChanged(String value) {
+    if (value.trim().isNotEmpty) PerfTimeline.begin('SEARCH_TYPED');
     _debounce?.cancel();
     _debounce = Timer(
       const Duration(milliseconds: 450),
@@ -488,11 +500,44 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
+  /// Set while a play request is resolving, so a double tap cannot start a
+  /// second resolution or push a second player. Released just before the
+  /// player opens: the next-episode flow starts a new request while the
+  /// earlier call is still awaiting its player route.
+  Object? _playbackStart;
+
   Future<void> _openItem(
     MediaItem item, {
     BuildContext? presentationContext,
     int? selectedSeason,
     int? selectedEpisode,
+  }) async {
+    if (_playbackStart != null) return;
+    final token = Object();
+    _playbackStart = token;
+    void release() {
+      if (identical(_playbackStart, token)) _playbackStart = null;
+    }
+
+    try {
+      await _resolveAndOpenPlayer(
+        item,
+        presentationContext: presentationContext,
+        selectedSeason: selectedSeason,
+        selectedEpisode: selectedEpisode,
+        beforePlayerOpens: release,
+      );
+    } finally {
+      release();
+    }
+  }
+
+  Future<void> _resolveAndOpenPlayer(
+    MediaItem item, {
+    BuildContext? presentationContext,
+    int? selectedSeason,
+    int? selectedEpisode,
+    required VoidCallback beforePlayerOpens,
   }) async {
     var searchDialogOpen = false;
     void dismissSearchDialog() {
@@ -503,6 +548,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       }
     }
 
+    PerfTimeline.begin('PLAY_PRESSED');
     int? season = selectedSeason, episode = selectedEpisode;
     if (item.type == 'series' && (season == null || episode == null)) {
       var episodeList = <Map<String, dynamic>>[];
@@ -624,7 +670,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           allowedPluginIds: playback.allowedProviderIds,
           allowTorrents: allowTorrents,
         );
-        source = await discovery.firstSource;
+        source = await discovery.startingSource();
+        PerfTimeline.end('PLAY_PRESSED', 'FIRST_SOURCE');
+        unawaited(
+          discovery.finished.then(
+            (_) => PerfTimeline.end('PLAY_PRESSED', 'PROVIDERS_FINISHED'),
+          ),
+        );
         if (source != null && !playback.autoStreamSelection) {
           await Future.any([
             discovery.finished,
@@ -689,6 +741,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         discovery?.cancel();
         return;
       }
+      beforePlayerOpens();
+      PerfTimeline.end('PLAY_PRESSED', 'PLAYER_OPEN');
       _spotlightTimer?.cancel();
       try {
         await Navigator.push<void>(
@@ -903,68 +957,72 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         const SizedBox(height: 13),
         SizedBox(
           height: 264,
-          child: ListView.separated(
-            padding: const EdgeInsets.only(right: 18),
-            scrollDirection: Axis.horizontal,
-            itemCount: items.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 13),
-            itemBuilder: (context, index) {
-              final item = items[index];
-              final card = MediaCard(
-                item: item,
-                isFavorite: _favoriteKeys.contains(_favoriteKey(item)),
-                progress: item.resumeMs > 0 ? .36 : 0,
-                onTap: () => _showDetails(item),
-                onFavorite: () async {
-                  final isFavorite = await _toggleFavorite(item);
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          isFavorite
-                              ? '${item.name} saved to your list'
-                              : '${item.name} removed from your list',
+          // Cards' frosted panels never overlap, so the whole row shares one
+          // backdrop blur pass instead of one per panel.
+          child: BackdropGroup(
+            child: ListView.separated(
+              padding: const EdgeInsets.only(right: 18),
+              scrollDirection: Axis.horizontal,
+              itemCount: items.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 13),
+              itemBuilder: (context, index) {
+                final item = items[index];
+                final card = MediaCard(
+                  item: item,
+                  isFavorite: _favoriteKeys.contains(_favoriteKey(item)),
+                  progress: item.resumeMs > 0 ? .36 : 0,
+                  onTap: () => _showDetails(item),
+                  onFavorite: () async {
+                    final isFavorite = await _toggleFavorite(item);
+                    if (mounted) {
+                      ScaffoldMessenger.of(this.context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            isFavorite
+                                ? '${item.name} saved to your list'
+                                : '${item.name} removed from your list',
+                          ),
                         ),
-                      ),
-                    );
-                  }
-                },
-              );
-              if (!showRanks) return card;
+                      );
+                    }
+                  },
+                );
+                if (!showRanks) return card;
 
-              final rank = '${index + 1}';
-              return SizedBox(
-                width: 194,
-                height: 264,
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Positioned(
-                      left: 0,
-                      bottom: -7,
-                      child: IgnorePointer(
-                        child: Text(
-                          rank,
-                          maxLines: 1,
-                          softWrap: false,
-                          style: TextStyle(
-                            fontSize: 190,
-                            height: .82,
-                            letterSpacing: index == 9 ? -24 : -8,
-                            fontWeight: FontWeight.w900,
-                            foreground: Paint()
-                              ..style = PaintingStyle.stroke
-                              ..strokeWidth = 3
-                              ..color = Colors.white.withValues(alpha: .78),
+                final rank = '${index + 1}';
+                return SizedBox(
+                  width: 194,
+                  height: 264,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Positioned(
+                        left: 0,
+                        bottom: -7,
+                        child: IgnorePointer(
+                          child: Text(
+                            rank,
+                            maxLines: 1,
+                            softWrap: false,
+                            style: TextStyle(
+                              fontSize: 190,
+                              height: .82,
+                              letterSpacing: index == 9 ? -24 : -8,
+                              fontWeight: FontWeight.w900,
+                              foreground: Paint()
+                                ..style = PaintingStyle.stroke
+                                ..strokeWidth = 3
+                                ..color = Colors.white.withValues(alpha: .78),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    Positioned(left: 48, top: 0, child: card),
-                  ],
-                ),
-              );
-            },
+                      Positioned(left: 48, top: 0, child: card),
+                    ],
+                  ),
+                );
+              },
+            ),
           ),
         ),
       ],

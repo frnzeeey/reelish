@@ -41,12 +41,18 @@ class StorageService {
   Future<List<MediaItem>> _items(String key) async {
     final raw =
         (await SharedPreferences.getInstance()).getStringList(key) ?? [];
-    return raw
-        .map(
-          (v) =>
-              MediaItem.fromStorage(Map<String, dynamic>.from(jsonDecode(v))),
-        )
-        .toList();
+    final items = <MediaItem>[];
+    for (final value in raw) {
+      // One corrupt entry must not make the whole list (and the Library
+      // screen, and every progress save) fail; skip it instead.
+      try {
+        final decoded = jsonDecode(value);
+        if (decoded is Map) {
+          items.add(MediaItem.fromStorage(Map<String, dynamic>.from(decoded)));
+        }
+      } catch (_) {}
+    }
+    return items;
   }
 
   Future<List<MediaItem>> history() => _items(_history);

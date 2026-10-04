@@ -50,10 +50,9 @@ void main() {
     discovery.add(source('https://media.example/video.mp4'));
     discovery.complete();
 
-    expect(
-      await discovery.updates.map((entry) => entry.url).toList(),
-      ['https://media.example/video.mp4'],
-    );
+    expect(await discovery.updates.map((entry) => entry.url).toList(), [
+      'https://media.example/video.mp4',
+    ]);
   });
 
   test('cancelled discovery ignores later results', () async {
@@ -76,5 +75,44 @@ void main() {
 
     expect(entry.isExpired, isTrue);
     expect(entry.isPlayable, isFalse);
+  });
+
+  group('startingSource', () {
+    final torrent = StreamSource(
+      name: 'torrent',
+      url: 'magnet:?xt=urn:btih:${'a' * 40}',
+    );
+
+    test('a direct first result starts immediately', () async {
+      final discovery = StreamDiscovery()
+        ..add(source('https://direct.example/a.m3u8'));
+      expect(
+        (await discovery.startingSource(grace: Duration.zero))?.url,
+        'https://direct.example/a.m3u8',
+      );
+    });
+
+    test('a torrent first result waits briefly for a direct stream', () async {
+      final discovery = StreamDiscovery()..add(torrent);
+      final starting = discovery.startingSource();
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      discovery.add(source('https://direct.example/b.mp4'));
+      expect((await starting)?.url, 'https://direct.example/b.mp4');
+    });
+
+    test('keeps the torrent when no direct stream arrives in time', () async {
+      final discovery = StreamDiscovery()..add(torrent);
+      expect(
+        await discovery.startingSource(grace: const Duration(milliseconds: 20)),
+        same(torrent),
+      );
+    });
+
+    test('keeps the torrent when discovery finishes without another', () async {
+      final discovery = StreamDiscovery()..add(torrent);
+      final starting = discovery.startingSource();
+      discovery.complete();
+      expect(await starting, same(torrent));
+    });
   });
 }

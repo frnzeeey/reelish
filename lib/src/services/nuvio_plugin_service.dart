@@ -3,19 +3,18 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_js/flutter_js.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/media_item.dart';
 import '../models/nuvio_plugin.dart';
 import '../models/stream_source.dart';
-import 'provider_fetch_bridge.dart';
 import 'network_target_policy.dart';
 import 'storage_service.dart';
 import 'stream_discovery.dart';
 import 'stream_normalizer.dart';
 import 'stream_validator.dart';
 import 'provider_execution_scheduler.dart';
+import 'provider_runner.dart';
 import 'provider_script_cache.dart';
 
 class NuvioPluginService extends ChangeNotifier {
@@ -39,18 +38,40 @@ class NuvioPluginService extends ChangeNotifier {
   Map<String, bool> _enabledOverrides = {};
   String? lastLookupMessage;
 
-  Future<void> load() async {
-    repositories.clear();
+  Future<void>? _loading;
+
+  /// Reloads installed repositories. Manifests are fetched concurrently and
+  /// the list is replaced only once all have answered, so a stream lookup
+  /// never sees a half-loaded (or empty) repository list.
+  Future<void> load() => _loading = _load();
+
+  Future<void> _load() async {
+    final overrides = await _storage.nuvioPluginEnabledOverrides();
+    final urls = await _storage.nuvioPluginRepositoryUrls();
+    final loaded = await Future.wait(
+      urls.map((url) async {
+        try {
+          return (url: url, repository: await _readRepository(url), error: '');
+        } catch (error) {
+          return (url: url, repository: null, error: _friendly(error));
+        }
+      }),
+    );
+    _enabledOverrides = overrides;
+    repositories
+      ..clear()
+      ..addAll([
+        for (final entry in loaded)
+          if (entry.repository case final repository?)
+            _applyOverrides(repository),
+      ]);
+    errors
+      ..clear()
+      ..addEntries([
+        for (final entry in loaded)
+          if (entry.repository == null) MapEntry(entry.url, entry.error),
+      ]);
     _scripts.clear();
-    errors.clear();
-    _enabledOverrides = await _storage.nuvioPluginEnabledOverrides();
-    for (final url in await _storage.nuvioPluginRepositoryUrls()) {
-      try {
-        repositories.add(_applyOverrides(await _readRepository(url)));
-      } catch (error) {
-        errors[url] = _friendly(error);
-      }
-    }
     notifyListeners();
   }
 
@@ -263,6 +284,15 @@ class NuvioPluginService extends ChangeNotifier {
     void Function()? onCandidate,
     bool Function()? isCancelled,
   }) async {
+    // Play can be pressed right after launch, while manifests still load.
+    final loading = _loading;
+    if (loading != null) {
+      try {
+        await loading;
+      } catch (_) {
+        // Use whatever repositories are available.
+      }
+    }
     final mediaType = item.type == 'series' ? 'tv' : 'movie';
     final providers = repositories
         .expand((repo) => repo.plugins.map((plugin) => (repo, plugin)))
@@ -337,30 +367,8 @@ class NuvioPluginService extends ChangeNotifier {
           });
           if (stopStartingProviders || (isCancelled?.call() ?? false)) return;
           await _scheduler.acquireRuntime();
-          QuickJsRuntime2? runtime;
-          ProviderFetchBridge? fetchBridge;
           try {
             if (stopStartingProviders || (isCancelled?.call() ?? false)) return;
-            // The local flutter_js bridge resolves Android's exported QuickJS
-            // memory-limit symbol so each provider keeps a bounded JS heap.
-            final activeRuntime = QuickJsRuntime2(
-              timeout: 20000,
-              memoryLimit: 64 * 1024 * 1024,
-              hostPromiseRejectionHandler: (reason) {
-                if (!kDebugMode) return;
-                // ignore: avoid_print
-                print(
-                  '[Provider JS] ${plugin.id} unhandled rejection: '
-                  '${_safeProviderDiagnostic(reason)}',
-                );
-              },
-            )..enableHandlePromises();
-            runtime = activeRuntime;
-            fetchBridge = ProviderFetchBridge(
-              activeRuntime,
-              null,
-              _networkDestinations,
-            );
             // Provider scripts often build package names dynamically, so
             // matching only literal require('...') calls misses valid module
             // requests such as `require(packageName)`. Detect the package
@@ -371,113 +379,27 @@ class NuvioPluginService extends ChangeNotifier {
             // Providers sometimes join "crypto" and "js" at runtime, so a
             // literal "crypto-js" search is not enough to find the import.
             final needsCryptoJs = normalizedProviderCode.contains('crypto');
-            if (needsCheerio || needsCryptoJs) {
-              final bundle = await (_cheerioBundle ??= rootBundle.loadString(
-                'assets/js/cheerio_bundle.js',
-              ));
-              final loadedBundle = activeRuntime.evaluate(bundle);
-              if (loadedBundle.isError) {
-                throw Exception(loadedBundle.stringResult);
-              }
-              if (needsCheerio) {
-                final status = activeRuntime.evaluate(
-                  'typeof globalThis.__onfeedCheerio + ":" + '
-                  'String(!!globalThis.__onfeedCheerio)',
-                );
-                if (status.isError ||
-                    !const {
-                      'function:true',
-                      'object:true',
-                    }.contains(status.stringResult)) {
-                  throw StateError(
-                    'The bundled Cheerio module did not initialize '
-                    '(${status.stringResult}).',
-                  );
-                }
-              }
-              if (needsCryptoJs) {
-                final status = activeRuntime.evaluate(
-                  'typeof globalThis.__onfeedCryptoJs + ":" + '
-                  'String(!!globalThis.__onfeedCryptoJs)',
-                );
-                if (status.isError ||
-                    !const {
-                      'function:true',
-                      'object:true',
-                    }.contains(status.stringResult)) {
-                  throw StateError(
-                    'The bundled CryptoJS module did not initialize '
-                    '(${status.stringResult}).',
-                  );
-                }
-              }
-            }
-            final setup = activeRuntime.evaluate('''
-            globalThis.module = { exports: {} };
-            globalThis.exports = globalThis.module.exports;
-            globalThis.SCRAPER_ID = ${jsonEncode(plugin.id)};
-            globalThis.SCRAPER_SETTINGS = {};
-            globalThis.require = function(name) {
-              const requestedModule = String(name).replace(/^node:/, '').toLowerCase();
-              if ((requestedModule === 'cheerio' || requestedModule === 'cheerio-without-node-native' || requestedModule === 'react-native-cheerio') && globalThis.__onfeedCheerio) {
-                return globalThis.__onfeedCheerio;
-              }
-              if (requestedModule === 'crypto-js' && globalThis.__onfeedCryptoJs) {
-                return globalThis.__onfeedCryptoJs;
-              }
-              throw new Error('Unsupported provider module: ' + requestedModule);
-            };
-            globalThis.global = globalThis;
-            globalThis.window = globalThis;
-            globalThis.self = globalThis;
-            globalThis.__providerLogs = [];
-            const __captureProviderLog = (...args) => {
-              if (globalThis.__providerLogs.length >= 20) globalThis.__providerLogs.shift();
-              globalThis.__providerLogs.push(args.map(String).join(' ').slice(0, 400));
-            };
-            globalThis.console = {
-              log: __captureProviderLog,
-              warn: __captureProviderLog,
-              error: __captureProviderLog
-            };
-          ''');
-            if (setup.isError) throw Exception(setup.stringResult);
-            final loaded = activeRuntime.evaluate(
-              '(function() {\n$providerCode\n})();',
-              sourceUrl: codeUrl.toString(),
+            final bundle = needsCheerio || needsCryptoJs
+                ? await (_cheerioBundle ??= rootBundle.loadString(
+                    'assets/js/cheerio_bundle.js',
+                  ))
+                : null;
+            // QuickJS runs on a background isolate so provider code and the
+            // bundle never block UI frames.
+            final streamEntries = await ProviderRunner.run(
+              ProviderRunRequest(
+                pluginId: plugin.id,
+                code: providerCode,
+                codeUrl: codeUrl.toString(),
+                tmdbId: item.id,
+                mediaType: mediaType,
+                season: season,
+                episode: episode,
+                bundle: bundle,
+                needsCheerio: needsCheerio,
+                needsCryptoJs: needsCryptoJs,
+              ),
             );
-            if (loaded.isError) throw Exception(loaded.stringResult);
-            final call = await activeRuntime.evaluateAsync('''
-            (async function() {
-              const provider = globalThis.module.exports || globalThis.exports || {};
-              const getStreams = provider.getStreams || globalThis.getStreams;
-              if (typeof getStreams !== 'function') {
-                throw new Error('Provider must export getStreams(tmdbId, mediaType, season, episode).');
-              }
-              const streams = await getStreams(
-                ${jsonEncode(item.id)}, ${jsonEncode(mediaType)},
-                ${season?.toString() ?? 'undefined'}, ${episode?.toString() ?? 'undefined'}
-              );
-              return JSON.stringify({
-                streams: Array.isArray(streams) ? streams : [],
-                logs: globalThis.__providerLogs
-              });
-            })()
-          ''');
-            final value = await activeRuntime
-                .handlePromise(call)
-                .timeout(const Duration(seconds: 20));
-            final decoded = jsonDecode(value.stringResult);
-            final List<dynamic> streamEntries;
-            if (decoded is List) {
-              streamEntries = decoded;
-            } else if (decoded is Map && decoded['streams'] is List) {
-              streamEntries = decoded['streams'] as List;
-              // An empty result is normal for a title a provider does not
-              // index. Keep its logs out of the persistent provider-error list.
-            } else {
-              streamEntries = const [];
-            }
             if (kDebugMode) {
               // ignore: avoid_print
               print(
@@ -485,10 +407,10 @@ class NuvioPluginService extends ChangeNotifier {
                 '${DateTime.now().difference(discoveryStartedAt).inMilliseconds}ms',
               );
             }
-            for (final entry in streamEntries.whereType<Map>()) {
+            for (final entry in streamEntries) {
               onCandidate?.call();
               final normalized = _streamNormalizer.normalize(
-                Map<String, dynamic>.from(entry),
+                entry,
                 // Match the provider key used by PlaybackSettings and retain
                 // repository identity when two repos reuse the same plugin id.
                 providerId: '${repo.url}|${plugin.id}',
@@ -507,25 +429,7 @@ class NuvioPluginService extends ChangeNotifier {
               }
             }
           } finally {
-            try {
-              fetchBridge?.dispose();
-            } finally {
-              final activeRuntime = runtime;
-              try {
-                if (activeRuntime != null) {
-                  final runtimeId = activeRuntime.getEngineInstanceId();
-                  try {
-                    activeRuntime.dispose();
-                  } finally {
-                    JavascriptRuntime.channelFunctionsRegistered.remove(
-                      runtimeId,
-                    );
-                  }
-                }
-              } finally {
-                _scheduler.releaseRuntime();
-              }
-            }
+            _scheduler.releaseRuntime();
           }
         } catch (error) {
           final message = _friendly(error);
@@ -533,7 +437,7 @@ class NuvioPluginService extends ChangeNotifier {
             // ignore: avoid_print
             print(
               '[Provider Perf] ${plugin.id} failed: '
-              '${_safeProviderDiagnostic(message)}',
+              '${ProviderRunner.safeProviderDiagnostic(message)}',
             );
           }
           errors[errorKey] = message;
@@ -722,16 +626,5 @@ class NuvioPluginService extends ChangeNotifier {
       RegExp(r'^[A-Za-z0-9_]*Exception:\s*'),
       '',
     );
-  }
-
-  String _safeProviderDiagnostic(Object? error) {
-    final message = '$error'.replaceAllMapped(
-      RegExp(r"""https?://[^\s"'<>]+""", caseSensitive: false),
-      (match) {
-        final host = Uri.tryParse(match.group(0)!)?.host;
-        return host == null || host.isEmpty ? '[URL]' : host;
-      },
-    );
-    return message.length > 400 ? '${message.substring(0, 397)}...' : message;
   }
 }

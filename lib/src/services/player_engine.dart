@@ -55,7 +55,12 @@ class MpvPlayerEngine implements PlayerEngine {
   PlayerEngineId get id => PlayerEngineId.mediaKit;
 
   @override
-  void activate() => VideoPlayerMediaKit.registerWith();
+  void activate() {
+    // Loads libmpv on first use rather than at app launch; it is the
+    // fallback engine, so most sessions never need it. Idempotent.
+    VideoPlayerMediaKit.ensureInitialized(android: true);
+    VideoPlayerMediaKit.registerWith();
+  }
 
   @override
   VideoPlayerController createController(PlayableSource source) =>
@@ -123,9 +128,11 @@ class PlayerEngineFactory {
   };
 }
 
+/// Selects the default engine at launch. libmpv is loaded lazily by
+/// [MpvPlayerEngine.activate], keeping its native libraries off the cold-start
+/// path.
 class PlayerEngineBootstrap {
   static void initialize() {
-    VideoPlayerMediaKit.ensureInitialized(android: true);
     if (defaultTargetPlatform == TargetPlatform.android) {
       const Media3PlayerEngine().activate();
     }

@@ -434,83 +434,86 @@ class _MediaSection extends StatelessWidget {
         else
           SizedBox(
             height: 264,
-            child: ListView.separated(
-              key: PageStorageKey<String>('library-row-$title'),
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              itemCount: items.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 12),
-              itemBuilder: (context, index) {
-                final item = items[index];
-                return Stack(
-                  children: [
-                    MediaCard(
-                      item: item,
-                      isFavorite: favorite,
-                      onTap: () => onPlay(item),
-                      onFavorite: favorite && onFavorite != null
-                          ? () => onFavorite!(item)
-                          : null,
-                    ),
-                    if (onRemove != null)
-                      Positioned(
-                        top: 7,
-                        right: 7,
-                        child: Material(
-                          color: Colors.black.withValues(alpha: .72),
-                          shape: const CircleBorder(),
-                          child: IconButton(
-                            tooltip: 'Remove from watch history',
-                            visualDensity: VisualDensity.compact,
-                            constraints: const BoxConstraints.tightFor(
-                              width: 34,
-                              height: 34,
+            // Cards never overlap; the row shares one backdrop blur pass.
+            child: BackdropGroup(
+              child: ListView.separated(
+                key: PageStorageKey<String>('library-row-$title'),
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                itemCount: items.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 12),
+                itemBuilder: (context, index) {
+                  final item = items[index];
+                  return Stack(
+                    children: [
+                      MediaCard(
+                        item: item,
+                        isFavorite: favorite,
+                        onTap: () => onPlay(item),
+                        onFavorite: favorite && onFavorite != null
+                            ? () => onFavorite!(item)
+                            : null,
+                      ),
+                      if (onRemove != null)
+                        Positioned(
+                          top: 7,
+                          right: 7,
+                          child: Material(
+                            color: Colors.black.withValues(alpha: .72),
+                            shape: const CircleBorder(),
+                            child: IconButton(
+                              tooltip: 'Remove from watch history',
+                              visualDensity: VisualDensity.compact,
+                              constraints: const BoxConstraints.tightFor(
+                                width: 34,
+                                height: 34,
+                              ),
+                              padding: EdgeInsets.zero,
+                              icon: const Icon(Icons.close_rounded, size: 17),
+                              onPressed: () => onRemove!(item),
                             ),
-                            padding: EdgeInsets.zero,
-                            icon: const Icon(Icons.close_rounded, size: 17),
-                            onPressed: () => onRemove!(item),
                           ),
                         ),
-                      ),
-                    if (title == 'Continue watching')
-                      Positioned(
-                        left: 7,
-                        top: 7,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 5,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: .7),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: .15),
+                      if (title == 'Continue watching')
+                        Positioned(
+                          left: 7,
+                          top: 7,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 5,
                             ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.play_arrow_rounded,
-                                size: 12,
-                                color: GlassTheme.primary,
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: .7),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: .15),
                               ),
-                              const SizedBox(width: 3),
-                              Text(
-                                _resumeLabel(item.resumeMs),
-                                style: const TextStyle(
-                                  fontSize: 8,
-                                  fontWeight: FontWeight.w700,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.play_arrow_rounded,
+                                  size: 12,
+                                  color: GlassTheme.primary,
                                 ),
-                              ),
-                            ],
+                                const SizedBox(width: 3),
+                                Text(
+                                  _resumeLabel(item.resumeMs),
+                                  style: const TextStyle(
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                  ],
-                );
-              },
+                    ],
+                  );
+                },
+              ),
             ),
           ),
       ],

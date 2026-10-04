@@ -36,6 +36,7 @@ class TmdbService {
   static const defaultBaseUrl = 'https://api.themoviedb.org/3';
   static const requestTimeout = Duration(seconds: 12);
   static const maxResponseBytes = 5 * 1024 * 1024;
+  static const _detailsParams = {'append_to_response': 'credits'};
 
   final String baseUrl;
   final String apiKey;
@@ -312,7 +313,7 @@ class TmdbService {
     final id = resolvedId.isEmpty ? item.id : resolvedId;
     final data = await _get(
       '/$pathType/${Uri.encodeComponent(id)}',
-      params: {'append_to_response': 'credits'},
+      params: _detailsParams,
       forceRefresh: forceRefresh,
       ttl: TmdbCacheTtl.metadata,
       onRevalidated: onRevalidated == null
@@ -393,8 +394,11 @@ class TmdbService {
     if (item.type != 'series') return [];
     final id = await _seriesTmdbId(item, forceRefresh: forceRefresh);
     if (id.isEmpty) return [];
+    // Same request as details(): opening a series loads both at once, and an
+    // identical key lets the in-flight dedup and cache serve them together.
     final data = await _get(
       '/tv/${Uri.encodeComponent(id)}',
+      params: _detailsParams,
       forceRefresh: forceRefresh,
       ttl: TmdbCacheTtl.metadata,
     );
@@ -581,11 +585,14 @@ class TmdbService {
       throw const FormatException('TMDB returned an invalid JSON response.');
     }
     final value = Map<String, dynamic>.from(decoded);
-    try {
-      await _cache.write(requestKey, value, ttl);
-    } catch (_) {
-      // Disk cache failures must not make a successful response fail.
-    }
+    // write() updates the memory cache synchronously. The disk copy (JSON
+    // encode plus a flushed write) finishes in the background instead of
+    // delaying every network response on its way to the UI.
+    unawaited(
+      _cache.write(requestKey, value, ttl).catchError((Object _) {
+        // Disk cache failures must not make a successful response fail.
+      }),
+    );
     return value;
   }
 
@@ -645,6 +652,36 @@ class TmdbService {
     }
   }
 
+  /// How long one validated DNS result and its keep-alive connections are
+  /// reused before the host is resolved again.
+  static const _clientLifetime = Duration(minutes: 5);
+  final Map<String, ({Future<http.Client> client, DateTime createdAt})>
+  _clients = {};
+
+  /// A pinned client per origin, so catalog, details and season requests
+  /// reuse one TLS connection instead of resolving and handshaking for each.
+  Future<http.Client> _clientFor(Uri uri) {
+    final origin = '${uri.scheme}://${uri.host.toLowerCase()}:${uri.port}';
+    final now = DateTime.now();
+    final cached = _clients[origin];
+    if (cached != null && now.difference(cached.createdAt) < _clientLifetime) {
+      return cached.client;
+    }
+    if (cached != null) {
+      // Requests may still be using the old client; closing it aborts them.
+      Timer(requestTimeout * 2, () {
+        cached.client.then((client) => client.close(), onError: (_) {});
+      });
+    }
+    final client = _network.createPinnedClient(uri);
+    _clients[origin] = (client: client, createdAt: now);
+    // A failed lookup must not be reused by later requests.
+    return client.catchError((Object error) {
+      if (identical(_clients[origin]?.client, client)) _clients.remove(origin);
+      throw error;
+    });
+  }
+
   Future<http.Response> _sendFollowingRedirects(Uri uri) async {
     var current = uri;
     for (var redirects = 0; redirects <= 3; redirects++) {
@@ -655,6 +692,7 @@ class TmdbService {
         maxResponseBytes: maxResponseBytes,
         timeout: requestTimeout,
         testClient: _testClient,
+        pinnedClient: _testClient == null ? await _clientFor(current) : null,
       );
       if (![301, 302, 303, 307, 308].contains(response.statusCode)) {
         return response;

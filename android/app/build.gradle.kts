@@ -82,6 +82,17 @@ flutter {
     source = "../.."
 }
 
+// Release APKs ship ARM code only. x86_64 libraries (libmpv, the torrent
+// streamer, Flutter and app code) were about 54 MB of the APK, and every
+// in-app update downloads the full file, while real x86_64 Android devices
+// are rare. Debug builds keep x86_64 for emulator development. Flutter resets
+// defaultConfig.ndk.abiFilters, so exclusion happens at packaging instead.
+androidComponents {
+    onVariants(selector().withBuildType("release")) { variant ->
+        variant.packaging.jniLibs.excludes.add("lib/x86_64/**")
+    }
+}
+
 // `flutter build apk --release` always names its output app-release.apk.
 // Also publish it as flutter-apk/reelish.apk, the asset name the in-app
 // updater looks for on GitHub Releases. This is a plain file copy on purpose:

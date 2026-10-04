@@ -12,6 +12,7 @@ import '../../models/stream_source.dart';
 import '../../services/storage_service.dart';
 import '../../services/playback_settings_controller.dart';
 import '../../services/stream_discovery.dart';
+import '../../services/perf_timeline.dart';
 import '../../services/playback_coordinator.dart';
 import '../../services/player_engine.dart';
 import '../../services/playback_source_policy.dart';
@@ -86,6 +87,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   int _initializationGeneration = 0;
   Completer<void>? _openCancellation;
   int _lastProgressSaveBucket = -1;
+  bool _wasPlaying = false;
   final PlaybackCoordinator _playbackCoordinator = PlaybackCoordinator();
 
   /// The engine new sources start on. It changes for the rest of the session
@@ -363,6 +365,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
               '(${DateTime.now().difference(_playerStartedAt).inMilliseconds}ms '
               'since screen open)',
         );
+        PerfTimeline.end('PLAY_PRESSED', 'FIRST_FRAME', finish: true);
       }
     };
     controller.addListener(listener);
@@ -1404,8 +1407,14 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
         setState(() => _nextEpisodePromptVisible = true);
       }
     }
-    final progressBucket = c.value.position.inSeconds ~/ 5;
-    if (progressBucket != _lastProgressSaveBucket) {
+    // Each save rewrites the whole history list, so save every 15 s while
+    // playing, plus immediately when playback pauses (the app may then be
+    // backgrounded and killed without disposing this screen).
+    final playing = c.value.isPlaying;
+    final paused = _wasPlaying && !playing && _ready;
+    _wasPlaying = playing;
+    final progressBucket = c.value.position.inSeconds ~/ 15;
+    if (paused || progressBucket != _lastProgressSaveBucket) {
       _lastProgressSaveBucket = progressBucket;
       _save?.cancel();
       _save = Timer(const Duration(milliseconds: 300), _saveProgress);

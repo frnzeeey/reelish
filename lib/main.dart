@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'src/screens/home_screen.dart';
 import 'src/screens/first_run_consent_screen.dart';
+import 'src/services/perf_timeline.dart';
 import 'src/services/player_engine.dart';
 import 'src/services/accent_settings_controller.dart';
 import 'src/theme/glass_theme.dart';
 
 void main() {
+  PerfTimeline.appStarted();
   WidgetsFlutterBinding.ensureInitialized();
   PlayerEngineBootstrap.initialize();
   runApp(const ReelishApp());

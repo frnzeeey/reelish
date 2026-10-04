@@ -89,6 +89,7 @@ class _MediaCardState extends State<MediaCard> {
       borderRadius: radius,
       tintColor: const Color(0xFF242833),
       showShadow: false,
+      groupBackdrop: true,
       child: child,
     );
   }

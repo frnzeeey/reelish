@@ -113,7 +113,24 @@ class TmdbResponseCache {
     }
   }
 
+  final Set<Future<void>> _pendingWrites = {};
+
+  /// Completes when disk writes started so far have finished. Writes run in
+  /// the background so responses are not held up by flushing to disk.
+  Future<void> flush() => Future.wait(_pendingWrites.toList());
+
+  /// Stores [value] in memory immediately and on disk in the background.
   Future<void> write(
+    String requestKey,
+    Map<String, dynamic> value,
+    Duration ttl,
+  ) {
+    final pending = _write(requestKey, value, ttl);
+    _pendingWrites.add(pending);
+    return pending.whenComplete(() => _pendingWrites.remove(pending));
+  }
+
+  Future<void> _write(
     String requestKey,
     Map<String, dynamic> value,
     Duration ttl,
