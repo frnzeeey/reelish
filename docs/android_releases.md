@@ -1,5 +1,17 @@
 # Android releases
 
+## Fresh release baseline
+
+The GitHub release list and remote version tags have been cleared. The new
+release line starts at `v1.0.0`, built from the repaired source on `main`.
+This tag builds version `1.0.0` with Android build number `1000000`.
+
+This is a fresh baseline for new installs. Reelish's in-app updater compares
+version tags, and Android prevents installing a lower version code over a
+higher one. Someone with an earlier `1.0.13` installation must uninstall it
+before installing `1.0.0`; Android will erase that app's local data. To offer
+existing users a normal update, publish a version higher than `1.0.13` instead.
+
 ## Root cause found
 
 The previous release was built from the wrong Git ref, not from a stale APK
@@ -10,13 +22,13 @@ and media-card widgets. The tag workflow checked out its tag correctly, so it
 built the older source named by that tag.
 
 Deleting a GitHub tag does not delete the same tag in local clones. The local
-`v1.0.13` tag still pointed to `1996509`; pushing it again recreated a release
-from that old commit. Before publishing, verify that the tag resolves to the
-intended commit:
+`v1.0.13` tag had remained at `1996509`; pushing it again recreated a release
+from that old commit. Old local version tags have now been removed. Before
+publishing, verify that the new tag resolves to the intended commit:
 
 ```bash
 git rev-parse HEAD
-git rev-parse v1.0.13
+git rev-parse v1.0.0
 ```
 
 The workflow now records and checks out the tag commit, verifies it equals
@@ -36,26 +48,25 @@ to `release/reelish.apk`, and requires the source and staged APK checksums to
 match. It also lists all APKs before upload and publishes `build-info.txt` and
 `reelish.apk.sha256` alongside the APK.
 
-To release the current `new_feature` source after these changes are committed:
+To release the repaired source:
 
 ```bash
-git switch new_feature
+git switch main
 git push origin HEAD
-git tag -f v1.0.13 HEAD
-git push origin refs/tags/v1.0.13
+git tag v1.0.0 HEAD
+git push origin refs/tags/v1.0.0
 ```
 
-The `-f` is needed only because the local `v1.0.13` tag is known to still point
-at the old commit while its GitHub tag was deleted. Confirm the remote tag is
-absent before pushing it. For later releases, use a new version tag without
-`-f`. The workflow refuses to overwrite a GitHub Release that already exists
-for a tag; a failed draft must be inspected and deleted before retrying.
+The remote `v1.0.0` tag and release must be absent before the first push. For
+later releases, use a new version tag. The workflow refuses to overwrite a
+GitHub Release that already exists for a tag; a failed draft must be inspected
+and deleted before retrying.
 
 The tag is the version source. The build name is the tag without its leading
 `v`. Android's version code remains
-`MAJOR * 1,000,000 + MINOR * 1,000 + PATCH`; for example, `v1.0.13` builds as
-version `1.0.13` and build number `1000013`. Minor and patch components must
-be below 1000, and the result must fit Android's supported range.
+`MAJOR * 1,000,000 + MINOR * 1,000 + PATCH`; for example, `v1.0.0` builds as
+version `1.0.0` and build number `1000000`. Minor and patch components must be
+below 1000, and the result must fit Android's supported range.
 
 ## Build identity in Reelish
 
