@@ -175,11 +175,25 @@ class TmdbResponseCache {
     }
   }
 
+  /// Search results live only minutes and are rarely reused, so when the
+  /// cache is full they are evicted before catalog and metadata entries.
+  static bool _isEphemeral(Duration ttl) => ttl <= TmdbCacheTtl.search;
+
   void _remember(TmdbCacheEntry entry) {
     _memory.remove(entry.requestKey);
     _memory[entry.requestKey] = entry;
     while (_memory.length > maxEntries) {
-      _memory.remove(_memory.keys.first);
+      // Oldest ephemeral entry first, never the one just stored; otherwise
+      // the least recently used entry.
+      final ephemeral = _memory.entries
+          .where(
+            (candidate) =>
+                candidate.key != entry.requestKey &&
+                _isEphemeral(candidate.value.ttl),
+          )
+          .map((candidate) => candidate.key)
+          .firstOrNull;
+      _memory.remove(ephemeral ?? _memory.keys.first);
     }
   }
 
@@ -210,7 +224,8 @@ class TmdbResponseCache {
       await for (final entity in directory.list(followLinks: false)) {
         if (entity is File && entity.path.endsWith('.json')) files.add(entity);
       }
-      final records = <({File file, int length, DateTime modified})>[];
+      final records =
+          <({File file, int length, DateTime modified, bool ephemeral})>[];
       var totalBytes = 0;
       final now = _clock();
       for (final file in files) {
@@ -229,7 +244,12 @@ class TmdbResponseCache {
             continue;
           }
           totalBytes += stat.size;
-          records.add((file: file, length: stat.size, modified: stat.modified));
+          records.add((
+            file: file,
+            length: stat.size,
+            modified: stat.modified,
+            ephemeral: _isEphemeral(Duration(milliseconds: ttlMs)),
+          ));
         } on FileSystemException {
           // Ignore a cache file removed while cleanup is scanning.
         } on FormatException {
@@ -240,7 +260,11 @@ class TmdbResponseCache {
           }
         }
       }
-      records.sort((a, b) => a.modified.compareTo(b.modified));
+      // Trim search entries first, then the oldest of the rest.
+      records.sort((a, b) {
+        if (a.ephemeral != b.ephemeral) return a.ephemeral ? -1 : 1;
+        return a.modified.compareTo(b.modified);
+      });
       while (records.length > maxEntries || totalBytes > maxBytes) {
         final oldest = records.removeAt(0);
         totalBytes -= oldest.length;

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -8,7 +9,9 @@ import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:onfeed/src/models/app_update.dart';
 import 'package:onfeed/src/screens/home_screen.dart';
+import 'package:onfeed/src/widgets/category_chip.dart';
 import 'package:onfeed/src/services/accent_settings_controller.dart';
+import 'package:onfeed/src/services/media_catalog_rules.dart';
 import 'package:onfeed/src/services/network_target_policy.dart';
 import 'package:onfeed/src/services/tmdb_response_cache.dart';
 import 'package:onfeed/src/services/tmdb_service.dart';
@@ -173,23 +176,70 @@ void main() {
     client.close();
   });
 
-  testWidgets('home startup defers recommendations and new releases', (
-    tester,
+  String daysAgo(int days) => MediaFreshnessRules.tmdbDate(
+    DateTime.now().toUtc().subtract(Duration(days: days)),
+  );
+
+  Map<String, Object?> movieJson(int id, String title) => {
+    'id': id,
+    'title': title,
+    'release_date': daysAgo(30),
+    'vote_average': 7.6,
+    'vote_count': 800,
+    'popularity': 50,
+    'genre_ids': [28],
+  };
+
+  Map<String, Object?> seriesJson(int id, String name) => {
+    'id': id,
+    'name': name,
+    'first_air_date': daysAgo(400),
+    'vote_average': 8.1,
+    'vote_count': 900,
+    'popularity': 40,
+    'genre_ids': [18],
+  };
+
+  http.Response results(List<Map<String, Object?>> entries) =>
+      http.Response(jsonEncode({'results': entries}), 200);
+
+  /// New releases are the only discover queries with a rating floor.
+  bool isNewReleasesQuery(Uri url) =>
+      url.path.contains('/discover/') &&
+      url.queryParameters.containsKey('vote_average.gte');
+
+  /// Serves the home catalog, Trending and recommendations. Deferred rows
+  /// answer with [deferredStatus] when it is set.
+  http.Response homeResponse(http.Request request, {int? deferredStatus}) {
+    final url = request.url;
+    final deferred =
+        isNewReleasesQuery(url) || url.path.contains('/recommendations');
+    if (deferred && deferredStatus != null) {
+      return http.Response('', deferredStatus);
+    }
+    if (url.path.endsWith('/trending/all/day')) {
+      return results([
+        {...movieJson(900, 'Trending Hit'), 'media_type': 'movie'},
+      ]);
+    }
+    if (url.path.contains('/recommendations')) {
+      return results([movieJson(500, 'Recommended Pick')]);
+    }
+    if (url.path.endsWith('/discover/movie')) {
+      return results([movieJson(1, 'Fresh Movie')]);
+    }
+    if (url.path.endsWith('/discover/tv')) {
+      return results([seriesJson(2, 'Scripted Drama')]);
+    }
+    return http.Response('', 404);
+  }
+
+  Future<AccentSettingsController> pumpHome(
+    WidgetTester tester,
+    TmdbService tmdb,
   ) async {
     SharedPreferences.setMockInitialValues({});
-    // Short enough that the deferred sections start beyond the viewport plus
-    // the scroll view's 250 px cache extent with this one-item catalog.
-    tester.view.physicalSize = const Size(400, 200);
-    tester.view.devicePixelRatio = 1;
-    final paths = <String>[];
-    final client = MockClient((request) async {
-      paths.add(request.url.path);
-      return http.Response(popularBody, 200);
-    });
-    final tmdb = service(client);
     final accentSettings = AccentSettingsController();
-    addTearDown(accentSettings.dispose);
-
     await tester.pumpWidget(
       MaterialApp(
         home: HomeScreen(
@@ -200,22 +250,63 @@ void main() {
         ),
       ),
     );
-    // The TMDB disk cache uses real file I/O, which cannot complete inside
-    // the widget test's fake-async zone; let it run in real time.
-    Future<void> settle() async {
-      for (var i = 0; i < 30; i++) {
-        await tester.runAsync(
-          () => Future<void>.delayed(const Duration(milliseconds: 20)),
-        );
-        await tester.pump(const Duration(milliseconds: 20));
-      }
+    return accentSettings;
+  }
+
+  // The TMDB disk cache uses real file I/O, which cannot complete inside
+  // the widget test's fake-async zone; let it run in real time.
+  Future<void> settle(WidgetTester tester) async {
+    for (var i = 0; i < 30; i++) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 20)),
+      );
+      await tester.pump(const Duration(milliseconds: 20));
     }
+  }
 
-    await settle();
+  Future<void> disposeHome(
+    WidgetTester tester,
+    AccentSettingsController accentSettings,
+    http.Client client,
+  ) async {
+    await tester.pumpWidget(const SizedBox.shrink());
+    accentSettings.dispose();
+    client.close();
+    tester.view.resetPhysicalSize();
+    tester.view.resetDevicePixelRatio();
+  }
 
-    expect(paths, containsAll(['/3/movie/popular', '/3/tv/popular']));
-    expect(paths.where((path) => path.contains('recommendations')), isEmpty);
-    expect(paths.where((path) => path.contains('/discover/')), isEmpty);
+  testWidgets('home startup defers recommendations and new releases', (
+    tester,
+  ) async {
+    // Short enough that the deferred sections start beyond the viewport plus
+    // the scroll view's 250 px cache extent with this small catalog.
+    tester.view.physicalSize = const Size(600, 200);
+    tester.view.devicePixelRatio = 1;
+    final urls = <Uri>[];
+    final client = MockClient((request) async {
+      urls.add(request.url);
+      return homeResponse(request);
+    });
+    final accentSettings = await pumpHome(tester, service(client));
+    await settle(tester);
+
+    // The catalog loads New movies and scripted series from discover.
+    final catalog = urls.where((url) => !isNewReleasesQuery(url)).toList();
+    expect(
+      catalog.map((url) => url.path),
+      containsAll(['/3/discover/movie', '/3/discover/tv']),
+    );
+    final seriesQuery = catalog.firstWhere(
+      (url) => url.path == '/3/discover/tv',
+    );
+    expect(seriesQuery.queryParameters['with_type'], '2|4');
+    expect(
+      seriesQuery.queryParameters['without_genres'],
+      '10767|10763|10764|10766',
+    );
+    expect(urls.where((url) => url.path.contains('recommendations')), isEmpty);
+    expect(urls.where(isNewReleasesQuery), isEmpty);
 
     for (var i = 0; i < 5; i++) {
       await tester.drag(
@@ -224,13 +315,106 @@ void main() {
       );
       await tester.pump(const Duration(milliseconds: 60));
     }
-    await settle();
-    expect(paths.where((path) => path.contains('recommendations')), isNotEmpty);
-    expect(paths.where((path) => path.contains('/discover/')), isNotEmpty);
+    await settle(tester);
+    expect(urls.where((url) => url.path.contains('recommendations')), isNotEmpty);
+    final releaseQueries = urls.where(isNewReleasesQuery).toList();
+    expect(releaseQueries, hasLength(3));
+    final movieReleases = releaseQueries.firstWhere(
+      (url) => url.path == '/3/discover/movie',
+    );
+    // Festival premieres and limited runs are not counted as releases.
+    expect(movieReleases.queryParameters['with_release_type'], '3|4');
 
-    await tester.pumpWidget(const SizedBox.shrink());
-    client.close();
-    tester.view.resetPhysicalSize();
-    tester.view.resetDevicePixelRatio();
+    await disposeHome(tester, accentSettings, client);
+  });
+
+  for (final status in [401, 429, 503]) {
+    testWidgets(
+      'a failed deferred row ($status) waits for Retry instead of looping',
+      (tester) async {
+        // Tall enough that both deferred rows are on screen at startup.
+        tester.view.physicalSize = const Size(500, 2400);
+        tester.view.devicePixelRatio = 1;
+        var releaseRequests = 0;
+        var recommendationRequests = 0;
+        final client = MockClient((request) async {
+          if (isNewReleasesQuery(request.url)) releaseRequests++;
+          if (request.url.path.contains('/recommendations')) {
+            recommendationRequests++;
+          }
+          return homeResponse(request, deferredStatus: status);
+        });
+        final accentSettings = await pumpHome(tester, service(client));
+        await settle(tester);
+
+        // Retryable statuses use the service's own retries (maxRetries 2).
+        final attempts = status == 401 ? 1 : 3;
+        expect(releaseRequests, 3 * attempts);
+        expect(recommendationRequests, 2 * attempts);
+        expect(find.text('Retry'), findsNWidgets(2));
+
+        // Still visible and rebuilt many times: no new requests.
+        await settle(tester);
+        await settle(tester);
+        expect(releaseRequests, 3 * attempts);
+        expect(recommendationRequests, 2 * attempts);
+
+        // Retry is the way to try again; it sends one new round.
+        await tester.tap(find.text('Retry').last);
+        await settle(tester);
+        expect(releaseRequests, 6 * attempts);
+        expect(recommendationRequests, 2 * attempts);
+
+        await disposeHome(tester, accentSettings, client);
+      },
+    );
+  }
+
+  testWidgets('Trending never leaks into the other home categories', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(500, 2400);
+    tester.view.devicePixelRatio = 1;
+    var trendingRequests = 0;
+    final client = MockClient((request) async {
+      if (request.url.path.endsWith('/trending/all/day')) trendingRequests++;
+      return homeResponse(request);
+    });
+    final accentSettings = await pumpHome(tester, service(client));
+    await settle(tester);
+
+    Future<void> open(String category) async {
+      await tester.tap(find.widgetWithText(CategoryChip, category));
+      await settle(tester);
+    }
+
+    await open('Trending');
+    expect(find.text('Trending Hit'), findsWidgets);
+    expect(find.text('Fresh Movie'), findsNothing);
+
+    await open('Movies');
+    expect(find.text('Fresh Movie'), findsWidgets);
+    expect(find.text('Trending Hit'), findsNothing);
+
+    await open('Series');
+    expect(find.text('Scripted Drama'), findsWidgets);
+    expect(find.text('Fresh Movie'), findsNothing);
+    expect(find.text('Trending Hit'), findsNothing);
+
+    await open('For you');
+    expect(find.text('New movies'), findsOneWidget);
+    expect(find.text('Popular movies'), findsNothing);
+    expect(find.text('Trending Hit'), findsNothing);
+
+    await open('Trending');
+    expect(find.text('Trending Hit'), findsWidgets);
+    // The second visit is served from the fresh TMDB cache.
+    expect(trendingRequests, 1);
+
+    await open('Movies');
+    expect(find.text('Fresh Movie'), findsWidgets);
+    expect(find.text('Trending Hit'), findsNothing);
+
+    await disposeHome(tester, accentSettings, client);
   });
 }

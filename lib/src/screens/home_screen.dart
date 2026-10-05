@@ -10,6 +10,8 @@ import '../models/media_item.dart';
 import '../models/resume_summary.dart';
 import '../models/stream_source.dart';
 import '../navigation/app_transitions.dart';
+import '../services/media_catalog_rules.dart';
+import '../services/media_discovery_ranking.dart';
 import '../services/perf_timeline.dart';
 import '../services/storage_service.dart';
 import '../services/stream_discovery.dart';
@@ -34,6 +36,17 @@ import 'media_details_screen.dart';
 import 'playback_settings_screen.dart';
 
 enum _DeferredLoadState { idle, loading, loaded, failed }
+
+/// One independently loaded home list. Its fields change only inside the
+/// home screen's setState.
+class _HomeFeed {
+  List<MediaItem> items = const [];
+  bool loading = false;
+  String? error;
+
+  /// Incremented for each load; a response for an older number is dropped.
+  int request = 0;
+}
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
@@ -61,13 +74,23 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final _spotlightController = PageController();
   final _homeScrollController = ScrollController();
   final ValueNotifier<int> _spotlightPageValue = ValueNotifier(0);
-  List<MediaItem> _items = [], _history = [];
+  List<MediaItem> _history = [];
+
+  /// New movies and series worth the queue: the source for For you, Movies,
+  /// Series, the spotlight and recommendation seeds.
+  final _catalog = _HomeFeed()..loading = true;
+
+  /// Kept apart from [_catalog] so Trending never leaks into other rows.
+  final _trending = _HomeFeed();
+
+  /// Results for the current query; leaving search shows the other feeds
+  /// unchanged.
+  final _searchFeed = _HomeFeed();
   Set<String> _favoriteKeys = {};
   List<MediaItem> _spotlightItems = [];
   List<MediaItem> _recommendations = [];
   List<MediaItem> _newReleases = [];
-  String? _catalogError;
-  bool _loading = true, _resolvingStreams = false;
+  bool _resolvingStreams = false;
   _DeferredLoadState _newReleasesState = _DeferredLoadState.idle;
   _DeferredLoadState _recommendationsState = _DeferredLoadState.idle;
   bool _searchVisible = false;
@@ -75,7 +98,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   int _tab = 0;
   bool _openingDetails = false;
   int _recommendationRequest = 0;
-  int _catalogRequest = 0;
   int _spotlightPage = 0;
   int _libraryRefreshToken = 0;
   Timer? _debounce;
@@ -122,7 +144,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Future<void> _start() async {
     await _playbackSettings.load();
-    unawaited(_load());
+    unawaited(_loadCatalog());
     // History is local data and does not depend on plugin repository loading.
     // Start it now so remote manifest requests cannot delay the resume row.
     unawaited(_loadHistory());
@@ -152,121 +174,178 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     setState(() {});
   }
 
-  Future<void> _load({String? query, bool forceRefresh = false}) async {
-    final request = ++_catalogRequest;
+  /// The list the current view shows: search results while a query is
+  /// entered, else Trending on its tab, else the catalog.
+  _HomeFeed get _activeFeed {
+    if (_search.text.trim().isNotEmpty) return _searchFeed;
+    if (_category == 'Trending') return _trending;
+    return _catalog;
+  }
+
+  Future<void> _reloadActiveFeed({bool forceRefresh = false}) {
+    final query = _search.text.trim();
+    if (query.isNotEmpty) return _loadSearch(query, forceRefresh: forceRefresh);
+    if (_category == 'Trending') {
+      return _loadTrending(forceRefresh: forceRefresh);
+    }
+    return _loadCatalog(forceRefresh: forceRefresh);
+  }
+
+  /// Starts a load of [feed] and returns its request number. Existing items
+  /// stay visible; the spinner shows only while the feed is empty.
+  int _beginFeedLoad(_HomeFeed feed) {
+    final request = ++feed.request;
     if (mounted) {
       setState(() {
-        _loading = _items.isEmpty;
-        _catalogError = null;
+        feed.loading = feed.items.isEmpty;
+        feed.error = null;
       });
     }
+    return request;
+  }
+
+  void _refreshSpotlight() {
+    _spotlightItems = _tmdb.spotlight([..._newReleases, ..._catalog.items]);
+  }
+
+  Future<void> _loadCatalog({bool forceRefresh = false}) async {
+    final feed = _catalog;
+    final request = _beginFeedLoad(feed);
     Object? loadError;
-    Future<List<MediaItem>> safe(Future<List<MediaItem>> future) async {
+    Future<List<MediaItem>?> safe(Future<List<MediaItem>> future) async {
       try {
         return await future;
       } catch (error) {
         loadError ??= error;
-        return [];
+        return null;
       }
     }
 
     final results = await Future.wait([
-      if (query != null)
-        safe(
-          _tmdb.search(
-            query,
-            forceRefresh: forceRefresh,
-            onRevalidated: (items) =>
-                _applyCatalogResults(request, items, replaceAll: true),
-          ),
-        )
-      else if (_category == 'Trending')
-        safe(
-          _tmdb.trending(
-            forceRefresh: forceRefresh,
-            onRevalidated: (items) =>
-                _applyCatalogResults(request, items, replaceAll: true),
-          ),
-        )
-      else
-        safe(
-          _tmdb.popular(
-            'movie',
-            forceRefresh: forceRefresh,
-            onRevalidated: (items) =>
-                _applyCatalogResults(request, items, replaceType: 'movie'),
-          ),
+      safe(
+        _tmdb.newMovies(
+          forceRefresh: forceRefresh,
+          onRevalidated: (items) => _applyCatalogType(request, 'movie', items),
         ),
-      if (query == null && _category != 'Trending')
-        safe(
-          _tmdb.popular(
-            'series',
-            forceRefresh: forceRefresh,
-            onRevalidated: (items) =>
-                _applyCatalogResults(request, items, replaceType: 'series'),
-          ),
+      ),
+      safe(
+        _tmdb.streamingSeries(
+          forceRefresh: forceRefresh,
+          onRevalidated: (items) => _applyCatalogType(request, 'series', items),
         ),
+      ),
     ]);
-    final combined = <String, MediaItem>{};
-    for (final list in results) {
-      for (final item in list) {
-        combined.putIfAbsent('${item.type}:${item.id}', () => item);
-      }
-    }
-    final values = combined.values.toList();
-    if (!mounted || request != _catalogRequest) return;
+    if (!mounted || request != feed.request) return;
     setState(() {
-      _items = values;
-      _spotlightItems = _tmdb.spotlight([..._newReleases, ...values]);
-      _loading = false;
-      _catalogError = loadError == null
+      // A row whose request failed keeps what it already showed, and the
+      // error banner reports the failure.
+      feed.items = MediaCatalogFilter.dedupe([
+        ...results[0] ?? feed.items.where(MediaCatalogFilter.isMovie),
+        ...results[1] ?? feed.items.where(MediaCatalogFilter.isSeries),
+      ]);
+      feed.loading = false;
+      feed.error = loadError == null
           ? null
           : _catalogFailureMessage(loadError!);
+      _refreshSpotlight();
     });
-    _markContentVisible();
+    _markContentVisible(feed.items);
   }
 
+  /// Replaces one media type of the catalog with a background refresh.
+  void _applyCatalogType(int request, String type, List<MediaItem> updates) {
+    if (!mounted || request != _catalog.request) return;
+    setState(() {
+      _catalog.items = MediaCatalogFilter.dedupe([
+        if (type == 'movie')
+          ...updates
+        else
+          ..._catalog.items.where(MediaCatalogFilter.isMovie),
+        if (type == 'series')
+          ...updates
+        else
+          ..._catalog.items.where(MediaCatalogFilter.isSeries),
+      ]);
+      _catalog.loading = false;
+      _catalog.error = null;
+      _refreshSpotlight();
+    });
+    _markContentVisible(_catalog.items);
+  }
+
+  /// Loads a single-request feed. Background refreshes replace its items
+  /// unless a newer load of the same feed has started.
+  Future<void> _loadFeed(
+    _HomeFeed feed,
+    Future<List<MediaItem>> Function(
+      void Function(List<MediaItem>) onRevalidated,
+    )
+    fetch, {
+    bool clearOnError = false,
+  }) async {
+    final request = _beginFeedLoad(feed);
+    void apply(List<MediaItem> items) {
+      if (!mounted || request != feed.request) return;
+      setState(() {
+        feed.items = items;
+        feed.loading = false;
+        feed.error = null;
+      });
+      _markContentVisible(items);
+    }
+
+    try {
+      apply(await fetch(apply));
+    } catch (error) {
+      if (!mounted || request != feed.request) return;
+      setState(() {
+        if (clearOnError) feed.items = const [];
+        feed.loading = false;
+        feed.error = _catalogFailureMessage(error);
+      });
+    }
+  }
+
+  /// Trending is served from the TMDB cache when revisited, so switching
+  /// back to the tab costs no request while the cached list is fresh.
+  Future<void> _loadTrending({bool forceRefresh = false}) => _loadFeed(
+    _trending,
+    (onRevalidated) => _tmdb.trending(
+      forceRefresh: forceRefresh,
+      onRevalidated: onRevalidated,
+    ),
+  );
+
+  /// A failed search clears its results, so an earlier query's titles never
+  /// appear under a new query.
+  Future<void> _loadSearch(String query, {bool forceRefresh = false}) =>
+      _loadFeed(
+        _searchFeed,
+        (onRevalidated) => _tmdb.search(
+          query,
+          forceRefresh: forceRefresh,
+          onRevalidated: onRevalidated,
+        ),
+        clearOnError: true,
+      );
+
+  /// Pull-to-refresh: reloads the visible list, and on For you also retries
+  /// or refreshes the deferred rows that have already been requested.
   Future<void> _refreshVisibleHome() async {
     final isSearch = _search.text.trim().isNotEmpty;
-    final refreshes = <Future<void>>[
-      _load(query: isSearch ? _search.text.trim() : null, forceRefresh: true),
-    ];
+    final refreshes = <Future<void>>[_reloadActiveFeed(forceRefresh: true)];
+    bool requested(_DeferredLoadState state) =>
+        state == _DeferredLoadState.loaded ||
+        state == _DeferredLoadState.failed;
     if (_category == 'For you' && !isSearch) {
-      if (_recommendationsState == _DeferredLoadState.loaded) {
-        refreshes.add(_loadTopRecommendations(_items, forceRefresh: true));
+      if (requested(_recommendationsState)) {
+        refreshes.add(_loadTopRecommendations(forceRefresh: true));
       }
-      if (_newReleasesState == _DeferredLoadState.loaded) {
+      if (requested(_newReleasesState)) {
         refreshes.add(_loadNewReleases(forceRefresh: true));
       }
     }
     await Future.wait(refreshes);
-  }
-
-  void _applyCatalogResults(
-    int request,
-    List<MediaItem> updates, {
-    String? replaceType,
-    bool replaceAll = false,
-  }) {
-    if (!mounted || request != _catalogRequest) return;
-    final combined = <String, MediaItem>{};
-    if (!replaceAll) {
-      for (final item in _items) {
-        if (item.type != replaceType) {
-          combined['${item.type}:${item.id}'] = item;
-        }
-      }
-    }
-    for (final item in updates) {
-      combined['${item.type}:${item.id}'] = item;
-    }
-    setState(() {
-      _items = combined.values.toList();
-      _spotlightItems = _tmdb.spotlight([..._newReleases, ..._items]);
-      _loading = false;
-      _catalogError = null;
-    });
-    _markContentVisible();
   }
 
   String _catalogFailureMessage(Object error) {
@@ -286,6 +365,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     return 'Could not load titles from TMDB. Check your connection and retry.';
   }
 
+  /// Loads New releases. A failed row is retried only by its Retry button or
+  /// pull-to-refresh, never because it is still on screen.
   Future<void> _loadNewReleases({bool forceRefresh = false}) async {
     if (_newReleasesState == _DeferredLoadState.loading ||
         (!forceRefresh && _newReleasesState == _DeferredLoadState.loaded)) {
@@ -302,12 +383,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       if (!mounted) return;
       setState(() {
         _newReleases = releases;
-        _spotlightItems = _tmdb.spotlight([...releases, ..._items]);
+        _refreshSpotlight();
         _newReleasesState = _DeferredLoadState.loaded;
       });
     } catch (_) {
       if (!mounted) return;
-      setState(() => _newReleasesState = _DeferredLoadState.failed);
+      setState(() {
+        _newReleasesState = _newReleases.isEmpty
+            ? _DeferredLoadState.failed
+            : _DeferredLoadState.loaded;
+      });
     }
   }
 
@@ -316,31 +401,23 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     setState(() {
       _newReleases = items;
       _newReleasesState = _DeferredLoadState.loaded;
-      _spotlightItems = _tmdb.spotlight([...items, ..._items]);
+      _refreshSpotlight();
     });
   }
 
-  Future<void> _loadTopRecommendations(
-    List<MediaItem> items, {
-    bool forceRefresh = false,
-  }) async {
-    if (!forceRefresh && _recommendationsState == _DeferredLoadState.loading) {
-      return;
-    }
-    if (!forceRefresh && _recommendationsState == _DeferredLoadState.loaded) {
+  /// Builds Top 10 recommendations from the best movie and the best series in
+  /// the catalog, chosen and ranked with vote-weighted scores.
+  Future<void> _loadTopRecommendations({bool forceRefresh = false}) async {
+    if (!forceRefresh &&
+        (_recommendationsState == _DeferredLoadState.loading ||
+            _recommendationsState == _DeferredLoadState.loaded)) {
       return;
     }
     final request = ++_recommendationRequest;
-    final seeds = <MediaItem>[];
-    for (final type in ['movie', 'series']) {
-      final candidates = items.where((item) => item.type == type).toList()
-        ..sort((a, b) {
-          final ratingA = double.tryParse(a.rating) ?? 0;
-          final ratingB = double.tryParse(b.rating) ?? 0;
-          return ratingB.compareTo(ratingA);
-        });
-      if (candidates.isNotEmpty) seeds.add(candidates.first);
-    }
+    final seeds = [
+      for (final type in const ['movie', 'series'])
+        MediaDiscoveryRanking.recommendationSeed(_catalog.items, type),
+    ].whereType<MediaItem>().toList();
     if (seeds.isEmpty) {
       if (mounted) {
         setState(() {
@@ -353,71 +430,45 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (mounted && _recommendations.isEmpty) {
       setState(() => _recommendationsState = _DeferredLoadState.loading);
     }
-    try {
-      final seedKeys = seeds.map((item) => '${item.type}:${item.id}').toSet();
-      final revalidated = <int, List<MediaItem>>{};
-      List<List<MediaItem>> initialLists = const [];
-      var initialListsReady = false;
-      void applyFreshRecommendations() {
-        if (!initialListsReady ||
-            !mounted ||
-            request != _recommendationRequest) {
-          return;
-        }
-        final current = <String, MediaItem>{};
-        for (var index = 0; index < seeds.length; index++) {
-          for (final item in revalidated[index] ?? initialLists[index]) {
-            if (!seedKeys.contains('${item.type}:${item.id}')) {
-              current['${item.type}:${item.id}'] = item;
-            }
-          }
-        }
-        final fresh = current.values.toList()
-          ..sort((a, b) {
-            final ratingA = double.tryParse(a.rating) ?? 0;
-            final ratingB = double.tryParse(b.rating) ?? 0;
-            return ratingB.compareTo(ratingA);
-          });
-        setState(() {
-          _recommendations = fresh.take(10).toList();
-          _recommendationsState = _DeferredLoadState.loaded;
-        });
-      }
+    final seedKeys = seeds.map(MediaCatalogFilter.key).toSet();
+    // Latest list per seed. A background refresh can land before the other
+    // seed's first response; it is kept rather than overwritten.
+    final lists = List<List<MediaItem>>.filled(seeds.length, const []);
+    final refreshed = <int>{};
+    var ready = false;
+    List<MediaItem> top() => MediaDiscoveryRanking.recommendations(
+      lists.expand((list) => list),
+      excludedKeys: seedKeys,
+    ).take(10).toList();
 
-      final lists = await Future.wait([
+    void applyFresh(int index, List<MediaItem> fresh) {
+      lists[index] = fresh;
+      refreshed.add(index);
+      if (!ready || !mounted || request != _recommendationRequest) return;
+      setState(() {
+        _recommendations = top();
+        _recommendationsState = _DeferredLoadState.loaded;
+      });
+    }
+
+    try {
+      final initial = await Future.wait([
         for (var index = 0; index < seeds.length; index++)
           _tmdb.recommendations(
             seeds[index],
             forceRefresh: forceRefresh,
-            onRevalidated: (fresh) {
-              revalidated[index] = fresh;
-              applyFreshRecommendations();
-            },
+            onRevalidated: (fresh) => applyFresh(index, fresh),
           ),
       ]);
-      initialLists = lists;
-      initialListsReady = true;
-      final seen = <String>{};
-      final recommendations =
-          lists
-              .expand((list) => list)
-              .where(
-                (item) =>
-                    !seedKeys.contains('${item.type}:${item.id}') &&
-                    seen.add('${item.type}:${item.id}'),
-              )
-              .toList()
-            ..sort((a, b) {
-              final ratingA = double.tryParse(a.rating) ?? 0;
-              final ratingB = double.tryParse(b.rating) ?? 0;
-              return ratingB.compareTo(ratingA);
-            });
+      for (var index = 0; index < seeds.length; index++) {
+        if (!refreshed.contains(index)) lists[index] = initial[index];
+      }
+      ready = true;
       if (!mounted || request != _recommendationRequest) return;
       setState(() {
-        _recommendations = recommendations.take(10).toList();
+        _recommendations = top();
         _recommendationsState = _DeferredLoadState.loaded;
       });
-      if (revalidated.isNotEmpty) applyFreshRecommendations();
     } catch (_) {
       if (!mounted || request != _recommendationRequest) return;
       setState(() {
@@ -510,18 +561,31 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     return keys.contains(_favoriteKey(item));
   }
 
-  void _markContentVisible() {
-    if (_items.isEmpty) return;
+  void _markContentVisible(List<MediaItem> items) {
+    if (items.isEmpty) return;
     PerfTimeline.markOnce('HOME_CONTENT_VISIBLE');
     PerfTimeline.end('SEARCH_TYPED', 'RESULTS_VISIBLE', finish: true);
   }
 
   void _searchChanged(String value) {
-    if (value.trim().isNotEmpty) PerfTimeline.begin('SEARCH_TYPED');
+    final query = value.trim();
+    if (query.isNotEmpty) PerfTimeline.begin('SEARCH_TYPED');
     _debounce?.cancel();
+    if (query.isEmpty) {
+      // Search never replaced the catalog or Trending, so leaving it only
+      // drops the results and any pending search response.
+      _searchFeed.request++;
+      if (!mounted) return;
+      setState(() {
+        _searchFeed.items = const [];
+        _searchFeed.loading = false;
+        _searchFeed.error = null;
+      });
+      return;
+    }
     _debounce = Timer(
       const Duration(milliseconds: 450),
-      () => _load(query: value.trim().isEmpty ? null : value),
+      () => _loadSearch(query),
     );
   }
 
@@ -941,14 +1005,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
+  /// Items for the selected category, from the feed the view shows.
   List<MediaItem> get _shown {
-    if (_category == 'Movies')
-      return _items.where((e) => e.type == 'movie').toList();
-    if (_category == 'Series')
-      return _items.where((e) => e.type == 'series').toList();
-    if (_category == 'Continue watching')
+    final items = _activeFeed.items;
+    if (_category == 'Movies') {
+      return items.where(MediaCatalogFilter.isMovie).toList();
+    }
+    if (_category == 'Series') {
+      return items.where(MediaCatalogFilter.isSeries).toList();
+    }
+    if (_category == 'Continue watching') {
       return _history.where((e) => e.resumeMs > 0).toList();
-    return _items;
+    }
+    return items;
   }
 
   void _onSpotlightPageChanged(int page) {
@@ -1219,7 +1288,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     selected: _category == category,
                     onTap: () {
                       setState(() => _category = category);
-                      if (category == 'Trending') _load();
+                      // Trending has its own list; the catalog other tabs
+                      // use is never replaced, so they need no reload.
+                      if (category == 'Trending' && !_trending.loading) {
+                        unawaited(_loadTrending());
+                      }
                     },
                   ),
               ],
@@ -1236,14 +1309,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final sectionCollapseDuration = MediaQuery.disableAnimationsOf(context)
         ? Duration.zero
         : const Duration(milliseconds: 220);
-    final movies = _items.where((item) => item.type == 'movie').toList();
-    final series = _items.where((item) => item.type == 'series').toList();
+    final catalog = _catalog.items;
+    final feed = _activeFeed;
+    final movies = catalog.where(MediaCatalogFilter.isMovie).toList();
+    final series = catalog.where(MediaCatalogFilter.isSeries).toList();
     final spotlights = _spotlightItems;
     final continueWatching = _history
         .where((item) => item.resumeMs > 0)
         .toList();
     final showHero =
-        !searchActive && _category == 'For you' && _items.isNotEmpty;
+        !searchActive && _category == 'For you' && catalog.isNotEmpty;
 
     return RefreshIndicator(
       onRefresh: _refreshVisibleHome,
@@ -1326,14 +1401,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 ),
               ),
             ),
-          if (_loading)
+          if (feed.loading)
             const SliverToBoxAdapter(
               child: Padding(
                 padding: EdgeInsets.all(28),
                 child: Center(child: CircularProgressIndicator()),
               ),
             ),
-          if (!_loading && _catalogError != null && _items.isNotEmpty)
+          if (!feed.loading && feed.error != null && feed.items.isNotEmpty)
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(18, 10, 18, 0),
@@ -1353,7 +1428,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          _catalogError!,
+                          feed.error!,
                           style: const TextStyle(
                             color: GlassTheme.muted,
                             fontSize: 12,
@@ -1363,7 +1438,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       IconButton(
                         tooltip: 'Retry catalog',
                         onPressed: () =>
-                            _load(query: isSearch ? _search.text.trim() : null),
+                            _reloadActiveFeed(),
                         icon: const Icon(FeatherIcons.refreshCw),
                       ),
                     ],
@@ -1371,7 +1446,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 ),
               ),
             ),
-          if (!_loading && _items.isEmpty)
+          if (!feed.loading && feed.items.isEmpty)
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(
@@ -1381,7 +1456,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 child: Column(
                   children: [
                     Icon(
-                      _catalogError == null
+                      feed.error == null
                           ? FeatherIcons.film
                           : FeatherIcons.cloudOff,
                       size: 34,
@@ -1389,7 +1464,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      _catalogError ??
+                      feed.error ??
                           (isSearch
                               ? 'No results matching ${_search.text.trim()}'
                               : 'Nothing to show just yet'),
@@ -1397,17 +1472,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     ),
                     const SizedBox(height: 5),
                     Text(
-                      _catalogError == null
+                      feed.error == null
                           ? 'Try another search or refresh your picks.'
                           : 'Your API key is not shown in this message. Retry after checking the connection or key.',
                       textAlign: TextAlign.center,
                       style: TextStyle(color: GlassTheme.muted),
                     ),
-                    if (_catalogError != null) ...[
+                    if (feed.error != null) ...[
                       const SizedBox(height: 12),
                       OutlinedButton.icon(
                         onPressed: () =>
-                            _load(query: isSearch ? _search.text.trim() : null),
+                            _reloadActiveFeed(),
                         icon: const Icon(FeatherIcons.refreshCw),
                         label: const Text('Retry'),
                       ),
@@ -1422,8 +1497,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ),
           if (_category == 'For you' && !isSearch)
             _deferredSectionGate(
-              enabled: _items.isNotEmpty,
-              onApproach: () => unawaited(_loadTopRecommendations(_items)),
+              enabled: catalog.isNotEmpty,
+              state: _recommendationsState,
+              onApproach: () => unawaited(_loadTopRecommendations()),
               child: _recommendations.isNotEmpty
                   ? _section(
                       'Top 10 recommendations',
@@ -1433,12 +1509,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   : _deferredSectionPlaceholder(
                       'Top 10 recommendations',
                       _recommendationsState,
-                      () => unawaited(_loadTopRecommendations(_items)),
+                      () => unawaited(_loadTopRecommendations()),
                     ),
             ),
           if (_category == 'For you' && !isSearch)
             _deferredSectionGate(
-              enabled: _items.isNotEmpty,
+              enabled: catalog.isNotEmpty,
+              state: _newReleasesState,
               onApproach: () => unawaited(_loadNewReleases()),
               child: _newReleases.isNotEmpty
                   ? _section('New releases', _newReleases)
@@ -1461,7 +1538,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           if (_category == 'For you' && isSearch && _shown.isNotEmpty)
             SliverToBoxAdapter(child: _section('Search results', _shown)),
           if (_category == 'For you' && !isSearch && movies.isNotEmpty)
-            SliverToBoxAdapter(child: _section('Popular movies', movies)),
+            SliverToBoxAdapter(child: _section('New movies', movies)),
           if (_category == 'For you' && !isSearch && series.isNotEmpty)
             SliverToBoxAdapter(
               child: _section('Series worth the queue', series),
@@ -1482,13 +1559,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
+  /// Starts a deferred row's first load once it scrolls into view.
+  ///
+  /// Only an [_DeferredLoadState.idle] row loads automatically. A failed row
+  /// stays failed while visible; otherwise each rebuild after the failure
+  /// would start another request. Its Retry button and pull-to-refresh are
+  /// the only ways to try again.
   Widget _deferredSectionGate({
     required bool enabled,
+    required _DeferredLoadState state,
     required VoidCallback onApproach,
     required Widget child,
   }) => SliverLayoutBuilder(
     builder: (context, constraints) {
-      if (enabled && constraints.remainingPaintExtent > 0) {
+      if (enabled &&
+          state == _DeferredLoadState.idle &&
+          constraints.remainingPaintExtent > 0) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) onApproach();
         });

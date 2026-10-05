@@ -18,6 +18,7 @@ class MediaItem {
     this.popularity = 0,
     this.isOngoing = false,
     this.hasRecentEpisode = false,
+    this.genreIds = const [],
   });
   final String id,
       type,
@@ -40,6 +41,26 @@ class MediaItem {
   final double popularity;
   final bool isOngoing;
   final bool hasRecentEpisode;
+
+  /// TMDB genre ids. Empty when the source did not include genres, such as
+  /// entries saved before genres were recorded.
+  final List<int> genreIds;
+
+  /// Reads `genre_ids` from list results, or `genres` ({id, name}) from
+  /// details. Malformed entries are skipped.
+  static List<int> _parseGenreIds(Object? ids, Object? genres) {
+    final Iterable<Object?> values = ids is List
+        ? ids
+        : genres is List
+        ? genres.map((genre) => genre is Map ? genre['id'] : null)
+        : const [];
+    return List.unmodifiable(
+      values
+          .map((id) => id is num ? id.toInt() : int.tryParse('$id'))
+          .whereType<int>(),
+    );
+  }
+
   factory MediaItem.fromJson(Map<String, dynamic> j, {String type = 'movie'}) =>
       MediaItem(
         id: '${j['id'] ?? ''}',
@@ -58,6 +79,7 @@ class MediaItem {
         popularity: double.tryParse('${j['popularity'] ?? 0}') ?? 0,
         isOngoing: j['isOngoing'] == true,
         hasRecentEpisode: j['hasRecentEpisode'] == true,
+        genreIds: _parseGenreIds(j['genreIds'], null),
       );
   factory MediaItem.fromStorage(Map<String, dynamic> j) =>
       MediaItem.fromJson(j).copyWith(
@@ -104,6 +126,7 @@ class MediaItem {
           type == 'series' &&
           (json['in_production'] == true || status == 'Returning Series'),
       hasRecentEpisode: json['hasRecentEpisode'] == true,
+      genreIds: _parseGenreIds(json['genre_ids'], json['genres']),
     );
   }
   Map<String, dynamic> toJson() => {
@@ -125,6 +148,7 @@ class MediaItem {
     'popularity': popularity,
     'isOngoing': isOngoing,
     'hasRecentEpisode': hasRecentEpisode,
+    'genreIds': genreIds,
   };
   MediaItem copyWith({
     int? resumeMs,
@@ -153,5 +177,6 @@ class MediaItem {
     popularity: popularity,
     isOngoing: isOngoing,
     hasRecentEpisode: hasRecentEpisode,
+    genreIds: genreIds,
   );
 }
