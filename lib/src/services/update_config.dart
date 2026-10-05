@@ -1,19 +1,18 @@
 /// Settings for the GitHub Releases based Android updater.
 ///
-/// Releases are published as `vX.Y.Z` tags with a `reelish.apk` asset:
-///
-/// ```bash
-/// flutter build apk --release --build-name 1.0.1 --build-number 1
-/// gh release create v1.0.1 build/app/outputs/flutter-apk/reelish.apk \
-///   --title "Reelish v1.0.1" --generate-notes
-/// ```
+/// Releases are published only by `.github/workflows/release.yml` (see
+/// `docs/releasing.md`): pushing a `vX.Y.Z` tag builds that exact commit,
+/// checks that `pubspec.yaml` says `X.Y.Z`, verifies the APK, and publishes it
+/// as the `reelish.apk` asset of release `vX.Y.Z`. Never upload an APK by
+/// hand: the updater trusts that the tag, the APK's version and the asset all
+/// describe the same build.
 abstract final class UpdateConfig {
   static const githubOwner = 'frnzeeey';
   static const githubRepository = 'reelish';
 
-  /// Asset names accepted as the Android build, in order of preference.
-  /// `app-release.apk` is Flutter's default output name.
-  static const apkAssetNames = ['reelish.apk', 'app-release.apk'];
+  /// The only release asset the updater downloads. The release workflow
+  /// uploads the APK under exactly this name.
+  static const apkAssetName = 'reelish.apk';
 
   /// Minimum time between automatic GitHub API requests. Unauthenticated
   /// requests are limited to 60 per hour per IP address, which may be shared
@@ -31,6 +30,8 @@ abstract final class UpdateConfig {
 
   static const userAgent = 'ReelishApp';
 
+  /// GitHub's latest *published* release: never a draft or a pre-release,
+  /// and chosen by publish date and the "latest" flag, not by tag name.
   static Uri get latestReleaseUri => Uri.https(
     'api.github.com',
     '/repos/$githubOwner/$githubRepository/releases/latest',
@@ -43,5 +44,32 @@ abstract final class UpdateConfig {
   static bool isTrustedAssetUri(Uri uri) =>
       uri.scheme == 'https' &&
       uri.host == 'github.com' &&
+      !uri.hasQuery &&
+      !uri.hasFragment &&
       uri.path.startsWith('/$githubOwner/$githubRepository/releases/download/');
+
+  /// Whether [uri] is exactly the download link of asset [name] in release
+  /// [tag], so an asset of another (older) release is never accepted.
+  static bool isReleaseAssetUri(
+    Uri uri, {
+    required String tag,
+    required String name,
+  }) =>
+      isTrustedAssetUri(uri) &&
+      _sameSegments(uri.pathSegments, [
+        githubOwner,
+        githubRepository,
+        'releases',
+        'download',
+        tag,
+        name,
+      ]);
+
+  static bool _sameSegments(List<String> a, List<String> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
 }

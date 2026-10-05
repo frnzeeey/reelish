@@ -10,10 +10,13 @@ import android.view.WindowManager
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageInfo
+import android.content.pm.PackageManager
+import android.content.pm.Signature
 import android.net.Uri
 import android.provider.Settings
 import androidx.core.content.FileProvider
 import java.io.File
+import java.security.MessageDigest
 
 class MainActivity : FlutterActivity() {
     private val channelName = "onfeed/player"
@@ -83,14 +86,16 @@ class MainActivity : FlutterActivity() {
                         return@setMethodCallHandler
                     }
                     @Suppress("DEPRECATION")
-                    val archive = packageManager.getPackageArchiveInfo(apk.path, 0)
+                    val archive = packageManager.getPackageArchiveInfo(apk.path, signingFlags())
                     if (archive == null) {
                         apk.delete()
                         result.error("invalid_apk", "The downloaded update is not a valid APK.", null)
                         return@setMethodCallHandler
                     }
                     @Suppress("DEPRECATION")
-                    val installed = packageManager.getPackageInfo(packageName, 0)
+                    val installed = packageManager.getPackageInfo(packageName, signingFlags())
+                    val archiveSigners = signerDigests(archive)
+                    val installedSigners = signerDigests(installed)
                     result.success(
                         mapOf(
                             "packageName" to archive.packageName,
@@ -98,6 +103,12 @@ class MainActivity : FlutterActivity() {
                             "versionCode" to versionCodeOf(archive),
                             "installedPackageName" to packageName,
                             "installedVersionCode" to versionCodeOf(installed),
+                            // Null when either signer set is unknown.
+                            "sameSigner" to if (archiveSigners.isNullOrEmpty() || installedSigners.isNullOrEmpty()) {
+                                null
+                            } else {
+                                archiveSigners.any { it in installedSigners }
+                            },
                         )
                     )
                 }
@@ -144,6 +155,33 @@ class MainActivity : FlutterActivity() {
         val updatesDir = File(cacheDir, "updates").canonicalFile
         val apk = File(path).canonicalFile
         return if (apk.parentFile == updatesDir && apk.isFile && apk.name.endsWith(".apk")) apk else null
+    }
+
+    @Suppress("DEPRECATION")
+    private fun signingFlags(): Int =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            PackageManager.GET_SIGNING_CERTIFICATES
+        } else {
+            PackageManager.GET_SIGNATURES
+        }
+
+    /**
+     * SHA-256 digests of the certificates [info] is signed with, including
+     * earlier keys in a rotation history, or null when they cannot be read.
+     */
+    private fun signerDigests(info: PackageInfo): Set<String>? {
+        val signatures: Array<Signature>? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            val signing = info.signingInfo ?: return null
+            if (signing.hasMultipleSigners()) signing.apkContentsSigners else signing.signingCertificateHistory
+        } else {
+            @Suppress("DEPRECATION")
+            info.signatures
+        }
+        if (signatures.isNullOrEmpty()) return null
+        val sha256 = MessageDigest.getInstance("SHA-256")
+        return signatures.map { signature ->
+            sha256.digest(signature.toByteArray()).joinToString("") { "%02x".format(it) }
+        }.toSet()
     }
 
     private fun versionCodeOf(info: PackageInfo): Long =

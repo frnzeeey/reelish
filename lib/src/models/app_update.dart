@@ -20,8 +20,12 @@ class AppVersion implements Comparable<AppVersion> {
   static AppVersion? tryParse(String value) {
     final match = _pattern.firstMatch(value.trim());
     if (match == null) return null;
-    int part(int group) => int.parse(match.group(group) ?? '0');
-    return AppVersion(part(1), part(2), part(3), match.group(4) ?? '');
+    // tryParse: a component too large for an int is malformed, not a crash.
+    final parts = [
+      for (final group in [1, 2, 3]) int.tryParse(match.group(group) ?? '0'),
+    ];
+    if (parts.contains(null)) return null;
+    return AppVersion(parts[0]!, parts[1]!, parts[2]!, match.group(4) ?? '');
   }
 
   @override

@@ -55,6 +55,10 @@ flutter pub get
 flutter run
 ```
 
+## Android releases
+
+Release builds are published on [GitHub Releases](https://github.com/frnzeeey/reelish/releases). Android can check for a newer stable release and offer to download its APK; installation is confirmed through Android's package installer. See [docs/releasing.md](docs/releasing.md) for how releases are made.
+
 ## Privacy and terms
 
 On first launch, read and accept the privacy policy and terms of use shown in the app. Favorites, playback history, settings, and provider choices are stored locally. TMDB, provider publishers, stream hosts, and subtitle services receive requests needed for the features you use; Android may contact GitHub for update checks. See the in-app **Privacy policy** and **Terms of use** for details.

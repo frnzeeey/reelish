@@ -9,10 +9,39 @@ import '../models/app_update.dart';
 import '../services/github_update_service.dart';
 import 'update_dialog.dart';
 
+/// What the update flow is doing. One value, so states such as "checking"
+/// and "downloading" can never both be true.
+enum UpdateFlowPhase {
+  idle,
+
+  /// A silent check on app start or resume is waiting for GitHub.
+  checkingInBackground,
+
+  /// A check the user started from About is waiting for GitHub.
+  checkingManually,
+
+  /// The update prompt, download, permission or installer step is showing.
+  updating,
+}
+
 /// Coordinates the update UI: prompt → download → install permission →
-/// Android installer. Only one check or update runs at a time.
+/// Android installer. Only one update runs at a time.
 abstract final class AppUpdateFlow {
-  static bool _busy = false;
+  static UpdateFlowPhase _phase = UpdateFlowPhase.idle;
+
+  /// Identifies the flow that owns [_phase]; a user-started check takes over
+  /// from a background check still waiting for GitHub.
+  static int _owner = 0;
+
+  @visibleForTesting
+  static UpdateFlowPhase get phase => _phase;
+
+  @visibleForTesting
+  static void resetForTest() {
+    _phase = UpdateFlowPhase.idle;
+    _owner++;
+    _offeredThisSession.clear();
+  }
 
   /// Releases already offered automatically during this app session. After
   /// "Later" the same release is offered again on the next app launch.
@@ -27,34 +56,48 @@ abstract final class AppUpdateFlow {
     BuildContext context, {
     Future<UpdateCheckResult> Function()? checker,
   }) async {
-    if (!isSupported || _busy) return;
-    _busy = true;
+    if (!isSupported || _phase != UpdateFlowPhase.idle) return;
+    final owner = ++_owner;
+    _phase = UpdateFlowPhase.checkingInBackground;
     try {
       final result = await (checker ?? GitHubUpdateService.checkForUpdate)();
+      // A manual check started meanwhile reports the outcome itself.
+      if (owner != _owner) return;
       final update = result.update;
       if (!result.hasUpdate || update == null || !context.mounted) return;
       if (_offeredThisSession.contains(update.tagName)) return;
       // Never interrupt playback or another screen; the next resume retries.
       if (ModalRoute.of(context)?.isCurrent == false) return;
       _offeredThisSession.add(update.tagName);
+      _phase = UpdateFlowPhase.updating;
       await _offer(context, update);
     } catch (_) {
       // Update checks must never disturb normal app use.
     } finally {
-      _busy = false;
+      if (owner == _owner) _phase = UpdateFlowPhase.idle;
     }
   }
 
-  /// User-started check, which reports every outcome.
-  static Future<void> checkManually(BuildContext context) async {
+  /// User-started check, which reports every outcome. It always asks GitHub,
+  /// and takes over from a background check that is still running.
+  static Future<void> checkManually(
+    BuildContext context, {
+    Future<UpdateCheckResult> Function()? checker,
+  }) async {
     final messenger = ScaffoldMessenger.maybeOf(context);
-    if (_busy) {
-      messenger?.showSnackBar(
-        const SnackBar(content: Text('An update is already in progress.')),
-      );
-      return;
+    switch (_phase) {
+      case UpdateFlowPhase.updating:
+        messenger?.showSnackBar(
+          const SnackBar(content: Text('An update is already in progress.')),
+        );
+        return;
+      case UpdateFlowPhase.checkingManually:
+        return; // A second tap while the first check runs.
+      case UpdateFlowPhase.idle || UpdateFlowPhase.checkingInBackground:
+        break;
     }
-    _busy = true;
+    final owner = ++_owner;
+    _phase = UpdateFlowPhase.checkingManually;
     try {
       messenger?.showSnackBar(
         const SnackBar(
@@ -62,14 +105,15 @@ abstract final class AppUpdateFlow {
           duration: Duration(seconds: 2),
         ),
       );
-      final result = await GitHubUpdateService.checkForUpdate(
-        forceRefresh: true,
-      );
-      if (!context.mounted) return;
+      final result =
+          await (checker ??
+              () => GitHubUpdateService.checkForUpdate(forceRefresh: true))();
+      if (owner != _owner || !context.mounted) return;
       messenger?.hideCurrentSnackBar();
       final update = result.update;
       if (result.hasUpdate && update != null) {
         _offeredThisSession.add(update.tagName);
+        _phase = UpdateFlowPhase.updating;
         await _offer(context, update);
       } else if (result.status == UpdateCheckStatus.upToDate ||
           result.status == UpdateCheckStatus.noRelease) {
@@ -88,8 +132,14 @@ abstract final class AppUpdateFlow {
               : FeatherIcons.alertCircle,
         );
       }
+    } catch (_) {
+      if (context.mounted) {
+        messenger?.showSnackBar(
+          const SnackBar(content: Text('Unable to check for updates.')),
+        );
+      }
     } finally {
-      _busy = false;
+      if (owner == _owner) _phase = UpdateFlowPhase.idle;
     }
   }
 

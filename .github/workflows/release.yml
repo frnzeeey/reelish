@@ -1,0 +1,285 @@
+name: Release
+
+# The single way a Reelish APK is published. Pushing a vMAJOR.MINOR.PATCH tag
+# builds exactly that commit on a fresh runner, verifies the APK, and only then
+# creates the GitHub Release for that tag. See docs/releasing.md.
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  # Keep in step with the local `flutter --version`.
+  FLUTTER_VERSION: '3.44.8'
+  APK_PATH: build/app/outputs/flutter-apk/app-release.apk
+  # The in-app updater downloads the release asset with exactly this name.
+  ASSET_NAME: reelish.apk
+
+jobs:
+  release:
+    name: Build and publish ${{ github.ref_name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write
+    steps:
+      - name: Check out the tagged commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.ref }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate tag, commit, and application version
+        id: source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          if [[ ! "$TAG" =~ ^v(0|[1-9][0-9]{0,3})\.(0|[1-9][0-9]{0,2})\.(0|[1-9][0-9]{0,2})$ ]]; then
+            echo "::error::Release tag '$TAG' does not match the expected format vMAJOR.MINOR.PATCH (no leading zeroes, minor/patch below 1000)."
+            exit 1
+          fi
+
+          HEAD_SHA="$(git rev-parse HEAD)"
+          TAG_SHA="$(git rev-parse "refs/tags/$TAG^{commit}")"
+          echo "Tag:        $TAG"
+          echo "Event SHA:  $GITHUB_SHA"
+          echo "HEAD:       $HEAD_SHA"
+          echo "Tag commit: $TAG_SHA"
+          echo "Describe:   $(git describe --tags --always)"
+          git log -1 --format='Subject:    %s%nDate:       %cI'
+          if [[ "$HEAD_SHA" != "$GITHUB_SHA" || "$TAG_SHA" != "$GITHUB_SHA" ]]; then
+            echo "::error::Checked-out commit does not match the tag that triggered this run."
+            exit 1
+          fi
+          if [[ -n "$(git status --porcelain)" ]]; then
+            echo "::error::Checked-out source tree is not clean."
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$HEAD_SHA" origin/main; then
+            echo "::error::$TAG points to $HEAD_SHA, which is not on origin/main. Push main first, then tag a main commit."
+            exit 1
+          fi
+          if [[ "$HEAD_SHA" != "$(git rev-parse origin/main)" ]]; then
+            echo "::warning::$TAG is not the tip of origin/main; newer main commits are not in this release."
+          fi
+
+          # pubspec.yaml is the single source of truth for the app version.
+          PUBSPEC_VERSION="$(sed -nE 's/^version:[[:space:]]*([^[:space:]#]+).*$/\1/p' pubspec.yaml)"
+          if [[ -z "$PUBSPEC_VERSION" ]]; then
+            echo "::error::Application version could not be determined from pubspec.yaml."
+            exit 1
+          fi
+          if [[ ! "$PUBSPEC_VERSION" =~ ^([0-9]+\.[0-9]+\.[0-9]+)\+([0-9]+)$ ]]; then
+            echo "::error::pubspec.yaml version '$PUBSPEC_VERSION' must be MAJOR.MINOR.PATCH+BUILD."
+            exit 1
+          fi
+          VERSION="${BASH_REMATCH[1]}"
+          BUILD_NUMBER="${BASH_REMATCH[2]}"
+          if [[ "v$VERSION" != "$TAG" ]]; then
+            echo "::error::Git tag version ($TAG) does not match application version ($VERSION in pubspec.yaml)."
+            exit 1
+          fi
+          IFS=. read -r MAJOR MINOR PATCH <<< "$VERSION"
+          EXPECTED_BUILD=$((MAJOR * 1000000 + MINOR * 1000 + PATCH))
+          if [[ "$BUILD_NUMBER" != "$EXPECTED_BUILD" ]]; then
+            echo "::error::pubspec.yaml build number is $BUILD_NUMBER; version $VERSION requires +$EXPECTED_BUILD (MAJOR*1000000 + MINOR*1000 + PATCH)."
+            exit 1
+          fi
+
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo "::error::A GitHub Release for $TAG already exists. Release a new version instead."
+            exit 1
+          fi
+          LATEST="$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName 2> /dev/null || true)"
+          if [[ -n "$LATEST" && "$(printf '%s\n%s\n' "$LATEST" "$TAG" | sort -V | tail -n 1)" != "$TAG" ]]; then
+            echo "::error::$TAG is not newer than the latest release $LATEST; Android cannot update to a lower version."
+            exit 1
+          fi
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "build_number=$BUILD_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "Releasing $TAG: versionName $VERSION, versionCode $BUILD_NUMBER, commit $HEAD_SHA"
+
+      - name: Set up Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Restore signing keystore and TMDB config
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ONFEED_RELEASE_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.ONFEED_RELEASE_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ONFEED_RELEASE_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ONFEED_RELEASE_KEY_PASSWORD }}
+          TMDB_API_KEY: ${{ secrets.ONFEED_TMDB_API_KEY }}
+        run: |
+          set -euo pipefail
+          for name in KEYSTORE_BASE64 STORE_PASSWORD KEY_ALIAS KEY_PASSWORD TMDB_API_KEY; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::Missing GitHub Actions secret for $name (see docs/releasing.md)."
+              exit 1
+            fi
+          done
+
+          KEYSTORE="$RUNNER_TEMP/onfeed-release.jks"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE"
+          chmod 600 "$KEYSTORE"
+          # Fail here in seconds rather than after a full Gradle build.
+          if ! keytool -list -keystore "$KEYSTORE" -storepass:env STORE_PASSWORD -alias "$KEY_ALIAS" > /dev/null; then
+            echo "::error::Keystore could not be opened with ONFEED_RELEASE_STORE_PASSWORD, or it has no key with alias ONFEED_RELEASE_KEY_ALIAS."
+            exit 1
+          fi
+          # -list only proves the store password. Signing also needs the key
+          # password; a wrong one failed v1.2.0 six minutes into the build
+          # ("Cannot recover key"). A certificate request reads the private
+          # key, so it proves the key password without signing anything.
+          # PKCS12 keys are protected by the store password, and keytool
+          # ignores -keypass for them, so check that rule directly.
+          KEYSTORE_TYPE="$(keytool -list -keystore "$KEYSTORE" -storepass:env STORE_PASSWORD | sed -nE 's/^Keystore type: *//p')"
+          if [[ "$KEYSTORE_TYPE" == "PKCS12" && "$KEY_PASSWORD" != "$STORE_PASSWORD" ]]; then
+            echo "::error::The keystore is PKCS12, so ONFEED_RELEASE_KEY_PASSWORD must equal ONFEED_RELEASE_STORE_PASSWORD."
+            exit 1
+          fi
+          if ! keytool -certreq -keystore "$KEYSTORE" -storepass:env STORE_PASSWORD \
+              -alias "$KEY_ALIAS" -keypass:env KEY_PASSWORD -file /dev/null > /dev/null 2>&1; then
+            echo "::error::The key '$KEY_ALIAS' could not be unlocked with ONFEED_RELEASE_KEY_PASSWORD."
+            exit 1
+          fi
+          echo "ONFEED_RELEASE_STORE_FILE=$KEYSTORE" >> "$GITHUB_ENV"
+
+          # The app imports this git-ignored file (see README).
+          if [[ ! "$TMDB_API_KEY" =~ ^[A-Za-z0-9._-]+$ ]]; then
+            echo "::error::ONFEED_TMDB_API_KEY contains unexpected characters."
+            exit 1
+          fi
+          printf "const tmdbApiKey = '%s';\n" "$TMDB_API_KEY" > lib/tmdb_config.local.dart
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          # Caches the SDK and pub packages only; build/ is never cached.
+          cache: true
+
+      - name: Clean build
+        id: build
+        env:
+          ONFEED_RELEASE_STORE_PASSWORD: ${{ secrets.ONFEED_RELEASE_STORE_PASSWORD }}
+          ONFEED_RELEASE_KEY_ALIAS: ${{ secrets.ONFEED_RELEASE_KEY_ALIAS }}
+          ONFEED_RELEASE_KEY_PASSWORD: ${{ secrets.ONFEED_RELEASE_KEY_PASSWORD }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          flutter --version
+          flutter clean
+          if [[ -e "$APK_PATH" ]]; then
+            echo "::error::$APK_PATH exists before the build."
+            exit 1
+          fi
+          flutter pub get --enforce-lockfile
+
+          echo "started_epoch=$(date -u +%s)" >> "$GITHUB_OUTPUT"
+          # The commit and tag are compiled in and shown under Settings > About.
+          flutter build apk --release \
+            --dart-define="REELISH_GIT_SHA=$GITHUB_SHA" \
+            --dart-define="REELISH_BUILD_TAG=$TAG"
+
+      - name: Verify APK
+        id: apk
+        env:
+          VERSION: ${{ steps.source.outputs.version }}
+          BUILD_NUMBER: ${{ steps.source.outputs.build_number }}
+          STARTED_EPOCH: ${{ steps.build.outputs.started_epoch }}
+        run: |
+          set -euo pipefail
+          if [[ ! -f "$APK_PATH" ]]; then
+            echo "::error::Release artifact was not generated: $APK_PATH"
+            exit 1
+          fi
+          if [[ ! -s "$APK_PATH" ]]; then
+            echo "::error::Release artifact is empty: $APK_PATH"
+            exit 1
+          fi
+          if (( $(stat -c %Y "$APK_PATH") < STARTED_EPOCH )); then
+            echo "::error::$APK_PATH is older than this build."
+            exit 1
+          fi
+
+          BUILD_TOOLS="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
+          BADGING="$("$BUILD_TOOLS/aapt2" dump badging "$APK_PATH")"
+          BADGING="$(grep -m1 '^package:' <<< "$BADGING")"
+          echo "$BADGING"
+          APP_ID="$(sed -nE "s/^package: name='([^']*)'.*/\1/p" <<< "$BADGING")"
+          APK_VERSION_CODE="$(sed -nE "s/.* versionCode='([^']*)'.*/\1/p" <<< "$BADGING")"
+          APK_VERSION_NAME="$(sed -nE "s/.* versionName='([^']*)'.*/\1/p" <<< "$BADGING")"
+          EXPECTED_APP_ID="$(sed -nE 's/^[[:space:]]*applicationId = "([^"]+)".*/\1/p' android/app/build.gradle.kts)"
+          if [[ "$APP_ID" != "$EXPECTED_APP_ID" ]]; then
+            echo "::error::APK application ID '$APP_ID' does not match '$EXPECTED_APP_ID' in build.gradle.kts."
+            exit 1
+          fi
+          if [[ "$APK_VERSION_NAME" != "$VERSION" || "$APK_VERSION_CODE" != "$BUILD_NUMBER" ]]; then
+            echo "::error::APK is version $APK_VERSION_NAME ($APK_VERSION_CODE); expected $VERSION ($BUILD_NUMBER)."
+            exit 1
+          fi
+
+          # The commit SHA is compiled into the Dart snapshot; finding it proves
+          # the APK was built from this checkout.
+          # grep -c reads all input, so unzip never hits SIGPIPE under pipefail.
+          if ! unzip -p "$APK_PATH" lib/arm64-v8a/libapp.so | grep -caF "$GITHUB_SHA" > /dev/null; then
+            echo "::error::APK does not embed commit $GITHUB_SHA."
+            exit 1
+          fi
+
+          "$BUILD_TOOLS/apksigner" verify --print-certs "$APK_PATH"
+          echo "sha256=$(sha256sum "$APK_PATH" | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          VERSION: ${{ steps.source.outputs.version }}
+          BUILD_NUMBER: ${{ steps.source.outputs.build_number }}
+          APK_SHA256: ${{ steps.apk.outputs.sha256 }}
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/release"
+          mkdir -p "$OUT"
+          cp -- "$APK_PATH" "$OUT/$ASSET_NAME"
+          (cd "$OUT" && printf '%s  %s\n' "$APK_SHA256" "$ASSET_NAME" > "$ASSET_NAME.sha256" && sha256sum -c "$ASSET_NAME.sha256")
+
+          {
+            echo "**Version:** $VERSION (Android versionCode $BUILD_NUMBER)"
+            echo "**Commit:** $GITHUB_SHA"
+            echo "**APK SHA-256:** \`$APK_SHA256\`"
+            echo "**Built by:** $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          } > "$OUT/notes.md"
+
+          # gh uploads the assets to a draft and publishes it only once every
+          # upload has succeeded.
+          gh release create "$TAG" \
+            "$OUT/$ASSET_NAME" \
+            "$OUT/$ASSET_NAME.sha256" \
+            --repo "$GITHUB_REPOSITORY" \
+            --verify-tag \
+            --title "Reelish $TAG" \
+            --notes-file "$OUT/notes.md" \
+            --generate-notes \
+            --latest
+
+      - name: Remove signing keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP/onfeed-release.jks"

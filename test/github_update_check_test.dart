@@ -42,7 +42,7 @@ AppUpdate _update({
   String version = '1.0.1',
   int? size,
   String? sha,
-  String url = '$_download/v1.0.1/reelish.apk',
+  String? url,
   String notes = '',
 }) => AppUpdate(
   currentVersion: _v('1.0.0'),
@@ -50,7 +50,7 @@ AppUpdate _update({
   tagName: 'v$version',
   releaseName: 'Reelish v$version',
   releaseNotes: notes,
-  downloadUri: Uri.parse(url),
+  downloadUri: Uri.parse(url ?? '$_download/v$version/reelish.apk'),
   assetName: 'reelish.apk',
   sizeBytes: size,
   sha256: sha,
@@ -80,6 +80,26 @@ void main() {
       expect(_v('1.0.0-beta') < _v('1.0.0'), isTrue);
       expect(_v('1.0.0-beta.2') < _v('1.0.0-beta.10'), isTrue);
       expect(_v('1.0.0-alpha') < _v('1.0.0-beta'), isTrue);
+    });
+
+    test('release tags: only vX.Y.Z (or X.Y.Z) count', () {
+      expect(GitHubUpdateService.releaseVersion('v1.0.0'), _v('1.0.0'));
+      expect(GitHubUpdateService.releaseVersion('1.0.10'), _v('1.0.10'));
+      for (final tag in [
+        'release-1.0.0',
+        'v1.0',
+        'v1',
+        'v1.0.0-beta.1',
+        'v1.0.0+5',
+        'latest',
+        'V1.0.0 ',
+      ]) {
+        expect(GitHubUpdateService.releaseVersion(tag), isNull, reason: tag);
+      }
+    });
+
+    test('huge components are malformed, not a crash', () {
+      expect(AppVersion.tryParse('1.0.99999999999999999999999'), isNull);
     });
 
     test('rejects malformed versions', () {
@@ -167,39 +187,79 @@ void main() {
       expect(result.status, UpdateCheckStatus.missingApk);
     });
 
-    test('prefers reelish.apk, then a single universal APK', () {
-      final preferred = parse(
+    test('scenario 6: picks reelish.apk among many assets', () {
+      final result = parse(
         '1.0.0',
         _release(
           'v1.0.1',
           assets: [
-            _asset('v1.0.1', 'app-arm64-v8a-release.apk'),
+            _asset('v1.0.1', 'source.zip'),
+            _asset('v1.0.1', 'app-debug.apk'),
+            _asset('v1.0.1', 'reelish-arm64.apk'),
+            _asset('v1.0.1', 'reelish.apk.sha256'),
             _asset('v1.0.1', 'reelish.apk'),
+            _asset('v1.0.1', 'reelish-universal.apk'),
           ],
         ),
       );
-      expect(preferred.update!.assetName, 'reelish.apk');
-
-      final universal = parse(
-        '1.0.0',
-        _release(
-          'v1.0.1',
-          assets: [
-            _asset('v1.0.1', 'app-arm64-v8a-release.apk'),
-            _asset('v1.0.1', 'Reelish-1.0.1.apk'),
-          ],
-        ),
+      expect(result.update!.assetName, 'reelish.apk');
+      expect(
+        result.update!.downloadUri.toString(),
+        '$_download/v1.0.1/reelish.apk',
       );
-      expect(universal.update!.assetName, 'Reelish-1.0.1.apk');
+    });
 
-      final ambiguous = parse(
+    test('never guesses: other APK names are not offered', () {
+      for (final names in [
+        ['app-release.apk'],
+        ['Reelish-1.0.1.apk'],
+        ['app-debug.apk', 'reelish-arm64.apk'],
+        ['REELISH.APK'],
+      ]) {
+        final result = parse(
+          '1.0.0',
+          _release(
+            'v1.0.1',
+            assets: [for (final n in names) _asset('v1.0.1', n)],
+          ),
+        );
+        expect(result.status, UpdateCheckStatus.missingApk, reason: '$names');
+      }
+    });
+
+    test('rejects an APK that belongs to another release', () {
+      // Release v1.0.2 whose asset link points at v1.0.1's (older) APK.
+      final result = parse(
         '1.0.0',
-        _release(
-          'v1.0.1',
-          assets: [_asset('v1.0.1', 'one.apk'), _asset('v1.0.1', 'two.apk')],
-        ),
+        _release('v1.0.2', assets: [_asset('v1.0.1', 'reelish.apk')]),
       );
-      expect(ambiguous.status, UpdateCheckStatus.missingApk);
+      expect(result.status, UpdateCheckStatus.missingApk);
+    });
+
+    test('rejects an asset without a known size', () {
+      final asset = _asset('v1.0.1', 'reelish.apk')..remove('size');
+      expect(
+        parse('1.0.0', _release('v1.0.1', assets: [asset])).status,
+        UpdateCheckStatus.missingApk,
+      );
+    });
+
+    test('drafts and pre-releases are never offered', () {
+      expect(
+        parse('1.0.0', {..._release('v2.0.0'), 'draft': true}).hasUpdate,
+        isFalse,
+      );
+      expect(
+        parse('1.0.0', {..._release('v2.0.0'), 'prerelease': true}).hasUpdate,
+        isFalse,
+      );
+    });
+
+    test('scenario 4: an older release is not offered over 1.0.10', () {
+      expect(
+        parse('1.0.10', _release('v1.0.9')).status,
+        UpdateCheckStatus.upToDate,
+      );
     });
 
     test('reads the GitHub asset digest for verification', () {
@@ -261,8 +321,28 @@ void main() {
       );
       expect(afterInstalling.hasUpdate, isFalse);
       expect(afterInstalling.status, UpdateCheckStatus.upToDate);
-      expect(requests, 1);
+      // The new version is checked once, which also clears the used APK.
+      expect(requests, 2);
     });
+
+    test(
+      'a known update is not offered once installed, even offline',
+      () async {
+        var online = true;
+        final client = MockClient((_) async {
+          if (!online) throw const SocketException('offline');
+          return http.Response(jsonEncode(_release('v1.1.0')), 200);
+        });
+        await check(client);
+        online = false;
+        final afterInstalling = await check(
+          client,
+          installed: '1.1.0',
+          at: DateTime.utc(2026, 1, 1, 12, 1),
+        );
+        expect(afterInstalling.hasUpdate, isFalse);
+      },
+    );
 
     test('scenario 6: no internet reports a network error', () async {
       final client = MockClient(
@@ -325,6 +405,130 @@ void main() {
       expect(requests, 1);
       await check(client, at: DateTime.utc(2026, 1, 1, 12, 20));
       expect(requests, 2);
+    });
+  });
+
+  group('checkForUpdate concurrency and cache', () {
+    test('a forced check never reuses a throttled background answer', () async {
+      var requests = 0;
+      var latest = 'v1.1.0';
+      final release = Completer<void>();
+      final client = MockClient((_) async {
+        requests++;
+        if (requests == 2) await release.future;
+        return http.Response(jsonEncode(_release(latest)), 200);
+      });
+      Future<UpdateCheckResult> check({bool force = false}) =>
+          GitHubUpdateService.checkForUpdate(
+            client: client,
+            forceRefresh: force,
+            clock: () => DateTime.utc(2026, 1, 1, 12),
+            installedVersionLoader: () async => '1.0.0',
+          );
+      await check(); // Fills the cache and starts the 6-hour throttle.
+      expect(requests, 1);
+
+      latest = 'v1.2.0'; // Published meanwhile.
+      final background = check(); // Throttled: answers from the cache.
+      final manual = check(force: true);
+      release.complete();
+      expect((await background).update?.latestVersion, _v('1.1.0'));
+      expect((await manual).update?.latestVersion, _v('1.2.0'));
+      expect(requests, 2);
+    });
+
+    test('a cached update pointing at another release is dropped', () async {
+      SharedPreferences.setMockInitialValues({
+        'onfeed.update.github.nextCheckAt.v2': DateTime.utc(
+          2026,
+          1,
+          1,
+          13,
+        ).toIso8601String(),
+        'onfeed.update.github.lastResult.v2': jsonEncode({
+          'installedVersion': '1.0.0',
+          'status': 'updateAvailable',
+          'latestVersion': '1.1.0',
+          'update': {
+            ..._update(version: '1.1.0').toJson(),
+            // Tampered: v1.1.0's entry downloading v1.0.1's APK.
+            'downloadUri': '$_download/v1.0.1/reelish.apk',
+          },
+        }),
+      });
+      final result = await GitHubUpdateService.checkForUpdate(
+        client: MockClient((_) async => fail('throttled; no request expected')),
+        clock: () => DateTime.utc(2026, 1, 1, 12),
+        installedVersionLoader: () async => '1.0.0',
+      );
+      expect(result.hasUpdate, isFalse);
+    });
+  });
+
+  group('cache follows the installed version', () {
+    Future<UpdateCheckResult> check(
+      http.Client client,
+      String installed, {
+      int minute = 0,
+    }) => GitHubUpdateService.checkForUpdate(
+      client: client,
+      clock: () => DateTime.utc(2026, 1, 1, 12, minute),
+      installedVersionLoader: () async => installed,
+    );
+
+    test('a reinstall or downgrade is re-checked at once', () async {
+      // Found on a device: an "up to date" computed for 1.2.0 hid the 1.0.1
+      // update for six hours after 1.0.0 was installed.
+      var requests = 0;
+      final client = MockClient((_) async {
+        requests++;
+        return http.Response(jsonEncode(_release('v1.0.1')), 200);
+      });
+      expect((await check(client, '1.2.0')).status, UpdateCheckStatus.upToDate);
+      final after = await check(client, '1.0.0', minute: 1);
+      expect(after.update?.latestVersion, _v('1.0.1'));
+      expect(requests, 2);
+      // Then the throttle applies again.
+      await check(client, '1.0.0', minute: 2);
+      expect(requests, 2);
+    });
+
+    test('a failed re-check does not retry on every resume', () async {
+      var requests = 0;
+      var online = true;
+      final client = MockClient((_) async {
+        requests++;
+        if (!online) throw const SocketException('offline');
+        return http.Response(jsonEncode(_release('v1.0.1')), 200);
+      });
+      await check(client, '1.2.0');
+      online = false;
+      await check(client, '1.0.0', minute: 1); // Re-check fails.
+      await check(client, '1.0.0', minute: 2);
+      await check(client, '1.0.0', minute: 3);
+      expect(requests, 2);
+    });
+
+    test('results saved by older app versions are re-checked once', () async {
+      SharedPreferences.setMockInitialValues({
+        'onfeed.update.github.nextCheckAt.v2': DateTime.utc(
+          2026,
+          1,
+          1,
+          13,
+        ).toIso8601String(),
+        'onfeed.update.github.lastResult.v2': jsonEncode({
+          'status': 'upToDate',
+          'latestVersion': '1.0.1',
+        }),
+      });
+      var requests = 0;
+      final client = MockClient((_) async {
+        requests++;
+        return http.Response(jsonEncode(_release('v1.0.1')), 200);
+      });
+      expect((await check(client, '1.0.0')).hasUpdate, isTrue);
+      expect(requests, 1);
     });
   });
 
@@ -425,6 +629,59 @@ void main() {
       expect(filesIn(cache), isEmpty);
     });
 
+    test('refuses the APK of another release', () async {
+      var requests = 0;
+      await expectLater(
+        GitHubUpdateService.downloadApk(
+          _update(version: '1.0.2', url: '$_download/v1.0.1/reelish.apk'),
+          client: MockClient((_) async {
+            requests++;
+            return http.Response('', 200);
+          }),
+          cacheDirectory: () async => cache,
+        ),
+        throwsA(isA<UpdateException>()),
+      );
+      expect(requests, 0);
+    });
+
+    test('scenario 8: a failed download can be retried', () async {
+      var fail = true;
+      final client = MockClient.streaming((_, _) async {
+        if (fail) throw const SocketException('connection reset');
+        return http.StreamedResponse(
+          Stream.value(apkBytes),
+          200,
+          contentLength: apkBytes.length,
+        );
+      });
+      final update = _update(size: apkBytes.length);
+      await expectLater(
+        GitHubUpdateService.downloadApk(
+          update,
+          client: client,
+          cacheDirectory: () async => cache,
+        ),
+        throwsA(
+          isA<UpdateException>().having(
+            (e) => e.message,
+            'message',
+            isNot(contains('SocketException')),
+          ),
+        ),
+      );
+      expect(filesIn(cache), isEmpty);
+
+      fail = false;
+      final file = await GitHubUpdateService.downloadApk(
+        update,
+        client: client,
+        cacheDirectory: () async => cache,
+      );
+      expect(file.lengthSync(), apkBytes.length);
+      expect(filesIn(cache), ['reelish-1.0.1.apk']);
+    });
+
     test('reuses a verified earlier download', () async {
       final update = _update(
         size: apkBytes.length,
@@ -466,6 +723,18 @@ void main() {
       );
     });
 
+    test('drops the build provenance the release workflow adds', () {
+      const notes = '''
+**Version:** 1.2.0 (Android versionCode 1002000)
+**Commit:** 6e21ac91b18f9ced608b8a1626bc770b27906090
+**APK SHA-256:** `caeea36fadd68d89581866659e5762bfb3b1db19c4771f7398e2b5c923948934`
+**Built by:** https://github.com/frnzeeey/reelish/actions/runs/1
+
+## What's Changed
+* Cinematic pause screen by @frnzeeey in https://github.com/frnzeeey/reelish/pull/20''';
+      expect(formatReleaseNotes(notes), '• Cinematic pause screen');
+    });
+
     test('empty notes stay empty', () {
       expect(formatReleaseNotes(''), '');
       expect(
@@ -478,6 +747,90 @@ void main() {
   });
 
   group('update UI', () {
+    setUp(AppUpdateFlow.resetForTest);
+
+    testWidgets('a manual check takes over from a background check', (
+      tester,
+    ) async {
+      final background = Completer<UpdateCheckResult>();
+      final update = _update(version: '1.2.0');
+      final available = UpdateCheckResult(
+        UpdateCheckStatus.updateAvailable,
+        update: update,
+        latestVersion: update.latestVersion,
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: Column(
+                children: [
+                  TextButton(
+                    onPressed: () => AppUpdateFlow.checkAutomatically(
+                      context,
+                      checker: () => background.future,
+                    ),
+                    child: const Text('background'),
+                  ),
+                  TextButton(
+                    onPressed: () => AppUpdateFlow.checkManually(
+                      context,
+                      checker: () async => available,
+                    ),
+                    child: const Text('manual'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('background'));
+      await tester.pump();
+      expect(AppUpdateFlow.phase, UpdateFlowPhase.checkingInBackground);
+
+      // Previously answered "An update is already in progress".
+      await tester.tap(find.text('manual'));
+      await tester.pumpAndSettle();
+      expect(find.text('An update is already in progress.'), findsNothing);
+      expect(find.text('New Reelish update available'), findsOneWidget);
+      expect(AppUpdateFlow.phase, UpdateFlowPhase.updating);
+
+      // The background answer arriving later opens no second prompt.
+      background.complete(available);
+      await tester.pumpAndSettle();
+      expect(find.text('New Reelish update available'), findsOneWidget);
+
+      await tester.tap(find.text('Later'));
+      await tester.pumpAndSettle();
+      expect(AppUpdateFlow.phase, UpdateFlowPhase.idle);
+    });
+
+    testWidgets('scenario 7: a failing check never surfaces or throws', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: TextButton(
+                onPressed: () => AppUpdateFlow.checkAutomatically(
+                  context,
+                  checker: () async => throw const SocketException('offline'),
+                ),
+                child: const Text('check'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('check'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.byType(Dialog), findsNothing);
+      expect(AppUpdateFlow.phase, UpdateFlowPhase.idle);
+    });
+
     Future<void> pumpHome(
       WidgetTester tester,
       Future<UpdateCheckResult> Function() checker,
