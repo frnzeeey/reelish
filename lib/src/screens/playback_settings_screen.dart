@@ -580,7 +580,7 @@ class PlaybackSettingsScreen extends StatelessWidget {
                     ),
                     _switchRow(
                       'Pause overlay',
-                      'Show the title after playback has been paused for five seconds.',
+                      'When paused, show the title artwork, details and synopsis with a large play button.',
                       settings.pauseOverlay,
                       (value) => _save(settings.copyWith(pauseOverlay: value)),
                     ),

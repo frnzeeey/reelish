@@ -4,11 +4,23 @@ class EpisodeRef {
     required this.season,
     required this.episode,
     this.title = '',
+    this.overview = '',
+    this.still = '',
+    this.runtimeMinutes,
   });
 
   final int season;
   final int episode;
   final String title;
+
+  /// What happens in this episode, from TMDB; empty when not provided.
+  final String overview;
+
+  /// Full-size still image URL for this episode; empty when TMDB has none.
+  final String still;
+
+  /// Listed runtime; null when TMDB does not know it.
+  final int? runtimeMinutes;
 
   String get code => 'S$season · E$episode';
 
@@ -46,6 +58,15 @@ class EpisodeContext {
                     season: s,
                     episode: e,
                     title: '${entry['name'] ?? ''}'.trim(),
+                    overview: '${entry['overview'] ?? ''}'.trim(),
+                    still: switch ('${entry['still_path'] ?? ''}') {
+                      '' => '',
+                      final path => 'https://image.tmdb.org/t/p/original$path',
+                    },
+                    runtimeMinutes: switch (entry['runtime']) {
+                      final num minutes when minutes > 0 => minutes.toInt(),
+                      _ => null,
+                    },
                   ),
                   airDate: DateTime.tryParse('${entry['air_date'] ?? ''}'),
                 ),

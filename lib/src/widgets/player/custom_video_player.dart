@@ -6,6 +6,7 @@ import 'package:video_player/video_player.dart';
 import 'package:flutter_go_torrent_streamer/flutter_go_torrent_streamer.dart';
 import 'package:video_player_media_kit/video_player_media_kit.dart';
 import '../../models/episode_context.dart';
+import '../../models/media_details.dart';
 import '../../models/media_item.dart';
 import '../../models/playback_settings.dart';
 import '../../models/stream_source.dart';
@@ -23,6 +24,7 @@ import '../../services/subtitle_addon_service.dart';
 import '../../services/subtitle_loader.dart';
 import 'audio_track_sheet.dart';
 import 'gesture_touch_layer.dart';
+import 'paused_overlay.dart';
 import 'player_controls.dart';
 import 'player_settings_sheet.dart';
 import 'stream_selector_sheet.dart';
@@ -47,6 +49,7 @@ class CustomVideoPlayer extends StatefulWidget {
     this.season,
     this.episode,
     this.imdbId,
+    this.details,
   });
   final MediaItem item;
   final StreamSource source;
@@ -76,6 +79,10 @@ class CustomVideoPlayer extends StatefulWidget {
   /// Resolves the IMDb id (`tt…`) used by OpenSubtitles when the item does
   /// not carry one yet. Subtitle search waits for it; playback does not.
   final Future<String>? imdbId;
+
+  /// TMDB details (genres, runtime, synopsis) for the pause screen. Optional;
+  /// the pause screen shows what the item itself carries until it resolves.
+  final Future<MediaDetails?>? details;
   @override
   State<CustomVideoPlayer> createState() => _CustomVideoPlayerState();
 }
@@ -88,7 +95,9 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   /// Controls visibility. A notifier, so showing or hiding controls rebuilds
   /// only the overlay, never the video surface or the rest of the player.
   final ValueNotifier<bool> _controlsVisible = ValueNotifier(true);
-  bool _scrubbing = false;
+
+  /// Whether the viewer is dragging the progress bar.
+  final ValueNotifier<bool> _scrubbing = ValueNotifier(false);
   int _sheetsOpen = 0;
   bool _landscapeLocked = false;
   bool _orientationDecided = false;
@@ -119,7 +128,19 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   double _subtitleDelay = 0;
   late PlaybackSettings _playback;
   Timer? _pauseOverlayTimer;
-  bool _pauseOverlayVisible = false;
+
+  /// Whether the pause screen is up. A notifier, so it animates in and out
+  /// without rebuilding the player.
+  final ValueNotifier<bool> _pauseOverlay = ValueNotifier(false);
+
+  /// Title details for the pause screen, once [CustomVideoPlayer.details]
+  /// resolves.
+  MediaDetails? _details;
+
+  /// Starts the one artwork download of the session, after startup.
+  Timer? _artworkTimer;
+  final Set<String> _precachedArtwork = {};
+  int? _artworkWidth;
   bool _nextEpisodePromptVisible = false;
   bool _nextEpisodeHandled = false;
   bool _startingNextEpisode = false;
@@ -194,6 +215,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     if (discovery != null) _listenForSources(discovery);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     unawaited(_resolveEpisodes());
+    unawaited(_resolveDetails());
     _remembered = widget.storage
         .rememberedSubtitle(_titleKey)
         .catchError((Object _) => null);
@@ -278,8 +300,8 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
       _errorMessage = null;
       _status = _nextStatus ?? 'Starting playback…';
       _nextStatus = null;
-      _pauseOverlayVisible = false;
     });
+    _pauseOverlay.value = false;
     _controlsVisible.value = true;
     _pauseOverlayTimer?.cancel();
     _pauseOverlayTimer = null;
@@ -411,6 +433,12 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
           _preferredEngine = attemptEngine;
         }
         setState(() => _ready = true);
+        // Pause artwork downloads once, after startup has had the network,
+        // so the first pause shows it from memory.
+        _artworkTimer ??= Timer(
+          const Duration(seconds: 4),
+          _precachePauseArtwork,
+        );
         _decideOrientation(c);
         // Subtitle discovery starts once the video plays, never before it.
         unawaited(_searchSubtitleAddons());
@@ -870,7 +898,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
         _ready &&
         !_error &&
         c.value.isPlaying &&
-        !_scrubbing &&
+        !_scrubbing.value &&
         _sheetsOpen == 0;
   }
 
@@ -909,7 +937,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   }
 
   void _onScrubChanged(bool scrubbing) {
-    _scrubbing = scrubbing;
+    _scrubbing.value = scrubbing;
     if (scrubbing) {
       _hide?.cancel();
     } else {
@@ -1054,6 +1082,59 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     if (resolved != null && resolved.next == null && _nextEpisodePromptVisible) {
       _dismissNextEpisode();
     }
+    // The episode's own still replaces the series artwork; fetch it now if
+    // the session's artwork download has already happened.
+    if (_ready && _artworkTimer?.isActive == false) _precachePauseArtwork();
+  }
+
+  Future<void> _resolveDetails() async {
+    final pending = widget.details;
+    if (pending == null) return;
+    MediaDetails? resolved;
+    try {
+      resolved = await pending;
+    } catch (_) {}
+    if (!mounted || resolved == null) return;
+    setState(() => _details = resolved);
+  }
+
+  /// What the pause screen shows, from the item, the episode list and the
+  /// title details as far as they have resolved.
+  PauseCardContent _pauseContent() => PauseCardContent.resolve(
+    item: widget.item,
+    episode: _episodes?.current,
+    season: widget.season,
+    episodeNumber: widget.episode,
+    details: _details,
+    duration: _controller?.value.duration,
+  );
+
+  /// Artwork decode width: the screen's longest side, so one decoded image
+  /// serves both orientations, capped at 1920 px.
+  int get _pauseArtworkWidth => _artworkWidth ??= View.of(
+    context,
+  ).physicalSize.longestSide.clamp(640, 1920).round();
+
+  /// Downloads and decodes the pause artwork ahead of the first pause. The
+  /// image cache keeps it, so pausing again never downloads it again.
+  void _precachePauseArtwork() {
+    if (!mounted || !_playback.pauseOverlay) return;
+    final url = _pauseContent().artwork.firstOrNull;
+    if (url == null || !_precachedArtwork.add(url)) return;
+    unawaited(
+      precacheImage(
+        pauseArtworkImage(url, _pauseArtworkWidth),
+        context,
+        // The overlay falls back to other artwork or the video frame.
+        onError: (_, _) {},
+      ),
+    );
+  }
+
+  void _resumeFromPauseScreen() {
+    final c = _controller;
+    if (c == null || !_ready || c.value.isPlaying) return;
+    _togglePlay();
   }
 
   /// False only when the episode list says there is no playable next one.
@@ -1287,7 +1368,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     if (previous.pauseOverlay && !_playback.pauseOverlay) {
       _pauseOverlayTimer?.cancel();
       _pauseOverlayTimer = null;
-      _pauseOverlayVisible = false;
+      _pauseOverlay.value = false;
     }
     setState(() {
       if (_subtitle != null &&
@@ -1800,6 +1881,8 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
 
   @override
   void dispose() {
+    // Detach first: nothing below may be notified after it is disposed.
+    _controller?.removeListener(_tick);
     _discoverySubscription?.cancel();
     // Stop starting further providers for a lookup this screen started.
     _rediscovery?.cancel();
@@ -1814,15 +1897,17 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     _save?.cancel();
     _hint?.cancel();
     _pauseOverlayTimer?.cancel();
+    _artworkTimer?.cancel();
     _nextEpisodeTimer?.cancel();
     _controlsVisible.dispose();
+    _scrubbing.dispose();
+    _pauseOverlay.dispose();
     _seekFlash.dispose();
     // Invalidate an in-flight subtitle search; its result is then ignored.
     _subtitleSearchGeneration++;
     _unbindEmbeddedSubtitles();
     _subtitleMenu.dispose();
     _embeddedLines.dispose();
-    _controller?.removeListener(_tick);
     _controller?.dispose();
     _torrentSession?.stop();
     const MethodChannel('onfeed/player').invokeMethod<void>('resetBrightness');
@@ -1835,16 +1920,20 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   void _tick() {
     final c = _controller;
     if (c == null) return;
-    if (c.value.isPlaying) {
+    // The pause screen follows a viewer pause, after a short hold so the
+    // paused frame registers first and quick pause/play taps do not flash
+    // it. Seeking while paused keeps it; playing or reaching the end (where
+    // the next-episode offer takes over) clears it.
+    if (!_canShowPauseScreen(c.value)) {
       _pauseOverlayTimer?.cancel();
       _pauseOverlayTimer = null;
-      if (_pauseOverlayVisible && mounted) {
-        setState(() => _pauseOverlayVisible = false);
-      }
-    } else if (_playback.pauseOverlay && _pauseOverlayTimer == null) {
-      _pauseOverlayTimer = Timer(const Duration(seconds: 5), () {
-        if (mounted && _controller?.value.isPlaying == false) {
-          setState(() => _pauseOverlayVisible = true);
+      _pauseOverlay.value = false;
+    } else if (!_pauseOverlay.value && _pauseOverlayTimer == null) {
+      _pauseOverlayTimer = Timer(const Duration(milliseconds: 450), () {
+        _pauseOverlayTimer = null;
+        final value = _controller?.value;
+        if (mounted && value != null && _canShowPauseScreen(value)) {
+          _pauseOverlay.value = true;
         }
       });
     }
@@ -1893,6 +1982,15 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
       _save = Timer(const Duration(milliseconds: 300), _saveProgress);
     }
   }
+
+  bool _canShowPauseScreen(VideoPlayerValue value) =>
+      _playback.pauseOverlay &&
+      _ready &&
+      !_error &&
+      value.isInitialized &&
+      !value.isPlaying &&
+      !value.isCompleted &&
+      !value.hasError;
 
   @override
   Widget build(BuildContext context) {
@@ -2018,7 +2116,18 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
                   : null,
               child: const SizedBox.expand(),
             ),
-          // 4. Temporary feedback.
+          // 4. Pause screen: artwork and details over the paused video,
+          // under the controls. Only its play button takes touches; other
+          // taps reach the gesture layer as usual.
+          if (playable)
+            ReelishPausedOverlay(
+              visible: _pauseOverlay,
+              scrubbing: _scrubbing,
+              content: _pauseContent(),
+              artworkWidth: _pauseArtworkWidth,
+              onPlay: _resumeFromPauseScreen,
+            ),
+          // 5. Temporary feedback.
           if (playable) PlayerSeekFeedback(flashes: _seekFlash),
           if (playable)
             PlayerBufferingIndicator(
@@ -2046,28 +2155,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
                 ),
               ),
             ),
-          if (_pauseOverlayVisible && playable && !c.value.isPlaying)
-            Positioned(
-              left: 32,
-              right: 32,
-              top: 0,
-              bottom: 0,
-              child: IgnorePointer(
-                child: Align(
-                  alignment: const Alignment(0, -.45),
-                  child: Text(
-                    widget.item.name,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      shadows: [Shadow(color: Colors.black87, blurRadius: 16)],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          // 5. Controls: always mounted while playable, faded in and out.
+          // 6. Controls: always mounted while playable, faded in and out.
           if (playable)
             ValueListenableBuilder<bool>(
               valueListenable: _controlsVisible,
@@ -2088,8 +2176,8 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
                 subtitle:
                     _episodes?.current.label ??
                     (widget.episodeLabel.isNotEmpty
-                    ? widget.episodeLabel
-                    : (current?.providerName ?? '')),
+                        ? widget.episodeLabel
+                        : (current?.providerName ?? '')),
                 sourceLabel: sourceLabel,
                 subtitleEnabled: _subtitle != null,
                 showAudio: _audioTracks.length > 1,
@@ -2128,6 +2216,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
                     : null,
                 nextEpisodeCountdown: _nextEpisodeCountdown,
                 onSpeedReset: _resetSpeed,
+                pauseScreen: _pauseOverlay,
               ),
             ),
           // The floating card shows while controls are hidden; with controls
@@ -2163,7 +2252,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
                 ),
               ),
             ),
-          // 6. No frame yet: starting, switching, reconnecting, or an error.
+          // 7. No frame yet: starting, switching, reconnecting, or an error.
           if (!playable)
             PlayerStatusView(
               onBack: () {

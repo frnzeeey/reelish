@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:feather_icon_font/feather_icon_font.dart';
 import '../models/app_update.dart';
 import '../models/episode_context.dart';
+import '../models/media_details.dart';
 import '../models/media_item.dart';
 import '../models/stream_source.dart';
 import '../navigation/app_transitions.dart';
@@ -752,6 +753,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         (value) => value.externalId,
         onError: (Object _) => '',
       );
+      // Genres, runtime and synopsis for the pause screen; usually a cache
+      // hit from the details page. The player works without it.
+      final details = _tmdb
+          .details(item)
+          .then<MediaDetails?>((value) => value, onError: (Object _) => null);
       beforePlayerOpens();
       PerfTimeline.end('PLAY_PRESSED', 'PLAYER_OPEN');
       _spotlightTimer?.cancel();
@@ -791,6 +797,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               season: season,
               episode: episode,
               imdbId: imdbId,
+              details: details,
               onNextEpisode: season == null || episode == null
                   ? null
                   : () => _playNextEpisode(

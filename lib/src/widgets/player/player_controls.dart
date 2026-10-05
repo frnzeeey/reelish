@@ -44,6 +44,7 @@ class PlayerControlsOverlay extends StatelessWidget {
     this.onNextEpisode,
     this.nextEpisodeCountdown,
     this.onSpeedReset,
+    this.pauseScreen,
   });
 
   final VideoPlayerController controller;
@@ -77,6 +78,10 @@ class PlayerControlsOverlay extends StatelessWidget {
   /// Returns playback to 1x from the speed pill; null opens settings.
   final VoidCallback? onSpeedReset;
 
+  /// True while the pause screen shows its own play button and title; the
+  /// center controls and the top-bar title then step aside for it.
+  final ValueListenable<bool>? pauseScreen;
+
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
@@ -107,18 +112,22 @@ class PlayerControlsOverlay extends StatelessWidget {
                     title: title,
                     subtitle: subtitle,
                     subtitleEnabled: subtitleEnabled,
+                    pauseScreen: pauseScreen,
                     onBack: onBack,
                     onSubtitles: onSubtitles,
                     onSettings: onSettings,
                   ),
                 ),
                 Center(
-                  child: _CenterControls(
-                    controller: controller,
-                    gap: wide ? 56 : 32,
-                    playSize: wide ? 76 : 68,
-                    onTogglePlay: onTogglePlay,
-                    onSeekBy: onSeekBy,
+                  child: _HiddenDuringPauseScreen(
+                    pauseScreen: pauseScreen,
+                    child: _CenterControls(
+                      controller: controller,
+                      gap: wide ? 56 : 32,
+                      playSize: wide ? 76 : 68,
+                      onTogglePlay: onTogglePlay,
+                      onSeekBy: onSeekBy,
+                    ),
                   ),
                 ),
                 Positioned(
@@ -152,6 +161,38 @@ class PlayerControlsOverlay extends StatelessWidget {
   );
 }
 
+/// Fades [child] out, and makes it untappable, while the pause screen shows.
+/// Hidden, it runs no animations (a scrolling title would otherwise keep
+/// drawing frames for the whole pause).
+class _HiddenDuringPauseScreen extends StatelessWidget {
+  const _HiddenDuringPauseScreen({
+    required this.pauseScreen,
+    required this.child,
+  });
+
+  final ValueListenable<bool>? pauseScreen;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final listenable = pauseScreen;
+    if (listenable == null) return child;
+    return ValueListenableBuilder<bool>(
+      valueListenable: listenable,
+      builder: (context, hidden, child) => IgnorePointer(
+        ignoring: hidden,
+        child: AnimatedOpacity(
+          opacity: hidden ? 0 : 1,
+          duration: playerFade,
+          curve: Curves.easeOutCubic,
+          child: TickerMode(enabled: !hidden, child: child!),
+        ),
+      ),
+      child: child,
+    );
+  }
+}
+
 class _TopBar extends StatelessWidget {
   const _TopBar({
     required this.title,
@@ -160,11 +201,13 @@ class _TopBar extends StatelessWidget {
     required this.onBack,
     required this.onSubtitles,
     required this.onSettings,
+    this.pauseScreen,
   });
 
   final String title;
   final String subtitle;
   final bool subtitleEnabled;
+  final ValueListenable<bool>? pauseScreen;
   final VoidCallback onBack;
   final VoidCallback onSubtitles;
   final VoidCallback onSettings;
@@ -179,35 +222,38 @@ class _TopBar extends StatelessWidget {
       ),
       const SizedBox(width: 6),
       Expanded(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            PlayerMarqueeText(
-              title,
-              style: const TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-                letterSpacing: -.2,
-                shadows: [Shadow(color: Colors.black54, blurRadius: 10)],
-              ),
-            ),
-            if (subtitle.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 2),
-                child: Text(
-                  subtitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    shadows: [Shadow(color: Colors.black54, blurRadius: 8)],
-                  ),
+        child: _HiddenDuringPauseScreen(
+          pauseScreen: pauseScreen,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              PlayerMarqueeText(
+                title,
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -.2,
+                  shadows: [Shadow(color: Colors.black54, blurRadius: 10)],
                 ),
               ),
-          ],
+              if (subtitle.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      shadows: [Shadow(color: Colors.black54, blurRadius: 8)],
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
       PlayerIconButton(
