@@ -6,6 +6,7 @@ import 'package:video_player/video_player.dart';
 import 'package:flutter_go_torrent_streamer/flutter_go_torrent_streamer.dart';
 import 'package:video_player_media_kit/video_player_media_kit.dart';
 import '../../models/episode_context.dart';
+import '../../models/episode_progress.dart';
 import '../../models/media_details.dart';
 import '../../models/media_item.dart';
 import '../../models/playback_settings.dart';
@@ -23,12 +24,31 @@ import '../../services/network_target_policy.dart';
 import '../../services/subtitle_addon_service.dart';
 import '../../services/subtitle_loader.dart';
 import 'audio_track_sheet.dart';
+import 'episode_panel.dart';
 import 'gesture_touch_layer.dart';
 import 'paused_overlay.dart';
 import 'player_controls.dart';
 import 'player_settings_sheet.dart';
 import 'stream_selector_sheet.dart';
 import 'subtitle_picker_sheet.dart';
+
+/// Starts [episode] in a new player that replaces the current one.
+typedef EpisodeSwitch =
+    Future<void> Function(EpisodeRef episode, EpisodeHandOff handOff);
+
+/// What the playing player offers the episode it hands over to.
+class EpisodeHandOff {
+  const EpisodeHandOff({required this.context, required this.release});
+
+  /// The playing player, which hosts the stream search and its errors.
+  final BuildContext context;
+
+  /// Frees this player's video engine. Called once streams for the new
+  /// episode are found, just before its player opens: the engine is chosen
+  /// app-wide, so this player must let go of it first, or disposing it later
+  /// would reach the new episode's engine and leave its own one running.
+  final Future<void> Function() release;
+}
 
 class CustomVideoPlayer extends StatefulWidget {
   const CustomVideoPlayer({
@@ -43,7 +63,7 @@ class CustomVideoPlayer extends StatefulWidget {
     this.streamCacheKey,
     this.discovery,
     this.onRediscover,
-    this.onNextEpisode,
+    this.onPlayEpisode,
     this.episodeLabel = '',
     this.episodeContext,
     this.season,
@@ -64,7 +84,12 @@ class CustomVideoPlayer extends StatefulWidget {
   /// Starts a fresh progressive provider lookup for this title, used by
   /// Retry and when a cached link has expired.
   final StreamDiscovery Function()? onRediscover;
-  final Future<void> Function()? onNextEpisode;
+
+  /// Plays another episode of this series through the app's play flow,
+  /// which finds its streams while this player stays open and then replaces
+  /// it. Completes early, with this player still open, when the switch fails
+  /// or is cancelled. Null for movies.
+  final EpisodeSwitch? onPlayEpisode;
 
   /// For series, the episode being played, such as `S2 · E3`.
   final String episodeLabel;
@@ -143,7 +168,14 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   int? _artworkWidth;
   bool _nextEpisodePromptVisible = false;
   bool _nextEpisodeHandled = false;
-  bool _startingNextEpisode = false;
+
+  /// True from choosing another episode until its player replaces this one
+  /// (or the switch fails): ignores further choices and holds the offers.
+  bool _switchingEpisode = false;
+
+  /// Players currently alive. Switching episodes briefly overlaps the old
+  /// player (closing) with the new one (opening).
+  static int _livePlayers = 0;
   double? _speedBeforeHold;
   TorrentStreamSession? _torrentSession;
   Timer? _hide, _save, _hint;
@@ -196,6 +228,9 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   /// resumes where the viewer was rather than at the original resume point.
   Duration? _lastPosition;
 
+  /// Length of the playing title, kept like [_lastPosition].
+  Duration _lastDuration = Duration.zero;
+
   /// Recent automatic reconnects per source, to bound retries after the
   /// stream drops during playback.
   final Map<String, List<DateTime>> _runtimeRetries = {};
@@ -216,6 +251,8 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     unawaited(_resolveEpisodes());
     unawaited(_resolveDetails());
+    _livePlayers++;
+    unawaited(_startPosition); // Read alongside the stream opening.
     _remembered = widget.storage
         .rememberedSubtitle(_titleKey)
         .catchError((Object _) => null);
@@ -403,8 +440,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
           // Playback at normal speed can proceed if the backend is slow here.
         }
       }
-      final resume =
-          _lastPosition ?? Duration(milliseconds: widget.item.resumeMs);
+      final resume = _lastPosition ?? await _startPosition;
       if (resume > Duration.zero) {
         final duration = c.value.duration;
         final safeResume =
@@ -673,13 +709,155 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     } catch (_) {}
   }
 
+  /// Plays the next episode (the offer, its countdown, and the panel's Next
+  /// button all come here), as listed in [EpisodeContext].
   Future<void> _startNextEpisode() async {
-    final callback = widget.onNextEpisode;
-    if (_startingNextEpisode || callback == null) return;
-    _startingNextEpisode = true;
+    if (_switchingEpisode) return;
     _nextEpisodeTimer?.cancel();
     if (mounted) setState(() => _nextEpisodePromptVisible = false);
-    await callback();
+    final next = (await _episodeContext())?.next;
+    if (!mounted) return;
+    if (next == null) {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        const SnackBar(content: Text('There is no next episode available.')),
+      );
+      return;
+    }
+    await _playEpisode(next);
+  }
+
+  /// The episode list, waiting for it if it is still loading.
+  Future<EpisodeContext?> _episodeContext() async {
+    if (_episodesResolved) return _episodes;
+    try {
+      return await widget.episodeContext;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Whether this is a series episode another one can be chosen from.
+  bool get _canSwitchEpisodes =>
+      widget.item.type == 'series' &&
+      widget.onPlayEpisode != null &&
+      widget.season != null &&
+      widget.episode != null;
+
+  /// Set once this episode's position is saved and handed over to the
+  /// player that replaces it, so disposing this one saves nothing stale.
+  bool _progressHandedOff = false;
+
+  /// The single way this player moves to another episode. The current
+  /// position is saved first, so each episode keeps its own progress.
+  /// Repeated taps while a switch is running are ignored.
+  Future<void> _playEpisode(EpisodeRef target) async {
+    final play = widget.onPlayEpisode;
+    if (play == null || _switchingEpisode || !mounted) return;
+    if (target.season == widget.season && target.episode == widget.episode) {
+      return;
+    }
+    setState(() => _switchingEpisode = true);
+    _nextEpisodeTimer?.cancel();
+    final c = _controller;
+    final wasPlaying = c?.value.isPlaying ?? false;
+    if (wasPlaying) unawaited(c!.pause().catchError((Object _) {}));
+    try {
+      await _saveProgress();
+    } catch (_) {
+      // Progress is best effort; the switch still happens.
+    }
+    if (!mounted) return;
+    _progressHandedOff = true;
+    var released = false;
+    try {
+      await play(
+        target,
+        EpisodeHandOff(
+          context: context,
+          release: () {
+            released = true;
+            return _releaseEngine(target);
+          },
+        ),
+      );
+    } catch (_) {}
+    // Still mounted: no stream was found, or the viewer cancelled. Continue
+    // where they were.
+    if (!mounted) return;
+    _progressHandedOff = false;
+    setState(() => _switchingEpisode = false);
+    if (released) {
+      // The new player did not open after all; reopen this episode at the
+      // position it was left.
+      unawaited(_initialize(_source ?? widget.source));
+      return;
+    }
+    if (wasPlaying && identical(c, _controller)) {
+      unawaited(c!.play().catchError((Object _) {}));
+    }
+  }
+
+  /// Lets go of the video engine (and torrent session) before [target]'s
+  /// player opens, showing a short status meanwhile. The last position is
+  /// kept, so this episode can still be reopened.
+  Future<void> _releaseEngine(EpisodeRef target) async {
+    if (!mounted) return;
+    _initializationGeneration++;
+    final opening = _openCancellation;
+    if (opening != null && !opening.isCompleted) opening.complete();
+    _pauseOverlayTimer?.cancel();
+    _pauseOverlay.value = false;
+    final controller = _controller;
+    _controller = null;
+    controller?.removeListener(_tick);
+    _unbindEmbeddedSubtitles();
+    final torrent = _torrentSession;
+    _torrentSession = null;
+    setState(() {
+      _ready = false;
+      _status = 'Opening ${target.code}…';
+    });
+    try {
+      await controller?.dispose();
+      await torrent?.stop();
+    } catch (_) {
+      // The new episode opens either way.
+    }
+  }
+
+  /// Opens the episode panel over the playing video.
+  Future<void> _openEpisodes() async {
+    if (_switchingEpisode) return;
+    final episodes = await _episodeContext();
+    if (!mounted) return;
+    if (episodes == null || episodes.episodes.isEmpty) {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        const SnackBar(
+          content: Text('The episode list is not available right now.'),
+        ),
+      );
+      return;
+    }
+    var progress = SeriesProgress.empty;
+    try {
+      // Saved first, so this episode's card shows where the viewer is now.
+      await _saveProgress();
+      progress = await widget.storage.seriesProgress(widget.item);
+    } catch (_) {}
+    if (!mounted) return;
+    final chosen = await _withSheet(
+      () => EpisodePanel.show(
+        context,
+        seriesTitle: widget.item.name,
+        episodes: episodes.episodes,
+        progress: progress,
+        current: episodes.current,
+        previous: episodes.previous,
+        next: episodes.next,
+      ),
+    );
+    if (chosen == null || !mounted) return;
+    await _playEpisode(chosen);
   }
 
   /// One subtitle line in the viewer's style; nothing when [text] is empty.
@@ -1178,8 +1356,46 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
         ? c.value.position
         : _lastPosition;
     if (position == null) return Future.value();
-    return widget.storage.saveProgress(widget.item, position.inMilliseconds);
+    final duration =
+        c != null && c.value.isInitialized && c.value.duration > Duration.zero
+        ? c.value.duration
+        : _lastDuration;
+    final season = widget.season, episode = widget.episode;
+    return Future.wait([
+      widget.storage.saveProgress(
+        widget.item,
+        position.inMilliseconds,
+        durationMs: duration.inMilliseconds,
+      ),
+      // Each episode keeps its own position, under its own key.
+      if (widget.item.type == 'series' && season != null && episode != null)
+        widget.storage.saveEpisodeProgress(
+          widget.item,
+          season: season,
+          episode: episode,
+          positionMs: position.inMilliseconds,
+          durationMs: duration.inMilliseconds,
+        ),
+    ]);
   }
+
+  /// Where this playback starts: a series episode resumes from its own
+  /// saved position (from the beginning once watched), never from another
+  /// episode's; a movie from its history entry.
+  late final Future<Duration> _startPosition = () async {
+    final season = widget.season, episode = widget.episode;
+    if (widget.item.type != 'series' || season == null || episode == null) {
+      return Duration(milliseconds: widget.item.resumeMs);
+    }
+    try {
+      final progress = await widget.storage.seriesProgress(widget.item);
+      return Duration(
+        milliseconds: progress.of(season, episode)?.resumeMs ?? 0,
+      );
+    } catch (_) {
+      return Duration.zero;
+    }
+  }();
 
   Future<void> _pickStream() async {
     final streams = _sources.where(_isSourceAllowed).toList();
@@ -1892,7 +2108,9 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     if (openCancellation != null && !openCancellation.isCompleted) {
       openCancellation.complete();
     }
-    _saveProgress();
+    // After a hand-over this episode is already saved; saving it again here
+    // would mark it as watched last, after the next episode started.
+    if (!_progressHandedOff) _saveProgress();
     _hide?.cancel();
     _save?.cancel();
     _hint?.cancel();
@@ -1910,10 +2128,16 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     _embeddedLines.dispose();
     _controller?.dispose();
     _torrentSession?.stop();
-    const MethodChannel('onfeed/player').invokeMethod<void>('resetBrightness');
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-    // Leave the rest of the app free to rotate again.
-    SystemChrome.setPreferredOrientations(const []);
+    // When another episode's player replaced this one, it is already
+    // showing: restoring the app's system UI and rotation would undo its.
+    if (--_livePlayers == 0) {
+      const MethodChannel(
+        'onfeed/player',
+      ).invokeMethod<void>('resetBrightness');
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+      // Leave the rest of the app free to rotate again.
+      SystemChrome.setPreferredOrientations(const []);
+    }
     super.dispose();
   }
 
@@ -1949,10 +2173,11 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     }
     if (_ready && c.value.isInitialized && c.value.position > Duration.zero) {
       _lastPosition = c.value.position;
+      if (c.value.duration > Duration.zero) _lastDuration = c.value.duration;
     }
     final duration = c.value.duration;
     if (widget.item.type == 'series' &&
-        widget.onNextEpisode != null &&
+        widget.onPlayEpisode != null &&
         !_nextEpisodeHandled &&
         _hasNextEpisode &&
         duration > Duration.zero &&
@@ -1986,6 +2211,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   bool _canShowPauseScreen(VideoPlayerValue value) =>
       _playback.pauseOverlay &&
       _ready &&
+      !_switchingEpisode &&
       !_error &&
       value.isInitialized &&
       !value.isPlaying &&
@@ -2197,6 +2423,9 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
                 onSubtitles: _pickSubtitles,
                 onAudio: _pickAudio,
                 onSources: _pickStream,
+                onEpisodes: _canSwitchEpisodes
+                    ? () => unawaited(_openEpisodes())
+                    : null,
                 onSettings: _settings,
                 onPip: () async {
                   _hide?.cancel();
@@ -2210,8 +2439,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
                   } catch (_) {}
                 },
                 onRotate: _toggleLandscape,
-                onNextEpisode:
-                    _nextEpisodePromptVisible && !_startingNextEpisode
+                onNextEpisode: _nextEpisodePromptVisible && !_switchingEpisode
                     ? () => unawaited(_startNextEpisode())
                     : null,
                 nextEpisodeCountdown: _nextEpisodeCountdown,
@@ -2222,7 +2450,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
           // The floating card shows while controls are hidden; with controls
           // up, the same offer is a pill in the bottom row, so the card never
           // covers the center controls on short landscape screens.
-          if (_nextEpisodePromptVisible && !_startingNextEpisode)
+          if (_nextEpisodePromptVisible && !_switchingEpisode)
             ValueListenableBuilder<bool>(
               valueListenable: _controlsVisible,
               builder: (context, controlsVisible, card) => IgnorePointer(

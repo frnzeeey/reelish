@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
+import '../models/episode_progress.dart';
 import '../models/media_item.dart';
 import '../models/stream_source.dart';
 import 'playback_source_policy.dart';
@@ -62,11 +63,96 @@ class StorageService {
         key,
         items.map((e) => jsonEncode(e.toJson())).toList(),
       );
-  Future<void> saveProgress(MediaItem item, int positionMs) async {
+
+  /// Saves where [item] was left, with its length when known, as the
+  /// title's watch-history entry (most recent first).
+  Future<void> saveProgress(
+    MediaItem item,
+    int positionMs, {
+    int durationMs = 0,
+  }) async {
     final all = await history();
     all.removeWhere((e) => e.id == item.id && e.type == item.type);
-    all.insert(0, item.copyWith(resumeMs: positionMs));
+    all.insert(
+      0,
+      item.copyWith(resumeMs: positionMs, durationMs: durationMs),
+    );
     await _saveItems(_history, all.take(50).toList());
+  }
+
+  static const _episodeProgressKey = 'onfeed.history.episodes.v1';
+
+  /// Series kept in the per-episode store; the oldest is dropped beyond it.
+  static const _maxSeriesWithProgress = 100;
+
+  /// Per-episode progress for [series]. The series' history entry keeps a
+  /// single `resumeMs` for continue-watching rows; this keeps each episode's
+  /// own position, so one episode never resumes at another's.
+  Future<SeriesProgress> seriesProgress(MediaItem series) async {
+    final all = await _episodeProgressStore();
+    final entry = all[_mediaKey(series)];
+    if (entry is! Map) return SeriesProgress.empty;
+    final episodes = <String, EpisodeProgress>{};
+    final raw = entry['episodes'];
+    if (raw is Map) {
+      for (final MapEntry(:key, :value) in raw.entries) {
+        final progress = EpisodeProgress.fromJson(value);
+        if (progress != null) episodes['$key'] = progress;
+      }
+    }
+    final last = entry['last'];
+    return SeriesProgress(
+      episodes: episodes,
+      last: last is List && last.length == 2 && last[0] is int && last[1] is int
+          ? (season: last[0] as int, episode: last[1] as int)
+          : null,
+    );
+  }
+
+  /// Records [positionMs] of [durationMs] for one episode of [series] and
+  /// marks it as the episode watched last.
+  Future<void> saveEpisodeProgress(
+    MediaItem series, {
+    required int season,
+    required int episode,
+    required int positionMs,
+    required int durationMs,
+  }) async {
+    final all = await _episodeProgressStore();
+    final key = _mediaKey(series);
+    final entry = all.remove(key);
+    final episodes = entry is Map && entry['episodes'] is Map
+        ? Map<String, dynamic>.from(entry['episodes'] as Map)
+        : <String, dynamic>{};
+    episodes[SeriesProgress.key(season, episode)] = EpisodeProgress(
+      positionMs: positionMs,
+      durationMs: durationMs,
+    ).toJson();
+    // Re-inserted last, so map order is least to most recently watched.
+    all[key] = {
+      'last': [season, episode],
+      'episodes': episodes,
+    };
+    while (all.length > _maxSeriesWithProgress) {
+      all.remove(all.keys.first);
+    }
+    await (await SharedPreferences.getInstance()).setString(
+      _episodeProgressKey,
+      jsonEncode(all),
+    );
+  }
+
+  Future<Map<String, dynamic>> _episodeProgressStore() async {
+    final raw = (await SharedPreferences.getInstance()).getString(
+      _episodeProgressKey,
+    );
+    if (raw == null) return {};
+    try {
+      final decoded = jsonDecode(raw);
+      return decoded is Map ? Map<String, dynamic>.from(decoded) : {};
+    } on FormatException {
+      return {};
+    }
   }
 
   Future<void> toggleFavorite(MediaItem item) async {

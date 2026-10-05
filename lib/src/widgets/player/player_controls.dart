@@ -38,6 +38,7 @@ class PlayerControlsOverlay extends StatelessWidget {
     required this.onSubtitles,
     required this.onAudio,
     required this.onSources,
+    this.onEpisodes,
     required this.onSettings,
     required this.onPip,
     required this.onRotate,
@@ -67,6 +68,9 @@ class PlayerControlsOverlay extends StatelessWidget {
   final VoidCallback onSubtitles;
   final VoidCallback onAudio;
   final VoidCallback onSources;
+
+  /// Opens the episode panel; null for movies, which hides the button.
+  final VoidCallback? onEpisodes;
   final VoidCallback onSettings;
   final VoidCallback onPip;
   final VoidCallback onRotate;
@@ -144,6 +148,7 @@ class PlayerControlsOverlay extends StatelessWidget {
                     onScrubChanged: onScrubChanged,
                     onAudio: onAudio,
                     onSources: onSources,
+                    onEpisodes: onEpisodes,
                     onSettings: onSettings,
                     onPip: onPip,
                     onRotate: onRotate,
@@ -411,6 +416,7 @@ class _BottomBar extends StatelessWidget {
     required this.onScrubChanged,
     required this.onAudio,
     required this.onSources,
+    this.onEpisodes,
     required this.onSettings,
     required this.onPip,
     required this.onRotate,
@@ -428,6 +434,7 @@ class _BottomBar extends StatelessWidget {
   final ValueChanged<bool> onScrubChanged;
   final VoidCallback onAudio;
   final VoidCallback onSources;
+  final VoidCallback? onEpisodes;
   final VoidCallback onSettings;
   final VoidCallback onPip;
   final VoidCallback onRotate;
@@ -465,6 +472,15 @@ class _BottomBar extends StatelessWidget {
           Expanded(
             child: Row(
               children: [
+                if (onEpisodes case final openEpisodes?) ...[
+                  _PillButton(
+                    icon: Icons.playlist_play_rounded,
+                    label: 'Episodes',
+                    semanticLabel: 'Episodes. Choose another episode',
+                    onPressed: openEpisodes,
+                  ),
+                  if (showSources) const SizedBox(width: 6),
+                ],
                 if (showSources)
                   Flexible(
                     child: _PillButton(

@@ -10,6 +10,7 @@ class MediaItem {
     this.rating = '',
     this.externalId = '',
     this.resumeMs = 0,
+    this.durationMs = 0,
     this.subtitleQuery = '',
     this.releaseDate = '',
     this.lastAirDate = '',
@@ -28,6 +29,11 @@ class MediaItem {
       rating,
       externalId;
   final int resumeMs;
+
+  /// Length of what was watched, saved with [resumeMs] so progress can be
+  /// shown as a share. Zero when unknown (saved before this was recorded,
+  /// or a live stream).
+  final int durationMs;
   final String subtitleQuery;
   final String releaseDate, lastAirDate;
   final int voteCount;
@@ -53,9 +59,11 @@ class MediaItem {
         isOngoing: j['isOngoing'] == true,
         hasRecentEpisode: j['hasRecentEpisode'] == true,
       );
-  factory MediaItem.fromStorage(Map<String, dynamic> j) => MediaItem.fromJson(
-    j,
-  ).copyWith(resumeMs: int.tryParse('${j['resumeMs']}') ?? 0);
+  factory MediaItem.fromStorage(Map<String, dynamic> j) =>
+      MediaItem.fromJson(j).copyWith(
+        resumeMs: int.tryParse('${j['resumeMs']}') ?? 0,
+        durationMs: int.tryParse('${j['durationMs']}') ?? 0,
+      );
   factory MediaItem.fromTmdb(Map<String, dynamic> json, {String? mediaType}) {
     final rawType = '${mediaType ?? json['media_type'] ?? 'movie'}';
     final type = rawType == 'tv' || rawType == 'series' ? 'series' : 'movie';
@@ -109,6 +117,7 @@ class MediaItem {
     'rating': rating,
     'externalId': externalId,
     'resumeMs': resumeMs,
+    'durationMs': durationMs,
     'subtitleQuery': subtitleQuery,
     'releaseDate': releaseDate,
     'lastAirDate': lastAirDate,
@@ -119,6 +128,7 @@ class MediaItem {
   };
   MediaItem copyWith({
     int? resumeMs,
+    int? durationMs,
     String? externalId,
     String? id,
     String? subtitleQuery,
@@ -135,6 +145,7 @@ class MediaItem {
     rating: rating,
     externalId: externalId ?? this.externalId,
     resumeMs: resumeMs ?? this.resumeMs,
+    durationMs: durationMs ?? this.durationMs,
     subtitleQuery: subtitleQuery ?? this.subtitleQuery,
     releaseDate: releaseDate ?? this.releaseDate,
     lastAirDate: lastAirDate ?? this.lastAirDate,

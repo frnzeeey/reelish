@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:feather_icon_font/feather_icon_font.dart';
 import '../models/app_update.dart';
 import '../models/episode_context.dart';
+import '../models/episode_progress.dart';
 import '../models/media_details.dart';
 import '../models/media_item.dart';
+import '../models/resume_summary.dart';
 import '../models/stream_source.dart';
 import '../navigation/app_transitions.dart';
 import '../services/perf_timeline.dart';
@@ -22,7 +24,8 @@ import '../widgets/category_chip.dart';
 import '../widgets/glass_box.dart';
 import '../widgets/media_card.dart';
 import '../widgets/soft_glass_dock.dart';
-import '../widgets/player/episode_selector_sheet.dart';
+import '../widgets/player/custom_video_player.dart';
+import '../widgets/player/episode_panel.dart';
 import '../widgets/player/stream_selector_sheet.dart';
 import 'plugins_screen.dart';
 import 'library_screen.dart';
@@ -467,8 +470,28 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Future<void> _loadHistory() async {
     final value = await _storage.history();
-    if (mounted) setState(() => _history = value);
+    // Series cards follow the episode watched last, so load each series'
+    // per-episode progress with the history.
+    final progress = <String, SeriesProgress>{};
+    for (final item in value) {
+      if (item.type != 'series' || item.resumeMs <= 0) continue;
+      try {
+        progress[_favoriteKey(item)] = await _storage.seriesProgress(item);
+      } catch (_) {}
+    }
+    if (mounted) {
+      setState(() {
+        _history = value;
+        _seriesProgress = progress;
+      });
+    }
   }
+
+  /// Per-episode progress of the series in watch history, by `type:id`.
+  Map<String, SeriesProgress> _seriesProgress = const {};
+
+  ResumeSummary _resumeSummary(MediaItem item) =>
+      ResumeSummary.of(item, series: _seriesProgress[_favoriteKey(item)]);
 
   String _favoriteKey(MediaItem item) => '${item.type}:${item.id}';
 
@@ -508,9 +531,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   /// earlier call is still awaiting its player route.
   Object? _playbackStart;
 
+  /// Finds streams for [item] (for a series, one episode) and opens the
+  /// player. When a player switches episodes, [handOff] comes from that
+  /// player: the search shows over it, a failure leaves it playing, and on
+  /// success it releases its video engine and the new episode's player
+  /// replaces it.
   Future<void> _openItem(
     MediaItem item, {
     BuildContext? presentationContext,
+    EpisodeHandOff? handOff,
     int? selectedSeason,
     int? selectedEpisode,
   }) async {
@@ -525,6 +554,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       await _resolveAndOpenPlayer(
         item,
         presentationContext: presentationContext,
+        handOff: handOff,
         selectedSeason: selectedSeason,
         selectedEpisode: selectedEpisode,
         beforePlayerOpens: release,
@@ -537,10 +567,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _resolveAndOpenPlayer(
     MediaItem item, {
     BuildContext? presentationContext,
+    EpisodeHandOff? handOff,
     int? selectedSeason,
     int? selectedEpisode,
     required VoidCallback beforePlayerOpens,
   }) async {
+    // The screen the player belongs to (the details page, or null for home)
+    // stays with the new player. Progress and errors show over the playing
+    // player when switching episodes.
+    final ownerContext = presentationContext;
+    final replacePlayer = handOff != null;
+    presentationContext = handOff?.context ?? presentationContext;
     var searchDialogOpen = false;
     void dismissSearchDialog() {
       if (!searchDialogOpen) return;
@@ -566,10 +603,29 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         );
         return;
       }
-      final selected = await EpisodeSelectorSheet.show(
+      final episodes = EpisodeRef.listFromTmdb(episodeList);
+      var progress = SeriesProgress.empty;
+      try {
+        progress = await _storage.seriesProgress(item);
+      } catch (_) {}
+      if (!mounted || presentationContext?.mounted == false) return;
+      // Opens on the episode watched last, so continuing is one tap.
+      final last = progress.last;
+      final lastWatched = last == null
+          ? null
+          : episodes
+                .where(
+                  (ref) =>
+                      ref.season == last.season && ref.episode == last.episode,
+                )
+                .firstOrNull;
+      final selected = await EpisodePanel.show(
         presentationContext ?? context,
-        item.name,
-        episodeList,
+        seriesTitle: item.name,
+        episodes: episodes,
+        progress: progress,
+        current: lastWatched,
+        currentIsPlaying: false,
       );
       if (selected == null ||
           !mounted ||
@@ -608,7 +664,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Finding a stream for ${item.name}',
+                            'Finding a stream for ${item.name}'
+                            '${season == null || episode == null ? '' : ' · S$season E$episode'}',
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
@@ -761,54 +818,63 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       beforePlayerOpens();
       PerfTimeline.end('PLAY_PRESSED', 'PLAYER_OPEN');
       _spotlightTimer?.cancel();
-      try {
-        await Navigator.push<void>(
-          context,
-          AppPageRoute<void>(
-            context: context,
-            builder: (_) => PlayerScreen(
-              item: playableItem,
-              source: selectedSource,
-              sources: discovery?.sources ?? [selectedSource],
-              discovery: discovery,
-              storage: _storage,
-              playbackSettings: _playbackSettings,
-              sourceFromCache: sourceFromCache,
-              streamCacheKey: streamCacheKey,
-              onRediscover: () {
-                // Recovery can happen after the user changes source
-                // preferences while the player is open. Read the controller
-                // here instead of capturing the initial discovery snapshot.
-                final current = _playbackSettings.value;
-                return _nuvioPlugins.discoverStreams(
-                  pluginItem,
-                  season: season,
-                  episode: episode,
-                  allowedPluginIds: current.allowedProviderIds,
-                  allowTorrents:
-                      current.p2pStreaming &&
-                      defaultTargetPlatform == TargetPlatform.android,
-                );
-              },
-              episodeLabel: season == null || episode == null
-                  ? ''
-                  : 'Season $season · Episode $episode',
-              episodeContext: episodeContext,
+      final route = AppPageRoute<void>(
+        context: context,
+        builder: (_) => PlayerScreen(
+          item: playableItem,
+          source: selectedSource,
+          sources: discovery?.sources ?? [selectedSource],
+          discovery: discovery,
+          storage: _storage,
+          playbackSettings: _playbackSettings,
+          sourceFromCache: sourceFromCache,
+          streamCacheKey: streamCacheKey,
+          onRediscover: () {
+            // Recovery can happen after the user changes source
+            // preferences while the player is open. Read the controller
+            // here instead of capturing the initial discovery snapshot.
+            final current = _playbackSettings.value;
+            return _nuvioPlugins.discoverStreams(
+              pluginItem,
               season: season,
               episode: episode,
-              imdbId: imdbId,
-              details: details,
-              onNextEpisode: season == null || episode == null
-                  ? null
-                  : () => _playNextEpisode(
-                      item,
-                      season!,
-                      episode!,
-                      presentationContext: presentationContext,
-                    ),
-            ),
-          ),
-        );
+              allowedPluginIds: current.allowedProviderIds,
+              allowTorrents:
+                  current.p2pStreaming &&
+                  defaultTargetPlatform == TargetPlatform.android,
+            );
+          },
+          episodeLabel: season == null || episode == null
+              ? ''
+              : 'Season $season · Episode $episode',
+          episodeContext: episodeContext,
+          season: season,
+          episode: episode,
+          imdbId: imdbId,
+          details: details,
+          // Every episode change (the panel, Previous/Next, auto-play)
+          // goes through this same flow.
+          onPlayEpisode: season == null || episode == null
+              ? null
+              : (target, handOff) => _openItem(
+                  item,
+                  presentationContext: ownerContext,
+                  handOff: handOff,
+                  selectedSeason: target.season,
+                  selectedEpisode: target.episode,
+                ),
+        ),
+      );
+      try {
+        if (replacePlayer) {
+          // The previous episode's player frees its engine first; then it is
+          // replaced (it is the top route).
+          await handOff.release();
+          if (!mounted) return;
+          await Navigator.pushReplacement<void, void>(context, route);
+        } else {
+          await Navigator.push<void>(context, route);
+        }
       } finally {
         discovery?.cancel();
         if (mounted && ModalRoute.of(context)?.isCurrent == true) {
@@ -872,55 +938,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       );
     } catch (_) {
       return null; // The player falls back to season and episode numbers.
-    }
-  }
-
-  Future<void> _playNextEpisode(
-    MediaItem item,
-    int season,
-    int episode, {
-    BuildContext? presentationContext,
-  }) async {
-    try {
-      // Same rule as the player's offer: the following listed episode, and
-      // only once it has aired.
-      final nextEpisode = EpisodeContext.fromTmdb(
-        await _tmdb.allEpisodes(item),
-        season: season,
-        episode: episode,
-      )?.next;
-      if (nextEpisode == null) {
-        if (mounted) {
-          ScaffoldMessenger.of(presentationContext ?? context).showSnackBar(
-            const SnackBar(
-              content: Text('There is no next episode available.'),
-            ),
-          );
-        }
-        return;
-      }
-      final nextSeason = nextEpisode.season;
-      final nextNumber = nextEpisode.episode;
-      if (!mounted) return;
-      final detailContext = presentationContext?.mounted == true
-          ? presentationContext
-          : null;
-      Navigator.of(context).pop();
-      await Future<void>.delayed(Duration.zero);
-      if (mounted) {
-        await _openItem(
-          item,
-          presentationContext: detailContext,
-          selectedSeason: nextSeason,
-          selectedEpisode: nextNumber,
-        );
-      }
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(presentationContext ?? context).showSnackBar(
-          const SnackBar(content: Text('Could not find the next episode.')),
-        );
-      }
     }
   }
 
@@ -999,10 +1016,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               separatorBuilder: (_, __) => const SizedBox(width: 13),
               itemBuilder: (context, index) {
                 final item = items[index];
+                // Real progress for watch-history entries; catalog items
+                // have none.
+                final resume = item.resumeMs > 0
+                    ? _resumeSummary(item)
+                    : ResumeSummary.unknown;
                 final card = MediaCard(
                   item: item,
                   isFavorite: _favoriteKeys.contains(_favoriteKey(item)),
-                  progress: item.resumeMs > 0 ? .36 : 0,
+                  progress: resume.fraction,
+                  progressLabel: resume.label,
                   onTap: () => _showDetails(item),
                   onFavorite: () async {
                     final isFavorite = await _toggleFavorite(item);

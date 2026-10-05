@@ -31,7 +31,7 @@ const _episode = EpisodeRef(
   episode: 4,
   title: 'The Awakening',
   overview: 'Mara finally opens the vault.',
-  still: 'https://image.tmdb.org/t/p/original/still.jpg',
+  stillPath: '/still.jpg',
   runtimeMinutes: 48,
 );
 

@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../models/episode_progress.dart';
 import '../models/media_item.dart';
+import '../models/resume_summary.dart';
 import '../services/storage_service.dart';
 import '../theme/glass_theme.dart';
 import '../widgets/media_card.dart';
@@ -51,13 +53,31 @@ class _LibraryScreenState extends State<LibraryScreen> {
       widget.storage.history(),
       widget.storage.favorites(),
     ]);
+    // Series cards follow the episode watched last.
+    final progress = <String, SeriesProgress>{};
+    for (final item in values[0]) {
+      if (item.type != 'series' || item.resumeMs <= 0) continue;
+      try {
+        progress['${item.type}:${item.id}'] = await widget.storage
+            .seriesProgress(item);
+      } catch (_) {}
+    }
     if (!mounted) return;
     setState(() {
       _history = values[0];
       _favorites = values[1];
+      _seriesProgress = progress;
       _loading = false;
     });
   }
+
+  /// Per-episode progress of the series in watch history, by `type:id`.
+  Map<String, SeriesProgress> _seriesProgress = const {};
+
+  ResumeSummary _resumeSummary(MediaItem item) => ResumeSummary.of(
+    item,
+    series: _seriesProgress['${item.type}:${item.id}'],
+  );
 
   Future<void> _removeHistory(MediaItem item) async {
     await widget.storage.removeHistory(item);
@@ -102,13 +122,15 @@ class _LibraryScreenState extends State<LibraryScreen> {
                             label: 'Everything',
                             count: _history.length + _favorites.length,
                             selected: _filter == _LibraryFilter.all,
-                            onTap: () => setState(() => _filter = _LibraryFilter.all),
+                            onTap: () =>
+                                setState(() => _filter = _LibraryFilter.all),
                           ),
                           const SizedBox(width: 8),
                           _FilterChip(
                             label: 'Continue',
                             count: continuing.length,
-                            selected: _filter == _LibraryFilter.continueWatching,
+                            selected:
+                                _filter == _LibraryFilter.continueWatching,
                             onTap: () => setState(
                               () => _filter = _LibraryFilter.continueWatching,
                             ),
@@ -138,6 +160,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                             'Titles you pause while watching will show up here.',
                         onPlay: widget.onPlay,
                         onRemove: _removeHistory,
+                        resumeOf: _resumeSummary,
                       ),
                     ),
                   if (_filter == _LibraryFilter.all ||
@@ -166,6 +189,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                             'Start watching something and it will be listed here.',
                         onPlay: widget.onPlay,
                         onRemove: _removeHistory,
+                        resumeOf: _resumeSummary,
                       ),
                     ),
                   const SliverToBoxAdapter(child: SizedBox(height: 128)),
@@ -279,9 +303,15 @@ class _LibraryStat extends StatelessWidget {
       children: [
         Icon(icon, size: 15, color: GlassTheme.primary),
         const SizedBox(width: 7),
-        Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800)),
+        Text(
+          value,
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+        ),
         const SizedBox(width: 5),
-        Text(label, style: const TextStyle(fontSize: 11, color: GlassTheme.muted)),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 11, color: GlassTheme.muted),
+        ),
       ],
     ),
   );
@@ -361,6 +391,7 @@ class _MediaSection extends StatelessWidget {
     this.onRemove,
     this.onFavorite,
     this.favorite = false,
+    this.resumeOf,
   });
 
   final String title;
@@ -372,6 +403,9 @@ class _MediaSection extends StatelessWidget {
   final ValueChanged<MediaItem>? onRemove;
   final ValueChanged<MediaItem>? onFavorite;
   final bool favorite;
+
+  /// Real progress for watch-history cards; null for other sections.
+  final ResumeSummary Function(MediaItem item)? resumeOf;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -444,12 +478,16 @@ class _MediaSection extends StatelessWidget {
                 separatorBuilder: (_, __) => const SizedBox(width: 12),
                 itemBuilder: (context, index) {
                   final item = items[index];
+                  final resume = item.resumeMs > 0
+                      ? resumeOf?.call(item) ?? ResumeSummary.unknown
+                      : ResumeSummary.unknown;
                   return Stack(
                     children: [
                       MediaCard(
                         item: item,
                         isFavorite: favorite,
                         onTap: () => onPlay(item),
+                        progress: resume.fraction,
                         onFavorite: favorite && onFavorite != null
                             ? () => onFavorite!(item)
                             : null,
@@ -500,7 +538,9 @@ class _MediaSection extends StatelessWidget {
                                 ),
                                 const SizedBox(width: 3),
                                 Text(
-                                  _resumeLabel(item.resumeMs),
+                                  resume.label.isEmpty
+                                      ? 'RESUME'
+                                      : resume.label.toUpperCase(),
                                   style: const TextStyle(
                                     fontSize: 8,
                                     fontWeight: FontWeight.w700,
@@ -519,14 +559,6 @@ class _MediaSection extends StatelessWidget {
       ],
     ),
   );
-}
-
-String _resumeLabel(int positionMs) {
-  final totalMinutes = positionMs ~/ 60000;
-  if (totalMinutes >= 60) {
-    return 'PAUSED AT ${totalMinutes ~/ 60}H ${totalMinutes % 60}M';
-  }
-  return 'PAUSED AT ${totalMinutes}M';
 }
 
 class _LibraryEmptyState extends StatelessWidget {
@@ -565,7 +597,13 @@ class _LibraryEmptyState extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
               const SizedBox(height: 4),
               Text(
                 message,

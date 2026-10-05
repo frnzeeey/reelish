@@ -11,6 +11,7 @@ class MediaCard extends StatefulWidget {
     required this.item,
     required this.onTap,
     this.progress = 0,
+    this.progressLabel = '',
     this.onFavorite,
     this.isFavorite = false,
   });
@@ -18,6 +19,10 @@ class MediaCard extends StatefulWidget {
   final MediaItem item;
   final FutureOr<void> Function() onTap;
   final double progress;
+
+  /// Replaces the year and rating on Continue Watching cards, such as
+  /// `S2 E1 · 27 min left`.
+  final String progressLabel;
   final VoidCallback? onFavorite;
   final bool isFavorite;
 
@@ -289,41 +294,53 @@ class _MediaCardState extends State<MediaCard> {
                                   ),
                                 ),
                                 const SizedBox(height: 3),
-                                Row(
-                                  children: [
-                                    if (item.year.isNotEmpty)
-                                      Flexible(
-                                        child: Text(
-                                          item.year,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
+                                if (widget.progressLabel.isNotEmpty)
+                                  Text(
+                                    widget.progressLabel,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  )
+                                else
+                                  Row(
+                                    children: [
+                                      if (item.year.isNotEmpty)
+                                        Flexible(
+                                          child: Text(
+                                            item.year,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              color: Colors.white70,
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ),
+                                      if (item.rating.isNotEmpty) ...[
+                                        if (item.year.isNotEmpty)
+                                          const SizedBox(width: 7),
+                                        Icon(
+                                          FeatherIcons.star,
+                                          size: 10,
+                                          color: GlassTheme.primary,
+                                        ),
+                                        const SizedBox(width: 3),
+                                        Text(
+                                          item.rating,
                                           style: const TextStyle(
                                             color: Colors.white70,
                                             fontSize: 10,
                                             fontWeight: FontWeight.w600,
                                           ),
                                         ),
-                                      ),
-                                    if (item.rating.isNotEmpty) ...[
-                                      if (item.year.isNotEmpty)
-                                        const SizedBox(width: 7),
-                                      Icon(
-                                        FeatherIcons.star,
-                                        size: 10,
-                                        color: GlassTheme.primary,
-                                      ),
-                                      const SizedBox(width: 3),
-                                      Text(
-                                        item.rating,
-                                        style: const TextStyle(
-                                          color: Colors.white70,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
+                                      ],
                                     ],
-                                  ],
-                                ),
+                                  ),
                                 if (progress > 0) ...[
                                   const SizedBox(height: 7),
                                   ClipRRect(

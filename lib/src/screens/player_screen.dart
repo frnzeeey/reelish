@@ -20,7 +20,7 @@ class PlayerScreen extends StatelessWidget {
     this.streamCacheKey,
     this.discovery,
     this.onRediscover,
-    this.onNextEpisode,
+    this.onPlayEpisode,
     this.episodeLabel = '',
     this.episodeContext,
     this.season,
@@ -37,7 +37,7 @@ class PlayerScreen extends StatelessWidget {
   final String? streamCacheKey;
   final StreamDiscovery? discovery;
   final StreamDiscovery Function()? onRediscover;
-  final Future<void> Function()? onNextEpisode;
+  final EpisodeSwitch? onPlayEpisode;
   final String episodeLabel;
   final Future<EpisodeContext?>? episodeContext;
   final int? season;
@@ -59,7 +59,7 @@ class PlayerScreen extends StatelessWidget {
       streamCacheKey: streamCacheKey,
       discovery: discovery,
       onRediscover: onRediscover,
-      onNextEpisode: onNextEpisode,
+      onPlayEpisode: onPlayEpisode,
       episodeLabel: episodeLabel,
       episodeContext: episodeContext,
       season: season,
