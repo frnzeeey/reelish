@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:feather_icon_font/feather_icon_font.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import '../models/app_update.dart';
 import '../models/episode_context.dart';
 import '../models/episode_progress.dart';
@@ -1065,7 +1065,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 ),
               ),
               const Icon(
-                FeatherIcons.chevronRight,
+                Symbols.chevron_right_rounded,
                 size: 14,
                 color: GlassTheme.muted,
               ),
@@ -1201,7 +1201,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         focusNode: _searchFocus,
                         onChanged: _searchChanged,
                         decoration: InputDecoration(
-                          prefixIcon: const Icon(FeatherIcons.search),
+                          prefixIcon: const Icon(Symbols.search_rounded),
                           hintText: 'Find your next favorite',
                           suffixIcon: value.text.isEmpty
                               ? null
@@ -1211,7 +1211,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                     _search.clear();
                                     _searchChanged('');
                                   },
-                                  icon: const Icon(FeatherIcons.x),
+                                  icon: const Icon(Symbols.close_rounded),
                                 ),
                         ),
                       ),
@@ -1221,7 +1221,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   IconButton(
                     tooltip: 'Close search',
                     onPressed: _closeSearch,
-                    icon: const Icon(FeatherIcons.x),
+                    icon: const Icon(Symbols.close_rounded),
                   ),
                 ],
               )
@@ -1257,7 +1257,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       backgroundColor: Colors.white.withValues(alpha: .09),
                       foregroundColor: Colors.white,
                     ),
-                    icon: const Icon(FeatherIcons.search),
+                    icon: const Icon(Symbols.search_rounded),
                   ),
                 ],
               ),
@@ -1365,7 +1365,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           borderRadius: BorderRadius.circular(14),
                         ),
                         child: Icon(
-                          FeatherIcons.link,
+                          Symbols.link_rounded,
                           color: GlassTheme.primary,
                         ),
                       ),
@@ -1394,7 +1394,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           context,
                           _nuvioPlugins,
                         ),
-                        icon: const Icon(FeatherIcons.plus),
+                        icon: const Icon(Symbols.add_rounded),
                       ),
                     ],
                   ),
@@ -1421,7 +1421,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   child: Row(
                     children: [
                       const Icon(
-                        FeatherIcons.cloudOff,
+                        Symbols.cloud_off_rounded,
                         color: GlassTheme.muted,
                         size: 18,
                       ),
@@ -1439,7 +1439,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         tooltip: 'Retry catalog',
                         onPressed: () =>
                             _reloadActiveFeed(),
-                        icon: const Icon(FeatherIcons.refreshCw),
+                        icon: const Icon(Symbols.refresh_rounded),
                       ),
                     ],
                   ),
@@ -1457,8 +1457,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   children: [
                     Icon(
                       feed.error == null
-                          ? FeatherIcons.film
-                          : FeatherIcons.cloudOff,
+                          ? Symbols.movie_rounded
+                          : Symbols.cloud_off_rounded,
                       size: 34,
                       color: GlassTheme.muted,
                     ),
@@ -1483,7 +1483,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       OutlinedButton.icon(
                         onPressed: () =>
                             _reloadActiveFeed(),
-                        icon: const Icon(FeatherIcons.refreshCw),
+                        icon: const Icon(Symbols.refresh_rounded),
                         label: const Text('Retry'),
                       ),
                     ],
@@ -1614,7 +1614,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             else
               TextButton.icon(
                 onPressed: onRetry,
-                icon: const Icon(FeatherIcons.refreshCw, size: 15),
+                icon: const Icon(Symbols.refresh_rounded, size: 15),
                 label: const Text('Retry'),
               ),
           ],
@@ -1794,7 +1794,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       ),
                     ),
                     onPressed: () => _showDetails(item),
-                    icon: const Icon(FeatherIcons.info),
+                    icon: const Icon(Symbols.info_rounded),
                     label: const Text(
                       'Details',
                       style: TextStyle(fontWeight: FontWeight.w800),
@@ -1827,7 +1827,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         );
                       }
                     },
-                    icon: const Icon(FeatherIcons.plus, size: 19),
+                    icon: const Icon(Symbols.add_rounded, size: 19),
                     label: const Text('My list'),
                   ),
                 ],

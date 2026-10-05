@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:feather_icon_font/feather_icon_font.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import '../models/app_update.dart';
 import '../services/github_update_service.dart';
@@ -128,8 +128,8 @@ abstract final class AppUpdateFlow {
               : 'Unable to check for updates',
           message: result.message,
           icon: result.status == UpdateCheckStatus.networkError
-              ? FeatherIcons.wifiOff
-              : FeatherIcons.alertCircle,
+              ? Symbols.wifi_off_rounded
+              : Symbols.error_rounded,
         );
       }
     } catch (_) {
@@ -240,7 +240,7 @@ abstract final class AppUpdateFlow {
     BuildContext context, {
     required String title,
     required String message,
-    IconData icon = FeatherIcons.alertCircle,
+    IconData icon = Symbols.error_rounded,
   }) => showDialog<void>(
     context: context,
     builder: (_) =>

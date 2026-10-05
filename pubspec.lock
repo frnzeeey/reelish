@@ -113,14 +113,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.3.3"
-  feather_icon_font:
-    dependency: "direct main"
-    description:
-      name: feather_icon_font
-      sha256: aca83e9106df638278e9419e972ac673f9f7bded56aa93ff375c62203e3a5201
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.0.0"
   ffi:
     dependency: transitive
     description:
@@ -327,6 +319,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.13.0"
+  material_symbols_icons:
+    dependency: "direct main"
+    description:
+      name: material_symbols_icons
+      sha256: bd513edc2bc9b034108d5518c48cf5cebbb67d0653728cc452368cb27ca80bb0
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.2960.0"
   media_kit:
     dependency: transitive
     description:

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -41,7 +42,7 @@ class AboutScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(17),
                 ),
                 child: Icon(
-                  Icons.movie_creation_outlined,
+                  Symbols.movie_rounded,
                   color: GlassTheme.primary,
                 ),
               ),
@@ -89,7 +90,7 @@ class AboutScreen extends StatelessWidget {
             height: 54,
             child: FilledButton.tonalIcon(
               onPressed: () => AppUpdateFlow.checkManually(context),
-              icon: const Icon(Icons.system_update_rounded),
+              icon: const Icon(Symbols.system_update_rounded),
               label: const Text('Check for updates'),
               style: FilledButton.styleFrom(
                 textStyle: const TextStyle(fontWeight: FontWeight.w700),
@@ -135,7 +136,7 @@ class SupportDevelopmentScreen extends StatelessWidget {
           height: 54,
           child: FilledButton.icon(
             onPressed: () => _openCoffeePage(context),
-            icon: const Icon(Icons.coffee_rounded),
+            icon: const Icon(Symbols.coffee_rounded),
             label: const Text('Buy me a coffee'),
             style: FilledButton.styleFrom(
               textStyle: const TextStyle(fontWeight: FontWeight.w700),

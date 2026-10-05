@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import '../models/episode_progress.dart';
 import '../models/media_item.dart';
@@ -250,7 +251,7 @@ class _LibraryHeader extends StatelessWidget {
               foregroundColor: GlassTheme.primary,
               backgroundColor: GlassTheme.primary.withValues(alpha: .1),
             ),
-            icon: const Icon(Icons.refresh_rounded),
+            icon: const Icon(Symbols.refresh_rounded),
           ),
         ],
       ),
@@ -263,13 +264,13 @@ class _LibraryHeader extends StatelessWidget {
       Row(
         children: [
           _LibraryStat(
-            icon: Icons.play_circle_outline_rounded,
+            icon: Symbols.play_circle_rounded,
             value: '$historyCount',
             label: 'watched',
           ),
           const SizedBox(width: 9),
           _LibraryStat(
-            icon: Icons.favorite_border_rounded,
+            icon: Symbols.favorite_rounded,
             value: '$favoriteCount',
             label: 'saved',
           ),
@@ -461,8 +462,8 @@ class _MediaSection extends StatelessWidget {
               title: emptyTitle,
               message: emptyMessage,
               icon: favorite
-                  ? Icons.favorite_border_rounded
-                  : Icons.movie_filter_outlined,
+                  ? Symbols.favorite_rounded
+                  : Symbols.movie_filter_rounded,
             ),
           )
         else
@@ -507,7 +508,7 @@ class _MediaSection extends StatelessWidget {
                                 height: 34,
                               ),
                               padding: EdgeInsets.zero,
-                              icon: const Icon(Icons.close_rounded, size: 17),
+                              icon: const Icon(Symbols.close_rounded, size: 17),
                               onPressed: () => onRemove!(item),
                             ),
                           ),
@@ -532,7 +533,8 @@ class _MediaSection extends StatelessWidget {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(
-                                  Icons.play_arrow_rounded,
+                                  Symbols.play_arrow_rounded,
+                                  fill: 1,
                                   size: 12,
                                   color: GlassTheme.primary,
                                 ),

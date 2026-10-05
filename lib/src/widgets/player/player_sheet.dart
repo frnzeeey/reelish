@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import '../../theme/glass_theme.dart';
 
@@ -135,8 +136,9 @@ class PlayerSheetOption extends StatelessWidget {
                 children: [
                   Icon(
                     selected
-                        ? Icons.radio_button_checked_rounded
-                        : Icons.radio_button_unchecked_rounded,
+                        ? Symbols.radio_button_checked_rounded
+                        : Symbols.radio_button_unchecked_rounded,
+                    fill: selected ? 1 : 0,
                     size: 20,
                     color: selected ? GlassTheme.primary : Colors.white54,
                   ),

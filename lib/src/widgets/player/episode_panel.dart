@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import '../../models/episode_context.dart';
 import '../../models/episode_progress.dart';
@@ -301,7 +302,7 @@ class _EpisodePanelState extends State<EpisodePanel> {
               IconButton(
                 tooltip: 'Close episodes',
                 onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.close_rounded),
+                icon: const Icon(Symbols.close_rounded),
               ),
             ],
           ),
@@ -430,7 +431,8 @@ class _NavigationButton extends StatelessWidget {
     final episode = this.episode;
     final label = forward ? 'Next' : 'Previous';
     final icon = Icon(
-      forward ? Icons.skip_next_rounded : Icons.skip_previous_rounded,
+      forward ? Symbols.skip_next_rounded : Symbols.skip_previous_rounded,
+      fill: 1,
       size: 20,
     );
     final text = Flexible(
@@ -586,7 +588,8 @@ class _EpisodeCardState extends State<_EpisodeCard> {
                         ],
                         if (!current && (progress?.isWatched ?? false)) ...[
                           const Icon(
-                            Icons.check_circle_rounded,
+                            Symbols.check_circle_rounded,
+                            fill: 1,
                             size: 14,
                             color: Colors.white54,
                           ),
@@ -683,7 +686,7 @@ class _EpisodeCardState extends State<_EpisodeCard> {
                   icon: AnimatedRotation(
                     turns: _expanded ? .5 : 0,
                     duration: const Duration(milliseconds: 180),
-                    child: const Icon(Icons.expand_more_rounded),
+                    child: const Icon(Symbols.expand_more_rounded),
                   ),
                 ),
               ),
@@ -713,8 +716,8 @@ class _CurrentBadge extends StatelessWidget {
         children: [
           Icon(
             label == 'Playing'
-                ? Icons.equalizer_rounded
-                : Icons.history_rounded,
+                ? Symbols.equalizer_rounded
+                : Symbols.history_rounded,
             size: 12,
             color: GlassTheme.background,
           ),
@@ -760,7 +763,7 @@ class _Thumbnail extends StatelessWidget {
       color: GlassTheme.elevatedSurface,
       child: Center(
         child: Icon(
-          Icons.movie_outlined,
+          Symbols.movie_rounded,
           color: Colors.white.withValues(alpha: .28),
           size: 26,
         ),
@@ -800,7 +803,8 @@ class _Thumbnail extends StatelessWidget {
                 color: Color(0x59000000),
                 child: Center(
                   child: Icon(
-                    Icons.play_arrow_rounded,
+                    Symbols.play_arrow_rounded,
+                    fill: 1,
                     color: Colors.white,
                     size: 30,
                   ),

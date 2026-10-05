@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import '../../models/stream_source.dart';
 import '../../models/subtitle_language.dart';
@@ -154,7 +155,7 @@ class SubtitlePickerSheet extends StatelessWidget {
         ],
       ];
       return PlayerSheetFrame(
-        icon: Icons.closed_caption_rounded,
+        icon: Symbols.closed_caption_rounded,
         title: 'Subtitles',
         children: [
           PlayerSheetOption(

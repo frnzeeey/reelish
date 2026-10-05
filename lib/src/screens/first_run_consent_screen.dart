@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../theme/glass_theme.dart';
@@ -100,7 +101,7 @@ class _FirstRunConsentScreenState extends State<FirstRunConsentScreen> {
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: Icon(
-                            Icons.policy_outlined,
+                            Symbols.policy_rounded,
                             color: GlassTheme.coralBright,
                           ),
                         ),
@@ -211,7 +212,8 @@ class _DocumentConsentTile extends StatelessWidget {
       children: [
         ListTile(
           leading: Icon(
-            read ? Icons.check_circle_rounded : Icons.description_outlined,
+            read ? Symbols.check_circle_rounded : Symbols.description_rounded,
+            fill: read ? 1 : 0,
             color: read ? GlassTheme.coralBright : GlassTheme.muted,
           ),
           title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:feather_icon_font/feather_icon_font.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import '../models/playback_settings.dart';
 import '../services/accent_settings_controller.dart';
@@ -44,7 +44,7 @@ class _SettingsPageHeader extends StatelessWidget {
           IconButton(
             tooltip: 'Back to settings',
             onPressed: onBack,
-            icon: const Icon(Icons.arrow_back_rounded),
+            icon: const Icon(Symbols.arrow_back_rounded),
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -121,7 +121,7 @@ class SettingsScreen extends StatelessWidget {
       _settingsGroupLabel(context, 'PREFERENCES'),
       const SizedBox(height: 10),
       _ProfileEntry(
-        icon: FeatherIcons.playCircle,
+        icon: Symbols.play_circle_rounded,
         eyebrow: 'PLAYER',
         title: 'Playback',
         subtitle: 'Streams, gestures, subtitles and P2P playback',
@@ -131,7 +131,7 @@ class SettingsScreen extends StatelessWidget {
       AnimatedBuilder(
         animation: accentSettings,
         builder: (context, _) => _ProfileEntry(
-          icon: FeatherIcons.monitor,
+          icon: Symbols.monitor_rounded,
           eyebrow: 'PERSONALIZE',
           title: 'Appearance',
           subtitle: '${accentSettings.value.label} accent color',
@@ -142,7 +142,7 @@ class SettingsScreen extends StatelessWidget {
       _settingsGroupLabel(context, 'INFORMATION'),
       const SizedBox(height: 10),
       _ProfileEntry(
-        icon: FeatherIcons.shield,
+        icon: Symbols.shield_rounded,
         eyebrow: 'PRIVACY',
         title: 'Privacy policy',
         subtitle: 'What stays on your device and what is sent to services',
@@ -155,7 +155,7 @@ class SettingsScreen extends StatelessWidget {
       ),
       const SizedBox(height: 12),
       _ProfileEntry(
-        icon: FeatherIcons.fileText,
+        icon: Symbols.description_rounded,
         eyebrow: 'LEGAL',
         title: 'Terms of use',
         subtitle: 'Rules for using the app, add-ons and media sources',
@@ -168,7 +168,7 @@ class SettingsScreen extends StatelessWidget {
       ),
       const SizedBox(height: 12),
       _ProfileEntry(
-        icon: FeatherIcons.info,
+        icon: Symbols.info_rounded,
         eyebrow: 'ABOUT',
         title: 'About',
         subtitle: 'App information and version',
@@ -178,7 +178,7 @@ class SettingsScreen extends StatelessWidget {
       ),
       const SizedBox(height: 12),
       _ProfileEntry(
-        icon: FeatherIcons.fileText,
+        icon: Symbols.description_rounded,
         eyebrow: 'ACKNOWLEDGEMENTS',
         title: 'Credits',
         subtitle: 'Services, content and third-party notices',
@@ -191,7 +191,7 @@ class SettingsScreen extends StatelessWidget {
       ),
       const SizedBox(height: 12),
       _ProfileEntry(
-        icon: FeatherIcons.heart,
+        icon: Symbols.favorite_rounded,
         eyebrow: 'OPTIONAL',
         title: 'Support development',
         subtitle: 'Help with continued development and server costs',
@@ -221,7 +221,7 @@ class AppearanceSettingsScreen extends StatelessWidget {
       _SettingsPageHeader(
         title: 'Appearance',
         subtitle: 'Choose the accent used across the app.',
-        icon: Icons.palette_outlined,
+        icon: Symbols.palette_rounded,
         onBack: onBack,
       ),
       Expanded(
@@ -266,7 +266,7 @@ class _AppearanceSettings extends StatelessWidget {
                   color: selected.primary.withValues(alpha: .14),
                   borderRadius: BorderRadius.circular(15),
                 ),
-                child: Icon(FeatherIcons.monitor, color: selected.primary),
+                child: Icon(Symbols.monitor_rounded, color: selected.primary),
               ),
               const SizedBox(width: 14),
               const Expanded(
@@ -420,7 +420,7 @@ class _AccentChoice extends StatelessWidget {
                         border: Border.all(color: accent.primary),
                       ),
                       child: Icon(
-                        Icons.check_rounded,
+                        Symbols.check_rounded,
                         size: 10,
                         color: accent.bright,
                       ),
@@ -523,7 +523,7 @@ class _ProfileEntry extends StatelessWidget {
           color: GlassTheme.elevatedSurface,
           borderRadius: BorderRadius.circular(10),
         ),
-        child: const Icon(Icons.chevron_right_rounded, size: 19, color: GlassTheme.muted),
+        child: const Icon(Symbols.chevron_right_rounded, size: 19, color: GlassTheme.muted),
       ),
       onTap: onTap,
     ),
@@ -556,7 +556,7 @@ class PlaybackSettingsScreen extends StatelessWidget {
             _SettingsPageHeader(
               title: 'Playback',
               subtitle: 'Fine tune streams, subtitles and controls.',
-              icon: Icons.play_circle_outline_rounded,
+              icon: Symbols.play_circle_rounded,
               onBack: onBack,
             ),
             Expanded(
@@ -1260,7 +1260,7 @@ class PlaybackSettingsScreen extends StatelessWidget {
             ListTile(
               title: Text(label?.call(option) ?? '$option'),
               trailing: option == current
-                  ? Icon(Icons.check_rounded, color: GlassTheme.primary)
+                  ? Icon(Symbols.check_rounded, color: GlassTheme.primary)
                   : null,
               onTap: () => Navigator.pop(context, option),
             ),
@@ -1466,7 +1466,7 @@ class _SettingRow extends StatelessWidget {
               const SizedBox(width: 8),
               trailing!,
             ] else if (onTap != null)
-              const Icon(Icons.chevron_right_rounded, color: GlassTheme.muted),
+              const Icon(Symbols.chevron_right_rounded, color: GlassTheme.muted),
           ],
         ),
       ),

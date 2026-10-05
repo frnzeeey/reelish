@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import '../../models/stream_source.dart';
 import 'player_sheet.dart';
@@ -53,7 +54,7 @@ class StreamSelectorSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => PlayerSheetFrame(
-    icon: Icons.video_library_outlined,
+    icon: Symbols.video_library_rounded,
     title: 'Playback source',
     subtitle: status,
     children: [

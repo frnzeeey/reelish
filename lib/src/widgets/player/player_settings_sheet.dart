@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:video_player/video_player.dart';
 import '../../models/stream_source.dart';
 import '../glass_box.dart';
@@ -137,8 +138,8 @@ class PlayerSettingsSheet extends StatelessWidget {
                     leading: Icon(
                       track.id == value.audioTrackId ||
                               (value.audioTrackId == null && track.isSelected)
-                          ? Icons.radio_button_checked_rounded
-                          : Icons.radio_button_off_rounded,
+                          ? Symbols.radio_button_checked_rounded
+                          : Symbols.radio_button_unchecked_rounded,
                     ),
                     title: Text(track.label ?? track.language ?? 'Audio track'),
                     subtitle: Text(
@@ -204,7 +205,7 @@ class PlayerSettingsSheet extends StatelessWidget {
                         subtitleDelay: (value.subtitleDelay - .25).clamp(-5, 5),
                       ),
                     ),
-                    icon: const Icon(Icons.remove_circle_outline),
+                    icon: const Icon(Symbols.do_not_disturb_on_rounded),
                   ),
                   Text('${value.subtitleDelay.toStringAsFixed(2)}s'),
                   IconButton(
@@ -215,7 +216,7 @@ class PlayerSettingsSheet extends StatelessWidget {
                         subtitleDelay: (value.subtitleDelay + .25).clamp(-5, 5),
                       ),
                     ),
-                    icon: const Icon(Icons.add_circle_outline),
+                    icon: const Icon(Symbols.add_circle_rounded),
                   ),
                 ],
               ),

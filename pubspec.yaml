@@ -1,4 +1,4 @@
-﻿name: onfeed
+name: onfeed
 description: "A new Flutter project."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -32,7 +32,6 @@ dependencies:
     sdk: flutter
 
   crypto: ^3.0.7
-  feather_icon_font: ^1.0.0
   http: ^1.6.0
   package_info_plus: ^10.2.1
   shared_preferences: ^2.5.5
@@ -47,6 +46,7 @@ dependencies:
   flutter_go_torrent_streamer: ^0.0.8
   flutter_js:
     path: third_party/flutter_js
+  material_symbols_icons: ^4.2960.0
 
 dev_dependencies:
   flutter_test:

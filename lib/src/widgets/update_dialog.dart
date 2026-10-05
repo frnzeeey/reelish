@@ -2,8 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:feather_icon_font/feather_icon_font.dart';
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import '../models/app_update.dart';
 import '../services/github_update_service.dart';
@@ -167,7 +167,7 @@ class UpdateAvailableDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     final notes = formatReleaseNotes(update.releaseNotes);
     return _UpdateDialogFrame(
-      icon: FeatherIcons.downloadCloud,
+      icon: Symbols.cloud_download_rounded,
       title: 'New Reelish update available',
       actions: [
         _DialogButton(
@@ -341,7 +341,7 @@ class _UpdateDownloadDialogState extends State<UpdateDownloadDialog> {
       },
       child: error != null
           ? _UpdateDialogFrame(
-              icon: FeatherIcons.alertCircle,
+              icon: Symbols.error_rounded,
               title: 'Download failed',
               actions: [
                 _DialogButton(label: 'Close', onPressed: _close),
@@ -354,7 +354,7 @@ class _UpdateDownloadDialogState extends State<UpdateDownloadDialog> {
               children: [Text(error, style: _bodyStyle(context))],
             )
           : _UpdateDialogFrame(
-              icon: FeatherIcons.download,
+              icon: Symbols.download_rounded,
               title: 'Downloading Reelish ${widget.update.latestVersion}',
               actions: [_DialogButton(label: 'Cancel', onPressed: _close)],
               children: [
@@ -404,7 +404,7 @@ class InstallPermissionDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => _UpdateDialogFrame(
-    icon: FeatherIcons.shield,
+    icon: Symbols.shield_rounded,
     title: 'Allow Reelish to install updates',
     actions: [
       _DialogButton(
@@ -434,7 +434,7 @@ class UpdateNoticeDialog extends StatelessWidget {
     super.key,
     required this.title,
     required this.message,
-    this.icon = FeatherIcons.alertCircle,
+    this.icon = Symbols.error_rounded,
   });
 
   final String title;

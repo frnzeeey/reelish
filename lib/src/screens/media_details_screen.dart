@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import '../models/media_details.dart';
 import '../models/media_item.dart';
 import '../services/perf_timeline.dart';
@@ -131,7 +132,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                         ? const ColoredBox(
                             color: GlassTheme.surface,
                             child: Icon(
-                              Icons.movie_outlined,
+                              Symbols.movie_rounded,
                               color: GlassTheme.muted,
                             ),
                           )
@@ -142,7 +143,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                             errorBuilder: (_, __, ___) => const ColoredBox(
                               color: GlassTheme.surface,
                               child: Icon(
-                                Icons.movie_outlined,
+                                Symbols.movie_rounded,
                                 color: GlassTheme.muted,
                               ),
                             ),
@@ -165,7 +166,8 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                         Row(
                           children: [
                             Icon(
-                              Icons.star_rounded,
+                              Symbols.star_rounded,
+                              fill: 1,
                               size: 15,
                               color: GlassTheme.primary,
                             ),
@@ -201,7 +203,8 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                 Padding(
                   padding: EdgeInsets.only(top: 24),
                   child: Icon(
-                    Icons.play_circle_fill_rounded,
+                    Symbols.play_circle_rounded,
+                    fill: 1,
                     color: GlassTheme.primary,
                     size: 26,
                   ),
@@ -291,7 +294,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                       foregroundColor: Colors.white,
                     ),
                     onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.arrow_back_rounded),
+                    icon: const Icon(Symbols.arrow_back_rounded),
                   ),
                 ),
               ),
@@ -421,7 +424,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
             child: member.profile.isEmpty
                 ? const ColoredBox(
                     color: GlassTheme.surface,
-                    child: Icon(Icons.person_outline_rounded, size: 32),
+                    child: Icon(Symbols.person_rounded, size: 32),
                   )
                 : Image.network(
                     member.profile,
@@ -429,7 +432,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                     cacheWidth: 144,
                     errorBuilder: (_, __, ___) => const ColoredBox(
                       color: GlassTheme.surface,
-                      child: Icon(Icons.person_outline_rounded, size: 32),
+                      child: Icon(Symbols.person_rounded, size: 32),
                     ),
                   ),
           ),
@@ -525,7 +528,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                         ),
                         TextButton.icon(
                           onPressed: _loadDetails,
-                          icon: const Icon(Icons.refresh_rounded),
+                          icon: const Icon(Symbols.refresh_rounded),
                           label: const Text('Retry'),
                         ),
                       ],
@@ -594,7 +597,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                             onPressed: _seasons.isEmpty
                                 ? _loadSeasons
                                 : () => _loadEpisodes(_selectedSeason!),
-                            icon: const Icon(Icons.refresh_rounded),
+                            icon: const Icon(Symbols.refresh_rounded),
                             label: const Text('Retry'),
                           ),
                         ],
@@ -638,7 +641,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                       foregroundColor: GlassTheme.background,
                     ),
                     onPressed: () => widget.onPlay(context),
-                    icon: const Icon(Icons.play_arrow_rounded),
+                    icon: const Icon(Symbols.play_arrow_rounded, fill: 1),
                     label: Text(
                       item.type == 'series'
                           ? 'Choose episode and play'

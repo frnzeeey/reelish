@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/services.dart';
 import '../services/nuvio_plugin_service.dart';
 import '../theme/glass_theme.dart';
@@ -103,7 +104,7 @@ class _NuvioPluginInstallerModalState extends State<NuvioPluginInstallerModal> {
                   IconButton(
                     tooltip: 'Close',
                     onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close_rounded),
+                    icon: const Icon(Symbols.close_rounded),
                   ),
                 ],
               ),
@@ -119,11 +120,11 @@ class _NuvioPluginInstallerModalState extends State<NuvioPluginInstallerModal> {
                 onSubmitted: (_) => _busy ? null : _install(),
                 decoration: InputDecoration(
                   hintText: 'Nuvio manifest URL',
-                  prefixIcon: const Icon(Icons.link_rounded),
+                  prefixIcon: const Icon(Symbols.link_rounded),
                   suffixIcon: IconButton(
                     tooltip: 'Paste from clipboard',
                     onPressed: _busy ? null : _paste,
-                    icon: const Icon(Icons.content_paste_rounded),
+                    icon: const Icon(Symbols.content_paste_rounded),
                   ),
                 ),
               ),
@@ -148,7 +149,7 @@ class _NuvioPluginInstallerModalState extends State<NuvioPluginInstallerModal> {
                           dimension: 18,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Icon(Icons.download_rounded),
+                      : const Icon(Symbols.download_rounded),
                   label: Text(
                     _busy ? 'Checking manifest…' : 'Install provider',
                   ),

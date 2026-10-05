@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../theme/glass_theme.dart';
@@ -130,7 +131,7 @@ class _LegalInformationScreenState extends State<LegalInformationScreen> {
                       );
                     }
                   },
-                  icon: const Icon(Icons.open_in_new_rounded),
+                  icon: const Icon(Symbols.open_in_new_rounded),
                   label: const Text('Project page & support'),
                 ),
                 const SizedBox(height: 8),

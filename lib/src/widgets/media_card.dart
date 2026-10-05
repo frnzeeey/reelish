@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:feather_icon_font/feather_icon_font.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import '../models/media_item.dart';
 import '../theme/glass_theme.dart';
 import 'liquid_glass.dart';
@@ -167,7 +167,7 @@ class _MediaCardState extends State<MediaCard> {
                         const ColoredBox(
                           color: GlassTheme.elevatedSurface,
                           child: Icon(
-                            FeatherIcons.film,
+                            Symbols.movie_rounded,
                             size: 36,
                             color: Colors.white30,
                           ),
@@ -179,7 +179,7 @@ class _MediaCardState extends State<MediaCard> {
                           cacheWidth: (146 * imagePixelRatio).round(),
                           errorBuilder: (_, _, _) => const ColoredBox(
                             color: GlassTheme.elevatedSurface,
-                            child: Icon(FeatherIcons.film),
+                            child: Icon(Symbols.movie_rounded),
                           ),
                         ),
                       const Positioned.fill(
@@ -254,9 +254,8 @@ class _MediaCardState extends State<MediaCard> {
                                     );
                                   },
                                   child: Icon(
-                                    _isFavorite
-                                        ? Icons.favorite_rounded
-                                        : Icons.favorite_border_rounded,
+                                    Symbols.favorite_rounded,
+                                    fill: _isFavorite ? 1 : 0,
                                     size: 18,
                                     color: _isFavorite
                                         ? GlassTheme.primary
@@ -325,7 +324,7 @@ class _MediaCardState extends State<MediaCard> {
                                         if (item.year.isNotEmpty)
                                           const SizedBox(width: 7),
                                         Icon(
-                                          FeatherIcons.star,
+                                          Symbols.star_rounded,
                                           size: 10,
                                           color: GlassTheme.primary,
                                         ),

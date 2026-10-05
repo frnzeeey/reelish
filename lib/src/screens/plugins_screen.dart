@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import '../models/nuvio_plugin.dart';
 import '../services/nuvio_plugin_service.dart';
@@ -25,7 +26,7 @@ class PluginsScreen extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: 84),
           child: FloatingActionButton.extended(
             onPressed: install,
-            icon: const Icon(Icons.add_rounded),
+            icon: const Icon(Symbols.add_rounded),
             label: const Text('Add provider'),
           ),
         ),
@@ -134,7 +135,7 @@ class _PluginsHeader extends StatelessWidget {
           foregroundColor: GlassTheme.primary,
           backgroundColor: GlassTheme.primary.withValues(alpha: .1),
         ),
-        icon: const Icon(Icons.refresh_rounded),
+        icon: const Icon(Symbols.refresh_rounded),
       ),
     ],
   );
@@ -193,7 +194,7 @@ class _PluginsHero extends StatelessWidget {
                     color: GlassTheme.primary.withValues(alpha: .16),
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  child: Icon(Icons.hub_rounded, color: GlassTheme.primary),
+                  child: Icon(Symbols.hub_rounded, color: GlassTheme.primary),
                 ),
                 const SizedBox(width: 12),
                 const Expanded(
@@ -220,7 +221,7 @@ class _PluginsHero extends StatelessWidget {
                     ],
                   ),
                 ),
-                Icon(Icons.bolt_rounded, color: GlassTheme.primary, size: 22),
+                Icon(Symbols.bolt_rounded, color: GlassTheme.primary, size: 22),
               ],
             ),
             const SizedBox(height: 14),
@@ -320,7 +321,7 @@ class _EmptyPlugins extends StatelessWidget {
             color: GlassTheme.primary.withValues(alpha: .12),
             shape: BoxShape.circle,
           ),
-          child: Icon(Icons.travel_explore_rounded, color: GlassTheme.primary),
+          child: Icon(Symbols.travel_explore_rounded, color: GlassTheme.primary),
         ),
         const SizedBox(height: 14),
         const Text(
@@ -336,7 +337,7 @@ class _EmptyPlugins extends StatelessWidget {
         const SizedBox(height: 18),
         FilledButton.icon(
           onPressed: onInstall,
-          icon: const Icon(Icons.add_rounded),
+          icon: const Icon(Symbols.add_rounded),
           label: const Text('Install a provider'),
         ),
       ],
@@ -413,7 +414,7 @@ class _RepositoryCardState extends State<_RepositoryCard> {
                 color: GlassTheme.primary.withValues(alpha: .12),
                 borderRadius: BorderRadius.circular(13),
               ),
-              child: Icon(Icons.dns_rounded, color: GlassTheme.primary, size: 21),
+              child: Icon(Symbols.dns_rounded, color: GlassTheme.primary, size: 21),
             ),
             title: Text(
               repository.name,
@@ -434,13 +435,13 @@ class _RepositoryCardState extends State<_RepositoryCard> {
                 IconButton(
                   tooltip: 'Remove repository',
                   onPressed: _confirmRemove,
-                  icon: const Icon(Icons.delete_outline_rounded, size: 20),
+                  icon: const Icon(Symbols.delete_rounded, size: 20),
                   visualDensity: VisualDensity.compact,
                 ),
                 AnimatedRotation(
                   turns: _expanded ? .5 : 0,
                   duration: const Duration(milliseconds: 180),
-                  child: const Icon(Icons.keyboard_arrow_down_rounded),
+                  child: const Icon(Symbols.keyboard_arrow_down_rounded),
                 ),
                 const SizedBox(width: 6),
               ],
@@ -501,7 +502,8 @@ class _ProviderTile extends StatelessWidget {
         child: Row(
           children: [
             Icon(
-              plugin.enabled ? Icons.check_circle_rounded : Icons.circle_outlined,
+              plugin.enabled ? Symbols.check_circle_rounded : Symbols.circle_rounded,
+              fill: plugin.enabled ? 1 : 0,
               color: plugin.enabled ? GlassTheme.primary : GlassTheme.disabled,
               size: 17,
             ),
@@ -567,7 +569,7 @@ class _NoticeCard extends StatelessWidget {
     ),
     child: Row(
       children: [
-        const Icon(Icons.power_settings_new_rounded, color: Color(0xFFFFB547), size: 20),
+        const Icon(Symbols.power_settings_new_rounded, color: Color(0xFFFFB547), size: 20),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
@@ -605,7 +607,7 @@ class _RepositoryError extends StatelessWidget {
     ),
     child: Row(
       children: [
-        const Icon(Icons.warning_amber_rounded, color: Color(0xFFFFB547), size: 20),
+        const Icon(Symbols.warning_rounded, color: Color(0xFFFFB547), size: 20),
         const SizedBox(width: 11),
         Expanded(
           child: Column(
@@ -621,7 +623,7 @@ class _RepositoryError extends StatelessWidget {
           tooltip: 'Dismiss',
           visualDensity: VisualDensity.compact,
           onPressed: onDismiss,
-          icon: const Icon(Icons.close_rounded, size: 18),
+          icon: const Icon(Symbols.close_rounded, size: 18),
         ),
       ],
     ),

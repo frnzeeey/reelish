@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import '../models/subtitle_addon.dart';
 import '../services/subtitle_addon_service.dart';
@@ -152,7 +153,7 @@ class _SubtitleAddonsScreenState extends State<SubtitleAddonsScreen> {
                           dimension: 18,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Icon(Icons.add_rounded),
+                      : const Icon(Symbols.add_rounded),
                   label: const Text('Add addon'),
                   style: FilledButton.styleFrom(
                     shape: RoundedRectangleBorder(
@@ -200,7 +201,7 @@ class _AddonCard extends StatelessWidget {
     ),
     child: Row(
       children: [
-        Icon(Icons.closed_caption_rounded, color: GlassTheme.primary),
+        Icon(Symbols.closed_caption_rounded, color: GlassTheme.primary),
         const SizedBox(width: 14),
         Expanded(
           child: Column(
@@ -223,7 +224,7 @@ class _AddonCard extends StatelessWidget {
         IconButton(
           tooltip: 'Remove ${addon.name}',
           onPressed: onRemove,
-          icon: const Icon(Icons.delete_outline_rounded),
+          icon: const Icon(Symbols.delete_rounded),
         ),
       ],
     ),
