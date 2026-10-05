@@ -47,6 +47,7 @@ class PlayerControlsOverlay extends StatelessWidget {
     this.nextEpisodeCountdown,
     this.onSpeedReset,
     this.pauseScreen,
+    this.onLock,
   });
 
   final VideoPlayerController controller;
@@ -87,6 +88,9 @@ class PlayerControlsOverlay extends StatelessWidget {
   /// center controls and the top-bar title then step aside for it.
   final ValueListenable<bool>? pauseScreen;
 
+  /// Locks the controls against accidental touches; null hides the button.
+  final VoidCallback? onLock;
+
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
@@ -121,6 +125,7 @@ class PlayerControlsOverlay extends StatelessWidget {
                     onBack: onBack,
                     onSubtitles: onSubtitles,
                     onSettings: onSettings,
+                    onLock: onLock,
                   ),
                 ),
                 Center(
@@ -208,6 +213,7 @@ class _TopBar extends StatelessWidget {
     required this.onSubtitles,
     required this.onSettings,
     this.pauseScreen,
+    this.onLock,
   });
 
   final String title;
@@ -217,6 +223,7 @@ class _TopBar extends StatelessWidget {
   final VoidCallback onBack;
   final VoidCallback onSubtitles;
   final VoidCallback onSettings;
+  final VoidCallback? onLock;
 
   @override
   Widget build(BuildContext context) => Row(
@@ -262,6 +269,12 @@ class _TopBar extends StatelessWidget {
           ),
         ),
       ),
+      if (onLock != null)
+        PlayerIconButton(
+          icon: Symbols.lock_rounded,
+          label: 'Lock controls',
+          onPressed: onLock!,
+        ),
       PlayerIconButton(
         icon: subtitleEnabled
             ? Symbols.closed_caption_rounded

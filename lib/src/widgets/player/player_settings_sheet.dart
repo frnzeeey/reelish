@@ -13,6 +13,7 @@ class PlayerSettings {
     this.subtitleDelay = 0,
     this.videoTrack,
     this.audioTrackId,
+    this.adjustSubtitlePosition = false,
   });
   final double speed;
   final BoxFit fit;
@@ -21,6 +22,10 @@ class PlayerSettings {
   final double subtitleDelay;
   final VideoTrack? videoTrack;
   final String? audioTrackId;
+
+  /// Set when the viewer asked to move subtitles; the player then shows its
+  /// position panel, where the subtitles stay visible.
+  final bool adjustSubtitlePosition;
   PlayerSettings copyWith({
     double? speed,
     BoxFit? fit,
@@ -31,6 +36,7 @@ class PlayerSettings {
     VideoTrack? videoTrack,
     bool clearVideoTrack = false,
     String? audioTrackId,
+    bool? adjustSubtitlePosition,
   }) => PlayerSettings(
     speed: speed ?? this.speed,
     fit: fit ?? this.fit,
@@ -39,6 +45,8 @@ class PlayerSettings {
     subtitleDelay: subtitleDelay ?? this.subtitleDelay,
     videoTrack: clearVideoTrack ? null : (videoTrack ?? this.videoTrack),
     audioTrackId: audioTrackId ?? this.audioTrackId,
+    adjustSubtitlePosition:
+        adjustSubtitlePosition ?? this.adjustSubtitlePosition,
   );
 }
 
@@ -219,6 +227,16 @@ class PlayerSettingsSheet extends StatelessWidget {
                     icon: const Icon(Symbols.add_circle_rounded),
                   ),
                 ],
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Symbols.vertical_align_center_rounded),
+                title: const Text('Subtitle position'),
+                trailing: const Icon(Symbols.chevron_right_rounded),
+                onTap: () => Navigator.pop(
+                  context,
+                  value.copyWith(adjustSubtitlePosition: true),
+                ),
               ),
               ListTile(
                 title: const Text('Off'),

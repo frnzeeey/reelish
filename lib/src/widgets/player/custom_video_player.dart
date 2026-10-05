@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -28,6 +29,8 @@ import 'episode_panel.dart';
 import 'gesture_touch_layer.dart';
 import 'paused_overlay.dart';
 import 'player_controls.dart';
+import 'player_lock_overlay.dart';
+import 'subtitle_position_panel.dart';
 import 'player_settings_sheet.dart';
 import 'stream_selector_sheet.dart';
 import 'subtitle_picker_sheet.dart';
@@ -121,6 +124,27 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   /// only the overlay, never the video surface or the rest of the player.
   final ValueNotifier<bool> _controlsVisible = ValueNotifier(true);
 
+  /// Controls lock against accidental touches. Session-only: every player
+  /// (and so every episode) starts unlocked. It blocks touches, never
+  /// playback.
+  final ValueNotifier<bool> _locked = ValueNotifier(false);
+  final ValueNotifier<bool> _unlockVisible = ValueNotifier(false);
+  Timer? _unlockHide;
+
+  /// Whether controls are really on screen: visible and not locked. The
+  /// layers that make room for the controls follow this.
+  final ValueNotifier<bool> _controlsShown = ValueNotifier(true);
+
+  /// Live subtitle position, so moving subtitles rebuilds only their layer.
+  late final ValueNotifier<double> _subtitlePosition;
+  late final Listenable _subtitleLayout = Listenable.merge([
+    _controlsShown,
+    _subtitlePosition,
+  ]);
+
+  /// Whether the subtitle position panel is open.
+  bool _adjustingSubtitles = false;
+
   /// Whether the viewer is dragging the progress bar.
   final ValueNotifier<bool> _scrubbing = ValueNotifier(false);
   int _sheetsOpen = 0;
@@ -176,6 +200,22 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   /// Players currently alive. Switching episodes briefly overlaps the old
   /// player (closing) with the new one (opening).
   static int _livePlayers = 0;
+
+  /// Whether the window is currently asked to keep the screen on. Neither
+  /// engine holds a wakelock itself, so playback would otherwise let the
+  /// screen time out.
+  static bool _keepingScreenOn = false;
+
+  static void _setKeepScreenOn(bool value) {
+    if (_keepingScreenOn == value) return;
+    _keepingScreenOn = value;
+    if (defaultTargetPlatform != TargetPlatform.android) return;
+    unawaited(
+      const MethodChannel(
+        'onfeed/player',
+      ).invokeMethod<void>('keepScreenOn', {'value': value}).catchError((_) {}),
+    );
+  }
   double? _speedBeforeHold;
   TorrentStreamSession? _torrentSession;
   Timer? _hide, _save, _hint;
@@ -242,6 +282,9 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     super.initState();
     _playback = widget.playbackSettings.value;
     _speed = _playback.defaultPlaybackSpeed;
+    _subtitlePosition = ValueNotifier(_playback.subtitlePosition);
+    _controlsVisible.addListener(_syncControlsShown);
+    _locked.addListener(_syncControlsShown);
     widget.playbackSettings.addListener(_onPlaybackSettingsChanged);
     _sources = List.of(widget.sources);
     _playbackCoordinator.replaceCandidates(_sources);
@@ -877,6 +920,12 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     );
   }
 
+  /// The subtitle box, with sample text while the position panel is open
+  /// and nothing is being said, so there is always something to place.
+  Widget _positionedSubtitleBox(String text) => _subtitleBox(
+    text.isEmpty && _adjustingSubtitles ? 'Subtitles appear here' : text,
+  );
+
   Widget _subtitleText(String text) {
     final weight = _playback.subtitleBold ? FontWeight.w700 : FontWeight.w500;
     final outline = TextStyle(
@@ -1090,6 +1139,55 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   void _show() {
     _controlsVisible.value = true;
     _scheduleHide();
+  }
+
+  void _syncControlsShown() =>
+      _controlsShown.value = _controlsVisible.value && !_locked.value;
+
+  void _lockControls() {
+    unawaited(_endHoldSpeed());
+    _hide?.cancel();
+    if (_adjustingSubtitles) setState(() => _adjustingSubtitles = false);
+    _locked.value = true;
+    // Shown once at first, so the viewer sees how to get back.
+    _revealUnlock();
+  }
+
+  /// Shows the unlock button for a few seconds.
+  void _revealUnlock() {
+    _unlockVisible.value = true;
+    _unlockHide?.cancel();
+    _unlockHide = Timer(const Duration(seconds: 3), () {
+      if (mounted) _unlockVisible.value = false;
+    });
+  }
+
+  void _unlockControls() {
+    _unlockHide?.cancel();
+    _unlockVisible.value = false;
+    _locked.value = false;
+    _show();
+  }
+
+  void _openSubtitlePosition() {
+    // Controls step aside so subtitles sit where they will while watching.
+    _hide?.cancel();
+    _controlsVisible.value = false;
+    setState(() => _adjustingSubtitles = true);
+  }
+
+  void _closeSubtitlePosition() {
+    if (_adjustingSubtitles) setState(() => _adjustingSubtitles = false);
+  }
+
+  /// Saves a final subtitle position; dragging only updates the live value.
+  void _commitSubtitlePosition(double value) {
+    if (value == _playback.subtitlePosition) return;
+    unawaited(
+      widget.playbackSettings.update(
+        _playback.copyWith(subtitlePosition: value),
+      ),
+    );
   }
 
   void _toggleControls() {
@@ -1477,6 +1575,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
       _rememberSubtitleChoice(chosen);
       chosen == null ? _clearSubtitle() : await _selectSubtitle(chosen);
     }
+    if (result.adjustSubtitlePosition && mounted) _openSubtitlePosition();
   }
 
   /// Downloadable subtitles: from the provider and from subtitle addons, with
@@ -1555,6 +1654,14 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     final previous = _playback;
     _playback = widget.playbackSettings.value;
     if (!mounted) return;
+    _subtitlePosition.value = _playback.subtitlePosition;
+    // Moving subtitles only redraws their layer, not the whole player.
+    if (jsonEncode(
+          previous.copyWith(subtitlePosition: _playback.subtitlePosition),
+        ) ==
+        jsonEncode(_playback)) {
+      return;
+    }
     if (!setEquals(previous.allowedProviderIds, _playback.allowedProviderIds) ||
         previous.p2pStreaming != _playback.p2pStreaming) {
       final candidates = <String, StreamSource>{};
@@ -2117,7 +2224,12 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     _pauseOverlayTimer?.cancel();
     _artworkTimer?.cancel();
     _nextEpisodeTimer?.cancel();
+    _unlockHide?.cancel();
     _controlsVisible.dispose();
+    _locked.dispose();
+    _unlockVisible.dispose();
+    _controlsShown.dispose();
+    _subtitlePosition.dispose();
     _scrubbing.dispose();
     _pauseOverlay.dispose();
     _seekFlash.dispose();
@@ -2131,6 +2243,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     // When another episode's player replaced this one, it is already
     // showing: restoring the app's system UI and rotation would undo its.
     if (--_livePlayers == 0) {
+      _setKeepScreenOn(false);
       const MethodChannel(
         'onfeed/player',
       ).invokeMethod<void>('resetBrightness');
@@ -2144,6 +2257,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   void _tick() {
     final c = _controller;
     if (c == null) return;
+    _setKeepScreenOn(c.value.isPlaying);
     // The pause screen follows a viewer pause, after a short hold so the
     // paused frame registers first and quick pause/play taps do not flash
     // it. Seeking while paused keeps it; playing or reaching the end (where
@@ -2237,6 +2351,42 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
       if (quality.isNotEmpty) quality,
       if (current?.providerName.isNotEmpty == true) current!.providerName,
     ].join(' · ');
+    // Back while locked shows the unlock button instead of leaving, and
+    // closes the subtitle position panel first. Never blocks back while the
+    // lock overlay is not up (loading, errors), so the viewer cannot be
+    // trapped.
+    return ValueListenableBuilder<bool>(
+      valueListenable: _locked,
+      builder: (context, locked, player) => PopScope(
+        canPop: !(locked && playable) && !_adjustingSubtitles,
+        onPopInvokedWithResult: (didPop, _) {
+          if (didPop) return;
+          if (locked && playable) {
+            _revealUnlock();
+          } else {
+            _closeSubtitlePosition();
+          }
+        },
+        child: player!,
+      ),
+      child: _buildPlayer(
+        c,
+        current: current,
+        sourceDetails: sourceDetails,
+        alternatives: alternatives,
+        sourceLabel: sourceLabel,
+      ),
+    );
+  }
+
+  Widget _buildPlayer(
+    VideoPlayerController? c, {
+    required StreamSource? current,
+    required String sourceDetails,
+    required int alternatives,
+    required String sourceLabel,
+  }) {
+    final playable = c != null && _ready;
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
@@ -2269,51 +2419,62 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
                 ),
               ),
             ),
-          // 2. Subtitles, raised above the bottom controls while they show.
-          if (c != null && _subtitle != null)
-            ValueListenableBuilder<bool>(
-              valueListenable: _controlsVisible,
-              builder: (context, controlsVisible, _) => AnimatedPositioned(
+          // 2. Subtitles, raised above the bottom controls while they show
+          // and moved by the viewer's position preference. Moving them
+          // rebuilds only this layer's position, not the text below.
+          if (c != null && (_subtitle != null || _adjustingSubtitles))
+            ListenableBuilder(
+              listenable: _subtitleLayout,
+              builder: (context, text) => AnimatedPositioned(
                 duration: playerFade,
                 curve: Curves.easeOutCubic,
                 left: 24,
                 right: 24,
-                bottom:
-                    (controlsVisible && playable ? 132 : 80) +
-                    _playback.subtitleVerticalOffset,
-                child: IgnorePointer(
-                  // Embedded tracks: libmpv's current text. Others: cues
-                  // from the downloaded file, shifted by the subtitle delay.
-                  child: _subtitle!.source == SubtitleSource.embedded
-                      ? ValueListenableBuilder<List<String>>(
-                          valueListenable: _embeddedLines,
-                          builder: (context, lines, _) => _subtitleBox(
-                            lines
-                                .map((line) => line.trim())
-                                .where((line) => line.isNotEmpty)
-                                .join('\n'),
-                          ),
-                        )
-                      : ValueListenableBuilder<VideoPlayerValue>(
-                          valueListenable: c,
-                          builder: (context, v, _) {
-                            final t =
-                                v.position.inMilliseconds / 1000 -
-                                _subtitleDelay;
-                            final cue = _cues
-                                .where((e) => t >= e.start && t <= e.end)
-                                .firstOrNull;
-                            return _subtitleBox(cue?.text ?? '');
-                          },
-                        ),
+                bottom: PlaybackSettings.subtitleBottom(
+                  height: MediaQuery.sizeOf(context).height,
+                  padding: MediaQuery.viewPaddingOf(context),
+                  controlsVisible: _controlsShown.value && playable,
+                  position: _subtitlePosition.value,
                 ),
+                child: text!,
+              ),
+              child: IgnorePointer(
+                // Embedded tracks: libmpv's current text. Others: cues
+                // from the downloaded file, shifted by the subtitle delay.
+                child: _subtitle == null
+                    ? _positionedSubtitleBox('')
+                    : _subtitle!.source == SubtitleSource.embedded
+                    ? ValueListenableBuilder<List<String>>(
+                        valueListenable: _embeddedLines,
+                        builder: (context, lines, _) => _positionedSubtitleBox(
+                          lines
+                              .map((line) => line.trim())
+                              .where((line) => line.isNotEmpty)
+                              .join('\n'),
+                        ),
+                      )
+                    : ValueListenableBuilder<VideoPlayerValue>(
+                        valueListenable: c,
+                        builder: (context, v, _) {
+                          final t =
+                              v.position.inMilliseconds / 1000 -
+                              _subtitleDelay;
+                          final cue = _cues
+                              .where((e) => t >= e.start && t <= e.end)
+                              .firstOrNull;
+                          return _positionedSubtitleBox(cue?.text ?? '');
+                        },
+                      ),
               ),
             ),
           // 3. Gestures. A single tap always toggles the controls; double
           // taps, swipes and hold-to-speed follow the viewer's settings.
           if (playable)
             GestureTouchLayer(
-              onTap: _toggleControls,
+              // With the position panel open, a tap on the video closes it.
+              onTap: _adjustingSubtitles
+                  ? _closeSubtitlePosition
+                  : _toggleControls,
               onDoubleTap: _playback.touchGestures ? _doubleTapSeek : null,
               onSwipe: !_playback.touchGestures
                   ? null
@@ -2358,7 +2519,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
           if (playable)
             PlayerBufferingIndicator(
               controller: c,
-              controlsVisible: _controlsVisible,
+              controlsVisible: _controlsShown,
             ),
           if (_gestureHint != null)
             Center(
@@ -2382,9 +2543,10 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
               ),
             ),
           // 6. Controls: always mounted while playable, faded in and out.
+          // Locking hides them without unmounting.
           if (playable)
             ValueListenableBuilder<bool>(
-              valueListenable: _controlsVisible,
+              valueListenable: _controlsShown,
               builder: (context, visible, child) => IgnorePointer(
                 ignoring: !visible,
                 child: AnimatedOpacity(
@@ -2445,6 +2607,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
                 nextEpisodeCountdown: _nextEpisodeCountdown,
                 onSpeedReset: _resetSpeed,
                 pauseScreen: _pauseOverlay,
+                onLock: _lockControls,
               ),
             ),
           // The floating card shows while controls are hidden; with controls
@@ -2452,7 +2615,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
           // covers the center controls on short landscape screens.
           if (_nextEpisodePromptVisible && !_switchingEpisode)
             ValueListenableBuilder<bool>(
-              valueListenable: _controlsVisible,
+              valueListenable: _controlsShown,
               builder: (context, controlsVisible, card) => IgnorePointer(
                 ignoring: controlsVisible && playable,
                 child: AnimatedOpacity(
@@ -2479,6 +2642,27 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
                   ),
                 ),
               ),
+            ),
+          if (playable && _adjustingSubtitles)
+            SubtitlePositionPanel(
+              position: _subtitlePosition,
+              onChanged: (value) => _subtitlePosition.value = value,
+              onCommit: _commitSubtitlePosition,
+              onDone: _closeSubtitlePosition,
+            ),
+          // Lock: one layer over everything that takes touches, so no
+          // gesture or control beneath it can react. Only while a frame
+          // shows; the loading and error views stay usable.
+          if (playable)
+            ValueListenableBuilder<bool>(
+              valueListenable: _locked,
+              builder: (context, locked, _) => locked
+                  ? PlayerLockOverlay(
+                      unlockVisible: _unlockVisible,
+                      onReveal: _revealUnlock,
+                      onUnlock: _unlockControls,
+                    )
+                  : const SizedBox.shrink(),
             ),
           // 7. No frame yet: starting, switching, reconnecting, or an error.
           if (!playable)

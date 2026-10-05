@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:onfeed/src/models/stream_source.dart';
 import 'package:onfeed/src/widgets/player/gesture_touch_layer.dart';
 import 'package:onfeed/src/widgets/player/player_controls.dart';
+import 'package:onfeed/src/widgets/player/player_lock_overlay.dart';
 import 'package:onfeed/src/widgets/player/player_marquee_text.dart';
 import 'package:onfeed/src/widgets/player/player_progress_bar.dart';
 import 'package:onfeed/src/widgets/player/stream_selector_sheet.dart';
@@ -409,5 +410,100 @@ void main() {
     );
     expect(find.text('S2 · E4 · The Crossing'), findsOneWidget);
     expect(find.text('NEXT EPISODE IN 8'), findsOneWidget);
+  });
+
+  testWidgets('lock overlay blocks player touches until unlocked', (
+    tester,
+  ) async {
+    var taps = 0, doubleTaps = 0, swipes = 0, holds = 0;
+    var reveals = 0, unlocks = 0;
+    final unlockVisible = ValueNotifier(false);
+    addTearDown(unlockVisible.dispose);
+    await tester.pumpWidget(
+      _app(
+        Stack(
+          fit: StackFit.expand,
+          children: [
+            GestureTouchLayer(
+              onTap: () => taps++,
+              onDoubleTap: (_) => doubleTaps++,
+              onSwipe: (_, _) => swipes++,
+              onLongPressStart: () => holds++,
+              child: const SizedBox.expand(),
+            ),
+            PlayerLockOverlay(
+              unlockVisible: unlockVisible,
+              onReveal: () {
+                reveals++;
+                unlockVisible.value = true;
+              },
+              onUnlock: () => unlocks++,
+            ),
+          ],
+        ),
+      ),
+    );
+
+    // The hidden unlock button cannot be hit by accident.
+    expect(find.bySemanticsLabel('Unlock controls'), findsNothing);
+    await tester.tapAt(const Offset(400, 300));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(unlocks, 0);
+    expect(reveals, 1);
+
+    await tester.tapAt(const Offset(100, 100));
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.tapAt(const Offset(100, 100));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.drag(find.byType(PlayerLockOverlay), const Offset(0, -200));
+    await tester.longPressAt(const Offset(100, 100));
+    await tester.pumpAndSettle();
+    expect([taps, doubleTaps, swipes, holds], [0, 0, 0, 0]);
+
+    expect(find.bySemanticsLabel('Unlock controls'), findsOneWidget);
+    await tester.tap(find.text('Tap to unlock'));
+    expect(unlocks, 1);
+  });
+
+  testWidgets('lock button shows only when the player offers it', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final controller = _controller();
+    addTearDown(controller.dispose);
+    var locks = 0;
+    Widget overlay({VoidCallback? onLock}) => _app(
+      PlayerControlsOverlay(
+        controller: controller,
+        title: 'Title',
+        subtitle: '',
+        sourceLabel: '',
+        subtitleEnabled: false,
+        showAudio: false,
+        showSources: false,
+        landscapeLocked: false,
+        onBack: () {},
+        onTogglePlay: () {},
+        onSeekBy: (_) {},
+        onSeekTo: (_) {},
+        onScrubChanged: (_) {},
+        onSubtitles: () {},
+        onAudio: () {},
+        onSources: () {},
+        onSettings: () {},
+        onPip: () {},
+        onRotate: () {},
+        onLock: onLock,
+      ),
+    );
+
+    await tester.pumpWidget(overlay());
+    expect(find.bySemanticsLabel('Lock controls'), findsNothing);
+
+    await tester.pumpWidget(overlay(onLock: () => locks++));
+    await tester.tap(find.bySemanticsLabel('Lock controls'));
+    expect(locks, 1);
   });
 }

@@ -19,7 +19,7 @@ void main() {
       expect(settings.defaultPlaybackSpeed, 1);
       expect(settings.preferredVideoHeight, 0);
       expect(settings.subtitleSize, 18);
-      expect(settings.subtitleVerticalOffset, 20);
+      expect(settings.subtitlePosition, 0);
       expect(settings.allowedProviderIds, isNull);
     });
 
@@ -56,7 +56,7 @@ void main() {
         'holdSpeed': 99,
         'streamSelectionTimeoutSeconds': -20,
         'subtitleSize': 2,
-        'subtitleVerticalOffset': 300,
+        'subtitlePosition': 3,
         'lastLinkCacheHours': 0,
         'defaultPlaybackSpeed': 10,
         'preferredVideoHeight': 1234,
@@ -65,10 +65,80 @@ void main() {
       expect(settings.holdSpeed, 4);
       expect(settings.streamSelectionTimeoutSeconds, 1);
       expect(settings.subtitleSize, 12);
-      expect(settings.subtitleVerticalOffset, 80);
+      expect(settings.subtitlePosition, PlaybackSettings.subtitlePositionMax);
       expect(settings.lastLinkCacheHours, 1);
       expect(settings.defaultPlaybackSpeed, 2);
       expect(settings.preferredVideoHeight, 0);
+    });
+
+    test('subtitle position round trips and converts the old offset', () {
+      final restored = PlaybackSettings.fromJson(
+        const PlaybackSettings(subtitlePosition: .12).toJson(),
+      );
+      expect(restored.subtitlePosition, .12);
+
+      // The old default pixel offset is the new default position.
+      expect(
+        PlaybackSettings.fromJson({
+          'subtitleVerticalOffset': 20,
+        }).subtitlePosition,
+        0,
+      );
+      expect(
+        PlaybackSettings.fromJson({
+          'subtitleVerticalOffset': 60,
+        }).subtitlePosition,
+        closeTo(.1, 1e-9),
+      );
+      expect(
+        PlaybackSettings.fromJson({'subtitlePosition': 'NaN'}).subtitlePosition,
+        0,
+      );
+    });
+
+    test('subtitle bottom keeps the original default and stays on screen', () {
+      double bottom(
+        double position, {
+        double height = 400,
+        bool controls = false,
+        EdgeInsets padding = EdgeInsets.zero,
+      }) => PlaybackSettings.subtitleBottom(
+        height: height,
+        padding: padding,
+        controlsVisible: controls,
+        position: position,
+      );
+
+      // Unchanged from before: 80 + 20, or 132 + 20 above the controls.
+      expect(bottom(0), 100);
+      expect(bottom(0, controls: true), 152);
+      // Relative to the player height, so a tablet moves further.
+      expect(bottom(.1), 140);
+      expect(bottom(.1, height: 1000), 200);
+      // Clamped inside the safe area and below the top bar.
+      expect(
+        bottom(
+          PlaybackSettings.subtitlePositionMin,
+          height: 1400,
+          padding: const EdgeInsets.only(bottom: 24),
+        ),
+        32,
+      );
+      expect(
+        bottom(
+          PlaybackSettings.subtitlePositionMax,
+          height: 300,
+          padding: const EdgeInsets.only(top: 30),
+          controls: true,
+        ),
+        150,
+      );
+    });
+
+    test('subtitle position labels', () {
+      expect(subtitlePositionLabel(0), 'Default');
+      expect(subtitlePositionLabel(.06), 'Higher 6%');
+      expect(subtitlePositionLabel(-.04), 'Lower 4%');
     });
   });
 

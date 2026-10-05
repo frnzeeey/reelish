@@ -44,6 +44,14 @@ class MainActivity : FlutterActivity() {
                     originalBrightness = null
                     result.success(null)
                 }
+                "keepScreenOn" -> {
+                    if (call.argument<Boolean>("value") == true) {
+                        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                    } else {
+                        window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                    }
+                    result.success(null)
+                }
                 "isEmulator" -> result.success(isEmulator())
                 "enterPip" -> {
                     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {

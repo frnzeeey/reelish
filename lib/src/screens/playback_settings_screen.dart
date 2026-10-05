@@ -829,16 +829,18 @@ class PlaybackSettingsScreen extends StatelessWidget {
                           _save(settings.copyWith(subtitleSize: value)),
                     ),
                     _sliderRow(
-                      'Vertical offset',
-                      'Distance above the bottom edge of the video.',
-                      settings.subtitleVerticalOffset,
-                      min: 0,
-                      max: 80,
-                      divisions: 16,
-                      valueLabel: '${settings.subtitleVerticalOffset.round()}',
-                      onChanged: (value) => _save(
-                        settings.copyWith(subtitleVerticalOffset: value),
+                      'Subtitle position',
+                      'Raise or lower subtitles. Also adjustable while '
+                          'watching, from the player settings.',
+                      settings.subtitlePosition,
+                      min: PlaybackSettings.subtitlePositionMin,
+                      max: PlaybackSettings.subtitlePositionMax,
+                      divisions: 25,
+                      valueLabel: subtitlePositionLabel(
+                        settings.subtitlePosition,
                       ),
+                      onChanged: (value) =>
+                          _save(settings.copyWith(subtitlePosition: value)),
                     ),
                     _switchRow(
                       'Bold',

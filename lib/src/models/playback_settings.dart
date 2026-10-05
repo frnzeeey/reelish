@@ -1,3 +1,7 @@
+import 'dart:math' as math;
+
+import 'package:flutter/painting.dart';
+
 class PlaybackSettings {
   const PlaybackSettings({
     this.touchGestures = true,
@@ -24,7 +28,7 @@ class PlaybackSettings {
     this.useForcedSubtitles = false,
     this.showOnlyPreferredLanguages = false,
     this.subtitleSize = 18,
-    this.subtitleVerticalOffset = 20,
+    this.subtitlePosition = 0,
     this.subtitleBold = false,
     this.subtitleTextColor = 0xFFFFFFFF,
     this.subtitleBackgroundColor = 0x00000000,
@@ -60,7 +64,14 @@ class PlaybackSettings {
   final bool useForcedSubtitles;
   final bool showOnlyPreferredLanguages;
   final double subtitleSize;
-  final double subtitleVerticalOffset;
+
+  /// How far subtitles sit above their default place, as a fraction of the
+  /// player height (0 is the default, negative is lower). Relative, so one
+  /// preference looks the same on phones, tablets and in either orientation.
+  final double subtitlePosition;
+  static const subtitlePositionMin = -.1;
+  static const subtitlePositionMax = .4;
+
   final bool subtitleBold;
   final int subtitleTextColor;
   final int subtitleBackgroundColor;
@@ -93,7 +104,7 @@ class PlaybackSettings {
     bool? useForcedSubtitles,
     bool? showOnlyPreferredLanguages,
     double? subtitleSize,
-    double? subtitleVerticalOffset,
+    double? subtitlePosition,
     bool? subtitleBold,
     int? subtitleTextColor,
     int? subtitleBackgroundColor,
@@ -133,8 +144,7 @@ class PlaybackSettings {
     showOnlyPreferredLanguages:
         showOnlyPreferredLanguages ?? this.showOnlyPreferredLanguages,
     subtitleSize: subtitleSize ?? this.subtitleSize,
-    subtitleVerticalOffset:
-        subtitleVerticalOffset ?? this.subtitleVerticalOffset,
+    subtitlePosition: subtitlePosition ?? this.subtitlePosition,
     subtitleBold: subtitleBold ?? this.subtitleBold,
     subtitleTextColor: subtitleTextColor ?? this.subtitleTextColor,
     subtitleBackgroundColor:
@@ -168,7 +178,7 @@ class PlaybackSettings {
     'useForcedSubtitles': useForcedSubtitles,
     'showOnlyPreferredLanguages': showOnlyPreferredLanguages,
     'subtitleSize': subtitleSize,
-    'subtitleVerticalOffset': subtitleVerticalOffset,
+    'subtitlePosition': subtitlePosition,
     'subtitleBold': subtitleBold,
     'subtitleTextColor': subtitleTextColor,
     'subtitleBackgroundColor': subtitleBackgroundColor,
@@ -221,10 +231,7 @@ class PlaybackSettings {
     useForcedSubtitles: json['useForcedSubtitles'] == true,
     showOnlyPreferredLanguages: json['showOnlyPreferredLanguages'] == true,
     subtitleSize: _double(json['subtitleSize'], 18).clamp(12, 40),
-    subtitleVerticalOffset: _double(
-      json['subtitleVerticalOffset'],
-      20,
-    ).clamp(0, 80),
+    subtitlePosition: _subtitlePosition(json),
     subtitleBold: json['subtitleBold'] == true,
     subtitleTextColor: _int(json['subtitleTextColor'], 0xFFFFFFFF),
     subtitleBackgroundColor: _int(json['subtitleBackgroundColor'], 0x00000000),
@@ -232,9 +239,48 @@ class PlaybackSettings {
     subtitleOutlineColor: _int(json['subtitleOutlineColor'], 0xFF000000),
   );
 
+  /// Reads [subtitlePosition]. Saves from before it existed hold a pixel
+  /// offset (`subtitleVerticalOffset`, 0-80, default 20) instead; that is
+  /// converted against a typical 400-pixel-tall landscape phone player.
+  static double _subtitlePosition(Map<String, dynamic> json) {
+    final value = json.containsKey('subtitlePosition')
+        ? _double(json['subtitlePosition'], 0)
+        : json.containsKey('subtitleVerticalOffset')
+        ? (_double(json['subtitleVerticalOffset'], 20).clamp(0, 80) - 20) / 400
+        : 0.0;
+    if (!value.isFinite) return 0;
+    return value.clamp(subtitlePositionMin, subtitlePositionMax).toDouble();
+  }
+
+  /// Distance from the bottom of a player [height] tall to the bottom of
+  /// the subtitles. Position 0 keeps the original place: 100 above the bottom
+  /// edge, or 152 while the bottom controls show. The result stays inside
+  /// the [padding] safe area and below the top bar, so subtitles can never
+  /// be moved off screen.
+  static double subtitleBottom({
+    required double height,
+    required EdgeInsets padding,
+    required bool controlsVisible,
+    required double position,
+  }) {
+    final base = (controlsVisible ? 132.0 : 80.0) + 20;
+    final lowest = padding.bottom + 8;
+    // Room above for the top bar and about two lines of text.
+    final highest = math.max(lowest, height - padding.top - 120);
+    return (base + position * height).clamp(lowest, highest).toDouble();
+  }
+
   static int _int(dynamic value, int fallback) =>
       value is num ? value.toInt() : int.tryParse('$value') ?? fallback;
 
   static double _double(dynamic value, double fallback) =>
       value is num ? value.toDouble() : double.tryParse('$value') ?? fallback;
+}
+
+/// How [PlaybackSettings.subtitlePosition] is shown: `Default`, `Higher 6%`
+/// or `Lower 4%`, in percent of the player height.
+String subtitlePositionLabel(double position) {
+  final percent = (position * 100).round();
+  if (percent == 0) return 'Default';
+  return percent > 0 ? 'Higher $percent%' : 'Lower ${-percent}%';
 }
