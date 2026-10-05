@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 import 'package:video_player_media_kit/video_player_media_kit.dart';
 import 'package:video_player_android/video_player_android.dart';
@@ -135,6 +138,22 @@ class PlayerEngineBootstrap {
   static void initialize() {
     if (defaultTargetPlatform == TargetPlatform.android) {
       const Media3PlayerEngine().activate();
+      unawaited(_configureForEmulator());
+    }
+  }
+
+  /// On an Android emulator libmpv's OpenGL video output cannot start, so
+  /// libmpv would play audio over a black picture; render through MediaCodec
+  /// instead. Physical devices are unaffected. Resolves long before libmpv is
+  /// first used (it is the fallback engine).
+  static Future<void> _configureForEmulator() async {
+    try {
+      final emulator = await const MethodChannel(
+        'onfeed/player',
+      ).invokeMethod<bool>('isEmulator');
+      MediaKitVideoPlayer.useMediaCodecOutput = emulator ?? false;
+    } catch (_) {
+      // Unknown: keep media_kit's defaults.
     }
   }
 }

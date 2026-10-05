@@ -44,6 +44,7 @@ class MainActivity : FlutterActivity() {
                     originalBrightness = null
                     result.success(null)
                 }
+                "isEmulator" -> result.success(isEmulator())
                 "enterPip" -> {
                     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
                         result.success(false)
@@ -144,6 +145,29 @@ class MainActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+    }
+
+    /**
+     * The same test media_kit uses (media_kit_video's Utils.isEmulator) to
+     * switch libmpv to software decoding, so the app knows when libmpv's
+     * OpenGL output would be used on an emulator.
+     */
+    private fun isEmulator(): Boolean = try {
+        (Build.BRAND.startsWith("generic") && Build.DEVICE.startsWith("generic")) ||
+            Build.FINGERPRINT.startsWith("generic") ||
+            Build.FINGERPRINT.startsWith("unknown") ||
+            Build.HARDWARE.contains("goldfish") ||
+            Build.HARDWARE.contains("ranchu") ||
+            Build.MODEL.contains("google_sdk") ||
+            Build.MODEL.contains("Emulator") ||
+            Build.MODEL.contains("Android SDK built for x86") ||
+            Build.MANUFACTURER.contains("Genymotion") ||
+            Build.PRODUCT.contains("sdk") ||
+            Build.PRODUCT.contains("vbox86p") ||
+            Build.PRODUCT.contains("emulator") ||
+            Build.PRODUCT.contains("simulator")
+    } catch (_: Throwable) {
+        false
     }
 
     private fun canInstallPackages(): Boolean =

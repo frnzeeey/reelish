@@ -31,6 +31,18 @@ class MediaKitVideoPlayer extends VideoPlayerPlatform {
 
   static MediaKitVideoPlayer? _shared;
 
+  /// Renders video through Android's MediaCodec straight into the video
+  /// surface (`vo=mediacodec_embed`, `hwdec=mediacodec`) instead of libmpv's
+  /// OpenGL ES output (`vo=gpu`).
+  ///
+  /// For Android emulators: there media_kit switches to software decoding,
+  /// and libmpv cannot create its EGL context on the emulator's OpenGL ES
+  /// translator ("Could not create EGL context for GLES 2.x"). libmpv then
+  /// drops the video track and plays audio over a black picture. Physical
+  /// devices keep media_kit's defaults. Applies to players created after
+  /// it is set.
+  static bool useMediaCodecOutput = false;
+
   /// Registers this class as the default instance of [VideoPlayerPlatform].
   ///
   /// One instance is shared and re-registering it is a no-op. package:
@@ -82,7 +94,15 @@ class MediaKitVideoPlayer extends VideoPlayerPlatform {
   Future<int?> create(DataSource dataSource) async {
     final player = Player();
     final completer = Completer();
-    final videoController = VideoController(player);
+    final videoController = VideoController(
+      player,
+      configuration: useMediaCodecOutput
+          ? const VideoControllerConfiguration(
+              vo: 'mediacodec_embed',
+              hwdec: 'mediacodec',
+            )
+          : const VideoControllerConfiguration(),
+    );
     // NOTE: [StreamController] without broadcast buffers events.
     final streamController = StreamController<VideoEvent>();
     final streamSubscriptions = <StreamSubscription>[];
