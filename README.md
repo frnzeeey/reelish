@@ -8,7 +8,8 @@ Reelish is an open-source Flutter app for discovering movies and TV series and w
 
 - Browse popular and trending movies and series, search titles, and view recommendations, new releases, and title details.
 - Keep a local library of favorites, recently watched titles, and playback progress so you can continue where you left off.
-- Install Nuvio-compatible provider repositories, enable the providers you want, and choose which providers can be used for playback.
+- Browse a built-in library of community provider repositories, search and filter it by language or content type, and install a repository from its details page.
+- Install provider repositories from a manifest URL, enable the providers you want, and choose which providers can be used for playback.
 - Play supported direct streams, with source selection, resume progress, playback controls, and configurable subtitles.
 - On Android, allow compatible providers to return torrent sources for P2P playback.
 - Choose an accent color and customize playback, subtitle appearance, language preferences, and gestures.
@@ -26,11 +27,21 @@ Reelish is an open-source Flutter app for discovering movies and TV series and w
 
 ## Providers
 
-Open **Plugins** and add a Nuvio-compatible provider manifest URL (or a supported GitHub repository/file link). Review the repository's providers, then enable the ones you want. Provider repositories and enabled-provider choices are saved on the device. Reelish runs provider scripts in a constrained JavaScript runtime and requests streams when you open a title; providers do not populate the catalog.
+Open **Plugins** and choose **Browse the library** to find a provider repository, or paste a provider manifest URL (or a supported GitHub repository/file link) with the link button. Review the repository's providers, then enable the ones you want. Provider repositories and enabled-provider choices are saved on the device. Reelish runs provider scripts in a constrained JavaScript runtime and requests streams when you open a title; providers do not populate the catalog.
 
 Providers are third-party code and services. Install repositories only from publishers you trust. Reelish does not supply or host streams. Provider availability and compatibility depend on each provider and its sources.
 
-Reelish is an independent project. It is not affiliated with, endorsed by, or sponsored by Nuvio, Stremio, CloudStream, or OpenSubtitles; their names are used only to describe compatible formats and services.
+### Plugin library
+
+The library lists repositories from a community-maintained catalog curated by wolf knight. Listings are not verified or endorsed by Reelish; repository names, descriptions, and manifests belong to their authors.
+
+The app downloads the catalog from [`assets/data/plugins.json`](assets/data/plugins.json) on this repository's `main` branch, checks for a newer copy at most every six hours (or when you pull to refresh), and keeps the last copy on the device. The same file is bundled with each release as an offline fallback. To update the catalog without an app release, regenerate the file and commit it:
+
+```sh
+dart run tool/generate_plugin_catalog.dart
+```
+
+Reelish is an independent project. It is not affiliated with, endorsed by, or sponsored by Stremio, CloudStream, or OpenSubtitles; their names are used only to describe compatible formats and services.
 
 ## Playback and subtitles
 
@@ -63,4 +74,4 @@ Release builds are published on [GitHub Releases](https://github.com/frnzeeey/re
 
 ## Privacy and terms
 
-On first launch, read and accept the privacy policy and terms of use shown in the app. Favorites, playback history, settings, and provider choices are stored locally. TMDB, provider publishers, stream hosts, and subtitle services receive requests needed for the features you use; Android may contact GitHub for update checks. See the in-app **Privacy policy** and **Terms of use** for details.
+On first launch, read and accept the privacy policy and terms of use shown in the app. Favorites, playback history, settings, and provider choices are stored locally. TMDB, provider publishers, stream hosts, and subtitle services receive requests needed for the features you use. The plugin library downloads its catalog from GitHub and loads provider logos from their listed hosts, and Android may contact GitHub for update checks. See the in-app **Privacy policy** and **Terms of use** for details.

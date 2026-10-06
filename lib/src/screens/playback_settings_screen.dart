@@ -905,8 +905,8 @@ class PlaybackSettingsScreen extends StatelessWidget {
                     ),
                     _infoRow(
                       'Torrent cache limit',
-                      'Unsupported by the torrent plugin',
-                      'The plugin accepts a cache directory but exposes no size limit or eviction API. Manual full-cache clearing is available.',
+                      '5 GB, checked at launch',
+                      'Torrent data is deleted automatically the next time Reelish starts once it uses more than 5 GB. Clear torrent cache frees the space sooner.',
                     ),
                   ]),
                   _section('STREAM SELECTION', [
@@ -1360,11 +1360,17 @@ class PlaybackSettingsScreen extends StatelessWidget {
     );
     if (confirmed != true) return;
     try {
-      await controller.clearTorrentCache();
+      final clearedNow = await controller.clearTorrentCache();
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Torrent cache cleared.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              clearedNow
+                  ? 'Torrent cache cleared.'
+                  : 'A torrent played this session, so the cache will be cleared the next time Reelish starts.',
+            ),
+          ),
+        );
       }
     } catch (_) {
       if (context.mounted) {

@@ -556,17 +556,72 @@ class MediaKitVideoPlayer extends VideoPlayerPlatform {
         ),
       );
 
+      // A decoder message after the media opened, waiting to see whether
+      // playback actually suffered.
+      Timer? decoderErrorCheck;
       streamSubscriptions.add(
         player.stream.error.listen(
           (event) {
-            final error = PlatformException(code: '', message: event);
+            final opened = completer.isCompleted;
+            if (kDebugMode) {
+              debugPrint(
+                '[MPV] error at ${diagnosticsClock.elapsedMilliseconds}ms '
+                '(opened=$opened): '
+                '${event.replaceAll(RegExp(r'https?://\S+'), '[URL]')}',
+              );
+            }
+            void forward() {
+              if (streamController.isClosed) return;
+              streamController.addError(
+                PlatformException(code: '', message: event),
+              );
+            }
+
             // Initialization can fail before video dimensions or duration
             // arrive. Forward the error immediately so video_player's
             // initialize future can fail instead of timing out.
-            streamController.addError(error);
-            if (!completer.isCompleted) {
+            if (!opened) {
+              forward();
               completer.complete();
+              return;
             }
+            // libmpv logs decoder trouble it recovers from at error level:
+            // "Could not open codec." when a hardware decoder cannot start and
+            // the software decoder takes over, or a single bad frame. Treating
+            // those as fatal discarded sources that were playing. Report one
+            // only if, a few seconds later, playback has stalled or the video
+            // track was dropped (both decoders failed, leaving audio over a
+            // black picture). Network and stream errors still fail at once.
+            //
+            // The exception is MediaCodec output (`vo=mediacodec_embed`, used
+            // on emulators): it can only show hardware-decoded frames, so a
+            // codec that fails to open there leaves the picture black.
+            if (!_isDecoderMessage(event) || useMediaCodecOutput) {
+              forward();
+              return;
+            }
+            if (decoderErrorCheck?.isActive ?? false) return;
+            final positionAtError = player.state.position;
+            final hadVideo = (width ?? 0) > 0;
+            decoderErrorCheck = Timer(_decoderErrorGrace, () {
+              if (streamController.isClosed) return;
+              final state = player.state;
+              final stalled =
+                  state.playing &&
+                  !state.completed &&
+                  state.position <= positionAtError;
+              final videoLost =
+                  hadVideo &&
+                  (state.track.video.id == 'no' ||
+                      (state.videoParams.dw ?? 0) == 0);
+              if (kDebugMode) {
+                debugPrint(
+                  '[MPV] decoder message check: stalled=$stalled '
+                  'videoLost=$videoLost',
+                );
+              }
+              if (stalled || videoLost) forward();
+            });
           },
         ),
       );
@@ -579,6 +634,17 @@ class MediaKitVideoPlayer extends VideoPlayerPlatform {
     }
 
     return () {};
+  }
+
+  /// How long a decoder message after opening may go unreported while
+  /// playback is checked.
+  static const _decoderErrorGrace = Duration(seconds: 5);
+
+  /// Whether [message] comes from a video or audio decoder, which libmpv
+  /// usually survives, as opposed to the network or the file itself.
+  static bool _isDecoderMessage(String message) {
+    final text = message.toLowerCase();
+    return text.contains('codec') || text.contains('decod');
   }
 }
 

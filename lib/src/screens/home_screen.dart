@@ -16,6 +16,7 @@ import '../services/perf_timeline.dart';
 import '../services/storage_service.dart';
 import '../services/stream_discovery.dart';
 import '../services/tmdb_service.dart';
+import '../services/plugin_library_repository.dart';
 import '../services/provider_plugin_service.dart';
 import '../services/playback_settings_controller.dart';
 import '../services/accent_settings_controller.dart';
@@ -29,6 +30,7 @@ import '../widgets/soft_glass_dock.dart';
 import '../widgets/player/custom_video_player.dart';
 import '../widgets/player/episode_panel.dart';
 import '../widgets/player/stream_selector_sheet.dart';
+import '../widgets/provider_search_dialog.dart';
 import 'plugins_screen.dart';
 import 'library_screen.dart';
 import 'player_screen.dart';
@@ -66,6 +68,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final _providerPlugins = ProviderPluginService();
+  // Loaded the first time the Plugin Library opens.
+  final _pluginLibrary = PluginLibraryRepository();
   final _storage = StorageService();
   final _playbackSettings = PlaybackSettingsController();
   late final TmdbService _tmdb;
@@ -148,6 +152,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     // History is local data and does not depend on plugin repository loading.
     // Start it now so remote manifest requests cannot delay the resume row.
     unawaited(_loadHistory());
+    // Before any torrent can start: deletes torrent data when a clear is
+    // pending or it has grown too large.
+    unawaited(_storage.cleanTorrentDataAtStartup());
     await _providerPlugins.load();
   }
 
@@ -651,6 +658,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       }
     }
 
+    // The search can take up to a minute when providers are slow, so the
+    // viewer can stop it. Completes when Cancel is pressed.
+    final searchCancelled = Completer<void>();
+    void cancelSearch() {
+      if (searchCancelled.isCompleted) return;
+      searchCancelled.complete();
+      dismissSearchDialog();
+    }
+
+    /// [future]'s value, or null once the search is cancelled.
+    Future<T?> unlessCancelled<T>(Future<T> future) =>
+        Future.any<T?>([future, searchCancelled.future.then((_) => null)]);
+
     PerfTimeline.begin('PLAY_PRESSED');
     int? season = selectedSeason, episode = selectedEpisode;
     if (item.type == 'series' && (season == null || episode == null)) {
@@ -702,49 +722,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (presentationContext?.mounted == true) {
       searchDialogOpen = true;
       unawaited(
-        showDialog<void>(
-          context: presentationContext!,
-          useRootNavigator: true,
-          barrierDismissible: false,
-          builder: (_) => PopScope(
-            canPop: false,
-            child: Dialog(
-              backgroundColor: Colors.transparent,
-              child: GlassBox(
-                padding: const EdgeInsets.all(22),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CircularProgressIndicator(color: GlassTheme.primary),
-                    const SizedBox(width: 18),
-                    Flexible(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Searching providers…',
-                            style: TextStyle(fontWeight: FontWeight.w800),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Finding a stream for ${item.name}'
-                            '${season == null || episode == null ? '' : ' · S$season E$episode'}',
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: GlassTheme.muted,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
+        ProviderSearchDialog.show(
+          presentationContext!,
+          title: item.name,
+          season: season,
+          episode: episode,
+          onCancel: cancelSearch,
         ),
       );
     } else if (mounted) {
@@ -761,9 +744,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       // Legacy items may carry an IMDb ID and need a TMDB lookup before
       // providers can search. Bound this optional lookup so a slow TMDB
       // response cannot delay provider discovery and playback startup.
-      final pluginId = await _tmdb
-          .resolveTmdbId(item)
-          .timeout(const Duration(seconds: 3), onTimeout: () => '');
+      final pluginId =
+          await unlessCancelled(
+            _tmdb
+                .resolveTmdbId(item)
+                .timeout(const Duration(seconds: 3), onTimeout: () => ''),
+          ) ??
+          '';
+      if (searchCancelled.isCompleted) return;
       final pluginItem = pluginId.isEmpty ? item : item.copyWith(id: pluginId);
       final playback = _playbackSettings.value;
       final streamCacheKey = item.type == 'series'
@@ -793,7 +781,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           allowedPluginIds: playback.allowedProviderIds,
           allowTorrents: allowTorrents,
         );
-        source = await discovery.startingSource();
+        source = await unlessCancelled<StreamSource?>(
+          discovery.startingSource(),
+        );
+        if (searchCancelled.isCompleted) {
+          discovery.cancel();
+          return;
+        }
         PerfTimeline.end('PLAY_PRESSED', 'FIRST_SOURCE');
         unawaited(
           discovery.finished.then(
@@ -801,12 +795,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
         );
         if (source != null && !playback.autoStreamSelection) {
-          await Future.any([
-            discovery.finished,
-            Future<void>.delayed(
-              Duration(seconds: playback.streamSelectionTimeoutSeconds),
-            ),
-          ]);
+          await unlessCancelled(
+            Future.any([
+              discovery.finished,
+              Future<void>.delayed(
+                Duration(seconds: playback.streamSelectionTimeoutSeconds),
+              ),
+            ]),
+          );
+          if (searchCancelled.isCompleted) {
+            discovery.cancel();
+            return;
+          }
           final available = discovery.sources;
           if (available.isNotEmpty) {
             dismissSearchDialog();
@@ -1038,6 +1038,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _searchFocus.dispose();
     _providerPlugins.removeListener(_onPluginChange);
     _providerPlugins.dispose();
+    _pluginLibrary.dispose();
     super.dispose();
   }
 
@@ -1082,7 +1083,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               padding: const EdgeInsets.only(right: 18),
               scrollDirection: Axis.horizontal,
               itemCount: items.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 13),
+              separatorBuilder: (_, _) => const SizedBox(width: 13),
               itemBuilder: (context, index) {
                 final item = items[index];
                 // Real progress for watch-history entries; catalog items
@@ -1437,8 +1438,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       ),
                       IconButton(
                         tooltip: 'Retry catalog',
-                        onPressed: () =>
-                            _reloadActiveFeed(),
+                        onPressed: () => _reloadActiveFeed(),
                         icon: const Icon(Symbols.refresh_rounded),
                       ),
                     ],
@@ -1481,8 +1481,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     if (feed.error != null) ...[
                       const SizedBox(height: 12),
                       OutlinedButton.icon(
-                        onPressed: () =>
-                            _reloadActiveFeed(),
+                        onPressed: () => _reloadActiveFeed(),
                         icon: const Icon(Symbols.refresh_rounded),
                         label: const Text('Retry'),
                       ),
@@ -1679,165 +1678,163 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     ],
   );
 
-  Widget _featured(
-    MediaItem item, {
-    required int imageCacheHeight,
-  }) => ClipRRect(
-    borderRadius: BorderRadius.circular(24),
-    child: Stack(
-      fit: StackFit.expand,
-      children: [
-        if (item.background.isNotEmpty)
-          Image.network(
-            item.background,
-            fit: BoxFit.cover,
-            cacheHeight: imageCacheHeight,
-            errorBuilder: (_, __, ___) =>
-                ColoredBox(color: GlassTheme.elevatedSurface),
-          )
-        else
-          ColoredBox(color: GlassTheme.elevatedSurface),
-        const DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Color(0x77000000),
-                Color(0x26000000),
-                Color(0x00000000),
-                Color(0xD90B0B0F),
-                GlassTheme.background,
-              ],
-              stops: [0, .2, .46, .82, 1],
+  Widget _featured(MediaItem item, {required int imageCacheHeight}) =>
+      ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (item.background.isNotEmpty)
+              Image.network(
+                item.background,
+                fit: BoxFit.cover,
+                cacheHeight: imageCacheHeight,
+                errorBuilder: (_, _, _) =>
+                    ColoredBox(color: GlassTheme.elevatedSurface),
+              )
+            else
+              ColoredBox(color: GlassTheme.elevatedSurface),
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color(0x77000000),
+                    Color(0x26000000),
+                    Color(0x00000000),
+                    Color(0xD90B0B0F),
+                    GlassTheme.background,
+                  ],
+                  stops: [0, .2, .46, .82, 1],
+                ),
+              ),
             ),
-          ),
-        ),
-        Positioned(
-          left: 21,
-          right: 21,
-          bottom: 22,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: GlassTheme.primary.withValues(alpha: .15),
-                  borderRadius: BorderRadius.circular(30),
-                  border: Border.all(
-                    color: GlassTheme.primary.withValues(alpha: .35),
-                  ),
-                ),
-                child: Text(
-                  'REELISH SPOTLIGHT',
-                  style: TextStyle(
-                    color: GlassTheme.primary,
-                    fontSize: 9,
-                    letterSpacing: 1.5,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 11),
-              Text(
-                item.name,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 35,
-                  height: 1.02,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -1.1,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                [
-                  item.year,
-                  item.type == 'series' ? 'Series' : 'Movie',
-                  if (item.rating.isNotEmpty) '${item.rating}/10',
-                ].where((value) => value.isNotEmpty).join('  |  '),
-                style: const TextStyle(
-                  color: Color(0xC7FFFFFF),
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              if (item.description.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text(
-                  item.description,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Color(0xC7FFFFFF),
-                    height: 1.35,
-                    fontSize: 13,
-                  ),
-                ),
-              ],
-              const SizedBox(height: 15),
-              Row(
+            Positioned(
+              left: 21,
+              right: 21,
+              bottom: 22,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  FilledButton.icon(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: GlassTheme.primary,
-                      foregroundColor: GlassTheme.background,
-                      shape: const StadiumBorder(),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 22,
-                        vertical: 15,
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: GlassTheme.primary.withValues(alpha: .15),
+                      borderRadius: BorderRadius.circular(30),
+                      border: Border.all(
+                        color: GlassTheme.primary.withValues(alpha: .35),
                       ),
                     ),
-                    onPressed: () => _showDetails(item),
-                    icon: const Icon(Symbols.info_rounded),
-                    label: const Text(
-                      'Details',
-                      style: TextStyle(fontWeight: FontWeight.w800),
+                    child: Text(
+                      'REELISH SPOTLIGHT',
+                      style: TextStyle(
+                        color: GlassTheme.primary,
+                        fontSize: 9,
+                        letterSpacing: 1.5,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      shape: const StadiumBorder(),
-                      side: BorderSide(
-                        color: Colors.white.withValues(alpha: .35),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 19,
-                        vertical: 15,
+                  const SizedBox(height: 11),
+                  Text(
+                    item.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 35,
+                      height: 1.02,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -1.1,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    [
+                      item.year,
+                      item.type == 'series' ? 'Series' : 'Movie',
+                      if (item.rating.isNotEmpty) '${item.rating}/10',
+                    ].where((value) => value.isNotEmpty).join('  |  '),
+                    style: const TextStyle(
+                      color: Color(0xC7FFFFFF),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (item.description.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      item.description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xC7FFFFFF),
+                        height: 1.35,
+                        fontSize: 13,
                       ),
                     ),
-                    onPressed: () async {
-                      final isFavorite = await _toggleFavorite(item);
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              isFavorite
-                                  ? '${item.name} saved to your list'
-                                  : '${item.name} removed from your list',
-                            ),
+                  ],
+                  const SizedBox(height: 15),
+                  Row(
+                    children: [
+                      FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: GlassTheme.primary,
+                          foregroundColor: GlassTheme.background,
+                          shape: const StadiumBorder(),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 22,
+                            vertical: 15,
                           ),
-                        );
-                      }
-                    },
-                    icon: const Icon(Symbols.add_rounded, size: 19),
-                    label: const Text('My list'),
+                        ),
+                        onPressed: () => _showDetails(item),
+                        icon: const Icon(Symbols.info_rounded),
+                        label: const Text(
+                          'Details',
+                          style: TextStyle(fontWeight: FontWeight.w800),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          shape: const StadiumBorder(),
+                          side: BorderSide(
+                            color: Colors.white.withValues(alpha: .35),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 19,
+                            vertical: 15,
+                          ),
+                        ),
+                        onPressed: () async {
+                          final isFavorite = await _toggleFavorite(item);
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  isFavorite
+                                      ? '${item.name} saved to your list'
+                                      : '${item.name} removed from your list',
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                        icon: const Icon(Symbols.add_rounded, size: 19),
+                        label: const Text('My list'),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
-      ],
-    ),
-  );
+      );
   @override
   Widget build(BuildContext context) {
     final availablePlugins = [
@@ -1853,7 +1850,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       TabPageTransition(active: _tab == 0, child: _home()),
       TabPageTransition(
         active: _tab == 1,
-        child: PluginsScreen(pluginService: _providerPlugins),
+        child: PluginsScreen(
+          pluginService: _providerPlugins,
+          pluginLibrary: _pluginLibrary,
+        ),
       ),
       TabPageTransition(
         active: _tab == 2,
@@ -1867,8 +1867,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         active: _tab == 3,
         child: SettingsScreen(
           accentSettings: widget.accentSettings,
-          onAppearanceSettings: () =>
-              unawaited(_openAppearanceSettings()),
+          onAppearanceSettings: () => unawaited(_openAppearanceSettings()),
           onPlaybackSettings: () =>
               unawaited(_openPlaybackSettings(availablePlugins)),
         ),

@@ -18,6 +18,9 @@ const _releaseBuildTag = String.fromEnvironment(
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
 
+  /// Read once; a rebuild must not start another platform call.
+  static final Future<PackageInfo> _packageInfo = PackageInfo.fromPlatform();
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('About')),
@@ -67,7 +70,7 @@ class AboutScreen extends StatelessWidget {
         ),
         const SizedBox(height: 14),
         FutureBuilder<PackageInfo>(
-          future: PackageInfo.fromPlatform(),
+          future: _packageInfo,
           builder: (context, snapshot) {
             final details = snapshot.hasData
                 ? [

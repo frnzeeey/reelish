@@ -119,7 +119,7 @@ class _ProviderInstallerModalState extends State<ProviderInstallerModal> {
                 textInputAction: TextInputAction.done,
                 onSubmitted: (_) => _busy ? null : _install(),
                 decoration: InputDecoration(
-                  hintText: 'Nuvio-compatible manifest URL',
+                  hintText: 'Provider manifest URL',
                   prefixIcon: const Icon(Symbols.link_rounded),
                   suffixIcon: IconButton(
                     tooltip: 'Paste from clipboard',

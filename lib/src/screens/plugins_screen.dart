@@ -2,14 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../models/provider_plugin.dart';
+import '../services/plugin_library_repository.dart';
 import '../services/provider_plugin_service.dart';
 import '../theme/glass_theme.dart';
 import '../widgets/provider_installer_modal.dart';
+import 'plugin_library_screen.dart';
 
 class PluginsScreen extends StatelessWidget {
-  const PluginsScreen({super.key, required this.pluginService});
+  const PluginsScreen({
+    super.key,
+    required this.pluginService,
+    required this.pluginLibrary,
+  });
 
   final ProviderPluginService pluginService;
+  final PluginLibraryRepository pluginLibrary;
 
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
@@ -19,27 +26,28 @@ class PluginsScreen extends StatelessWidget {
           .expand((repo) => repo.plugins)
           .toList();
       final enabledCount = plugins.where((plugin) => plugin.enabled).length;
-      final install = () => ProviderInstallerModal.show(context, pluginService);
+      void install() => ProviderInstallerModal.show(context, pluginService);
+      void browse() => PluginLibraryScreen.open(
+        context,
+        repository: pluginLibrary,
+        pluginService: pluginService,
+      );
       return Scaffold(
-        floatingActionButton: Padding(
-          // Keep the action above the app-wide glass navigation dock.
-          padding: const EdgeInsets.only(bottom: 84),
-          child: FloatingActionButton.extended(
-            onPressed: install,
-            icon: const Icon(Symbols.add_rounded),
-            label: const Text('Add provider'),
-          ),
-        ),
         body: ListView(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 126),
           children: [
-            _PluginsHeader(onRefresh: () => pluginService.load()),
+            _PluginsHeader(
+              onRefresh: () => pluginService.load(),
+              onPaste: install,
+            ),
             const SizedBox(height: 18),
             _PluginsHero(
               repositoryCount: pluginService.repositories.length,
               providerCount: plugins.length,
               enabledCount: enabledCount,
             ),
+            const SizedBox(height: 12),
+            _LibraryEntry(onTap: browse),
             const SizedBox(height: 24),
             _SectionHeading(
               title: 'Your repositories',
@@ -49,7 +57,7 @@ class PluginsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             if (pluginService.repositories.isEmpty)
-              _EmptyPlugins(onInstall: install)
+              _EmptyPlugins(onInstall: install, onBrowse: browse)
             else ...[
               if (enabledCount == 0) ...[
                 const SizedBox(height: 12),
@@ -70,21 +78,55 @@ class PluginsScreen extends StatelessWidget {
                   ),
                 ),
             ],
-            if (pluginService.errors.isNotEmpty) ...[
+            if (pluginService.errors.isNotEmpty ||
+                pluginService.pendingScriptUpdates.isNotEmpty) ...[
               const SizedBox(height: 14),
               _SectionHeading(
                 title: 'Needs attention',
-                detail: '${pluginService.errors.length} load errors',
+                detail: switch (pluginService.errors.length +
+                    pluginService.pendingScriptUpdates.length) {
+                  1 => '1 issue',
+                  final count => '$count issues',
+                },
               ),
               const SizedBox(height: 12),
-              for (final error in pluginService.errors.entries)
+              for (final update in pluginService.pendingScriptUpdates.entries)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 9),
                   child: _RepositoryError(
-                    name: error.key,
-                    message: error.value,
-                    onDismiss: () => pluginService.removeFailed(error.key),
+                    name:
+                        pluginService.repositories
+                            .where((repo) => repo.url == update.key)
+                            .firstOrNull
+                            ?.name ??
+                        update.key,
+                    message: update.value.length == 1
+                        ? 'A provider changed its code. It is paused until you allow the update. Only allow it if you trust this repository.'
+                        : '${update.value.length} providers changed their code. They are paused until you allow the update. Only allow it if you trust this repository.',
+                    onApprove: () =>
+                        pluginService.approveScriptUpdates(update.key),
                   ),
+                ),
+              for (final error in pluginService.errors.entries)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 9),
+                  child: pluginService.failedRepositoryUrls.contains(error.key)
+                      ? _RepositoryError(
+                          name: error.key,
+                          message: error.value,
+                          onRetry: () => pluginService.load(),
+                          onRemove: () => _confirmRemoveFailed(
+                            context,
+                            pluginService,
+                            error.key,
+                          ),
+                        )
+                      : _RepositoryError(
+                          name: error.key,
+                          message: error.value,
+                          onDismiss: () =>
+                              pluginService.dismissError(error.key),
+                        ),
                 ),
             ],
           ],
@@ -95,9 +137,10 @@ class PluginsScreen extends StatelessWidget {
 }
 
 class _PluginsHeader extends StatelessWidget {
-  const _PluginsHeader({required this.onRefresh});
+  const _PluginsHeader({required this.onRefresh, required this.onPaste});
 
   final VoidCallback onRefresh;
+  final VoidCallback onPaste;
 
   @override
   Widget build(BuildContext context) => Row(
@@ -128,6 +171,12 @@ class _PluginsHeader extends StatelessWidget {
           ],
         ),
       ),
+      IconButton(
+        tooltip: 'Paste a manifest URL',
+        onPressed: onPaste,
+        icon: const Icon(Symbols.add_link_rounded),
+      ),
+      const SizedBox(width: 4),
       IconButton.filledTonal(
         tooltip: 'Refresh repositories',
         onPressed: onRefresh,
@@ -202,7 +251,7 @@ class _PluginsHero extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                      'SOURCE OVERVIEW',
+                        'SOURCE OVERVIEW',
                         style: TextStyle(
                           color: GlassTheme.muted,
                           fontSize: 10,
@@ -227,7 +276,11 @@ class _PluginsHero extends StatelessWidget {
             const SizedBox(height: 14),
             const Text(
               'Choose which trusted providers Reelish can search when you press play.',
-              style: TextStyle(color: Colors.white70, height: 1.4, fontSize: 12),
+              style: TextStyle(
+                color: Colors.white70,
+                height: 1.4,
+                fontSize: 12,
+              ),
             ),
             const SizedBox(height: 17),
             Row(
@@ -272,7 +325,10 @@ class _MetricPill extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 5),
-        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 10)),
+        Text(
+          label,
+          style: const TextStyle(color: Colors.white70, fontSize: 10),
+        ),
       ],
     ),
   );
@@ -294,15 +350,81 @@ class _SectionHeading extends StatelessWidget {
           style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
         ),
       ),
-      Text(detail, style: const TextStyle(color: GlassTheme.muted, fontSize: 11)),
+      Text(
+        detail,
+        style: const TextStyle(color: GlassTheme.muted, fontSize: 11),
+      ),
     ],
   );
 }
 
+/// Opens the community Plugin Library.
+class _LibraryEntry extends StatelessWidget {
+  const _LibraryEntry({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: GlassTheme.surface,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(20),
+      side: const BorderSide(color: GlassTheme.border),
+    ),
+    clipBehavior: Clip.antiAlias,
+    child: InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 14, 10, 14),
+        child: Row(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: GlassTheme.primary.withValues(alpha: .12),
+                borderRadius: BorderRadius.circular(13),
+              ),
+              child: Icon(
+                Symbols.storefront_rounded,
+                color: GlassTheme.primary,
+                size: 21,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Browse Reelish Plugins',
+                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+                  ),
+                  SizedBox(height: 3),
+                  Text(
+                    'Discover community providers and add them from the catalog.',
+                    style: TextStyle(
+                      color: GlassTheme.muted,
+                      fontSize: 11,
+                      height: 1.3,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Symbols.chevron_right_rounded, color: GlassTheme.muted),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
 class _EmptyPlugins extends StatelessWidget {
-  const _EmptyPlugins({required this.onInstall});
+  const _EmptyPlugins({required this.onInstall, required this.onBrowse});
 
   final VoidCallback onInstall;
+  final VoidCallback onBrowse;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -321,7 +443,10 @@ class _EmptyPlugins extends StatelessWidget {
             color: GlassTheme.primary.withValues(alpha: .12),
             shape: BoxShape.circle,
           ),
-          child: Icon(Symbols.travel_explore_rounded, color: GlassTheme.primary),
+          child: Icon(
+            Symbols.travel_explore_rounded,
+            color: GlassTheme.primary,
+          ),
         ),
         const SizedBox(height: 14),
         const Text(
@@ -330,15 +455,27 @@ class _EmptyPlugins extends StatelessWidget {
         ),
         const SizedBox(height: 7),
         const Text(
-          'Install a Nuvio-compatible provider manifest to add streaming sources. You can turn each provider on or off at any time.',
+          'Browse the library or paste a provider manifest URL to add streaming sources. You can turn each provider on or off at any time.',
           textAlign: TextAlign.center,
           style: TextStyle(color: GlassTheme.muted, height: 1.45, fontSize: 12),
         ),
         const SizedBox(height: 18),
-        FilledButton.icon(
-          onPressed: onInstall,
-          icon: const Icon(Symbols.add_rounded),
-          label: const Text('Install a provider'),
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            FilledButton.icon(
+              onPressed: onBrowse,
+              icon: const Icon(Symbols.storefront_rounded),
+              label: const Text('Browse the library'),
+            ),
+            OutlinedButton.icon(
+              onPressed: onInstall,
+              icon: const Icon(Symbols.add_rounded),
+              label: const Text('Paste a manifest'),
+            ),
+          ],
         ),
       ],
     ),
@@ -393,6 +530,7 @@ class _RepositoryCardState extends State<_RepositoryCard> {
         .length;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 180),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: GlassTheme.surface,
         borderRadius: BorderRadius.circular(20),
@@ -402,82 +540,97 @@ class _RepositoryCardState extends State<_RepositoryCard> {
               : GlassTheme.border,
         ),
       ),
-      child: Column(
-        children: [
-          ListTile(
-            onTap: () => setState(() => _expanded = !_expanded),
-            contentPadding: const EdgeInsets.fromLTRB(14, 5, 8, 5),
-            leading: Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: GlassTheme.primary.withValues(alpha: .12),
-                borderRadius: BorderRadius.circular(13),
-              ),
-              child: Icon(Symbols.dns_rounded, color: GlassTheme.primary, size: 21),
-            ),
-            title: Text(
-              repository.name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-            ),
-            subtitle: Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                '$enabledCount of ${repository.plugins.length} providers active',
-                style: const TextStyle(color: GlassTheme.muted, fontSize: 10),
-              ),
-            ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  tooltip: 'Remove repository',
-                  onPressed: _confirmRemove,
-                  icon: const Icon(Symbols.delete_rounded, size: 20),
-                  visualDensity: VisualDensity.compact,
+      // The tiles' ink paints on this Material, above the card colour.
+      child: Material(
+        type: MaterialType.transparency,
+        child: Column(
+          children: [
+            ListTile(
+              onTap: () => setState(() => _expanded = !_expanded),
+              contentPadding: const EdgeInsets.fromLTRB(14, 5, 8, 5),
+              leading: Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: GlassTheme.primary.withValues(alpha: .12),
+                  borderRadius: BorderRadius.circular(13),
                 ),
-                AnimatedRotation(
-                  turns: _expanded ? .5 : 0,
-                  duration: const Duration(milliseconds: 180),
-                  child: const Icon(Symbols.keyboard_arrow_down_rounded),
+                child: Icon(
+                  Symbols.dns_rounded,
+                  color: GlassTheme.primary,
+                  size: 21,
                 ),
-                const SizedBox(width: 6),
-              ],
-            ),
-          ),
-          AnimatedCrossFade(
-            duration: const Duration(milliseconds: 180),
-            crossFadeState: _expanded
-                ? CrossFadeState.showSecond
-                : CrossFadeState.showFirst,
-            firstChild: const SizedBox(width: double.infinity),
-            secondChild: Column(
-              children: [
-                Divider(height: 1, color: GlassTheme.border),
-                for (var index = 0; index < repository.plugins.length; index++)
-                  _ProviderTile(
-                    plugin: repository.plugins[index],
-                    onChanged: (enabled) => widget.service.setPluginEnabled(
-                      repository,
-                      repository.plugins[index],
-                      enabled,
-                    ),
-                    showDivider: index < repository.plugins.length - 1,
+              ),
+              title: Text(
+                repository.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
+              ),
+              subtitle: Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  '$enabledCount of ${repository.plugins.length} providers active',
+                  style: const TextStyle(color: GlassTheme.muted, fontSize: 10),
+                ),
+              ),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    tooltip: 'Remove repository',
+                    onPressed: _confirmRemove,
+                    icon: const Icon(Symbols.delete_rounded, size: 20),
+                    visualDensity: VisualDensity.compact,
                   ),
-                if (repository.plugins.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.all(18),
-                    child: Text(
-                      'This repository contains no valid providers.',
-                      style: TextStyle(color: GlassTheme.muted, fontSize: 12),
-                    ),
+                  AnimatedRotation(
+                    turns: _expanded ? .5 : 0,
+                    duration: const Duration(milliseconds: 180),
+                    child: const Icon(Symbols.keyboard_arrow_down_rounded),
                   ),
-              ],
+                  const SizedBox(width: 6),
+                ],
+              ),
             ),
-          ),
-        ],
+            AnimatedCrossFade(
+              duration: const Duration(milliseconds: 180),
+              crossFadeState: _expanded
+                  ? CrossFadeState.showSecond
+                  : CrossFadeState.showFirst,
+              firstChild: const SizedBox(width: double.infinity),
+              secondChild: Column(
+                children: [
+                  Divider(height: 1, color: GlassTheme.border),
+                  for (
+                    var index = 0;
+                    index < repository.plugins.length;
+                    index++
+                  )
+                    _ProviderTile(
+                      plugin: repository.plugins[index],
+                      onChanged: (enabled) => widget.service.setPluginEnabled(
+                        repository,
+                        repository.plugins[index],
+                        enabled,
+                      ),
+                      showDivider: index < repository.plugins.length - 1,
+                    ),
+                  if (repository.plugins.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.all(18),
+                      child: Text(
+                        'This repository contains no valid providers.',
+                        style: TextStyle(color: GlassTheme.muted, fontSize: 12),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -502,7 +655,9 @@ class _ProviderTile extends StatelessWidget {
         child: Row(
           children: [
             Icon(
-              plugin.enabled ? Symbols.check_circle_rounded : Symbols.circle_rounded,
+              plugin.enabled
+                  ? Symbols.check_circle_rounded
+                  : Symbols.circle_rounded,
               fill: plugin.enabled ? 1 : 0,
               color: plugin.enabled ? GlassTheme.primary : GlassTheme.disabled,
               size: 17,
@@ -516,7 +671,10 @@ class _ProviderTile extends StatelessWidget {
                     plugin.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   if (plugin.description.isNotEmpty) ...[
                     const SizedBox(height: 3),
@@ -569,15 +727,33 @@ class _NoticeCard extends StatelessWidget {
     ),
     child: Row(
       children: [
-        const Icon(Symbols.power_settings_new_rounded, color: Color(0xFFFFB547), size: 20),
+        const Icon(
+          Symbols.power_settings_new_rounded,
+          color: Color(0xFFFFB547),
+          size: 20,
+        ),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: const TextStyle(color: Color(0xFFFFB547), fontWeight: FontWeight.w700, fontSize: 12)),
+              Text(
+                title,
+                style: const TextStyle(
+                  color: Color(0xFFFFB547),
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12,
+                ),
+              ),
               const SizedBox(height: 3),
-              Text(message, style: const TextStyle(color: GlassTheme.muted, fontSize: 10, height: 1.35)),
+              Text(
+                message,
+                style: const TextStyle(
+                  color: GlassTheme.muted,
+                  fontSize: 10,
+                  height: 1.35,
+                ),
+              ),
             ],
           ),
         ),
@@ -586,16 +762,55 @@ class _NoticeCard extends StatelessWidget {
   );
 }
 
+/// Removing an unreachable repository is permanent, so it is confirmed: the
+/// usual cause is a missing connection, not a broken repository.
+Future<void> _confirmRemoveFailed(
+  BuildContext context,
+  ProviderPluginService service,
+  String url,
+) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('Remove repository?'),
+      content: Text(
+        'This uninstalls $url. If it failed only because you are offline, '
+        'use Retry instead.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext, false),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext, true),
+          child: const Text('Remove'),
+        ),
+      ],
+    ),
+  );
+  if (confirmed == true) await service.removeFailed(url);
+}
+
+/// A repository that did not load ([onRetry] and [onRemove]), provider code
+/// waiting for approval ([onApprove]) or a provider lookup error
+/// ([onDismiss]).
 class _RepositoryError extends StatelessWidget {
   const _RepositoryError({
     required this.name,
     required this.message,
-    required this.onDismiss,
+    this.onDismiss,
+    this.onRetry,
+    this.onRemove,
+    this.onApprove,
   });
 
   final String name;
   final String message;
-  final VoidCallback onDismiss;
+  final VoidCallback? onDismiss;
+  final VoidCallback? onRetry;
+  final VoidCallback? onRemove;
+  final VoidCallback? onApprove;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -613,18 +828,52 @@ class _RepositoryError extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 11)),
+              Text(
+                name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 11,
+                ),
+              ),
               const SizedBox(height: 3),
-              Text(message, maxLines: 3, overflow: TextOverflow.ellipsis, style: const TextStyle(color: GlassTheme.muted, fontSize: 10, height: 1.3)),
+              Text(
+                message,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: GlassTheme.muted,
+                  fontSize: 10,
+                  height: 1.3,
+                ),
+              ),
             ],
           ),
         ),
-        IconButton(
-          tooltip: 'Dismiss',
-          visualDensity: VisualDensity.compact,
-          onPressed: onDismiss,
-          icon: const Icon(Symbols.close_rounded, size: 18),
-        ),
+        if (onApprove != null)
+          TextButton(onPressed: onApprove, child: const Text('Allow update')),
+        if (onRetry != null)
+          IconButton(
+            tooltip: 'Retry',
+            visualDensity: VisualDensity.compact,
+            onPressed: onRetry,
+            icon: const Icon(Symbols.refresh_rounded, size: 18),
+          ),
+        if (onRemove != null)
+          IconButton(
+            tooltip: 'Remove repository',
+            visualDensity: VisualDensity.compact,
+            onPressed: onRemove,
+            icon: const Icon(Symbols.delete_rounded, size: 18),
+          ),
+        if (onDismiss != null)
+          IconButton(
+            tooltip: 'Dismiss',
+            visualDensity: VisualDensity.compact,
+            onPressed: onDismiss,
+            icon: const Icon(Symbols.close_rounded, size: 18),
+          ),
       ],
     ),
   );

@@ -17,7 +17,7 @@ class LegalInformationScreen extends StatefulWidget {
   final bool requireReadToEnd;
 
   static const _projectUrl = 'https://github.com/frnzeeey/reelish';
-  static const _effectiveDate = 'October 1, 2026';
+  static const _effectiveDate = 'October 6, 2026';
 
   @override
   State<LegalInformationScreen> createState() => _LegalInformationScreenState();
@@ -79,10 +79,7 @@ class _LegalInformationScreenState extends State<LegalInformationScreen> {
               children: [
                 Text(
                   'Reelish · Updated ${LegalInformationScreen._effectiveDate}',
-                  style: const TextStyle(
-                    color: GlassTheme.muted,
-                    fontSize: 12,
-                  ),
+                  style: const TextStyle(color: GlassTheme.muted, fontSize: 12),
                 ),
                 const SizedBox(height: 16),
                 for (final section in sections) ...[
@@ -98,18 +95,20 @@ class _LegalInformationScreenState extends State<LegalInformationScreen> {
                       children: [
                         Text(
                           section.$1,
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: -.15,
-                          ),
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: -.15,
+                              ),
                         ),
                         const SizedBox(height: 9),
                         Text(
                           section.$2,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Colors.white.withValues(alpha: .78),
-                            height: 1.6,
-                          ),
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: Colors.white.withValues(alpha: .78),
+                                height: 1.6,
+                              ),
                         ),
                       ],
                     ),
@@ -184,8 +183,8 @@ class _LegalInformationScreenState extends State<LegalInformationScreen> {
       'Information kept on your device',
       'The app stores your favorites, recently played titles and resume '
           'positions, playback preferences, installed add-on repository '
-          'addresses and settings, and a short-lived cache of selected stream '
-          'sources. These are stored in the app’s private device storage. The '
+          'addresses and settings, a short-lived cache of selected stream '
+          'sources, and a copy of the plugin library catalog. These are stored in the app’s private device storage. The '
           'app does not currently include its own advertising or analytics '
           'service. You can remove favorites and history in Library, remove '
           'add-ons in Plugins, clear the torrent cache in Playback settings, '
@@ -197,7 +196,11 @@ class _LegalInformationScreenState extends State<LegalInformationScreen> {
       'When you browse, search or open titles, the app sends title identifiers '
           'and related requests to The Movie Database (TMDB) to retrieve '
           'catalog, artwork and details. Subtitle searches send a title or '
-          'episode identifier to the OpenSubtitles v3 service. If you install '
+          'episode identifier to the OpenSubtitles v3 service. Opening the '
+          'plugin library downloads its catalog from the app’s GitHub '
+          'repository and loads provider logos from the addresses listed in '
+          'the catalog; those hosts can receive your IP address and request '
+          'data, but no title or account information is sent. If you install '
           'an add-on, the app contacts the repository and service addresses '
           'configured for it. Add-ons receive the title and episode identifiers '
           'needed for your request and may send them to their own servers. '
@@ -258,7 +261,10 @@ class _LegalInformationScreenState extends State<LegalInformationScreen> {
           'person’s rights. P2P/torrent playback may share your network address '
           'with other participants and may upload pieces of a file. Add-ons '
           'and remote content can change without notice and may be inaccurate, '
-          'unavailable or unsafe.',
+          'unavailable or unsafe. The app checks each stream address before '
+          'playback, but the video engine then follows redirects and playlist '
+          'links chosen by the stream host, which can reach other addresses, '
+          'including devices on your local network.',
     ),
     (
       'Third-party services and software',
@@ -267,7 +273,7 @@ class _LegalInformationScreenState extends State<LegalInformationScreen> {
           'may include open-source software, which remains subject to its '
           'respective license. Third-party names and marks belong to their '
           'owners. Reelish is an independent app and is not affiliated with, '
-          'endorsed by or sponsored by Nuvio, Stremio, CloudStream or '
+          'endorsed by or sponsored by Stremio, CloudStream or '
           'OpenSubtitles. Their names are used only to describe compatible '
           'formats and services.',
     ),
@@ -307,6 +313,14 @@ class _LegalInformationScreenState extends State<LegalInformationScreen> {
           'TMDB. TMDB supplies catalog metadata and imagery. TMDB trademarks '
           'and content remain with their respective owners; see TMDB’s terms '
           'and attribution requirements before redistributing any material.',
+    ),
+    (
+      'Plugin library',
+      'The plugin library lists provider repositories from a '
+          'community-maintained catalog curated by wolf knight. Repository '
+          'names, descriptions, logos and manifests belong to their authors, '
+          'who build and maintain each provider independently of Reelish. '
+          'A listing is not an endorsement or a verification of a provider.',
     ),
     (
       'External content',

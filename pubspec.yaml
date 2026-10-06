@@ -51,6 +51,8 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  integration_test:
+    sdk: flutter
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -81,6 +83,7 @@ flutter:
     - assets/js/cheerio_bundle.js
     - assets/fonts/Montserrat-OFL.txt
     - assets/icons/reelish_icon.png
+    - assets/data/plugins.json
 
   fonts:
     - family: Montserrat

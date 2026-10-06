@@ -51,8 +51,9 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.onfeed"
+        // Permanent store and update identity. Changing it makes Android treat
+        // the app as a different one (no in-place update, separate data).
+        applicationId = "io.github.frnzeeey.reelish"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

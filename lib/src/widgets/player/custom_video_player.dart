@@ -24,6 +24,7 @@ import '../../services/video_quality_selector.dart';
 import '../../services/network_target_policy.dart';
 import '../../services/subtitle_addon_service.dart';
 import '../../services/subtitle_loader.dart';
+import '../../services/torrent_source_preparer.dart';
 import 'audio_track_sheet.dart';
 import 'episode_panel.dart';
 import 'gesture_touch_layer.dart';
@@ -216,6 +217,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
       ).invokeMethod<void>('keepScreenOn', {'value': value}).catchError((_) {}),
     );
   }
+
   double? _speedBeforeHold;
   TorrentStreamSession? _torrentSession;
   Timer? _hide, _save, _hint;
@@ -408,7 +410,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     _unbindEmbeddedSubtitles();
     try {
       final isTorrent = source.isTorrent;
-      if (isTorrent) source = await _prepareTorrent(source);
+      if (isTorrent) source = await _prepareTorrent(source, generation);
       // MediaKit/libmpv performs native media requests, so source preparation
       // preflights public hosts before the URL crosses into the native engine.
       // The only bypass is the loopback URL created by Reelish's torrent
@@ -974,7 +976,10 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     final StreamSource? first;
     if (mounted) setState(() => _status = 'Finding best stream…');
     try {
+      final previous = _rediscovery;
       discovery = rediscover();
+      // Lookups are shared per title, so the new one may be the same object.
+      if (!identical(previous, discovery)) previous?.cancel();
       _rediscovery = discovery;
       first = await discovery.firstSource;
     } catch (_) {
@@ -1016,104 +1021,21 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     return _rediscoverAndPlay();
   }
 
-  Future<StreamSource> _prepareTorrent(StreamSource source) async {
+  late final TorrentSourcePreparer _torrents = TorrentSourcePreparer(
+    storage: widget.storage,
+    destinations: _networkDestinations,
+  );
+
+  Future<StreamSource> _prepareTorrent(StreamSource source, int generation) {
     if (!Theme.of(context).platform.toString().contains('android')) {
       throw UnsupportedError('Torrent streaming is available on Android only.');
     }
-    final topicPattern = RegExp(
-      r'^urn:btih:(?:[0-9a-f]{40}|[a-z2-7]{32})$|^urn:btmh:1220[0-9a-f]{64}$',
-      caseSensitive: false,
-    );
-    final rawMagnet = source.url.toLowerCase().startsWith('magnet:')
-        ? Uri.tryParse(source.url)
-        : null;
-    final topic =
-        rawMagnet?.queryParametersAll['xt']
-            ?.where((value) => topicPattern.hasMatch(value))
-            .firstOrNull ??
-        (source.infoHash.isEmpty ? null : 'urn:btih:${source.infoHash.trim()}');
-    if (topic == null || !topicPattern.hasMatch(topic)) {
-      throw Exception('Torrent source has no valid info hash.');
-    }
-    final trackerCandidates = <String>{
-      ...?rawMagnet?.queryParametersAll['tr'],
-      ...source.torrentSources
-          .where((tracker) => tracker.startsWith('tracker:'))
-          .map((tracker) => tracker.substring(8)),
-    }.where(StreamSource.isSafeTorrentTracker).toList();
-    final trackerUrls = <String>[];
-    final trackersToCheck = trackerCandidates.take(8).toList();
-    var nextTracker = 0;
-    Future<void> validateTrackers() async {
-      while (nextTracker < trackersToCheck.length) {
-        final tracker = trackersToCheck[nextTracker++];
-        try {
-          await _networkDestinations.resolveDestination(
-            Uri.parse(tracker),
-            allowedSchemes: const {'http', 'https', 'udp'},
-          );
-          trackerUrls.add(tracker);
-        } catch (_) {
-          // Invalid, private, or unresolvable trackers are omitted. The native
-          // torrent engine performs its own peer/DHT networking beyond this
-          // Dart preflight, so this check narrows plugin-supplied tracker risk
-          // without claiming to pin native sockets.
-        }
-      }
-    }
-
-    await Future.wait(
-      List.generate(
-        trackersToCheck.length < 4 ? trackersToCheck.length : 4,
-        (_) => validateTrackers(),
-      ),
-    );
-    final query = <String, dynamic>{
-      'xt': topic,
-      if (source.name.isNotEmpty) 'dn': source.name,
-      if (trackerUrls.isNotEmpty) 'tr': trackerUrls,
-    };
-    final magnet = Uri(scheme: 'magnet', queryParameters: query).toString();
-    final dir = await widget.storage.torrentCacheDirectory();
-    final session = await FlutterTorrentStreamer().startStream(
-      magnet,
-      dir.path,
-    );
-    _torrentSession = session;
-    List<TorrentFile> files = [];
-    final metadataTimer = Stopwatch()..start();
-    while (files.isEmpty &&
-        metadataTimer.elapsed < const Duration(seconds: 30)) {
-      try {
-        files = await session.getFiles().timeout(const Duration(seconds: 1));
-      } on TimeoutException {
-        // Poll again until the bounded metadata deadline expires.
-      }
-      if (files.isEmpty) {
-        await Future<void>.delayed(const Duration(milliseconds: 500));
-      }
-    }
-    if (files.isEmpty) throw Exception('Torrent metadata did not load.');
-    final videoFiles = files
-        .where(
-          (f) => RegExp(
-            r'\.(mkv|mp4|m4v|webm|mov|avi)$',
-            caseSensitive: false,
-          ).hasMatch(f.name),
-        )
-        .toList();
-    final candidates = videoFiles.isNotEmpty ? videoFiles : files;
-    final file =
-        candidates.where((f) => f.index == source.fileIdx).firstOrNull ??
-        (candidates..sort((a, b) => b.size.compareTo(a.size))).first;
-    await session.selectFile(file.index);
-    return StreamSource(
-      name: source.name,
-      url: session.streamUrl,
-      description: source.description,
-      headers: source.headers,
-      subtitles: source.subtitles,
-      providerName: source.providerName,
+    return _torrents.prepare(
+      source,
+      // The viewer may close the player or pick another source while the
+      // session starts; dispose and the next attempt stop _torrentSession.
+      superseded: () => !mounted || generation != _initializationGeneration,
+      onSession: (session) => _torrentSession = session,
     );
   }
 
@@ -1308,7 +1230,9 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   Future<void> _pickAudio() async {
     final controller = _controller;
     if (controller == null || _audioTracks.length < 2) return;
-    final id = await _withSheet(() => AudioTrackSheet.show(context, _audioTracks));
+    final id = await _withSheet(
+      () => AudioTrackSheet.show(context, _audioTracks),
+    );
     if (id == null || !mounted || !identical(controller, _controller)) return;
     await _selectAudioTrack(controller, id);
   }
@@ -1338,7 +1262,9 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
           ),
       ];
     });
-    if (_playback.useForcedSubtitles) unawaited(_applyPreferredSubtitle(automatic: false));
+    if (_playback.useForcedSubtitles) {
+      unawaited(_applyPreferredSubtitle(automatic: false));
+    }
   }
 
   Future<void> _resolveEpisodes() async {
@@ -1355,7 +1281,9 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     });
     // At the finale (or before the next episode airs) there is nothing to
     // offer; withdraw an offer made before this was known.
-    if (resolved != null && resolved.next == null && _nextEpisodePromptVisible) {
+    if (resolved != null &&
+        resolved.next == null &&
+        _nextEpisodePromptVisible) {
       _dismissNextEpisode();
     }
     // The episode's own still replaces the series artwork; fetch it now if
@@ -1514,8 +1442,43 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     await _initialize(picked);
   }
 
+  /// The other engine, when it can open the current source.
+  PlayerEngine? get _alternateEngine {
+    final source = _source;
+    final alternate = PlayerEngineFactory.alternateFor(_engine);
+    if (source == null ||
+        alternate == null ||
+        !PlayerEngineFactory.canOpen(alternate, source.url)) {
+      return null;
+    }
+    return alternate;
+  }
+
+  static String _engineName(PlayerEngineId id) => switch (id) {
+    PlayerEngineId.media3 => 'the Android player',
+    PlayerEngineId.mediaKit => 'the compatibility player',
+    PlayerEngineId.flutterPlatform => 'the system player',
+  };
+
+  /// Reopens the current source on [engine] where the viewer was, and uses
+  /// that engine for the rest of the session. Rendering failures that leave
+  /// audio over a black picture raise no error, so this is the viewer's way
+  /// out of them.
+  Future<void> _switchEngine(PlayerEngine engine) async {
+    final source = _source;
+    if (source == null) return;
+    _preferredEngine = engine;
+    _nextStatus = 'Switching player…';
+    PlaybackLog.log(
+      'Player',
+      'viewer switched engine ${_engine.id.name} -> ${engine.id.name}',
+    );
+    await _initialize(source, resetAttempts: false, engine: engine);
+  }
+
   Future<void> _settings() async {
     final controller = _controller;
+    final alternate = _alternateEngine;
     final result = await _withSheet(
       () => PlayerSettingsSheet.show(
         context,
@@ -1530,9 +1493,14 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
         _availableSubtitles,
         _videoTracks,
         _audioTracks,
+        alternate == null ? null : _engineName(alternate.id),
       ),
     );
     if (result == null || !mounted) return;
+    if (result.switchEngine && alternate != null) {
+      await _switchEngine(alternate);
+      return;
+    }
     // Apply only what changed: re-selecting the same quality can make the
     // engine switch renditions, and reloading subtitles blanks them.
     final speedChanged = result.speed != _speed;
@@ -1581,10 +1549,8 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   /// Downloadable subtitles: from the provider and from subtitle addons, with
   /// the viewer's filters applied ("show only preferred languages" also
   /// applies to addon results).
-  List<SubtitleTrack> get _availableSubtitles => _filterSubtitles([
-    ..._providerSubtitles,
-    ..._addonSubtitleResults,
-  ]);
+  List<SubtitleTrack> get _availableSubtitles =>
+      _filterSubtitles([..._providerSubtitles, ..._addonSubtitleResults]);
 
   List<SubtitleTrack> get _providerSubtitles {
     final unique = <String, SubtitleTrack>{};
@@ -2337,11 +2303,11 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     final c = _controller;
     final current = _source;
     final currentUri = current == null ? null : Uri.tryParse(current.url);
-    final sourceDetails = [
+    final sourceDetails = <String>{
       if (current?.name.isNotEmpty == true) current!.name,
       if (current?.providerName.isNotEmpty == true) current!.providerName,
       if (currentUri?.hasAuthority == true) currentUri!.host,
-    ].toSet().join(' · ');
+    }.join(' · ');
     final playable = c != null && _ready;
     final alternatives = _sources.where(_isSourceAllowed).length;
     final quality = current == null
@@ -2457,8 +2423,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
                         valueListenable: c,
                         builder: (context, v, _) {
                           final t =
-                              v.position.inMilliseconds / 1000 -
-                              _subtitleDelay;
+                              v.position.inMilliseconds / 1000 - _subtitleDelay;
                           final cue = _cues
                               .where((e) => t >= e.start && t <= e.end)
                               .firstOrNull;

@@ -7,6 +7,13 @@ has no signing key or signature verification mechanism, so a repository owner
 or compromised hosting account can change executable provider code. Do not
 describe installed providers as immutable or cryptographically trusted.
 
+Reelish pins provider code by SHA-256 instead (trust on first use). The first
+version of each script that is downloaded is recorded and runs. If a later
+download differs, that provider is paused and the Plugins screen lists the
+repository under "Needs attention" until the viewer chooses **Allow update**.
+This doesn't prove who wrote the code, but it stops a repository from
+silently swapping in new code. Removing a repository forgets its approvals.
+
 Provider scripts run in an isolated QuickJS runtime with a 20 second
 synchronous execution limit and a 64 MiB runtime memory cap. The provider
 scheduler has four workers, but only two QuickJS runtimes can be active
@@ -42,26 +49,47 @@ OpenSubtitles, and subtitle downloads.
 Provider results pass through `StreamNormalizer`, `StreamValidator`, and
 `SourcePreparer` before native playback. Provider-supplied media headers are
 preserved in the canonical source and passed through `VideoPlayerController`
-to the MediaKit adapter on Android. HLS and DASH format hints are carried into
-the `video_player` API; MediaKit/libmpv still performs the actual URL probing
-on Android. Current playback still uses one engine per platform:
-MediaKit/libmpv on Android and Flutter's registered video player on other
-platforms. The `PlayerEngine` interface is a Dart coordination boundary; it
-does not currently provide an Android Media3 engine or engine failover.
+to the engine. HLS and DASH format hints are carried into the `video_player`
+API. On Android, HTTPS sources open on Media3 first. Other schemes, torrents
+(through the streamer's loopback URL), and sources Media3 cannot decode open on
+MediaKit/libmpv. Other platforms use Flutter's registered video player.
 
 Android's app-wide `usesCleartextTraffic` override is removed. Android's
 cleartext policy cannot safely enumerate dynamically discovered provider
-domains. HTTP media URLs remain eligible after public-address preflight because
-some providers require them. The player is MediaKit/libmpv native networking,
-not the Dart HTTP client: DNS is checked before handing over a stream, but the
-native engine may resolve the hostname again and follows playlist and media
-redirects internally. Those later native requests are not pinned or validated
-by the Dart policy. Torrent tracker URLs also receive DNS preflight, but the
-native torrent engine's peer and DHT networking is outside this boundary.
+domains. Media3 follows that policy; libmpv uses its own network stack and
+does not. HTTP media URLs remain eligible on libmpv after public-address
+preflight because some providers require them.
 
-Consequently, cleartext restrictions and DNS pinning are strongest for Dart
-HTTP paths. HTTP playback behavior and enforcement of Android's cleartext
-policy by the bundled native media/torrent libraries require on-device
-verification. A controlled native proxy or player integration would be needed
-to validate every media playlist segment and redirect without relying on the
-native engine's resolver.
+## Accepted risk: native media requests (SEC-01)
+
+`SourcePreparer` checks that a stream's host resolves to public addresses
+before the URL is handed to a native engine. After that, Media3 and libmpv do
+their own networking: they resolve the hostname again and follow HTTP
+redirects and HLS/DASH playlist entries (variant playlists, segments, keys)
+without the Dart destination policy. The torrent engine's peer, tracker and
+DHT traffic is also outside it.
+
+So a hostile provider, or a compromised stream host, could make the player
+send requests to a private or local address on the viewer's network (a
+router admin page, a local service). Such a request carries no Reelish data
+beyond the URL and the provider's own headers. The response is fed to a
+media decoder, not shown or returned to the provider, so the risk is blind
+request forgery against the local network, not data theft.
+
+This is accepted for now. Closing it needs every native media request routed
+through an in-app validating proxy. That adds latency and battery use to
+playback, and risks breaking providers that rely on redirects or unusual
+playlists. Mitigations in place:
+
+- Every URL a provider returns is checked for scheme and public destination
+  before playback, so a provider cannot point the player straight at a
+  private address.
+- Provider scripts can only make network requests through the validating
+  fetch bridge.
+- Provider code is pinned by hash and changed code needs approval (see
+  above), which limits a repository's ability to start sending hostile
+  results silently.
+- Install only repositories you trust.
+
+Revisit this if Reelish ever handles credentials, or runs on networks where
+local services must be protected (managed or enterprise devices).

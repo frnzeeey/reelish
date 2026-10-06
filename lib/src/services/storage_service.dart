@@ -8,11 +8,32 @@ import '../models/stream_source.dart';
 import 'playback_source_policy.dart';
 
 class StorageService {
+  StorageService({Future<Directory> Function()? filesDirectory})
+    : _filesDirectory = filesDirectory ?? getApplicationSupportDirectory;
+
+  /// App-private files outside Android backup (only SharedPreferences are
+  /// backed up; see `android/app/src/main/res/xml/backup_rules.xml`).
+  final Future<Directory> Function() _filesDirectory;
+
+  /// Read-modify-write updates (history, favourites, progress, subtitle
+  /// choices, stream links) run one at a time across every instance, so two
+  /// saves landing together cannot each write back a list missing the
+  /// other's change.
+  static Future<void> _updates = Future.value();
+
+  static Future<T> _serialized<T>(Future<T> Function() update) {
+    final result = _updates.then((_) => update());
+    _updates = result.then<void>((_) {}, onError: (Object _) {});
+    return result;
+  }
+
   static const _providerRepositoriesKey = 'onfeed.nuvio.plugin.repositories',
       _history = 'onfeed.history',
       _favorites = 'onfeed.favorites';
   Future<List<String>> providerRepositoryUrls() async =>
-      (await SharedPreferences.getInstance()).getStringList(_providerRepositoriesKey) ??
+      (await SharedPreferences.getInstance()).getStringList(
+        _providerRepositoriesKey,
+      ) ??
       [];
   Future<void> saveProviderRepositoryUrls(List<String> urls) async =>
       (await SharedPreferences.getInstance()).setStringList(
@@ -33,12 +54,39 @@ class StorageService {
     }
   }
 
-  Future<void> saveProviderEnabledOverrides(
-    Map<String, bool> values,
-  ) async => (await SharedPreferences.getInstance()).setString(
-    'onfeed.nuvio.plugin.enabled',
-    jsonEncode(values),
-  );
+  Future<void> saveProviderEnabledOverrides(Map<String, bool> values) async =>
+      (await SharedPreferences.getInstance()).setString(
+        'onfeed.nuvio.plugin.enabled',
+        jsonEncode(values),
+      );
+  static const _providerScriptHashesKey = 'onfeed.plugin.scriptHashes.v1';
+
+  /// SHA-256 of each provider script the viewer has allowed to run, by
+  /// script URL.
+  Future<Map<String, String>> providerScriptHashes() async {
+    final raw = (await SharedPreferences.getInstance()).getString(
+      _providerScriptHashesKey,
+    );
+    if (raw == null) return {};
+    try {
+      final decoded = jsonDecode(raw);
+      return decoded is Map
+          ? {
+              for (final MapEntry(:key, :value) in decoded.entries)
+                if (value is String) '$key': value,
+            }
+          : {};
+    } on FormatException {
+      return {};
+    }
+  }
+
+  Future<void> saveProviderScriptHashes(Map<String, String> hashes) async =>
+      (await SharedPreferences.getInstance()).setString(
+        _providerScriptHashesKey,
+        jsonEncode(hashes),
+      );
+
   Future<List<MediaItem>> _items(String key) async {
     final raw =
         (await SharedPreferences.getInstance()).getStringList(key) ?? [];
@@ -70,15 +118,12 @@ class StorageService {
     MediaItem item,
     int positionMs, {
     int durationMs = 0,
-  }) async {
+  }) => _serialized(() async {
     final all = await history();
     all.removeWhere((e) => e.id == item.id && e.type == item.type);
-    all.insert(
-      0,
-      item.copyWith(resumeMs: positionMs, durationMs: durationMs),
-    );
+    all.insert(0, item.copyWith(resumeMs: positionMs, durationMs: durationMs));
     await _saveItems(_history, all.take(50).toList());
-  }
+  });
 
   static const _episodeProgressKey = 'onfeed.history.episodes.v1';
 
@@ -117,7 +162,7 @@ class StorageService {
     required int episode,
     required int positionMs,
     required int durationMs,
-  }) async {
+  }) => _serialized(() async {
     final all = await _episodeProgressStore();
     final key = _mediaKey(series);
     final entry = all.remove(key);
@@ -140,7 +185,7 @@ class StorageService {
       _episodeProgressKey,
       jsonEncode(all),
     );
-  }
+  });
 
   Future<Map<String, dynamic>> _episodeProgressStore() async {
     final raw = (await SharedPreferences.getInstance()).getString(
@@ -155,7 +200,7 @@ class StorageService {
     }
   }
 
-  Future<void> toggleFavorite(MediaItem item) async {
+  Future<void> toggleFavorite(MediaItem item) => _serialized(() async {
     final all = await favorites();
     if (all.any((e) => e.id == item.id && e.type == item.type)) {
       all.removeWhere((e) => e.id == item.id && e.type == item.type);
@@ -163,13 +208,13 @@ class StorageService {
       all.insert(0, item);
     }
     await _saveItems(_favorites, all);
-  }
+  });
 
-  Future<void> removeHistory(MediaItem item) async {
+  Future<void> removeHistory(MediaItem item) => _serialized(() async {
     final all = await history()
       ..removeWhere((e) => e.id == item.id && e.type == item.type);
     await _saveItems(_history, all);
-  }
+  });
 
   Future<bool> isFavorite(MediaItem item) async =>
       (await favorites()).any((e) => e.id == item.id && e.type == item.type);
@@ -194,28 +239,29 @@ class StorageService {
     }
   }
 
-  Future<void> rememberSubtitle(
-    String titleKey,
-    RememberedSubtitle choice,
-  ) async {
-    final preferences = await SharedPreferences.getInstance();
-    var values = <String, dynamic>{};
-    try {
-      final decoded = jsonDecode(
-        preferences.getString(_subtitlePreferencesKey) ?? '{}',
-      );
-      if (decoded is Map) values = Map<String, dynamic>.from(decoded);
-    } on FormatException {
-      // Start over from an unreadable value.
-    }
-    values
-      ..remove(titleKey)
-      ..[titleKey] = choice.toJson();
-    while (values.length > 200) {
-      values.remove(values.keys.first);
-    }
-    await preferences.setString(_subtitlePreferencesKey, jsonEncode(values));
-  }
+  Future<void> rememberSubtitle(String titleKey, RememberedSubtitle choice) =>
+      _serialized(() async {
+        final preferences = await SharedPreferences.getInstance();
+        var values = <String, dynamic>{};
+        try {
+          final decoded = jsonDecode(
+            preferences.getString(_subtitlePreferencesKey) ?? '{}',
+          );
+          if (decoded is Map) values = Map<String, dynamic>.from(decoded);
+        } on FormatException {
+          // Start over from an unreadable value.
+        }
+        values
+          ..remove(titleKey)
+          ..[titleKey] = choice.toJson();
+        while (values.length > 200) {
+          values.remove(values.keys.first);
+        }
+        await preferences.setString(
+          _subtitlePreferencesKey,
+          jsonEncode(values),
+        );
+      });
 
   Future<String?> readSetting(String key) async =>
       (await SharedPreferences.getInstance()).getString(key);
@@ -223,7 +269,47 @@ class StorageService {
   Future<void> saveSetting(String key, String value) async =>
       (await SharedPreferences.getInstance()).setString(key, value);
 
-  static const _lastStreamsKey = 'onfeed.playback.lastStreams.v1';
+  /// Where cached stream links lived before they moved to [_lastStreamsFile];
+  /// read once, then removed.
+  static const _legacyLastStreamsKey = 'onfeed.playback.lastStreams.v1';
+  static const _lastStreamsFileName = 'last_streams.v1.json';
+
+  /// Cached stream links hold signed URLs and provider headers, so they are
+  /// kept in a private file that Android backup does not include.
+  Future<File> _lastStreamsFile() async =>
+      File('${(await _filesDirectory()).path}/$_lastStreamsFileName');
+
+  Future<Map<String, dynamic>> _readLastStreams() async {
+    String? raw;
+    final file = await _lastStreamsFile();
+    if (await file.exists()) {
+      raw = await file.readAsString();
+    } else {
+      raw = (await SharedPreferences.getInstance()).getString(
+        _legacyLastStreamsKey,
+      );
+    }
+    if (raw == null) return {};
+    try {
+      final decoded = jsonDecode(raw);
+      return decoded is Map ? Map<String, dynamic>.from(decoded) : {};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  Future<void> _writeLastStreams(Map<String, dynamic> values) async {
+    final file = await _lastStreamsFile();
+    await file.parent.create(recursive: true);
+    // Write then rename, so an interrupted write never leaves a corrupt file.
+    final temporary = File('${file.path}.tmp');
+    await temporary.writeAsString(jsonEncode(values), flush: true);
+    await temporary.rename(file.path);
+    final preferences = await SharedPreferences.getInstance();
+    if (preferences.containsKey(_legacyLastStreamsKey)) {
+      await preferences.remove(_legacyLastStreamsKey);
+    }
+  }
 
   Future<StreamSource?> lastStream(
     MediaItem item, {
@@ -232,13 +318,8 @@ class StorageService {
     Set<String>? allowedProviderIds,
     String? cacheKey,
   }) async {
-    final raw = (await SharedPreferences.getInstance()).getString(
-      _lastStreamsKey,
-    );
-    if (raw == null) return null;
     try {
-      final value = jsonDecode(raw);
-      if (value is! Map) return null;
+      final value = await _readLastStreams();
       final key = cacheKey ?? _mediaKey(item);
       final entry = value[key];
       if (entry is! Map) return null;
@@ -272,39 +353,130 @@ class StorageService {
     String? cacheKey,
   }) async {
     if (!source.isPlayable) return;
-    final preferences = await SharedPreferences.getInstance();
-    Map<String, dynamic> values = {};
-    final raw = preferences.getString(_lastStreamsKey);
-    if (raw != null) {
-      try {
-        final decoded = jsonDecode(raw);
-        if (decoded is Map) values = Map<String, dynamic>.from(decoded);
-      } catch (_) {}
-    }
-    values[cacheKey ?? _mediaKey(item)] = {
-      'savedAt': DateTime.now().toUtc().toIso8601String(),
-      'source': source.toJson(),
-    };
-    if (values.length > 100) {
-      values.remove(values.keys.first);
-    }
-    await preferences.setString(_lastStreamsKey, jsonEncode(values));
+    await _serialized(() async {
+      final values = await _readLastStreams();
+      final key = cacheKey ?? _mediaKey(item);
+      // Re-inserted last, so the oldest entry is first when trimming.
+      values
+        ..remove(key)
+        ..[key] = {
+          'savedAt': DateTime.now().toUtc().toIso8601String(),
+          'source': source.toJson(),
+        };
+      while (values.length > 100) {
+        values.remove(values.keys.first);
+      }
+      await _writeLastStreams(values);
+    });
   }
 
   String _mediaKey(MediaItem item) => '${item.type}:${item.id}';
 
+  /// The save path handed to the torrent streamer. Calling this marks the
+  /// torrent engine as started for this process (see [clearTorrentCache]).
+  ///
+  /// flutter_go_torrent_streamer ignores this path: its Go client keeps all
+  /// torrent data in [_torrentEngineDataDirectory], which is where the space
+  /// is actually used.
   Future<Directory> torrentCacheDirectory({bool create = true}) async {
-    final documents = await getApplicationDocumentsDirectory();
-    final directory = Directory('${documents.path}/torrent_cache');
+    await (_torrentStartupCleanup ??= _cleanTorrentDataAtStartup());
+    _torrentEngineStarted = true;
+    final cache = await getTemporaryDirectory();
+    final directory = Directory('${cache.path}/torrent_cache');
     if (create && !await directory.exists()) {
       await directory.create(recursive: true);
     }
     return directory;
   }
 
-  Future<void> clearTorrentCache() async {
-    final directory = await torrentCacheDirectory(create: false);
-    if (await directory.exists()) await directory.delete(recursive: true);
+  /// Where the torrent engine stores downloaded pieces: a fixed folder next
+  /// to the session file it is initialised with (the documents directory).
+  static Future<Directory> _torrentEngineDataDirectory() async {
+    final documents = await getApplicationDocumentsDirectory();
+    return Directory('${documents.path}/flutter_torrent_streamer_global');
+  }
+
+  static const _torrentClearPendingKey = 'onfeed.torrent.clearPending';
+
+  /// Whether the native torrent client may be running in this process. Its
+  /// data can only be deleted safely before it starts: it keeps files and a
+  /// piece-completion database open, and deleting them underneath it would
+  /// make it serve pieces it no longer has.
+  static bool _torrentEngineStarted = false;
+  static Future<void>? _torrentStartupCleanup;
+
+  /// Torrent data using more disk space than this is deleted at launch.
+  static const maxTorrentDataBytes = 5 * 1024 * 1024 * 1024;
+
+  /// Deletes torrent data before the engine first starts when a clear was
+  /// requested while it was running, or when it uses more than
+  /// [maxTorrentDataBytes] of disk. Also removes the folder earlier versions
+  /// created but never used. Never throws.
+  ///
+  /// The whole folder goes or none of it: deleting only some files would
+  /// leave the engine's piece-completion database describing pieces that no
+  /// longer exist.
+  Future<void> cleanTorrentDataAtStartup() =>
+      _torrentStartupCleanup ??= _cleanTorrentDataAtStartup();
+
+  Future<void> _cleanTorrentDataAtStartup() async {
+    if (_torrentEngineStarted) return;
+    try {
+      final preferences = await SharedPreferences.getInstance();
+      final documents = await getApplicationDocumentsDirectory();
+      final unused = Directory('${documents.path}/torrent_cache');
+      if (await unused.exists()) await unused.delete(recursive: true);
+      final data = await _torrentEngineDataDirectory();
+      if (!await data.exists()) return;
+      final pending = preferences.getBool(_torrentClearPendingKey) ?? false;
+      if (pending ||
+          (await _diskUsageBytes(data) ?? 0) > maxTorrentDataBytes) {
+        await data.delete(recursive: true);
+      }
+      await preferences.remove(_torrentClearPendingKey);
+    } catch (_) {
+      // Leaves the data for the next launch.
+    }
+  }
+
+  /// Disk space used by [directory], or null when it cannot be measured.
+  ///
+  /// Torrent files are sparse: their length is the full download size even
+  /// when only a few pieces exist, so summing lengths would wildly
+  /// overestimate. `du` reports allocated blocks; Android ships it (toybox).
+  static Future<int?> _diskUsageBytes(Directory directory) async {
+    if (!Platform.isAndroid && !Platform.isLinux && !Platform.isMacOS) {
+      return null;
+    }
+    try {
+      final result = await Process.run('du', [
+        '-sk',
+        directory.path,
+      ]).timeout(const Duration(seconds: 10));
+      if (result.exitCode != 0) return null;
+      final kilobytes = int.tryParse(
+        '${result.stdout}'.trim().split(RegExp(r'\s+')).first,
+      );
+      return kilobytes == null ? null : kilobytes * 1024;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Deletes downloaded torrent data now when the engine has not started in
+  /// this process; otherwise schedules it for the next launch. Returns
+  /// whether the data was deleted now.
+  Future<bool> clearTorrentCache() async {
+    if (!_torrentEngineStarted) {
+      final data = await _torrentEngineDataDirectory();
+      if (await data.exists()) await data.delete(recursive: true);
+      return true;
+    }
+    await (await SharedPreferences.getInstance()).setBool(
+      _torrentClearPendingKey,
+      true,
+    );
+    return false;
   }
 }
 

@@ -14,6 +14,7 @@ class PlayerSettings {
     this.videoTrack,
     this.audioTrackId,
     this.adjustSubtitlePosition = false,
+    this.switchEngine = false,
   });
   final double speed;
   final BoxFit fit;
@@ -26,6 +27,10 @@ class PlayerSettings {
   /// Set when the viewer asked to move subtitles; the player then shows its
   /// position panel, where the subtitles stay visible.
   final bool adjustSubtitlePosition;
+
+  /// Set when the viewer asked to reopen the stream on the other playback
+  /// engine, the recovery for a picture that stays black while audio plays.
+  final bool switchEngine;
   PlayerSettings copyWith({
     double? speed,
     BoxFit? fit,
@@ -37,6 +42,7 @@ class PlayerSettings {
     bool clearVideoTrack = false,
     String? audioTrackId,
     bool? adjustSubtitlePosition,
+    bool? switchEngine,
   }) => PlayerSettings(
     speed: speed ?? this.speed,
     fit: fit ?? this.fit,
@@ -47,6 +53,7 @@ class PlayerSettings {
     audioTrackId: audioTrackId ?? this.audioTrackId,
     adjustSubtitlePosition:
         adjustSubtitlePosition ?? this.adjustSubtitlePosition,
+    switchEngine: switchEngine ?? this.switchEngine,
   );
 }
 
@@ -57,17 +64,22 @@ class PlayerSettingsSheet extends StatelessWidget {
     required this.subtitles,
     this.videoTracks = const [],
     this.audioTracks = const [],
+    this.alternateEngine,
   });
   final PlayerSettings value;
   final List<SubtitleTrack> subtitles;
   final List<VideoTrack> videoTracks;
   final List<VideoAudioTrack> audioTracks;
+
+  /// Name of the other playback engine, when it can open this stream.
+  final String? alternateEngine;
   static Future<PlayerSettings?> show(
     BuildContext context,
     PlayerSettings value,
     List<SubtitleTrack> subtitles, [
     List<VideoTrack> videoTracks = const [],
     List<VideoAudioTrack> audioTracks = const [],
+    String? alternateEngine,
   ]) => showModalBottomSheet<PlayerSettings>(
     context: context,
     backgroundColor: Colors.transparent,
@@ -76,6 +88,7 @@ class PlayerSettingsSheet extends StatelessWidget {
       subtitles: subtitles,
       videoTracks: videoTracks,
       audioTracks: audioTracks,
+      alternateEngine: alternateEngine,
     ),
   );
   @override
@@ -165,6 +178,19 @@ class PlayerSettingsSheet extends StatelessWidget {
                   ),
                 const SizedBox(height: 8),
               ],
+              if (alternateEngine case final engine?)
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Symbols.swap_horiz_rounded),
+                  title: Text('Switch to $engine'),
+                  subtitle: const Text(
+                    'Try this if the picture stays black while audio plays.',
+                  ),
+                  onTap: () => Navigator.pop(
+                    context,
+                    value.copyWith(switchEngine: true),
+                  ),
+                ),
               const Text('Aspect ratio'),
               Wrap(
                 spacing: 6,

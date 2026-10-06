@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:onfeed/src/models/playback_settings.dart';
@@ -151,10 +153,18 @@ void main() {
       quality: '1080p',
     );
 
-    setUp(() => SharedPreferences.setMockInitialValues({}));
+    late Directory files;
+    StorageService newStorage() =>
+        StorageService(filesDirectory: () async => files);
+
+    setUp(() {
+      SharedPreferences.setMockInitialValues({});
+      files = Directory.systemTemp.createTempSync('reelish_storage_');
+    });
+    tearDown(() => files.deleteSync(recursive: true));
 
     test('stores and restores the source for the same title', () async {
-      final storage = StorageService();
+      final storage = newStorage();
       await storage.saveLastStream(item, source);
 
       final restored = await storage.lastStream(
@@ -174,7 +184,7 @@ void main() {
         '{"movie:42":{"savedAt":"2000-01-01T00:00:00.000Z","source":$_jsonSource}}',
       );
 
-      final restored = await StorageService().lastStream(
+      final restored = await newStorage().lastStream(
         item,
         maxAge: const Duration(days: 1),
         allowTorrents: true,
@@ -184,7 +194,7 @@ void main() {
     });
 
     test('does not reuse a cached source from a disallowed provider', () async {
-      final storage = StorageService();
+      final storage = newStorage();
       final providerSource = source.copyWithProviderId('repo-a|provider-a');
       await storage.saveLastStream(item, providerSource);
 
@@ -199,7 +209,7 @@ void main() {
     });
 
     test('reuses a cached source when its provider is allowed', () async {
-      final storage = StorageService();
+      final storage = newStorage();
       final providerSource = source.copyWithProviderId('repo-a|provider-a');
       await storage.saveLastStream(item, providerSource);
 
@@ -211,6 +221,41 @@ void main() {
       );
 
       expect(restored?.providerId, 'repo-a|provider-a');
+    });
+
+    test('moves links out of backed-up preferences on the next save', () async {
+      final preferences = await SharedPreferences.getInstance();
+      await preferences.setString(
+        'onfeed.playback.lastStreams.v1',
+        '{"movie:7":{"savedAt":"${DateTime.now().toUtc().toIso8601String()}","source":$_jsonSource}}',
+      );
+      final storage = newStorage();
+      const older = MediaItem(id: '7', type: 'movie', name: 'Older');
+
+      // Still readable before migration.
+      expect(
+        await storage.lastStream(
+          older,
+          maxAge: const Duration(days: 1),
+          allowTorrents: true,
+        ),
+        isNotNull,
+      );
+      await storage.saveLastStream(item, source);
+
+      expect(preferences.containsKey('onfeed.playback.lastStreams.v1'), false);
+      expect(File('${files.path}/last_streams.v1.json').existsSync(), true);
+      for (final title in [older, item]) {
+        expect(
+          await storage.lastStream(
+            title,
+            maxAge: const Duration(days: 1),
+            allowTorrents: true,
+          ),
+          isNotNull,
+          reason: title.name,
+        );
+      }
     });
   });
 

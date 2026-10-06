@@ -37,5 +37,7 @@ class PlaybackSettingsController extends ChangeNotifier {
     await _storage.saveSetting(_key, jsonEncode(value.toJson()));
   }
 
-  Future<void> clearTorrentCache() => _storage.clearTorrentCache();
+  /// True when the cache was cleared now, false when it is cleared at the
+  /// next launch (a torrent played this session).
+  Future<bool> clearTorrentCache() => _storage.clearTorrentCache();
 }
