@@ -266,7 +266,10 @@ class _LegalInformationScreenState extends State<LegalInformationScreen> {
           'app publisher. Their own terms and privacy policies apply. The app '
           'may include open-source software, which remains subject to its '
           'respective license. Third-party names and marks belong to their '
-          'owners.',
+          'owners. Reelish is an independent app and is not affiliated with, '
+          'endorsed by or sponsored by Nuvio, Stremio, CloudStream or '
+          'OpenSubtitles. Their names are used only to describe compatible '
+          'formats and services.',
     ),
     (
       'In-app updates',

@@ -78,7 +78,7 @@ class NuvioPluginService extends ChangeNotifier {
   Future<NuvioPluginRepository> install(String rawUrl) async {
     final url = await _normalizeUrl(rawUrl);
     if (repositories.any((repo) => repo.url == url)) {
-      throw Exception('This Nuvio plugin repository is already installed.');
+      throw Exception('This provider repository is already installed.');
     }
     final repository = _applyOverrides(await _readRepository(url));
     if (repository.plugins.isEmpty) {
@@ -172,7 +172,7 @@ class NuvioPluginService extends ChangeNotifier {
       if (decoded.containsKey('pluginLists') ||
           decoded.containsKey('manifestVersion')) {
         throw Exception(
-          'That link is a CloudStream repository. Use a Nuvio provider manifest from nuvioplugin.com.',
+          'That link is a CloudStream repository. Use a Nuvio-compatible provider manifest instead.',
         );
       }
       repositoryName =
@@ -184,16 +184,16 @@ class NuvioPluginService extends ChangeNotifier {
         entries = [decoded];
       } else if (decoded.containsKey('resources')) {
         throw Exception(
-          'That link is an add-on manifest, not a Nuvio provider manifest. Copy the plugin manifest URL from nuvioplugin.com.',
+          'That link is an add-on manifest, not a Nuvio-compatible provider manifest. Check the manifest URL from the provider repository.',
         );
       } else {
         throw Exception(
-          'The link returned JSON, but it is not a Nuvio provider manifest. Copy the plugin manifest URL from nuvioplugin.com.',
+          'The link returned JSON, but it is not a Nuvio-compatible provider manifest. Check the manifest URL from the provider repository.',
         );
       }
     } else {
       throw Exception(
-        'The link did not return a Nuvio provider manifest. Copy the plugin manifest URL from nuvioplugin.com.',
+        'The link did not return a Nuvio-compatible provider manifest. Check the manifest URL from the provider repository.',
       );
     }
     final name = Uri.parse(
@@ -205,7 +205,7 @@ class NuvioPluginService extends ChangeNotifier {
           ? repositoryName!
           : (name.length > 1
                 ? name[name.length - 2]
-                : 'Nuvio plugin repository'),
+                : 'Provider repository'),
       entries,
     );
   }
@@ -312,7 +312,7 @@ class NuvioPluginService extends ChangeNotifier {
           });
     if (repositories.isEmpty) {
       lastLookupMessage =
-          'No Nuvio providers are installed. Open Plugins and install a provider manifest from nuvioplugin.com.';
+          'No providers are installed. Open Plugins and install a provider manifest.';
       return [];
     }
     if (enabled.isEmpty) {
@@ -490,7 +490,7 @@ class NuvioPluginService extends ChangeNotifier {
         }
       } else {
         lastLookupMessage =
-            'The enabled Nuvio providers returned no streams for this title. Try another title or provider.';
+            'The enabled providers returned no streams for this title. Try another title or provider.';
       }
     }
     if (lookupErrors.isNotEmpty) notifyListeners();
@@ -513,7 +513,7 @@ class NuvioPluginService extends ChangeNotifier {
     final uri = Uri.tryParse(url);
     if (uri == null) {
       throw Exception(
-        'Use an HTTPS URL for a Nuvio plugin repository or manifest.',
+        'Use an HTTPS URL for a provider repository or manifest.',
       );
     }
     await _networkDestinations.resolveDestination(uri);
@@ -568,7 +568,7 @@ class NuvioPluginService extends ChangeNotifier {
     if (!uri.path.toLowerCase().endsWith('/manifest.json') &&
         uri.path.toLowerCase() != 'manifest.json') {
       throw Exception(
-        'Paste a Nuvio manifest.json URL or a GitHub repository/file link.',
+        'Paste a Nuvio-compatible manifest.json URL or a GitHub repository/file link.',
       );
     }
     return uri.toString();

@@ -94,7 +94,7 @@ class _NuvioPluginInstallerModalState extends State<NuvioPluginInstallerModal> {
                 children: [
                   const Expanded(
                     child: Text(
-                      'Install a Nuvio plugin',
+                      'Install a provider manifest',
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w800,
@@ -119,7 +119,7 @@ class _NuvioPluginInstallerModalState extends State<NuvioPluginInstallerModal> {
                 textInputAction: TextInputAction.done,
                 onSubmitted: (_) => _busy ? null : _install(),
                 decoration: InputDecoration(
-                  hintText: 'Nuvio manifest URL',
+                  hintText: 'Nuvio-compatible manifest URL',
                   prefixIcon: const Icon(Symbols.link_rounded),
                   suffixIcon: IconButton(
                     tooltip: 'Paste from clipboard',

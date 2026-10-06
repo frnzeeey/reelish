@@ -105,7 +105,7 @@ class _SubtitleAddonsScreenState extends State<SubtitleAddonsScreen> {
             children: [
               const Text(
                 'While a title plays, Reelish asks these Stremio subtitle '
-                'addons for subtitles, the same way Nuvio does. Addons only '
+                'addons for subtitles. Addons only '
                 'receive the IMDb id, season and episode.',
                 style: TextStyle(color: GlassTheme.muted, height: 1.5),
               ),

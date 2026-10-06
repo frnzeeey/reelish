@@ -21,7 +21,7 @@ Reelish combines discovery and playback in a single app, while treating catalog 
 
 • Discovery: A home screen brings together trending and popular titles, search, recommendations, new releases, and a featured spotlight. Quality and recency rules rank spotlight and release collections rather than relying on one undifferentiated feed.
 • Exploration: Title details include metadata and artwork; series pages load seasons and episodes so users can move from a show to a specific episode.
-• Extensible source discovery: Users can install compatible Nuvio provider manifests, enable or disable individual providers, and discover sources for a title. Stream normalization and validation turn provider results into a consistent set of playable choices.
+• Extensible source discovery: Users can install Nuvio-compatible provider manifests, enable or disable individual providers, and discover sources for a title. Stream normalization and validation turn provider results into a consistent set of playable choices.
 • Playback: A custom player provides playback controls, stream selection, episode navigation, subtitle selection, and configurable viewing preferences. Supported text subtitles include WebVTT and SRT. Playback settings cover gestures, playback speed, next-episode behavior, language preferences, and subtitle appearance.
 • Continuity: A local library keeps favorites and watch history, including saved playback progress. The app can retain a recently used stream for optional reuse.
 • Resilience and trust boundaries: TMDB requests use response caching, in-flight request deduplication, bounded concurrency, and retry handling. Provider code runs in a bounded QuickJS environment. Network requests validate public destinations and redirects, while provider-returned sources are normalized and checked before playback.
@@ -39,7 +39,7 @@ TECH STACK
 • Flutter and Dart for the cross-platform application and interface.
 • Material widgets with a custom dark glass visual theme, Montserrat typography, and Feather icons.
 • TMDB API for catalog, search, metadata, recommendation, season, and episode data; the http package handles API requests.
-• Stremio-compatible add-on support documented by the project, plus Nuvio provider manifests and a locally bundled Cheerio JavaScript bundle for provider compatibility.
+• Stremio-compatible add-on support documented by the project, plus Nuvio-compatible provider manifests and a locally bundled Cheerio JavaScript bundle for provider compatibility.
 • flutter_js with a bundled QuickJS runtime to execute provider scripts in an isolated, resource-bounded environment.
 • video_player as the app-facing playback API, with Android video_player/Media3 registration and a local MediaKit adapter available in the project; other platforms use the registered Flutter video player implementation. The player engine is abstracted behind a Dart interface.
 • shared_preferences for on-device library, provider, and playback preferences; path_provider for application storage and torrent cache paths.

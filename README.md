@@ -8,7 +8,7 @@ Reelish is an open-source Flutter app for discovering movies and TV series and w
 
 - Browse popular and trending movies and series, search titles, and view recommendations, new releases, and title details.
 - Keep a local library of favorites, recently watched titles, and playback progress so you can continue where you left off.
-- Install Nuvio provider repositories, enable the providers you want, and choose which providers can be used for playback.
+- Install Nuvio-compatible provider repositories, enable the providers you want, and choose which providers can be used for playback.
 - Play supported direct streams, with source selection, resume progress, playback controls, and configurable subtitles.
 - On Android, allow compatible providers to return torrent sources for P2P playback.
 - Choose an accent color and customize playback, subtitle appearance, language preferences, and gestures.
@@ -26,9 +26,11 @@ Reelish is an open-source Flutter app for discovering movies and TV series and w
 
 ## Providers
 
-Open **Plugins** and add a Nuvio provider manifest URL (or a supported GitHub repository/file link). Review the repository's providers, then enable the ones you want. Provider repositories and enabled-provider choices are saved on the device. Reelish runs provider scripts in a constrained JavaScript runtime and requests streams when you open a title; providers do not populate the catalog.
+Open **Plugins** and add a Nuvio-compatible provider manifest URL (or a supported GitHub repository/file link). Review the repository's providers, then enable the ones you want. Provider repositories and enabled-provider choices are saved on the device. Reelish runs provider scripts in a constrained JavaScript runtime and requests streams when you open a title; providers do not populate the catalog.
 
 Providers are third-party code and services. Install repositories only from publishers you trust. Reelish does not supply or host streams. Provider availability and compatibility depend on each provider and its sources.
+
+Reelish is an independent project. It is not affiliated with, endorsed by, or sponsored by Nuvio, Stremio, CloudStream, or OpenSubtitles; their names are used only to describe compatible formats and services.
 
 ## Playback and subtitles
 

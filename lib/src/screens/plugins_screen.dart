@@ -44,7 +44,7 @@ class PluginsScreen extends StatelessWidget {
             _SectionHeading(
               title: 'Your repositories',
               detail: pluginService.repositories.isEmpty
-                  ? 'Add a Nuvio manifest to get started'
+                  ? 'Add a provider manifest to get started'
                   : '${pluginService.repositories.length} installed',
             ),
             const SizedBox(height: 12),
@@ -330,7 +330,7 @@ class _EmptyPlugins extends StatelessWidget {
         ),
         const SizedBox(height: 7),
         const Text(
-          'Install a Nuvio manifest to add streaming sources. You can turn each provider on or off at any time.',
+          'Install a Nuvio-compatible provider manifest to add streaming sources. You can turn each provider on or off at any time.',
           textAlign: TextAlign.center,
           style: TextStyle(color: GlassTheme.muted, height: 1.45, fontSize: 12),
         ),
