@@ -53,7 +53,7 @@ void main() {
     SubtitleLoader.resetCache();
   });
 
-  group('SubtitleLanguage (Nuvio normalization)', () {
+  group('SubtitleLanguage normalization', () {
     test('normalizes OpenSubtitles and provider language values', () {
       const cases = {
         'eng': 'en',
@@ -115,7 +115,7 @@ void main() {
       expect(episode.type, 'series');
     });
 
-    test('encodes the video id as Nuvio does', () {
+    test('encodes the video id as a URL path segment', () {
       expect(
         SubtitleAddon.openSubtitlesV3
             .resourceUri('series', 'tt0944947:2:3')
@@ -160,7 +160,7 @@ void main() {
       expect(results.first.hearingImpaired, isFalse);
     });
 
-    test('reads the language from Nuvio\'s fallback fields', () {
+    test('reads the language from fallback fields', () {
       final movie = SubtitleRequest.create(type: 'movie', imdbId: 'tt1')!;
       final results = SubtitleAddonService.parse(
         {
@@ -468,7 +468,7 @@ void main() {
     });
   });
 
-  group('subtitle addons (Nuvio parity)', () {
+  group('subtitle addons', () {
     test('reads manifests with plain and object resources', () {
       final plain = SubtitleAddon.fromManifest(
         'https://subs.example.com/manifest.json',
@@ -513,7 +513,7 @@ void main() {
       );
     });
 
-    test('builds resource URLs like Nuvio, keeping configuration', () {
+    test('builds resource URLs, keeping configuration', () {
       const configured = SubtitleAddon(
         manifestUrl: 'https://subs.example.com/abc123/manifest.json?lang=en',
         id: 'x',

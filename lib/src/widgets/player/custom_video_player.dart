@@ -1579,8 +1579,8 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   }
 
   /// Downloadable subtitles: from the provider and from subtitle addons, with
-  /// the viewer's filters applied (as Nuvio's filterAddonSubtitlesForSettings
-  /// applies "show only preferred languages" to addon results).
+  /// the viewer's filters applied ("show only preferred languages" also
+  /// applies to addon results).
   List<SubtitleTrack> get _availableSubtitles => _filterSubtitles([
     ..._providerSubtitles,
     ..._addonSubtitleResults,
@@ -1844,7 +1844,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     );
   }
 
-  /// Subtitles automatic selection may pick, in Nuvio's order: tracks in
+  /// Subtitles automatic selection may pick, in order: tracks in
   /// the video first, then provider subtitles, then OpenSubtitles.
   List<SubtitleTrack> get _autoSelectCandidates => [
     ..._filterSubtitles(_embeddedSubtitles),
@@ -1855,7 +1855,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   /// nothing without a preferred language, so subtitles are never forced on.
   ///
   /// [automatic] calls (startup, new tracks or addon results) first restore
-  /// the viewer's remembered choice for this title, as Nuvio does per show:
+  /// the viewer's remembered choice for this title (kept per show):
   /// Off stays off, and a remembered language wins over the general
   /// preference. Calls after a settings change apply the settings directly.
   Future<void> _applyPreferredSubtitle({bool automatic = true}) async {
@@ -2010,7 +2010,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   }
 
   /// Looks up OpenSubtitles results for the playing title in the background,
-  /// as Nuvio does when its player starts. Never blocks or fails playback.
+  /// starting with the player. Never blocks or fails playback.
   Future<void> _searchSubtitleAddons({bool force = false}) async {
     if (_addonSearchStarted && !force) return;
     _addonSearchStarted = true;
@@ -2081,7 +2081,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
           errors.add(error);
           return;
         }
-        // Progressive, like Nuvio: each addon's results appear as they come.
+        // Progressive: each addon's results appear as they come.
         byAddon[addon.manifestUrl] = results;
         _addonSubtitleResults = [
           for (final tracks in byAddon.values) ...tracks,

@@ -1,31 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/services.dart';
-import '../services/nuvio_plugin_service.dart';
+import '../services/provider_plugin_service.dart';
 import '../theme/glass_theme.dart';
 import 'glass_box.dart';
 
-class NuvioPluginInstallerModal extends StatefulWidget {
-  const NuvioPluginInstallerModal({super.key, required this.pluginService});
+class ProviderInstallerModal extends StatefulWidget {
+  const ProviderInstallerModal({super.key, required this.pluginService});
 
-  final NuvioPluginService pluginService;
+  final ProviderPluginService pluginService;
 
   static Future<void> show(
     BuildContext context,
-    NuvioPluginService pluginService,
+    ProviderPluginService pluginService,
   ) => showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (_) => NuvioPluginInstallerModal(pluginService: pluginService),
+    builder: (_) => ProviderInstallerModal(pluginService: pluginService),
   );
 
   @override
-  State<NuvioPluginInstallerModal> createState() =>
-      _NuvioPluginInstallerModalState();
+  State<ProviderInstallerModal> createState() =>
+      _ProviderInstallerModalState();
 }
 
-class _NuvioPluginInstallerModalState extends State<NuvioPluginInstallerModal> {
+class _ProviderInstallerModalState extends State<ProviderInstallerModal> {
   final _url = TextEditingController();
   bool _busy = false;
   String? _error;

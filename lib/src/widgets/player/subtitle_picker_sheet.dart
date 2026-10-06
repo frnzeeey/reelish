@@ -58,7 +58,7 @@ class SubtitleMenu {
     preferredLanguages: preferredLanguages ?? this.preferredLanguages,
   );
 
-  /// Nuvio's language order: preferred languages first (in preference
+  /// Language order: preferred languages first (in preference
   /// order), then by language name, unknown last. Tracks of one language
   /// keep their source order.
   static List<SubtitleTrack> ordered(

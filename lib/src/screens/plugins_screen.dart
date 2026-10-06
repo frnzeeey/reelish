@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
-import '../models/nuvio_plugin.dart';
-import '../services/nuvio_plugin_service.dart';
+import '../models/provider_plugin.dart';
+import '../services/provider_plugin_service.dart';
 import '../theme/glass_theme.dart';
-import '../widgets/nuvio_plugin_installer_modal.dart';
+import '../widgets/provider_installer_modal.dart';
 
 class PluginsScreen extends StatelessWidget {
   const PluginsScreen({super.key, required this.pluginService});
 
-  final NuvioPluginService pluginService;
+  final ProviderPluginService pluginService;
 
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
@@ -19,7 +19,7 @@ class PluginsScreen extends StatelessWidget {
           .expand((repo) => repo.plugins)
           .toList();
       final enabledCount = plugins.where((plugin) => plugin.enabled).length;
-      final install = () => NuvioPluginInstallerModal.show(context, pluginService);
+      final install = () => ProviderInstallerModal.show(context, pluginService);
       return Scaffold(
         floatingActionButton: Padding(
           // Keep the action above the app-wide glass navigation dock.
@@ -352,8 +352,8 @@ class _RepositoryCard extends StatefulWidget {
     required this.service,
   });
 
-  final NuvioPluginRepository repository;
-  final NuvioPluginService service;
+  final ProviderRepository repository;
+  final ProviderPluginService service;
 
   @override
   State<_RepositoryCard> createState() => _RepositoryCardState();
@@ -490,7 +490,7 @@ class _ProviderTile extends StatelessWidget {
     required this.showDivider,
   });
 
-  final NuvioPlugin plugin;
+  final ProviderPlugin plugin;
   final ValueChanged<bool> onChanged;
   final bool showDivider;
 

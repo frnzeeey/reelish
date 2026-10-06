@@ -16,11 +16,11 @@ import '../services/perf_timeline.dart';
 import '../services/storage_service.dart';
 import '../services/stream_discovery.dart';
 import '../services/tmdb_service.dart';
-import '../services/nuvio_plugin_service.dart';
+import '../services/provider_plugin_service.dart';
 import '../services/playback_settings_controller.dart';
 import '../services/accent_settings_controller.dart';
 import '../theme/glass_theme.dart';
-import '../widgets/nuvio_plugin_installer_modal.dart';
+import '../widgets/provider_installer_modal.dart';
 import '../widgets/app_update_flow.dart';
 import '../widgets/category_chip.dart';
 import '../widgets/glass_box.dart';
@@ -65,7 +65,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
-  final _nuvioPlugins = NuvioPluginService();
+  final _providerPlugins = ProviderPluginService();
   final _storage = StorageService();
   final _playbackSettings = PlaybackSettingsController();
   late final TmdbService _tmdb;
@@ -108,7 +108,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     super.initState();
     _tmdb = widget.tmdbService ?? TmdbService();
     WidgetsBinding.instance.addObserver(this);
-    _nuvioPlugins.addListener(_onPluginChange);
+    _providerPlugins.addListener(_onPluginChange);
     _startSpotlightTimer();
     _start();
     unawaited(_loadFavorites());
@@ -148,7 +148,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     // History is local data and does not depend on plugin repository loading.
     // Start it now so remote manifest requests cannot delay the resume row.
     unawaited(_loadHistory());
-    await _nuvioPlugins.load();
+    await _providerPlugins.load();
   }
 
   @override
@@ -752,7 +752,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
     try {
       // Resolve IMDb metadata for subtitles in parallel with stream discovery.
-      // Nuvio providers need the TMDB ID already present on the selected item;
+      // Providers need the TMDB ID already present on the selected item;
       // serially waiting for this optional lookup delays every playback start.
       final externalIdsFuture = _tmdb.resolveIds(item);
       final episodeCode = season != null && episode != null
@@ -786,7 +786,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         sourceFromCache = source != null;
       }
       if (source == null) {
-        discovery = _nuvioPlugins.discoverStreams(
+        discovery = _providerPlugins.discoverStreams(
           pluginItem,
           season: season,
           episode: episode,
@@ -843,7 +843,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           SnackBar(
             duration: const Duration(seconds: 10),
             content: Text(
-              _nuvioPlugins.lastLookupMessage ??
+              _providerPlugins.lastLookupMessage ??
                   'No source was returned for this title.',
             ),
             action: SnackBarAction(
@@ -898,7 +898,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             // preferences while the player is open. Read the controller
             // here instead of capturing the initial discovery snapshot.
             final current = _playbackSettings.value;
-            return _nuvioPlugins.discoverStreams(
+            return _providerPlugins.discoverStreams(
               pluginItem,
               season: season,
               episode: episode,
@@ -1036,8 +1036,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _spotlightPageValue.dispose();
     _search.dispose();
     _searchFocus.dispose();
-    _nuvioPlugins.removeListener(_onPluginChange);
-    _nuvioPlugins.dispose();
+    _providerPlugins.removeListener(_onPluginChange);
+    _providerPlugins.dispose();
     super.dispose();
   }
 
@@ -1349,7 +1349,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   : const SizedBox.shrink(),
             ),
           ),
-          if (_nuvioPlugins.repositories.isEmpty)
+          if (_providerPlugins.repositories.isEmpty)
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(18, 8, 18, 10),
@@ -1390,9 +1390,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         ),
                       ),
                       IconButton.filledTonal(
-                        onPressed: () => NuvioPluginInstallerModal.show(
+                        onPressed: () => ProviderInstallerModal.show(
                           context,
-                          _nuvioPlugins,
+                          _providerPlugins,
                         ),
                         icon: const Icon(Symbols.add_rounded),
                       ),
@@ -1841,7 +1841,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final availablePlugins = [
-      for (final repository in _nuvioPlugins.repositories)
+      for (final repository in _providerPlugins.repositories)
         for (final plugin in repository.plugins)
           (
             id: '${repository.url}|${plugin.id}',
@@ -1853,7 +1853,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       TabPageTransition(active: _tab == 0, child: _home()),
       TabPageTransition(
         active: _tab == 1,
-        child: PluginsScreen(pluginService: _nuvioPlugins),
+        child: PluginsScreen(pluginService: _providerPlugins),
       ),
       TabPageTransition(
         active: _tab == 2,

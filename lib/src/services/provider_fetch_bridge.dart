@@ -71,7 +71,7 @@ class ProviderFetchBridge {
 
   /// Request headers kept when following a redirect from [from] to [to].
   ///
-  /// Matches OkHttp, which React Native (and so Nuvio) uses on Android: all
+  /// Matches OkHttp, the usual Android HTTP client: all
   /// provider headers are kept except `Authorization` on a cross-origin hop,
   /// and body headers when the method becomes GET. A provider-supplied
   /// `Cookie` is not sent to another origin; the runtime's cookie jar supplies

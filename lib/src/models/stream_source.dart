@@ -27,7 +27,7 @@ class SubtitleTrack {
   /// The subtitle addon, for addon results (for example `OpenSubtitles v3`).
   final String addonName;
 
-  /// Stable identity, as Nuvio's selection key: URL, addon and id.
+  /// Stable identity for selection: URL, addon and id.
   String get key => [
     if (url.isNotEmpty) url,
     if (addonName.isNotEmpty) addonName,
@@ -186,7 +186,7 @@ class StreamSource {
     Map<String, dynamic> j, {
     String providerName = '',
   }) {
-    // Nuvio providers generally return a URL string, but some return the
+    // Providers generally return a URL string, but some return the
     // Stremio-style `{ url, headers }` object. Preserve those headers and
     // unwrap the actual URL before validating or handing it to the player.
     final rawUrl = j['url'] ?? j['link'] ?? j['stream'];

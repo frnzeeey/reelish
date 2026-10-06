@@ -5,8 +5,8 @@ import '../models/subtitle_addon.dart';
 import '../services/subtitle_addon_service.dart';
 import '../theme/glass_theme.dart';
 
-/// Stremio subtitle addons the player searches while you watch, as in
-/// Nuvio. OpenSubtitles v3 is preinstalled.
+/// Stremio subtitle addons the player searches while you watch.
+/// OpenSubtitles v3 is preinstalled.
 class SubtitleAddonsScreen extends StatefulWidget {
   const SubtitleAddonsScreen({super.key, this.service});
 

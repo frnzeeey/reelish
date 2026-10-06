@@ -12,7 +12,7 @@ import 'network_target_policy.dart';
 import 'storage_service.dart';
 
 /// What to search subtitles for. Stremio subtitle addons are addressed by
-/// the IMDb-based video id Nuvio takes from Cinemeta.
+/// their IMDb-based video id, as listed by Cinemeta.
 class SubtitleRequest {
   const SubtitleRequest._(this.type, this.imdbId, this.season, this.episode);
 
@@ -54,8 +54,8 @@ class SubtitleSearchException implements Exception {
   String toString() => message;
 }
 
-/// Installed Stremio subtitle addons and their searches, mirroring Nuvio's
-/// AddonSubtitleLoader: every enabled, compatible addon is asked for
+/// Installed Stremio subtitle addons and their searches:
+/// every enabled, compatible addon is asked for
 /// `subtitles/{type}/{id}.json` in parallel, and each addon's results are
 /// reported as they arrive. OpenSubtitles v3 is preinstalled.
 class SubtitleAddonService {
@@ -328,7 +328,7 @@ class SubtitleAddonService {
     caseSensitive: false,
   );
 
-  /// Parses an addon `subtitles` response (Nuvio's parseAddonSubtitles):
+  /// Parses an addon `subtitles` response:
   /// `url` required (HTTPS only here), language from `lang`, `language`,
   /// `languageCode`, `locale` or `label`. Entries labeled with another
   /// season or episode, and duplicates, are dropped.

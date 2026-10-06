@@ -53,7 +53,7 @@ class ProviderRunException implements Exception {
   String toString() => message;
 }
 
-/// Runs Nuvio provider scripts on a background isolate.
+/// Runs provider scripts on a background isolate.
 ///
 /// QuickJS evaluates synchronously through FFI on the calling isolate. On the
 /// UI isolate, parsing the 700 KB Cheerio/CryptoJS bundle and running provider

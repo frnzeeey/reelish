@@ -8,18 +8,18 @@ import '../models/stream_source.dart';
 import 'playback_source_policy.dart';
 
 class StorageService {
-  static const _nuvioPlugins = 'onfeed.nuvio.plugin.repositories',
+  static const _providerRepositoriesKey = 'onfeed.nuvio.plugin.repositories',
       _history = 'onfeed.history',
       _favorites = 'onfeed.favorites';
-  Future<List<String>> nuvioPluginRepositoryUrls() async =>
-      (await SharedPreferences.getInstance()).getStringList(_nuvioPlugins) ??
+  Future<List<String>> providerRepositoryUrls() async =>
+      (await SharedPreferences.getInstance()).getStringList(_providerRepositoriesKey) ??
       [];
-  Future<void> saveNuvioPluginRepositoryUrls(List<String> urls) async =>
+  Future<void> saveProviderRepositoryUrls(List<String> urls) async =>
       (await SharedPreferences.getInstance()).setStringList(
-        _nuvioPlugins,
+        _providerRepositoriesKey,
         urls,
       );
-  Future<Map<String, bool>> nuvioPluginEnabledOverrides() async {
+  Future<Map<String, bool>> providerEnabledOverrides() async {
     final raw = (await SharedPreferences.getInstance()).getString(
       'onfeed.nuvio.plugin.enabled',
     );
@@ -33,7 +33,7 @@ class StorageService {
     }
   }
 
-  Future<void> saveNuvioPluginEnabledOverrides(
+  Future<void> saveProviderEnabledOverrides(
     Map<String, bool> values,
   ) async => (await SharedPreferences.getInstance()).setString(
     'onfeed.nuvio.plugin.enabled',
@@ -177,7 +177,7 @@ class StorageService {
   static const _subtitlePreferencesKey = 'onfeed.player.subtitleChoice.v1';
 
   /// The viewer's last subtitle choice for a title (a movie or a whole
-  /// series), as Nuvio remembers it per show: Off, or a language with its
+  /// series), remembered per show: Off, or a language with its
   /// source. Null when nothing is remembered or the entry is unreadable.
   Future<RememberedSubtitle?> rememberedSubtitle(String titleKey) async {
     final raw = (await SharedPreferences.getInstance()).getString(

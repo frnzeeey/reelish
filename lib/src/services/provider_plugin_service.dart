@@ -6,7 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/media_item.dart';
-import '../models/nuvio_plugin.dart';
+import '../models/provider_plugin.dart';
 import '../models/stream_source.dart';
 import 'network_target_policy.dart';
 import 'storage_service.dart';
@@ -17,9 +17,9 @@ import 'provider_execution_scheduler.dart';
 import 'provider_runner.dart';
 import 'provider_script_cache.dart';
 
-class NuvioPluginService extends ChangeNotifier {
+class ProviderPluginService extends ChangeNotifier {
   static Future<String>? _cheerioBundle;
-  NuvioPluginService({
+  ProviderPluginService({
     StorageService? storage,
     ProviderExecutionScheduler? scheduler,
   }) : _storage = storage ?? StorageService(),
@@ -27,7 +27,7 @@ class NuvioPluginService extends ChangeNotifier {
 
   final StorageService _storage;
   final ProviderExecutionScheduler _scheduler;
-  final List<NuvioPluginRepository> repositories = [];
+  final List<ProviderRepository> repositories = [];
   final NetworkDestinationValidator _networkDestinations =
       NetworkDestinationValidator();
   static const StreamNormalizer _streamNormalizer = StreamNormalizer();
@@ -46,8 +46,8 @@ class NuvioPluginService extends ChangeNotifier {
   Future<void> load() => _loading = _load();
 
   Future<void> _load() async {
-    final overrides = await _storage.nuvioPluginEnabledOverrides();
-    final urls = await _storage.nuvioPluginRepositoryUrls();
+    final overrides = await _storage.providerEnabledOverrides();
+    final urls = await _storage.providerRepositoryUrls();
     final loaded = await Future.wait(
       urls.map((url) async {
         try {
@@ -75,7 +75,7 @@ class NuvioPluginService extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<NuvioPluginRepository> install(String rawUrl) async {
+  Future<ProviderRepository> install(String rawUrl) async {
     final url = await _normalizeUrl(rawUrl);
     if (repositories.any((repo) => repo.url == url)) {
       throw Exception('This provider repository is already installed.');
@@ -86,32 +86,32 @@ class NuvioPluginService extends ChangeNotifier {
     }
     repositories.add(repository);
     _scripts.clear();
-    await _storage.saveNuvioPluginRepositoryUrls(
+    await _storage.saveProviderRepositoryUrls(
       repositories.map((repo) => repo.url).toList(),
     );
     notifyListeners();
     return repository;
   }
 
-  Future<void> remove(NuvioPluginRepository repo) async {
+  Future<void> remove(ProviderRepository repo) async {
     repositories.removeWhere((entry) => entry.url == repo.url);
     _scripts.clear();
     _enabledOverrides.removeWhere((key, _) => key.startsWith('${repo.url}|'));
-    await _storage.saveNuvioPluginEnabledOverrides(_enabledOverrides);
-    await _storage.saveNuvioPluginRepositoryUrls(
+    await _storage.saveProviderEnabledOverrides(_enabledOverrides);
+    await _storage.saveProviderRepositoryUrls(
       repositories.map((entry) => entry.url).toList(),
     );
     notifyListeners();
   }
 
   Future<void> setPluginEnabled(
-    NuvioPluginRepository repository,
-    NuvioPlugin plugin,
+    ProviderRepository repository,
+    ProviderPlugin plugin,
     bool enabled,
   ) async {
     final key = '${repository.url}|${plugin.id}';
     _enabledOverrides[key] = enabled;
-    final updated = NuvioPluginRepository(
+    final updated = ProviderRepository(
       url: repository.url,
       name: repository.name,
       plugins: repository.plugins
@@ -126,12 +126,12 @@ class NuvioPluginService extends ChangeNotifier {
       (entry) => entry.url == repository.url,
     );
     if (index >= 0) repositories[index] = updated;
-    await _storage.saveNuvioPluginEnabledOverrides(_enabledOverrides);
+    await _storage.saveProviderEnabledOverrides(_enabledOverrides);
     notifyListeners();
   }
 
-  NuvioPluginRepository _applyOverrides(NuvioPluginRepository repository) =>
-      NuvioPluginRepository(
+  ProviderRepository _applyOverrides(ProviderRepository repository) =>
+      ProviderRepository(
         url: repository.url,
         name: repository.name,
         plugins: repository.plugins
@@ -147,13 +147,13 @@ class NuvioPluginService extends ChangeNotifier {
 
   Future<void> removeFailed(String url) async {
     errors.remove(url);
-    final urls = await _storage.nuvioPluginRepositoryUrls()
+    final urls = await _storage.providerRepositoryUrls()
       ..remove(url);
-    await _storage.saveNuvioPluginRepositoryUrls(urls);
+    await _storage.saveProviderRepositoryUrls(urls);
     notifyListeners();
   }
 
-  Future<NuvioPluginRepository> _readRepository(String url) async {
+  Future<ProviderRepository> _readRepository(String url) async {
     final response = await _secureGet(
       Uri.parse(url),
       timeout: const Duration(seconds: 15),
@@ -199,7 +199,7 @@ class NuvioPluginService extends ChangeNotifier {
     final name = Uri.parse(
       url,
     ).pathSegments.where((segment) => segment.isNotEmpty).toList();
-    return NuvioPluginRepository.fromJson(
+    return ProviderRepository.fromJson(
       url,
       repositoryName?.isNotEmpty == true
           ? repositoryName!
@@ -497,7 +497,7 @@ class NuvioPluginService extends ChangeNotifier {
     return unique.values.toList();
   }
 
-  bool _supportsMediaType(NuvioPlugin plugin, String requestedType) {
+  bool _supportsMediaType(ProviderPlugin plugin, String requestedType) {
     String normalize(String type) => switch (type.toLowerCase()) {
       'tv' || 'series' || 'show' || 'shows' => 'tv',
       'movie' || 'movies' || 'film' || 'films' => 'movie',
@@ -520,7 +520,7 @@ class NuvioPluginService extends ChangeNotifier {
 
     // Plugin directories commonly provide either a raw manifest link or a
     // GitHub repository/file link. Convert those links to the raw manifest
-    // that the Nuvio repository format uses.
+    // that provider repositories use.
     if (uri.host == 'github.com' || uri.host == 'www.github.com') {
       final segments = uri.pathSegments
           .where((part) => part.isNotEmpty)

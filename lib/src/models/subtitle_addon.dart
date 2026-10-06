@@ -1,9 +1,9 @@
 import 'dart:convert';
 
-/// An installed Stremio subtitle addon, the way Nuvio gets subtitles.
+/// An installed Stremio subtitle addon.
 ///
-/// Compatibility and URL rules follow Nuvio's `isCompatibleSubtitleResource`
-/// and `buildAddonResourceUrl`.
+/// Decides which addons can serve subtitles for a title, and builds their
+/// resource URLs.
 class SubtitleAddon {
   const SubtitleAddon({
     required this.manifestUrl,
@@ -14,7 +14,7 @@ class SubtitleAddon {
     this.enabled = true,
   });
 
-  /// Preinstalled: the addon Nuvio users get subtitles from. Manifest
+  /// Preinstalled: the OpenSubtitles v3 addon. Manifest
   /// verified from opensubtitles-v3.strem.io.
   static const openSubtitlesV3 = SubtitleAddon(
     manifestUrl: 'https://opensubtitles-v3.strem.io/manifest.json',
@@ -75,7 +75,7 @@ class SubtitleAddon {
     return Uri.parse(url);
   }
 
-  /// Nuvio's `encodeAddonPathSegment`: only `A-Z a-z 0-9 - _ . ~` stay
+  /// Encodes one URL path segment: only `A-Z a-z 0-9 - _ . ~` stay
   /// literal, so `tt0944947:2:3` becomes `tt0944947%3A2%3A3`.
   static String encodeSegment(String value) {
     final out = StringBuffer();

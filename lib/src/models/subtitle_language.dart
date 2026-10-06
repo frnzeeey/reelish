@@ -1,6 +1,6 @@
 /// Subtitle language normalization and naming.
 ///
-/// Mirrors Nuvio's `normalizeLanguageCode` (PlayerLanguagePreferences.kt):
+/// Normalizes language codes:
 /// lowercase, `_`→`-`, Brazilian/European Portuguese and Latin American
 /// Spanish detection, then 3-letter code and language-name aliases. Codes are
 /// ISO 639-1 (`en`), with `pt-BR`, `es-419`, `zh-CN` and `zh-TW` regions kept.
