@@ -44,10 +44,13 @@ class Media3PlayerEngine implements PlayerEngine {
 
   @override
   VideoPlayerController createController(PlayableSource source) =>
-      VideoPlayerController.networkUrl(
-        source.uri,
-        formatHint: _formatHint(source.streamType),
-        httpHeaders: source.headers,
+      PlayerEngineGate._track(
+        _EngineVideoController(
+          source.uri,
+          formatHint: _formatHint(source.streamType),
+          httpHeaders: source.headers,
+        ),
+        id,
       );
 }
 
@@ -67,10 +70,13 @@ class MpvPlayerEngine implements PlayerEngine {
 
   @override
   VideoPlayerController createController(PlayableSource source) =>
-      VideoPlayerController.networkUrl(
-        source.uri,
-        formatHint: _formatHint(source.streamType),
-        httpHeaders: source.headers,
+      PlayerEngineGate._track(
+        _EngineVideoController(
+          source.uri,
+          formatHint: _formatHint(source.streamType),
+          httpHeaders: source.headers,
+        ),
+        id,
       );
 }
 
@@ -85,11 +91,111 @@ class FlutterPlatformPlayerEngine implements PlayerEngine {
 
   @override
   VideoPlayerController createController(PlayableSource source) =>
-      VideoPlayerController.networkUrl(
-        source.uri,
-        formatHint: _formatHint(source.streamType),
-        httpHeaders: source.headers,
+      PlayerEngineGate._track(
+        _EngineVideoController(
+          source.uri,
+          formatHint: _formatHint(source.streamType),
+          httpHeaders: source.headers,
+        ),
+        id,
       );
+}
+
+/// A controller that tells [PlayerEngineGate] when it is gone.
+class _EngineVideoController extends VideoPlayerController {
+  _EngineVideoController(super.uri, {super.formatHint, super.httpHeaders})
+    : super.networkUrl();
+
+  /// Longest a caller waits for an engine to dispose a player.
+  static const disposeTimeout = Duration(seconds: 5);
+
+  /// Bounded: libmpv (media_kit) runs play and dispose under one per-player
+  /// lock, and its play first waits for the Android video surface. When that
+  /// surface never initializes, play never returns and dispose would wait
+  /// behind it forever, leaving the screen that disposes it (and the next
+  /// source or episode) stuck. The native dispose still finishes if the
+  /// engine ever recovers; callers just stop waiting for it.
+  @override
+  Future<void> dispose() async {
+    try {
+      await super.dispose().timeout(
+        disposeTimeout,
+        onTimeout: () {
+          if (kDebugMode) {
+            debugPrint(
+              '[Playback][Engine] player did not dispose within '
+              '${disposeTimeout.inSeconds}s; moving on',
+            );
+          }
+        },
+      );
+    } finally {
+      PlayerEngineGate._release(this);
+    }
+  }
+}
+
+/// Keeps engines from switching under a live player.
+///
+/// package:video_player sends every controller call, dispose included,
+/// through one app-wide platform instance. Selecting another engine while a
+/// player of the current one is still open (or still being disposed) would
+/// send that player's calls, and its dispose, to the wrong engine: its
+/// native player would be orphaned and could keep playing, and switching
+/// back makes the plugin dispose all of its players at once. So a switch
+/// first waits for the other engine's players to be disposed.
+abstract final class PlayerEngineGate {
+  static final Map<VideoPlayerController, PlayerEngineId> _live = {};
+  static Completer<void>? _released;
+
+  /// Longest a switch waits for the other engine's players.
+  static const maxWait = Duration(seconds: 5);
+
+  /// Live controllers by engine, for diagnostics and tests.
+  @visibleForTesting
+  static int liveCount(PlayerEngineId engine) =>
+      _live.values.where((id) => id == engine).length;
+
+  static VideoPlayerController _track(
+    VideoPlayerController controller,
+    PlayerEngineId engine,
+  ) {
+    _live[controller] = engine;
+    return controller;
+  }
+
+  static void _release(VideoPlayerController controller) {
+    if (_live.remove(controller) == null) return;
+    final released = _released;
+    _released = null;
+    released?.complete();
+  }
+
+  /// Selects [engine] once no player of another engine is alive, or after
+  /// [maxWait], whichever comes first.
+  static Future<void> activate(
+    PlayerEngine engine, {
+    Duration timeout = maxWait,
+  }) async {
+    final deadline = DateTime.now().add(timeout);
+    while (_live.values.any((id) => id != engine.id)) {
+      final remaining = deadline.difference(DateTime.now());
+      if (remaining <= Duration.zero) {
+        if (kDebugMode) {
+          debugPrint(
+            '[Playback][Engine] switching to ${engine.id.name} while another '
+            'engine still has a player open',
+          );
+        }
+        break;
+      }
+      await (_released ??= Completer<void>()).future.timeout(
+        remaining,
+        onTimeout: () {},
+      );
+    }
+    engine.activate();
+  }
 }
 
 VideoFormat? _formatHint(StreamType type) => switch (type) {

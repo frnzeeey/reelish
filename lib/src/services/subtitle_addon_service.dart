@@ -77,6 +77,9 @@ class SubtitleAddonService {
   /// cache lifetimes.
   static const cacheTtl = Duration(minutes: 30);
 
+  /// Searches (one per addon and video) kept at most.
+  static const maxCachedSearches = 24;
+
   final StorageService _storage;
   final http.Client? _testClient;
   final NetworkDestinationValidator _network;
@@ -232,7 +235,17 @@ class SubtitleAddonService {
     final pending = _inFlight[key];
     if (pending != null) return pending;
     final future = _search(addon, request).then((results) {
-      _cache[key] = (at: _clock(), results: results);
+      final now = _clock();
+      // Static, so it lives as long as the app: drop expired searches and
+      // keep only the most recent ones, or a long binge would keep every
+      // episode's (often hundreds of) results in memory.
+      _cache
+        ..removeWhere((_, entry) => now.difference(entry.at) >= cacheTtl)
+        ..remove(key)
+        ..[key] = (at: now, results: results);
+      while (_cache.length > maxCachedSearches) {
+        _cache.remove(_cache.keys.first);
+      }
       return results;
     });
     _inFlight[key] = future;

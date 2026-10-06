@@ -89,10 +89,39 @@ class MediaKitVideoPlayer extends VideoPlayerPlatform {
     _streamSubscriptions.remove(textureId);
   }
 
+  /// The protocols FFmpeg inside libmpv may open: the network schemes Reelish
+  /// accepts for streams, plus what they are built on (TLS, TCP/UDP, AES
+  /// encrypted HLS segments, `data:` URIs in playlists). Redirects and
+  /// playlist entries are held to it too, so a stream from a provider can
+  /// never make the engine read `file:` or other local resources.
+  static const _allowedProtocols = 'http,https,tls,tcp,udp,crypto,data,'
+      'httpproxy,hls,rtmp,rtmps,rtmpe,rtmpt,rtmpte,rtmpts,rtsp,rtsps,rtp,'
+      'srt,mmsh,mmst';
+
+  static Future<void> _restrictProtocols(Player player) async {
+    final platform = player.platform;
+    if (platform is! NativePlayer) return;
+    try {
+      // `[…]` quotes the value, whose commas would otherwise split options.
+      for (final option in const ['stream-lavf-o', 'demuxer-lavf-o']) {
+        await platform.setProperty(
+          option,
+          'protocol_whitelist=[$_allowedProtocols]',
+        );
+        if (kDebugMode) {
+          debugPrint('[MPV] $option=${await platform.getProperty(option)}');
+        }
+      }
+    } catch (error) {
+      if (kDebugMode) debugPrint('[MPV] protocol allowlist not set: $error');
+    }
+  }
+
   /// Creates an instance of a video player and returns its textureId.
   @override
   Future<int?> create(DataSource dataSource) async {
     final player = Player();
+    await _restrictProtocols(player);
     final completer = Completer();
     final videoController = VideoController(
       player,
@@ -606,12 +635,10 @@ class MediaKitVideoPlayer extends VideoPlayerPlatform {
             decoderErrorCheck = Timer(_decoderErrorGrace, () {
               if (streamController.isClosed) return;
               final state = player.state;
-              final stalled =
-                  state.playing &&
+              final stalled = state.playing &&
                   !state.completed &&
                   state.position <= positionAtError;
-              final videoLost =
-                  hadVideo &&
+              final videoLost = hadVideo &&
                   (state.track.video.id == 'no' ||
                       (state.videoParams.dw ?? 0) == 0);
               if (kDebugMode) {

@@ -22,9 +22,11 @@ subprojects {
 }
 
 // flutter_js 0.8.7 targets Kotlin/JVM 1.8, while AGP 9 defaults its Java
-// compile task to 11. Keep those tasks aligned for this dependency only.
+// compile task to 11; the vendored torrent plugin sets no Kotlin target (it
+// no longer applies the Kotlin Gradle Plugin), so Kotlin would follow the
+// JDK. Keep both aligned with their Java target of 11.
 subprojects {
-    if (name == "flutter_js") {
+    if (name == "flutter_js" || name == "flutter_go_torrent_streamer") {
         afterEvaluate {
             tasks.withType<KotlinCompile>().configureEach {
                 compilerOptions.jvmTarget.set(

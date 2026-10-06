@@ -232,6 +232,38 @@ void main() {
       expect(requested?.path, '/subtitles/movie/tt0111161.json');
     });
 
+    test('keeps only the most recent searches', () async {
+      final requested = <String>[];
+      final client = MockClient((request) async {
+        requested.add(request.url.path);
+        return http.Response(jsonEncode({'subtitles': []}), 200);
+      });
+      final subtitles = service(client);
+      SubtitleRequest episode(int number) => SubtitleRequest.create(
+        type: 'series',
+        imdbId: 'tt0944947',
+        season: 1,
+        episode: number,
+      )!;
+      const limit = SubtitleAddonService.maxCachedSearches;
+      for (var number = 1; number <= limit + 1; number++) {
+        await subtitles.searchAddon(
+          SubtitleAddon.openSubtitlesV3,
+          episode(number),
+        );
+      }
+      expect(requested, hasLength(limit + 1));
+
+      // The newest is still cached; the oldest was evicted.
+      await subtitles.searchAddon(
+        SubtitleAddon.openSubtitlesV3,
+        episode(limit + 1),
+      );
+      expect(requested, hasLength(limit + 1));
+      await subtitles.searchAddon(SubtitleAddon.openSubtitlesV3, episode(1));
+      expect(requested, hasLength(limit + 2));
+    });
+
     test('a missing title is an empty result, not an error', () async {
       final client = MockClient((_) async => http.Response('Not found', 404));
       expect(

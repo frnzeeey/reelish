@@ -168,7 +168,7 @@ void main() {
     expect(context.current.overview, 'Mara finally opens the vault.');
     expect(
       context.current.still,
-      'https://image.tmdb.org/t/p/original/still.jpg',
+      'https://image.tmdb.org/t/p/w1280/still.jpg',
     );
     expect(context.current.runtimeMinutes, 48);
     expect(context.next?.still, isEmpty);

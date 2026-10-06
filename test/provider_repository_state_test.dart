@@ -1,7 +1,10 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:onfeed/src/models/media_item.dart';
 import 'package:onfeed/src/models/provider_plugin.dart';
 import 'package:onfeed/src/services/network_target_policy.dart';
@@ -165,8 +168,9 @@ void main() {
     // QuickJS build used by `flutter test` cannot apply the runtime memory
     // limit, so a script that is allowed fails to start here; a paused one
     // never gets that far.)
-    bool paused(ProviderPluginService service) =>
-        service.lastLookupMessage?.contains('changed its code') ?? false;
+    bool paused(ProviderPluginService service) => RegExp(
+      'changed (its|their) code',
+    ).hasMatch(service.lastLookupMessage ?? '');
 
     ProviderPluginService serviceWith(String Function() code) =>
         ProviderPluginService(
@@ -224,6 +228,177 @@ void main() {
       await reinstalled.streams(movie);
       expect(paused(reinstalled), isFalse);
     });
+
+    test('a script a manifest update adds waits for approval', () async {
+      SharedPreferences.setMockInitialValues({});
+      var plugins = const [
+        ProviderPlugin(id: 'p', name: 'Provider', filename: 'provider.js'),
+      ];
+      final service = ProviderPluginService(
+        storage: StorageService(),
+        networkDestinations: NetworkDestinationValidator(
+          lookup: (_) async => [InternetAddress('93.184.216.34')],
+        ),
+        manifestReader: (url) async =>
+            ProviderRepository(url: url, name: url, plugins: plugins),
+        scriptReader: (_) async =>
+            'module.exports.getStreams = async () => [];',
+      );
+      await service.install(_alpha);
+
+      // A script listed at install time is trusted on first use.
+      await service.streams(movie);
+      expect(paused(service), isFalse);
+      expect(service.pendingScriptUpdates, isEmpty);
+
+      // The repository later points its provider at a new file and adds
+      // another provider: neither runs until the viewer allows it.
+      plugins = const [
+        ProviderPlugin(id: 'p', name: 'Provider', filename: 'provider-v2.js'),
+        ProviderPlugin(id: 'q', name: 'Newcomer', filename: 'newcomer.js'),
+      ];
+      await service.load();
+      expect(await service.streams(movie), isEmpty);
+      expect(paused(service), isTrue);
+      expect(service.pendingScriptUpdates[_alpha]?.keys, {
+        'https://example.com/alpha/provider-v2.js',
+        'https://example.com/alpha/newcomer.js',
+      });
+
+      await service.approveScriptUpdates(_alpha);
+      await service.streams(movie);
+      expect(paused(service), isFalse);
+      expect(service.pendingScriptUpdates, isEmpty);
+
+      // The approval survives a relaunch.
+      final relaunched = ProviderPluginService(
+        storage: StorageService(),
+        networkDestinations: NetworkDestinationValidator(
+          lookup: (_) async => [InternetAddress('93.184.216.34')],
+        ),
+        manifestReader: (url) async =>
+            ProviderRepository(url: url, name: url, plugins: plugins),
+        scriptReader: (_) async =>
+            'module.exports.getStreams = async () => [];',
+      );
+      await relaunched.load();
+      await relaunched.streams(movie);
+      expect(paused(relaunched), isFalse);
+    });
+
+    test('repositories installed before tracking keep working', () async {
+      // Saved by an older version: no record of the scripts at install.
+      SharedPreferences.setMockInitialValues({
+        'onfeed.nuvio.plugin.repositories': [_alpha],
+      });
+      final service = serviceWith(
+        () => 'module.exports.getStreams = async () => [];',
+      );
+      await service.load();
+      await service.streams(movie);
+      expect(paused(service), isFalse);
+      expect(service.pendingScriptUpdates, isEmpty);
+    });
+  });
+
+  test('an unchanged manifest is not downloaded again', () async {
+    SharedPreferences.setMockInitialValues({
+      'onfeed.nuvio.plugin.repositories': [_alpha],
+    });
+    final files = await Directory.systemTemp.createTemp('manifest-cache-');
+    addTearDown(() => files.delete(recursive: true));
+    var version = 'v1';
+    final conditions = <String?>[];
+    final client = MockClient((request) async {
+      conditions.add(request.headers['If-None-Match']);
+      if (request.headers['If-None-Match'] == '"$version"') {
+        return http.Response('', 304);
+      }
+      return http.Response(
+        jsonEncode([
+          {'id': 'p', 'name': 'Provider $version', 'filename': 'p.js'},
+        ]),
+        200,
+        headers: {'etag': '"$version"'},
+      );
+    });
+    ProviderPluginService service() => ProviderPluginService(
+      storage: StorageService(filesDirectory: () async => files),
+      networkDestinations: NetworkDestinationValidator(
+        lookup: (_) async => [InternetAddress('93.184.216.34')],
+      ),
+      httpClient: client,
+    );
+    String providerName(ProviderPluginService service) =>
+        service.repositories.single.plugins.single.name;
+
+    final first = service();
+    await first.load();
+    expect(providerName(first), 'Provider v1');
+    // The copy is saved in the background.
+    final cache = File('${files.path}/provider_manifests.v1.json');
+    for (var i = 0; i < 100 && !await cache.exists(); i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+    }
+
+    // Next launch: a conditional request, answered 304 from the cache.
+    final second = service();
+    await second.load();
+    expect(conditions, [null, '"v1"']);
+    expect(providerName(second), 'Provider v1');
+
+    // A changed manifest is downloaded again.
+    version = 'v2';
+    await second.load();
+    expect(providerName(second), 'Provider v2');
+  });
+
+  test('removal forgets approvals for scripts on other hosts', () async {
+    SharedPreferences.setMockInitialValues({});
+    const elsewhere = 'https://cdn.other.example/provider.js';
+    final service = ProviderPluginService(
+      storage: StorageService(),
+      networkDestinations: NetworkDestinationValidator(
+        lookup: (_) async => [InternetAddress('93.184.216.34')],
+      ),
+      manifestReader: (url) async => ProviderRepository(
+        url: url,
+        name: url,
+        plugins: const [
+          ProviderPlugin(id: 'p', name: 'Provider', filename: elsewhere),
+        ],
+      ),
+      scriptReader: (_) async => 'module.exports.getStreams = async () => [];',
+    );
+    await service.install(_alpha);
+    await service.streams(const MediaItem(id: '1', type: 'movie', name: 'F'));
+    expect((await StorageService().providerScriptHashes()).keys, [elsewhere]);
+
+    await service.remove(service.repositories.single);
+
+    expect(await StorageService().providerScriptHashes(), isEmpty);
+    expect(await StorageService().providerKnownScripts(), isEmpty);
+  });
+
+  test('concurrent lookups each keep their own message', () async {
+    final service = _service(host);
+    final loading = service.load();
+    await pumpEventQueue();
+    host.answerAll();
+    await loading;
+    const movie = MediaItem(id: '1', type: 'movie', name: 'Film');
+
+    // One lookup has no allowed plugins; the other allows only an
+    // unknown one. Both finish with nothing, for different reasons.
+    final none = service.discoverStreams(movie, allowedPluginIds: {});
+    final unknown = service.discoverStreams(
+      const MediaItem(id: '2', type: 'movie', name: 'Other'),
+      allowedPluginIds: {'https://elsewhere.example/manifest.json|x'},
+    );
+    await Future.wait([none.finished, unknown.finished]);
+
+    expect(none.message, contains('No provider plugins are allowed'));
+    expect(unknown.message, contains('None of your enabled providers'));
   });
 
   test('a lookup after an offline launch retries the repositories', () async {

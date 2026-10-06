@@ -1,0 +1,39 @@
+group = "com.example.flutter_torrent_streamer"
+version = "1.0-SNAPSHOT"
+
+// Reelish: this build applies no Kotlin Gradle Plugin; Flutter is removing
+// support for plugins that do. The Flutter Gradle plugin (or AGP built-in
+// Kotlin) compiles the Kotlin sources. See REELISH_PATCH.md.
+apply plugin: "com.android.library"
+
+android {
+    namespace = "com.example.flutter_torrent_streamer"
+
+    compileSdk = 35
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
+    }
+
+    sourceSets {
+        main.java.srcDirs += "src/main/kotlin"
+        // Explicitly map jniLibs to the correct folder
+        main.jniLibs.srcDirs = ["src/main/jniLibs"]
+    }
+
+    // Ensure .so files are not stripped during packaging to avoid issues
+    packagingOptions {
+        pickFirst 'lib/arm64-v8a/libtorrent_streamer.so'
+        pickFirst 'lib/x86_64/libtorrent_streamer.so'
+        doNotStrip "**/*.so"
+    }
+
+    defaultConfig {
+        minSdk = 21
+    }
+
+    dependencies {
+        implementation "androidx.core:core-ktx:1.10.1"
+    }
+}

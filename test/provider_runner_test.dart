@@ -97,4 +97,18 @@ void main() {
       throwsA(isA<ProviderRunException>()),
     );
   });
+
+  test('a provider stuck in synchronous code still returns a timeout', () async {
+    // The desktop QuickJS build never interrupts this loop; without the
+    // run's own ceiling the caller (and its runtime slot) would wait forever.
+    final watch = Stopwatch()..start();
+    await expectLater(
+      ProviderRunner.run(
+        _request('while (true) {}'),
+        timeout: const Duration(seconds: 2),
+      ),
+      throwsA(isA<TimeoutException>()),
+    );
+    expect(watch.elapsed, lessThan(const Duration(seconds: 10)));
+  });
 }

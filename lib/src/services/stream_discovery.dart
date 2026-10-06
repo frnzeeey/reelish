@@ -17,6 +17,10 @@ class StreamDiscovery {
   bool _completed = false;
   bool _recordedCandidate = false;
 
+  /// Why this lookup found no stream (no providers, all failed, paused for
+  /// review...), once it has finished; null when nothing needs saying.
+  String? message;
+
   List<StreamSource> get sources => List.unmodifiable(_sources);
   Stream<StreamSource> get updates => _replaySources();
   Future<StreamSource?> get firstSource => _firstSource.future;
@@ -42,6 +46,7 @@ class StreamDiscovery {
       return first;
     }
   }
+
   Future<void> get finished => _finished.future;
   bool get isCancelled => _cancelled;
 

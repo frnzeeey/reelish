@@ -9,3 +9,13 @@ which lets Reelish enforce the existing 64 MiB provider heap cap.
 
 Keep this patch isolated when syncing upstream changes, and verify the native
 symbol names for every Android runtime version before updating the binding.
+
+## Script interrupt deadline
+
+`lib/quickjs/ffi.dart` also looks up QuickJS's public `JS_SetInterruptHandler`
+and installs a Dart callback that stops a script once a deadline passes
+(`QuickJsRuntime2.setInterruptDeadline`). The runtime's `timeout` argument
+alone does not stop synchronous code such as `while (true) {}` on every
+build, and a script stuck there never returns. The handler replaces any
+handler the native bridge installed. Builds that do not export the symbol
+(the Windows test DLL) keep their previous behaviour; the lookup returns null.

@@ -158,10 +158,9 @@ packages:
   flutter_go_torrent_streamer:
     dependency: "direct main"
     description:
-      name: flutter_go_torrent_streamer
-      sha256: "38f44e744a9b7e8bb37addb0d42558a25abe1056d6b6e31fb91e6d4cb5d6fd33"
-      url: "https://pub.dev"
-    source: hosted
+      path: "packages/flutter_go_torrent_streamer"
+      relative: true
+    source: path
     version: "0.0.8"
   flutter_js:
     dependency: "direct main"

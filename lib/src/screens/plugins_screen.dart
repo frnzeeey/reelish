@@ -101,8 +101,8 @@ class PluginsScreen extends StatelessWidget {
                             ?.name ??
                         update.key,
                     message: update.value.length == 1
-                        ? 'A provider changed its code. It is paused until you allow the update. Only allow it if you trust this repository.'
-                        : '${update.value.length} providers changed their code. They are paused until you allow the update. Only allow it if you trust this repository.',
+                        ? 'A provider was added or changed its code. It is paused until you allow it. Only allow it if you trust this repository.'
+                        : '${update.value.length} providers were added or changed their code. They are paused until you allow them. Only allow it if you trust this repository.',
                     onApprove: () =>
                         pluginService.approveScriptUpdates(update.key),
                   ),

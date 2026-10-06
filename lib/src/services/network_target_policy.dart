@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart';
@@ -159,17 +160,19 @@ class NetworkDestinationValidator {
     }
     try {
       final streamed = await client.send(request).timeout(effectiveTimeout);
-      final bytes = <int>[];
+      // Byte storage: a List<int> would hold each byte in a 64-bit slot,
+      // eight times the response size while it downloads.
+      final bytes = BytesBuilder(copy: false);
       await (() async {
         await for (final chunk in streamed.stream.timeout(effectiveTimeout)) {
           if (bytes.length + chunk.length > maxResponseBytes) {
             throw const FormatException('HTTP response is too large.');
           }
-          bytes.addAll(chunk);
+          bytes.add(chunk);
         }
       })().timeout(effectiveTimeout);
       return http.Response.bytes(
-        bytes,
+        bytes.takeBytes(),
         streamed.statusCode,
         request: request,
         headers: streamed.headers,

@@ -4,7 +4,9 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:onfeed/src/models/playable_source.dart';
 import 'package:onfeed/src/models/stream_source.dart';
+import 'package:onfeed/src/models/stream_type.dart';
 import 'package:onfeed/src/services/network_target_policy.dart';
 import 'package:onfeed/src/services/playback_coordinator.dart';
 import 'package:onfeed/src/services/player_engine.dart';
@@ -23,6 +25,13 @@ StreamSource _source(String name, {String provider = 'A', String url = ''}) =>
 void main() {
   group('failure classification', () {
     PlaybackFailure classify(Object error) => PlaybackFailure.classify(error);
+
+    test('audio without a picture is a rendering failure', () {
+      final failure = classify(PlaybackFailure.noPicture);
+      expect(failure.kind, PlaybackFailureKind.rendering);
+      expect(failure.canTryAnotherEngine, isTrue);
+      expect(failure.userMessage, 'The video could not be displayed.');
+    });
 
     test('network, HTTP, DNS and timeout failures skip the engine retry', () {
       for (final error in <Object>[
@@ -195,6 +204,38 @@ void main() {
       VideoPlayerMediaKit.registerWith();
       expect(identical(VideoPlayerPlatform.instance, mediaKit), isTrue);
     });
+
+    test(
+      'another engine is selected only once the open player is gone',
+      () async {
+        final controller = const MpvPlayerEngine().createController(
+          PlayableSource(
+            source: const StreamSource(name: 'a', url: 'http://cdn.example/a'),
+            uri: Uri.parse('http://cdn.example/a'),
+            headers: const {},
+            streamType: StreamType.hls,
+          ),
+        );
+        expect(PlayerEngineGate.liveCount(PlayerEngineId.mediaKit), 1);
+
+        var switched = false;
+        final switching = PlayerEngineGate.activate(
+          const FlutterPlatformPlayerEngine(),
+        ).then((_) => switched = true);
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+        expect(switched, isFalse);
+
+        await controller.dispose();
+        await switching.timeout(const Duration(seconds: 1));
+        expect(switched, isTrue);
+        expect(PlayerEngineGate.liveCount(PlayerEngineId.mediaKit), 0);
+
+        // With nothing open, a switch does not wait at all.
+        await PlayerEngineGate.activate(
+          const FlutterPlatformPlayerEngine(),
+        ).timeout(const Duration(milliseconds: 100));
+      },
+    );
   });
 
   group('NAT64 destinations', () {

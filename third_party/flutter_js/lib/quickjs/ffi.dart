@@ -255,6 +255,74 @@ void Function(Pointer<JSRuntime>, int) _lookupMemoryLimitSetter() {
   }
 }
 
+/// `int (*)(JSRuntime *rt, void *opaque)`: QuickJS's interrupt callback.
+/// A non-zero return stops the running script with an uncatchable error.
+typedef _JSInterruptHandler = Int32 Function(Pointer<JSRuntime>, Pointer<Void>);
+
+/// `void JS_SetInterruptHandler(JSRuntime *rt, handler, void *opaque)`, or
+/// null when the native library does not export it.
+final void Function(
+  Pointer<JSRuntime>,
+  Pointer<NativeFunction<_JSInterruptHandler>>,
+  Pointer<Void>,
+)? _jsSetInterruptHandler = () {
+  try {
+    return _qjsLib
+        .lookup<
+            NativeFunction<
+                Void Function(
+                  Pointer<JSRuntime>,
+                  Pointer<NativeFunction<_JSInterruptHandler>>,
+                  Pointer<Void>,
+                )>>('JS_SetInterruptHandler')
+        .asFunction<
+            void Function(
+              Pointer<JSRuntime>,
+              Pointer<NativeFunction<_JSInterruptHandler>>,
+              Pointer<Void>,
+            )>();
+  } on ArgumentError {
+    return null;
+  }
+}();
+
+/// Interrupt deadlines (microseconds since epoch) by runtime address. Each
+/// isolate has its own copy, matching the runtimes it created.
+final Map<int, int> _interruptDeadlines = {};
+
+/// Called by QuickJS on the thread running the script, every few thousand
+/// instructions, including inside synchronous loops.
+int _interruptAtDeadline(Pointer<JSRuntime> rt, Pointer<Void> opaque) {
+  final deadline = _interruptDeadlines[rt.address];
+  return deadline != null && DateTime.now().microsecondsSinceEpoch >= deadline
+      ? 1
+      : 0;
+}
+
+/// Stops any script running on [rt] once [deadline] passes; null removes the
+/// deadline. Replaces a handler the native bridge may have installed. Returns
+/// false when the native library cannot interrupt scripts.
+bool jsSetInterruptDeadline(Pointer<JSRuntime> rt, DateTime? deadline) {
+  final setter = _jsSetInterruptHandler;
+  if (setter == null) return false;
+  if (deadline == null) {
+    _interruptDeadlines.remove(rt.address);
+    setter(rt, nullptr, nullptr);
+    return true;
+  }
+  _interruptDeadlines[rt.address] = deadline.microsecondsSinceEpoch;
+  setter(
+    rt,
+    Pointer.fromFunction<_JSInterruptHandler>(_interruptAtDeadline, 0),
+    nullptr,
+  );
+  return true;
+}
+
+/// Forgets [rt]'s deadline once the runtime is freed.
+void jsClearInterruptDeadline(Pointer<JSRuntime> rt) =>
+    _interruptDeadlines.remove(rt.address);
+
 /// void jsFreeRuntime(JSRuntime *rt)
 final void Function(
   Pointer<JSRuntime>,

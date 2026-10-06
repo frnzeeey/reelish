@@ -84,7 +84,7 @@ void main() {
         },
       ]).single;
       expect(ref.thumbnail, 'https://image.tmdb.org/t/p/w300/a.jpg');
-      expect(ref.still, 'https://image.tmdb.org/t/p/original/a.jpg');
+      expect(ref.still, 'https://image.tmdb.org/t/p/w1280/a.jpg');
       expect(ref.airDate, DateTime(2020, 2, 1));
     });
   });

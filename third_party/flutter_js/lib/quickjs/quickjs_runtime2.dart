@@ -134,6 +134,14 @@ class QuickJsRuntime2 extends JavascriptRuntime {
   }
 
   /// Free Runtime and Context which can be recreate when evaluate again.
+  /// Stops any script still running once [deadline] passes, including
+  /// synchronous loops; null removes the deadline. Returns false when this
+  /// platform's QuickJS build cannot interrupt scripts.
+  bool setInterruptDeadline(DateTime? deadline) {
+    _ensureEngine();
+    return jsSetInterruptDeadline(_rt!, deadline);
+  }
+
   close() {
     final rt = _rt;
     final ctx = _ctx;
@@ -141,6 +149,7 @@ class QuickJsRuntime2 extends JavascriptRuntime {
     _ctx = null;
     if (ctx != null) jsFreeContext(ctx);
     if (rt == null) return;
+    jsClearInterruptDeadline(rt);
     _executePendingJob();
     try {
       for (final obj in localContext.values) {

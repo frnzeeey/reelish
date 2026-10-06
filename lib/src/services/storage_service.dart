@@ -87,6 +87,91 @@ class StorageService {
         jsonEncode(hashes),
       );
 
+  static const _providerManifestsFileName = 'provider_manifests.v1.json';
+
+  /// Manifests larger than this are not kept; they are downloaded each time.
+  static const maxCachedManifestBytes = 1024 * 1024;
+
+  Future<File> _providerManifestsFile() async =>
+      File('${(await _filesDirectory()).path}/$_providerManifestsFileName');
+
+  Future<Map<String, dynamic>> _readProviderManifests() async {
+    try {
+      final file = await _providerManifestsFile();
+      if (!await file.exists()) return {};
+      final decoded = jsonDecode(await file.readAsString());
+      return decoded is Map ? Map<String, dynamic>.from(decoded) : {};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  /// The last downloaded copy of the provider manifest at [url] with the
+  /// validators its host sent, for a conditional request; null when none.
+  Future<CachedManifest?> cachedProviderManifest(String url) async {
+    final entry = (await _readProviderManifests())[url];
+    if (entry is! Map || entry['body'] is! String) return null;
+    final etag = entry['etag'], lastModified = entry['lastModified'];
+    return CachedManifest(
+      body: entry['body'] as String,
+      etag: etag is String ? etag : null,
+      lastModified: lastModified is String ? lastModified : null,
+    );
+  }
+
+  /// Keeps [manifest] for [url], or forgets it when [manifest] is null. Kept
+  /// in a private file outside backup, like other downloaded data.
+  Future<void> saveProviderManifest(String url, CachedManifest? manifest) =>
+      _serialized(() async {
+        final values = await _readProviderManifests();
+        values.remove(url);
+        if (manifest != null &&
+            manifest.body.length <= maxCachedManifestBytes) {
+          values[url] = {
+            'body': manifest.body,
+            'etag': ?manifest.etag,
+            'lastModified': ?manifest.lastModified,
+          };
+        }
+        final file = await _providerManifestsFile();
+        await file.parent.create(recursive: true);
+        final temporary = File('${file.path}.tmp');
+        await temporary.writeAsString(jsonEncode(values), flush: true);
+        await temporary.rename(file.path);
+      });
+
+  static const _providerKnownScriptsKey = 'onfeed.plugin.knownScripts.v1';
+
+  /// Script URLs each repository listed when it was installed (or approved
+  /// later), by repository URL. A script URL outside this set was added by a
+  /// manifest update and needs the viewer's approval before it runs.
+  Future<Map<String, Set<String>>> providerKnownScripts() async {
+    final raw = (await SharedPreferences.getInstance()).getString(
+      _providerKnownScriptsKey,
+    );
+    if (raw == null) return {};
+    try {
+      final decoded = jsonDecode(raw);
+      return decoded is Map
+          ? {
+              for (final MapEntry(:key, :value) in decoded.entries)
+                if (value is List) '$key': value.whereType<String>().toSet(),
+            }
+          : {};
+    } on FormatException {
+      return {};
+    }
+  }
+
+  Future<void> saveProviderKnownScripts(Map<String, Set<String>> known) async =>
+      (await SharedPreferences.getInstance()).setString(
+        _providerKnownScriptsKey,
+        jsonEncode({
+          for (final MapEntry(:key, :value) in known.entries)
+            key: value.toList(),
+        }),
+      );
+
   Future<List<MediaItem>> _items(String key) async {
     final raw =
         (await SharedPreferences.getInstance()).getStringList(key) ?? [];
@@ -429,8 +514,7 @@ class StorageService {
       final data = await _torrentEngineDataDirectory();
       if (!await data.exists()) return;
       final pending = preferences.getBool(_torrentClearPendingKey) ?? false;
-      if (pending ||
-          (await _diskUsageBytes(data) ?? 0) > maxTorrentDataBytes) {
+      if (pending || (await _diskUsageBytes(data) ?? 0) > maxTorrentDataBytes) {
         await data.delete(recursive: true);
       }
       await preferences.remove(_torrentClearPendingKey);
@@ -478,6 +562,15 @@ class StorageService {
     );
     return false;
   }
+}
+
+/// A provider manifest as last downloaded, with its HTTP validators.
+class CachedManifest {
+  const CachedManifest({required this.body, this.etag, this.lastModified});
+
+  final String body;
+  final String? etag;
+  final String? lastModified;
 }
 
 /// A remembered subtitle choice for one title.

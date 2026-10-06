@@ -26,9 +26,10 @@ class EpisodeRef {
   /// First air date; null when TMDB does not list one.
   final DateTime? airDate;
 
-  /// Full-size still, for the pause screen.
+  /// Large still for the pause screen: 1280 px wide like the backdrops it
+  /// stands in for, about a third smaller to download than the original.
   String get still =>
-      stillPath.isEmpty ? '' : 'https://image.tmdb.org/t/p/original$stillPath';
+      stillPath.isEmpty ? '' : 'https://image.tmdb.org/t/p/w1280$stillPath';
 
   /// Small still (300 px wide), for episode lists.
   String get thumbnail =>

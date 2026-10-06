@@ -8,6 +8,7 @@ import 'package:http/testing.dart';
 import 'package:onfeed/src/models/media_item.dart';
 import 'package:onfeed/src/services/media_catalog_rules.dart';
 import 'package:onfeed/src/services/network_target_policy.dart';
+import 'package:onfeed/src/services/paged_feed_controller.dart';
 import 'package:onfeed/src/services/tmdb_response_cache.dart';
 import 'package:onfeed/src/services/tmdb_service.dart';
 
@@ -246,6 +247,155 @@ void main() {
     expect((await cache.read('catalog-b'))?.fromMemory, isTrue);
     expect((await cache.read('search-3'))?.fromMemory, isTrue);
     await cache.flush();
+  });
+
+  http.Response pageOf(List<Object?> entries, {int page = 1, int? total}) =>
+      http.Response(
+        jsonEncode({'page': page, 'results': entries, 'total_pages': ?total}),
+        200,
+      );
+
+  test('New movies pages report TMDB paging and request one page', () async {
+    final urls = <Uri>[];
+    final client = MockClient((request) async {
+      urls.add(request.url);
+      final page = int.parse(request.url.queryParameters['page']!);
+      return pageOf([recentMovie(page * 10)], page: page, total: 3);
+    });
+    final tmdb = service(client);
+
+    final first = await tmdb.newMoviesPage();
+    final third = await tmdb.newMoviesPage(page: 3);
+
+    expect(urls.map((url) => url.queryParameters['page']), ['1', '3']);
+    expect(first.items.single.id, '10');
+    expect(first.hasMore, isTrue);
+    expect(third.totalPages, 3);
+    expect(third.hasMore, isFalse);
+    client.close();
+  });
+
+  test('a response without total_pages ends the list', () async {
+    final client = MockClient((_) async => results([recentSeries(1)]));
+    final page = await service(client).streamingSeriesPage();
+    expect(page.hasMore, isFalse);
+    client.close();
+  });
+
+  test('the same page is served from cache until it expires', () async {
+    // Entries are stamped this far in the past when stored.
+    var age = Duration.zero;
+    var requests = 0;
+    final client = MockClient((_) async {
+      requests++;
+      return pageOf([recentMovie(1)], total: 5);
+    });
+    final cache = TmdbResponseCache(
+      directory: cacheRoot,
+      clock: () => DateTime.now().subtract(age),
+    );
+    final tmdb = service(client, cache: cache);
+
+    final fresh = await tmdb.newMoviesPage();
+    final cached = await tmdb.newMoviesPage();
+    expect(requests, 1);
+    expect(fresh.fromCache, isFalse);
+    expect(cached.fromCache, isTrue);
+
+    // Page 2 is a different cache entry.
+    await tmdb.newMoviesPage(page: 2);
+    expect(requests, 2);
+
+    // Past the catalog lifetime the cached page is still shown, and a
+    // background request renews it.
+    age = TmdbCacheTtl.catalog + const Duration(minutes: 1);
+    await tmdb.newMoviesPage(page: 3);
+    expect(requests, 3);
+    age = Duration.zero;
+    CatalogPage? revalidated;
+    final stale = await tmdb.newMoviesPage(
+      page: 3,
+      onRevalidated: (page) => revalidated = page,
+    );
+    expect(stale.fromCache, isTrue);
+    await _until(() => revalidated != null);
+    expect(requests, 4);
+    expect(revalidated!.hasMore, isTrue);
+
+    await cache.flush();
+    client.close();
+  });
+
+  test('later New releases pages skip lists that have ended', () async {
+    final urls = <Uri>[];
+    final client = MockClient((request) async {
+      urls.add(request.url);
+      final page = int.parse(request.url.queryParameters['page']!);
+      final query = request.url.queryParameters;
+      // Movies have 3 pages, premieres 1, ongoing series 2.
+      if (request.url.path.endsWith('/discover/movie')) {
+        return pageOf([recentMovie(100 + page)], page: page, total: 3);
+      }
+      if (query.containsKey('first_air_date.gte')) {
+        return pageOf([recentSeries(200 + page)], page: page, total: 1);
+      }
+      return pageOf([recentSeries(300 + page)], page: page, total: 2);
+    });
+    final tmdb = service(client);
+
+    final first = await tmdb.newReleasesPage();
+    expect(urls, hasLength(3));
+    expect(first.sourceTotalPages, [3, 1, 2]);
+    expect(first.hasMore, isTrue);
+
+    urls.clear();
+    final second = await tmdb.newReleasesPage(page: 2, previous: first);
+    expect(urls, hasLength(2));
+    expect(
+      urls.where(
+        (url) => url.queryParameters.containsKey('first_air_date.gte'),
+      ),
+      isEmpty,
+    );
+    expect(second.items.map((item) => item.id), containsAll(['102', '302']));
+
+    urls.clear();
+    final third = await tmdb.newReleasesPage(page: 3, previous: second);
+    expect(urls.single.path, endsWith('/discover/movie'));
+    expect(third.hasMore, isFalse);
+    client.close();
+  });
+
+  test('Top 10 candidates page each seed and keep page 1 cache keys', () async {
+    final urls = <Uri>[];
+    final client = MockClient((request) async {
+      urls.add(request.url);
+      final page = int.parse(request.url.queryParameters['page'] ?? '1');
+      return request.url.path.contains('/tv/')
+          ? pageOf([recentSeries(500 + page)], page: page, total: 1)
+          : pageOf([recentMovie(400 + page)], page: page, total: 4);
+    });
+    final tmdb = service(client);
+    final seeds = [
+      const MediaItem(id: '11', type: 'movie', name: 'Seed movie'),
+      const MediaItem(id: '22', type: 'series', name: 'Seed series'),
+    ];
+
+    final first = await tmdb.recommendationCandidatesPage(seeds);
+    expect(urls.map((url) => url.queryParameters['page']), [null, null]);
+    expect(first.items.map((item) => item.id), ['401', '501']);
+
+    urls.clear();
+    final second = await tmdb.recommendationCandidatesPage(
+      seeds,
+      page: 2,
+      previous: first,
+    );
+    // The series seed had one page; only the movie seed is asked again.
+    expect(urls.single.path, '/3/movie/11/recommendations');
+    expect(urls.single.queryParameters['page'], '2');
+    expect(second.items.map((item) => item.id), ['402']);
+    client.close();
   });
 
   test('MediaItem keeps genre data through storage', () {

@@ -27,6 +27,7 @@ class ProviderPluginService extends ChangeNotifier {
     @visibleForTesting
     Future<ProviderRepository> Function(String url)? manifestReader,
     @visibleForTesting Future<String> Function(Uri url)? scriptReader,
+    @visibleForTesting this.httpClient,
   }) : _storage = storage ?? StorageService(),
        _scheduler = scheduler ?? ProviderExecutionScheduler(),
        _networkDestinations =
@@ -41,6 +42,10 @@ class ProviderPluginService extends ChangeNotifier {
   final Future<ProviderRepository> Function(String url)? _manifestReader;
   final Future<String> Function(Uri url)? _scriptReader;
 
+  /// Replaces the socket client in tests; destinations are still validated.
+  @visibleForTesting
+  final http.Client? httpClient;
+
   /// SHA-256 of each provider script allowed to run, by script URL. A script
   /// is trusted the first time it is seen; after that, changed code waits
   /// for the viewer's approval in [pendingScriptUpdates] instead of running.
@@ -49,8 +54,17 @@ class ProviderPluginService extends ChangeNotifier {
   Map<String, String> _approvedScripts = {};
   Future<void>? _approvedScriptsLoaded;
 
-  /// Changed provider scripts waiting for approval: repository URL → script
-  /// URL → new SHA-256. Those providers are skipped until approved.
+  /// Script URLs each repository listed when it was installed, by repository
+  /// URL. Only these are trusted on first use: a script URL that a later
+  /// manifest adds (a new provider, or a provider pointed at another file)
+  /// waits in [pendingScriptUpdates] like changed code, so a repository
+  /// update cannot slip new code past the review.
+  Map<String, Set<String>> _knownScripts = {};
+  Future<void>? _knownScriptsLoaded;
+
+  /// Changed or newly added provider scripts waiting for approval:
+  /// repository URL → script URL → new SHA-256. Those providers are skipped
+  /// until approved.
   final Map<String, Map<String, String>> pendingScriptUpdates = {};
   static const StreamNormalizer _streamNormalizer = StreamNormalizer();
   static const StreamValidator _streamValidator = StreamValidator();
@@ -116,6 +130,17 @@ class ProviderPluginService extends ChangeNotifier {
         }
       }),
     );
+    // Repositories installed before scripts were tracked get their current
+    // scripts as the trusted baseline, once.
+    await _ensureKnownScripts();
+    var baselineAdded = false;
+    for (final entry in loaded) {
+      final repository = entry.repository;
+      if (repository == null || _knownScripts.containsKey(entry.url)) continue;
+      _knownScripts[entry.url] = _scriptUrls(repository);
+      baselineAdded = true;
+    }
+    if (baselineAdded) await _storage.saveProviderKnownScripts(_knownScripts);
     final previous = {for (final repo in repositories) repo.url: repo};
     failedRepositoryUrls.clear();
     errors.clear();
@@ -153,6 +178,9 @@ class ProviderPluginService extends ChangeNotifier {
       if (saved.contains(url) || repositories.any((repo) => repo.url == url)) {
         throw Exception('This provider repository is already installed.');
       }
+      await _ensureKnownScripts();
+      _knownScripts[url] = _scriptUrls(fetched);
+      await _storage.saveProviderKnownScripts(_knownScripts);
       await _storage.saveProviderRepositoryUrls([...saved, url]);
       final repository = _applyOverrides(fetched);
       repositories.add(repository);
@@ -172,11 +200,22 @@ class ProviderPluginService extends ChangeNotifier {
     errors.remove(url);
     _scripts.clear();
     pendingScriptUpdates.remove(url);
-    await _ensureApprovedScripts();
+    await Future.wait([_ensureApprovedScripts(), _ensureKnownScripts()]);
+    // Approvals go with the repository: scripts next to its manifest, and
+    // any script it listed elsewhere (a provider's file on another host).
+    final owned = _knownScripts.remove(url);
+    if (owned != null) await _storage.saveProviderKnownScripts(_knownScripts);
     final scriptBase = Uri.parse(url).resolve('.').toString();
-    if (_approvedScripts.keys.any((key) => key.startsWith(scriptBase))) {
-      _approvedScripts.removeWhere((key, _) => key.startsWith(scriptBase));
+    bool belongs(String script) =>
+        script.startsWith(scriptBase) || (owned?.contains(script) ?? false);
+    if (_approvedScripts.keys.any(belongs)) {
+      _approvedScripts.removeWhere((key, _) => belongs(key));
       await _storage.saveProviderScriptHashes(_approvedScripts);
+    }
+    try {
+      await _storage.saveProviderManifest(url, null);
+    } catch (_) {
+      // A leftover cached copy is only used if this URL is installed again.
     }
     _enabledOverrides.removeWhere((key, _) => key.startsWith('$url|'));
     await _storage.saveProviderEnabledOverrides(_enabledOverrides);
@@ -227,19 +266,44 @@ class ProviderPluginService extends ChangeNotifier {
             .toList(),
       );
 
-  Future<void> _ensureApprovedScripts() => _approvedScriptsLoaded ??= _storage
-      .providerScriptHashes()
-      .then((hashes) => _approvedScripts = {...hashes, ..._approvedScripts});
+  /// A failed read is not kept, so the next lookup tries storage again
+  /// instead of failing every lookup for the rest of the session.
+  Future<void> _ensureApprovedScripts() =>
+      _approvedScriptsLoaded ??= _storage.providerScriptHashes().then(
+        (hashes) => _approvedScripts = {...hashes, ..._approvedScripts},
+        onError: (Object error) {
+          _approvedScriptsLoaded = null;
+          throw error;
+        },
+      );
 
-  /// Lets the changed provider scripts of [repositoryUrl] run from now on.
+  Future<void> _ensureKnownScripts() =>
+      _knownScriptsLoaded ??= _storage.providerKnownScripts().then(
+        (known) => _knownScripts = {...known, ..._knownScripts},
+        onError: (Object error) {
+          _knownScriptsLoaded = null;
+          throw error;
+        },
+      );
+
+  /// The script URL of every provider [repository] lists.
+  static Set<String> _scriptUrls(ProviderRepository repository) => {
+    for (final plugin in repository.plugins)
+      Uri.parse(repository.url).resolve(plugin.filename).toString(),
+  };
+
+  /// Lets the changed or added provider scripts of [repositoryUrl] run from
+  /// now on.
   Future<void> approveScriptUpdates(String repositoryUrl) async {
     final pending = pendingScriptUpdates.remove(repositoryUrl);
     if (pending == null) return;
-    await _ensureApprovedScripts();
+    await Future.wait([_ensureApprovedScripts(), _ensureKnownScripts()]);
     _approvedScripts.addAll(pending);
+    (_knownScripts[repositoryUrl] ??= {}).addAll(pending.keys);
     _scripts.clear();
     notifyListeners();
     await _storage.saveProviderScriptHashes(_approvedScripts);
+    await _storage.saveProviderKnownScripts(_knownScripts);
   }
 
   /// Uninstalls a saved repository whose manifest did not load.
@@ -256,16 +320,52 @@ class ProviderPluginService extends ChangeNotifier {
   Future<ProviderRepository> _readRepository(String url) async {
     final reader = _manifestReader;
     if (reader != null) return reader(url);
+    // A conditional request: an unchanged manifest costs a 304 instead of a
+    // full download on every launch. Cache problems only cost that saving.
+    CachedManifest? cached;
+    try {
+      cached = await _storage.cachedProviderManifest(url);
+    } catch (_) {}
     final response = await _secureGet(
       Uri.parse(url),
+      headers: {
+        'If-None-Match': ?cached?.etag,
+        'If-Modified-Since': ?cached?.lastModified,
+      },
       timeout: const Duration(seconds: 15),
     );
+    if (response.statusCode == 304 && cached != null) {
+      return _parseRepository(url, cached.body);
+    }
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception(
         'Plugin manifest request failed (${response.statusCode}).',
       );
     }
-    final decoded = jsonDecode(response.body);
+    final repository = _parseRepository(url, response.body);
+    final etag = response.headers['etag'];
+    final lastModified = response.headers['last-modified'];
+    unawaited(
+      _storage
+          .saveProviderManifest(
+            url,
+            etag == null && lastModified == null
+                ? null
+                : CachedManifest(
+                    body: response.body,
+                    etag: etag,
+                    lastModified: lastModified,
+                  ),
+          )
+          .catchError((Object _) {}),
+    );
+    return repository;
+  }
+
+  /// Reads a provider manifest document; throws with a user-facing message
+  /// when it is not one.
+  ProviderRepository _parseRepository(String url, String body) {
+    final decoded = jsonDecode(body);
     final List<dynamic> entries;
     String? repositoryName;
     if (decoded is List) {
@@ -361,9 +461,10 @@ class ProviderPluginService extends ChangeNotifier {
           onSource: discovery.add,
           onCandidate: discovery.recordCandidate,
           isCancelled: () => discovery.isCancelled,
+          onMessage: (message) => discovery.message = message,
         );
       } catch (error) {
-        lastLookupMessage = _friendly(error);
+        discovery.message = lastLookupMessage = _friendly(error);
       } finally {
         discovery.complete();
         if (identical(_inflightDiscoveries[key], discovery)) {
@@ -383,7 +484,18 @@ class ProviderPluginService extends ChangeNotifier {
     void Function(StreamSource source)? onSource,
     void Function()? onCandidate,
     bool Function()? isCancelled,
+    void Function(String? message)? onMessage,
   }) async {
+    // Why this lookup found nothing, or null. Reported to [onMessage], so
+    // concurrent lookups each keep their own, and kept in
+    // [lastLookupMessage] for callers without a discovery.
+    String? message;
+    List<StreamSource> done(List<StreamSource> result) {
+      lastLookupMessage = message;
+      onMessage?.call(message);
+      return result;
+    }
+
     // Play can be pressed right after launch, while manifests still load.
     // Repositories that failed to load (often because the app opened
     // offline) are retried at most every 30 seconds. With none loaded the
@@ -423,24 +535,24 @@ class ProviderPluginService extends ChangeNotifier {
             return b.$2.priority.compareTo(a.$2.priority);
           });
     if (repositories.isEmpty) {
-      lastLookupMessage = failedRepositoryUrls.isNotEmpty
+      message = failedRepositoryUrls.isNotEmpty
           ? 'Your provider repositories could not be loaded. Check your connection and try again.'
           : 'No providers are installed. Open Plugins and install a provider manifest.';
-      return [];
+      return done(const []);
     }
     if (enabled.isEmpty) {
-      lastLookupMessage =
+      message =
           'Your installed providers are switched off. Open Plugins and enable at least one provider.';
-      return [];
+      return done(const []);
     }
     if (available.isEmpty) {
-      lastLookupMessage = allowedPluginIds != null && allowedPluginIds.isEmpty
+      message = allowedPluginIds != null && allowedPluginIds.isEmpty
           ? 'No provider plugins are allowed for automatic stream selection. Update Allowed plugins in Playback settings.'
           : 'None of your enabled providers supports ${item.type == 'series' ? 'series' : 'movies'}.';
-      return [];
+      return done(const []);
     }
 
-    lastLookupMessage = null;
+    message = null;
     final discoveryStartedAt = DateTime.now();
     final lookupErrors = <String, String>{};
     final results = <StreamSource>[];
@@ -594,7 +706,7 @@ class ProviderPluginService extends ChangeNotifier {
     }
     if (searchTimedOut) {
       final timeoutSeconds = searchTimeout.inSeconds;
-      lastLookupMessage = unique.isEmpty
+      message = unique.isEmpty
           ? 'Provider search stopped after $timeoutSeconds seconds without finding a stream. Try fewer enabled providers or try again.'
           : 'Showing sources found in $timeoutSeconds seconds. Some providers did not finish.';
     }
@@ -602,38 +714,39 @@ class ProviderPluginService extends ChangeNotifier {
       if (searchTimedOut) {
         // Keep the timeout message as the useful result for this lookup.
       } else if (pausedForReview > 0 && lookupErrors.isEmpty) {
-        lastLookupMessage = pausedForReview == 1
-            ? 'A provider changed its code and is paused until you review the update in Plugins.'
-            : '$pausedForReview providers changed their code and are paused until you review the update in Plugins.';
+        message = pausedForReview == 1
+            ? 'A provider was added or changed its code and is paused until you review it in Plugins.'
+            : '$pausedForReview providers were added or changed their code and are paused until you review them in Plugins.';
       } else if (lookupErrors.isNotEmpty) {
         final first = lookupErrors.entries.first;
-        lastLookupMessage = '${first.key}: ${first.value}';
+        message = '${first.key}: ${first.value}';
         if (lookupErrors.length > 1) {
-          lastLookupMessage =
-              '$lastLookupMessage Open Plugins to see the other provider errors.';
+          message = '$message Open Plugins to see the other provider errors.';
         }
       } else {
-        lastLookupMessage =
+        message =
             'The enabled providers returned no streams for this title. Try another title or provider.';
       }
     }
     if (lookupErrors.isNotEmpty || pausedForReview > 0) notifyListeners();
-    return unique.values.toList();
+    return done(unique.values.toList());
   }
 
   /// Whether [code] downloaded from [scriptUrl] may run: it is the approved
-  /// version, or the first version of this script seen (which is then
-  /// recorded). Changed code is held in [pendingScriptUpdates] instead.
+  /// version, or the first version seen of a script the repository listed
+  /// when it was installed (which is then recorded). Changed code, and
+  /// scripts a manifest update added, are held in [pendingScriptUpdates].
   Future<bool> _scriptApproved(
     ProviderRepository repo,
     String scriptUrl,
     String code,
   ) async {
-    await _ensureApprovedScripts();
+    await Future.wait([_ensureApprovedScripts(), _ensureKnownScripts()]);
     final hash = sha256.convert(utf8.encode(code)).toString();
     final approved = _approvedScripts[scriptUrl];
     if (approved == hash) return true;
-    if (approved == null) {
+    final known = _knownScripts[repo.url];
+    if (approved == null && (known == null || known.contains(scriptUrl))) {
       _approvedScripts[scriptUrl] = hash;
       await _storage.saveProviderScriptHashes(_approvedScripts);
       return true;
@@ -735,6 +848,7 @@ class ProviderPluginService extends ChangeNotifier {
         allowedSchemes: const {'https'},
         maxResponseBytes: 4 * 1024 * 1024,
         timeout: timeout,
+        testClient: httpClient,
       );
       if (![301, 302, 303, 307, 308].contains(response.statusCode)) {
         return response;

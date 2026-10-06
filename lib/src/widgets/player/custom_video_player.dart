@@ -475,6 +475,9 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
         loadAudioTracks(),
       ]).timeout(const Duration(seconds: 2), onTimeout: () => <void>[]);
       await _applyPreferredAudio(c);
+      // A newer source, episode or close during the track queries above has
+      // already disposed [c]; it must not be listened to or played.
+      if (!mounted || generation != _initializationGeneration) return;
       if (_subtitle == null) unawaited(_applyPreferredSubtitle());
       c.addListener(_tick);
       // Engines start at 1x, so only a non-default speed needs a round trip.
@@ -499,7 +502,13 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
         }
       }
       if (!mounted || generation != _initializationGeneration) return;
-      await c.play();
+      // A play request the engine never answers would leave the viewer on
+      // the loading screen; it fails like any other start-up error.
+      await c.play().timeout(
+        const Duration(seconds: 10),
+        onTimeout: () =>
+            throw TimeoutException('The video engine did not start playing.'),
+      );
       if (mounted && generation == _initializationGeneration) {
         PlaybackLog.log(
           'Player',
@@ -508,6 +517,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
               'since screen open)',
         );
         _awaitFirstFrame(c, generation, attemptClock);
+        _watchForPicture(c, generation, attemptEngine, failedCandidate);
         if (engineFallback && attemptEngine.id != _preferredEngine.id) {
           // The other engine played what the preferred one could not; try it
           // first for the rest of this session.
@@ -535,6 +545,49 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     } catch (error) {
       await _handleFailure(failedCandidate, error, generation);
     }
+  }
+
+  /// How long Media3 may play with no picture before the source counts as a
+  /// rendering failure.
+  static const _noPictureGrace = Duration(seconds: 4);
+
+  /// Catches audio playing over a black screen on Media3.
+  ///
+  /// Media3 drops a video track it cannot decode (an unsupported codec or
+  /// profile) and plays the audio alone without reporting an error; its video
+  /// size then stays zero. After [_noPictureGrace] of such playback the
+  /// source is handed to the failure policy as a rendering failure, which
+  /// tries it on the other engine at the same position. libmpv reports its
+  /// size differently, so it keeps the viewer's manual engine switch.
+  void _watchForPicture(
+    VideoPlayerController controller,
+    int generation,
+    PlayerEngine engine,
+    StreamSource source,
+  ) {
+    if (engine.id != PlayerEngineId.media3 || !controller.value.size.isEmpty) {
+      return;
+    }
+    final start = controller.value.position;
+    late VoidCallback listener;
+    listener = () {
+      final value = controller.value;
+      if (!mounted ||
+          generation != _initializationGeneration ||
+          value.hasError ||
+          !value.size.isEmpty) {
+        controller.removeListener(listener);
+        return;
+      }
+      if (value.isPlaying && value.position - start >= _noPictureGrace) {
+        controller.removeListener(listener);
+        PlaybackLog.log('Failure', 'audio is playing but no picture appeared');
+        unawaited(
+          _handleFailure(source, PlaybackFailure.noPicture, generation),
+        );
+      }
+    };
+    controller.addListener(listener);
   }
 
   /// Logs when the first frame is actually presented: the position starts
@@ -612,7 +665,10 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     );
     if (failure.kind == PlaybackFailureKind.cancelled) return;
 
-    if (wasPlaying && _allowReconnect(failedCandidate)) {
+    // Reconnecting cannot help a picture that was never drawn.
+    if (wasPlaying &&
+        failure.kind != PlaybackFailureKind.rendering &&
+        _allowReconnect(failedCandidate)) {
       final attempt = _runtimeRetries[_sourceKey(failedCandidate)]!.length;
       final delay = Duration(seconds: attempt == 1 ? 1 : 3);
       PlaybackLog.log(
@@ -640,7 +696,9 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     if (!mounted || generation != _initializationGeneration) return;
 
     final alternateEngine = PlayerEngineFactory.alternateFor(failedEngine);
-    if (!wasPlaying &&
+    // A picture that never appeared is also worth the other engine after
+    // playback started: the audio was playing, the video was not.
+    if ((!wasPlaying || failure.kind == PlaybackFailureKind.rendering) &&
         failure.canTryAnotherEngine &&
         alternateEngine != null &&
         PlayerEngineFactory.canOpen(alternateEngine, failedCandidate.url) &&
@@ -1242,7 +1300,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     String id,
   ) async {
     try {
-      await controller.selectAudioTrack(id);
+      await controller.selectAudioTrack(id).timeout(const Duration(seconds: 4));
     } catch (_) {
       return; // Keep the engine's current track if the backend refuses.
     }
@@ -1706,7 +1764,9 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
             .firstOrNull;
         if (track == null) continue;
         try {
-          await controller.selectAudioTrack(track.id);
+          await controller
+              .selectAudioTrack(track.id)
+              .timeout(const Duration(seconds: 2));
           if (mounted) {
             setState(() {
               _audioTracks = [

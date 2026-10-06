@@ -44,6 +44,10 @@ class PlaybackFailure {
   const PlaybackFailure(this.kind, this.original, {this.statusCode});
 
   final PlaybackFailureKind kind;
+
+  /// Reported when audio plays but the engine never draws a picture; it
+  /// classifies as [PlaybackFailureKind.rendering].
+  static const noPicture = 'The video renderer produced no picture.';
   final Object original;
   final int? statusCode;
 
@@ -208,7 +212,7 @@ class PlaybackCoordinator {
     } catch (error) {
       throw SourcePreparationException(error);
     }
-    engine.activate();
+    await PlayerEngineGate.activate(engine);
     final controller = engine.createController(prepared);
     var initialized = false;
     try {

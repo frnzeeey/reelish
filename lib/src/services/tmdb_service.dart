@@ -12,6 +12,7 @@ import '../models/media_item.dart';
 import 'media_catalog_rules.dart';
 import 'media_discovery_ranking.dart';
 import 'network_target_policy.dart';
+import 'paged_feed_controller.dart';
 import 'tmdb_response_cache.dart';
 
 class TmdbService {
@@ -141,48 +142,191 @@ class TmdbService {
     'without_genres': MediaCatalogFilter.tmdbExcludedTvGenres,
   };
 
-  /// Recently released movies for the New movies row, ranked by
-  /// [MediaDiscoveryRanking.newMovies]. [page] is accepted so the row can
-  /// load more later; the home screen asks only for page 1.
-  Future<List<MediaItem>> newMovies({
+  /// TMDB serves at most this many pages of any list.
+  static const maxPages = 500;
+
+  /// The last page of [data]'s list, at least [page] and at most
+  /// [maxPages]. A response without `total_pages` ends at [page].
+  static int _totalPages(Map<String, dynamic> data, int page) {
+    final total = data['total_pages'];
+    return min(max(total is num ? total.toInt() : page, page), maxPages);
+  }
+
+  /// One page of a single TMDB list, parsed and ranked by [parse].
+  Future<CatalogPage> _catalogPage(
+    String path, {
+    required Map<String, String> params,
+    required int page,
+    required List<MediaItem> Function(Map<String, dynamic>) parse,
+    required Duration ttl,
     bool forceRefresh = false,
-    void Function(List<MediaItem>)? onRevalidated,
-    int page = 1,
+    void Function(CatalogPage)? onRevalidated,
   }) async {
-    List<MediaItem> ranked(Map<String, dynamic> data) =>
-        MediaDiscoveryRanking.newMovies(_mediaItems(data['results'], 'movie'));
-    final data = await _get(
+    CatalogPage build(Map<String, dynamic> data, {bool fromCache = false}) =>
+        CatalogPage(
+          items: parse(data),
+          page: page,
+          totalPages: _totalPages(data, page),
+          fromCache: fromCache,
+        );
+    final result = await _request(
+      path,
+      params: params,
+      forceRefresh: forceRefresh,
+      ttl: ttl,
+    );
+    _notifyRevalidated(
+      result.revalidation,
+      onRevalidated == null ? null : (value) => onRevalidated(build(value)),
+    );
+    return build(result.value, fromCache: result.fromCache);
+  }
+
+  /// One page of a row merged from several TMDB lists. Page 1 asks every
+  /// list; later pages skip a list whose `total_pages` in [previous] is
+  /// already behind. When cached values are stale, their refreshes are
+  /// awaited together and [onRevalidated] fires once with the merged page.
+  Future<CatalogPage> _mergedCatalogPage(
+    List<
+      ({
+        String path,
+        Map<String, String> Function(int page) params,
+        List<MediaItem> Function(Object? results) parse,
+      })
+    >
+    sources, {
+    required int page,
+    CatalogPage? previous,
+    required List<MediaItem> Function(List<List<MediaItem>> lists) combine,
+    required Duration ttl,
+    bool forceRefresh = false,
+    void Function(CatalogPage)? onRevalidated,
+  }) async {
+    final known = page == 1
+        ? const <int>[]
+        : previous?.sourceTotalPages ?? const <int>[];
+    final active = [
+      for (var index = 0; index < sources.length; index++)
+        if (index >= known.length || page <= known[index]) index,
+    ];
+    final results = await Future.wait([
+      for (final index in active)
+        _request(
+          sources[index].path,
+          params: sources[index].params(page),
+          forceRefresh: forceRefresh,
+          priority: _TmdbRequestPriority.deferred,
+          ttl: ttl,
+        ),
+    ]);
+
+    CatalogPage build(
+      List<Map<String, dynamic>> values, {
+      bool fromCache = false,
+    }) {
+      final lists = List<List<MediaItem>>.filled(sources.length, const []);
+      final totals = [
+        for (var index = 0; index < sources.length; index++)
+          index < known.length ? known[index] : page,
+      ];
+      for (var slot = 0; slot < active.length; slot++) {
+        final index = active[slot];
+        lists[index] = sources[index].parse(values[slot]['results']);
+        totals[index] = _totalPages(values[slot], page);
+      }
+      return CatalogPage(
+        items: combine(lists),
+        page: page,
+        totalPages: totals.fold(page, max),
+        sourceTotalPages: totals,
+        fromCache: fromCache,
+      );
+    }
+
+    final initial = [for (final result in results) result.value];
+    final pending = [for (final result in results) result.revalidation];
+    if (onRevalidated != null && pending.any((refresh) => refresh != null)) {
+      unawaited(() async {
+        final fresh = await Future.wait([
+          for (final refresh in pending)
+            refresh == null
+                ? Future<Map<String, dynamic>?>.value()
+                : refresh.then<Map<String, dynamic>?>(
+                    (value) => value,
+                    onError: (Object _) => null,
+                  ),
+        ]);
+        if (fresh.every((value) => value == null)) return;
+        try {
+          onRevalidated(
+            build([
+              for (var slot = 0; slot < initial.length; slot++)
+                fresh[slot] ?? initial[slot],
+            ]),
+          );
+        } catch (_) {
+          // A presentation callback must not surface as an unhandled error.
+        }
+      }());
+    }
+    return build(
+      initial,
+      fromCache:
+          results.isNotEmpty && results.every((result) => result.fromCache),
+    );
+  }
+
+  /// One page of recently released movies for the New movies row, ranked by
+  /// [MediaDiscoveryRanking.newMovies] within the page.
+  Future<CatalogPage> newMoviesPage({
+    int page = 1,
+    bool forceRefresh = false,
+    void Function(CatalogPage)? onRevalidated,
+  }) {
+    page = max(page, 1);
+    return _catalogPage(
       '/discover/movie',
       params: {
         ..._movieReleaseParams(MediaDiscoveryRanking.newMovieWindow),
         'sort_by': 'popularity.desc',
         'vote_count.gte': '${MediaDiscoveryRanking.relaxedVoteThreshold}',
-        'page': '${max(page, 1)}',
+        'page': '$page',
       },
-      forceRefresh: forceRefresh,
+      page: page,
+      parse: (data) => MediaDiscoveryRanking.newMovies(
+        _mediaItems(data['results'], 'movie'),
+      ),
       ttl: TmdbCacheTtl.catalog,
-      onRevalidated: onRevalidated == null
-          ? null
-          : (value) => onRevalidated(ranked(value)),
+      forceRefresh: forceRefresh,
+      onRevalidated: onRevalidated,
     );
-    return ranked(data);
   }
 
-  /// Scripted series with an episode in the last
-  /// [MediaDiscoveryRanking.seriesActivityWindow], for the Series worth the
-  /// queue row. TMDB filters out talk, news, reality and soap programming;
-  /// [MediaDiscoveryRanking.worthQueueSeries] checks again and ranks.
-  Future<List<MediaItem>> streamingSeries({
+  /// Recently released movies for the New movies row; see [newMoviesPage].
+  Future<List<MediaItem>> newMovies({
     bool forceRefresh = false,
     void Function(List<MediaItem>)? onRevalidated,
     int page = 1,
-  }) async {
-    List<MediaItem> ranked(Map<String, dynamic> data) =>
-        MediaDiscoveryRanking.worthQueueSeries(
-          _mediaItems(data['results'], 'tv'),
-        );
+  }) async => (await newMoviesPage(
+    page: page,
+    forceRefresh: forceRefresh,
+    onRevalidated: onRevalidated == null
+        ? null
+        : (fresh) => onRevalidated(fresh.items),
+  )).items;
+
+  /// One page of scripted series with an episode in the last
+  /// [MediaDiscoveryRanking.seriesActivityWindow], for the Series worth the
+  /// queue row. TMDB filters out talk, news, reality and soap programming;
+  /// [MediaDiscoveryRanking.worthQueueSeries] checks again and ranks.
+  Future<CatalogPage> streamingSeriesPage({
+    int page = 1,
+    bool forceRefresh = false,
+    void Function(CatalogPage)? onRevalidated,
+  }) {
+    page = max(page, 1);
     final today = DateTime.now().toUtc();
-    final data = await _get(
+    return _catalogPage(
       '/discover/tv',
       params: {
         ..._scriptedTvParams,
@@ -192,16 +336,30 @@ class TmdbService {
         'air_date.lte': _date(today),
         'sort_by': 'popularity.desc',
         'vote_count.gte': '${MediaDiscoveryRanking.relaxedVoteThreshold}',
-        'page': '${max(page, 1)}',
+        'page': '$page',
       },
-      forceRefresh: forceRefresh,
+      page: page,
+      parse: (data) => MediaDiscoveryRanking.worthQueueSeries(
+        _mediaItems(data['results'], 'tv'),
+      ),
       ttl: TmdbCacheTtl.catalog,
-      onRevalidated: onRevalidated == null
-          ? null
-          : (value) => onRevalidated(ranked(value)),
+      forceRefresh: forceRefresh,
+      onRevalidated: onRevalidated,
     );
-    return ranked(data);
   }
+
+  /// Series for the Series worth the queue row; see [streamingSeriesPage].
+  Future<List<MediaItem>> streamingSeries({
+    bool forceRefresh = false,
+    void Function(List<MediaItem>)? onRevalidated,
+    int page = 1,
+  }) async => (await streamingSeriesPage(
+    page: page,
+    forceRefresh: forceRefresh,
+    onRevalidated: onRevalidated == null
+        ? null
+        : (fresh) => onRevalidated(fresh.items),
+  )).items;
 
   Future<List<MediaItem>> trending({
     bool forceRefresh = false,
@@ -250,6 +408,39 @@ class TmdbService {
     return _recommendationItems(data['results'], item.id, pathType);
   }
 
+  /// One page of recommendations for each of [seeds], as unranked
+  /// candidates for the Top 10 row. A seed whose list has ended is skipped.
+  Future<CatalogPage> recommendationCandidatesPage(
+    List<MediaItem> seeds, {
+    int page = 1,
+    CatalogPage? previous,
+    bool forceRefresh = false,
+    void Function(CatalogPage)? onRevalidated,
+  }) {
+    String pathType(MediaItem seed) => seed.type == 'series' ? 'tv' : 'movie';
+    return _mergedCatalogPage(
+      [
+        for (final seed in seeds)
+          (
+            path:
+                '/${pathType(seed)}/'
+                '${Uri.encodeComponent(seed.id)}/recommendations',
+            // Page 1 sends no page parameter, so existing cache entries
+            // stay valid.
+            params: (page) => page > 1 ? {'page': '$page'} : const {},
+            parse: (results) =>
+                _recommendationItems(results, seed.id, pathType(seed)),
+          ),
+      ],
+      page: max(page, 1),
+      previous: previous,
+      combine: (lists) => [for (final list in lists) ...list],
+      ttl: TmdbCacheTtl.recommendations,
+      forceRefresh: forceRefresh,
+      onRevalidated: onRevalidated,
+    );
+  }
+
   /// Recommendations for one title, ranked by vote-weighted score so a
   /// handful of perfect votes cannot outrank an established title.
   List<MediaItem> _recommendationItems(
@@ -264,105 +455,83 @@ class TmdbService {
     ),
   );
 
-  /// Recent titles for the New releases row: movies first released in the
-  /// window that had a theatrical or digital release, scripted series that
-  /// premiered in it, and scripted series that aired an episode in it.
-  ///
-  /// When cached values are stale, their refreshes are awaited together and
-  /// [onRevalidated] fires once with the combined list, rather than once per
-  /// request. A refresh that fails keeps that request's cached value.
-  Future<List<MediaItem>> newReleases({
+  /// One page of recent titles for the New releases row: movies first
+  /// released in the window that had a theatrical or digital release,
+  /// scripted series that premiered in it, and scripted series that aired an
+  /// episode in it. Each page merges that page of all three lists.
+  Future<CatalogPage> newReleasesPage({
+    int page = 1,
+    CatalogPage? previous,
     bool forceRefresh = false,
-    void Function(List<MediaItem>)? onRevalidated,
-  }) async {
+    void Function(CatalogPage)? onRevalidated,
+  }) {
     final today = DateTime.now().toUtc();
     final from = _date(today.subtract(MediaDiscoveryRanking.newReleaseWindow));
     final to = _date(today);
-    final quality = {
+    Map<String, String> quality(int page) => {
       'vote_count.gte': '${MediaDiscoveryRanking.voteThreshold}',
       'vote_average.gte': '${MediaDiscoveryRanking.ratingThreshold}',
-      'page': '1',
+      'page': '$page',
     };
-    final queries = <(String, Map<String, String>)>[
-      (
-        '/discover/movie',
-        {
-          ..._movieReleaseParams(MediaDiscoveryRanking.newReleaseWindow),
-          'sort_by': 'primary_release_date.desc',
-          ...quality,
-        },
-      ),
-      (
-        '/discover/tv',
-        {
-          ..._scriptedTvParams,
-          'first_air_date.gte': from,
-          'first_air_date.lte': to,
-          'sort_by': 'first_air_date.desc',
-          ...quality,
-        },
-      ),
-      // This separate query includes ongoing shows with episodes in the
-      // window, even when their first_air_date is much older.
-      (
-        '/discover/tv',
-        {
-          ..._scriptedTvParams,
-          'air_date.gte': from,
-          'air_date.lte': to,
-          'sort_by': 'popularity.desc',
-          ...quality,
-        },
-      ),
-    ];
-
-    List<MediaItem> combine(List<Map<String, dynamic>> pages) =>
-        MediaDiscoveryRanking.newReleases([
-          ..._mediaItems(pages[0]['results'], 'movie'),
-          ..._mediaItems(pages[1]['results'], 'tv'),
-          // The API result omits the matched episode date, so retain the fact
-          // that it passed the server-side air-date filter for local ranking.
-          ..._mediaItems(_withRecentEpisode(pages[2]['results']), 'tv'),
-        ]).take(20).toList();
-
-    final results = await Future.wait([
-      for (final (path, params) in queries)
-        _request(
-          path,
-          params: params,
-          forceRefresh: forceRefresh,
-          priority: _TmdbRequestPriority.deferred,
-          ttl: TmdbCacheTtl.newReleases,
+    return _mergedCatalogPage(
+      [
+        (
+          path: '/discover/movie',
+          params: (page) => {
+            ..._movieReleaseParams(MediaDiscoveryRanking.newReleaseWindow),
+            'sort_by': 'primary_release_date.desc',
+            ...quality(page),
+          },
+          parse: (results) => _mediaItems(results, 'movie'),
         ),
-    ]);
-    final initial = [for (final result in results) result.value];
-    final pending = [for (final result in results) result.revalidation];
-    if (onRevalidated != null && pending.any((refresh) => refresh != null)) {
-      unawaited(() async {
-        final fresh = await Future.wait([
-          for (final refresh in pending)
-            refresh == null
-                ? Future<Map<String, dynamic>?>.value()
-                : refresh.then<Map<String, dynamic>?>(
-                    (value) => value,
-                    onError: (Object _) => null,
-                  ),
-        ]);
-        if (fresh.every((value) => value == null)) return;
-        try {
-          onRevalidated(
-            combine([
-              for (var index = 0; index < initial.length; index++)
-                fresh[index] ?? initial[index],
-            ]),
-          );
-        } catch (_) {
-          // A presentation callback must not surface as an unhandled error.
-        }
-      }());
-    }
-    return combine(initial);
+        (
+          path: '/discover/tv',
+          params: (page) => {
+            ..._scriptedTvParams,
+            'first_air_date.gte': from,
+            'first_air_date.lte': to,
+            'sort_by': 'first_air_date.desc',
+            ...quality(page),
+          },
+          parse: (results) => _mediaItems(results, 'tv'),
+        ),
+        // This separate query includes ongoing shows with episodes in the
+        // window, even when their first_air_date is much older. The API
+        // result omits the matched episode date, so retain the fact that it
+        // passed the server-side air-date filter for local ranking.
+        (
+          path: '/discover/tv',
+          params: (page) => {
+            ..._scriptedTvParams,
+            'air_date.gte': from,
+            'air_date.lte': to,
+            'sort_by': 'popularity.desc',
+            ...quality(page),
+          },
+          parse: (results) => _mediaItems(_withRecentEpisode(results), 'tv'),
+        ),
+      ],
+      page: max(page, 1),
+      previous: previous,
+      combine: (lists) => MediaDiscoveryRanking.newReleases([
+        for (final list in lists) ...list,
+      ]),
+      ttl: TmdbCacheTtl.newReleases,
+      forceRefresh: forceRefresh,
+      onRevalidated: onRevalidated,
+    );
   }
+
+  /// The first 20 New releases; see [newReleasesPage].
+  Future<List<MediaItem>> newReleases({
+    bool forceRefresh = false,
+    void Function(List<MediaItem>)? onRevalidated,
+  }) async => (await newReleasesPage(
+    forceRefresh: forceRefresh,
+    onRevalidated: onRevalidated == null
+        ? null
+        : (fresh) => onRevalidated(fresh.items.take(20).toList()),
+  )).items.take(20).toList();
 
   static List<Object?> _withRecentEpisode(Object? results) => [
     for (final entry in results is List ? results : const [])
@@ -566,24 +735,30 @@ class TmdbService {
       ttl: ttl,
       priority: priority,
     );
-    final revalidation = result.revalidation;
-    if (onRevalidated != null && revalidation != null) {
-      unawaited(
-        revalidation.then(
-          (value) {
-            try {
-              onRevalidated(value);
-            } catch (_) {
-              // A presentation callback must not invalidate a successful response.
-            }
-          },
-          onError: (Object _) {
-            // A failed refresh keeps the stale value already returned.
-          },
-        ),
-      );
-    }
+    _notifyRevalidated(result.revalidation, onRevalidated);
     return result.value;
+  }
+
+  /// Hands a background refresh's value to [onRevalidated] when it lands.
+  static void _notifyRevalidated(
+    Future<Map<String, dynamic>>? revalidation,
+    void Function(Map<String, dynamic>)? onRevalidated,
+  ) {
+    if (onRevalidated == null || revalidation == null) return;
+    unawaited(
+      revalidation.then(
+        (value) {
+          try {
+            onRevalidated(value);
+          } catch (_) {
+            // A presentation callback must not invalidate a successful response.
+          }
+        },
+        onError: (Object _) {
+          // A failed refresh keeps the stale value already returned.
+        },
+      ),
+    );
   }
 
   /// Returns the cached or fetched value. [revalidation] is set only when a
@@ -594,6 +769,7 @@ class TmdbService {
     ({
       Map<String, dynamic> value,
       Future<Map<String, dynamic>>? revalidation,
+      bool fromCache,
     })
   >
   _request(
@@ -632,7 +808,7 @@ class TmdbService {
         _log(
           '[TMDB] ${cached.fromMemory ? 'MEMORY_CACHE_HIT' : 'PERSISTENT_CACHE_HIT'} $requestLabel',
         );
-        return (value: cached.entry.value, revalidation: null);
+        return (value: cached.entry.value, revalidation: null, fromCache: true);
       }
       if (cached != null) {
         _log('[TMDB] STALE_CACHE_HIT $requestLabel');
@@ -654,14 +830,18 @@ class TmdbService {
             );
           }
         }
-        return (value: cached.entry.value, revalidation: revalidation);
+        return (
+          value: cached.entry.value,
+          revalidation: revalidation,
+          fromCache: true,
+        );
       }
     }
 
     final existing = _inFlight[requestKey];
     if (existing != null) {
       _log('[TMDB] DEDUP $requestLabel');
-      return (value: await existing, revalidation: null);
+      return (value: await existing, revalidation: null, fromCache: false);
     }
     final value = await _startNetworkRequest(
       requestKey,
@@ -670,7 +850,7 @@ class TmdbService {
       ttl,
       priority,
     );
-    return (value: value, revalidation: null);
+    return (value: value, revalidation: null, fromCache: false);
   }
 
   Future<Map<String, dynamic>> _startNetworkRequest(
