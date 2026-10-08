@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'src/screens/home_screen.dart';
+import 'src/screens/splash_screen.dart';
 import 'src/screens/first_run_consent_screen.dart';
 import 'src/services/perf_timeline.dart';
 import 'src/services/player_engine.dart';
@@ -21,13 +22,8 @@ class ReelishApp extends StatefulWidget {
 }
 
 class _ReelishAppState extends State<ReelishApp> {
+  // Loaded once, by the splash gate, before the first screen appears.
   final _accentSettings = AccentSettingsController();
-
-  @override
-  void initState() {
-    super.initState();
-    _accentSettings.load();
-  }
 
   @override
   void dispose() {
@@ -57,34 +53,30 @@ class _StartupScreen extends StatefulWidget {
 }
 
 class _StartupScreenState extends State<_StartupScreen> {
-  bool? _hasAcceptedDocuments;
+  bool _acceptedThisSession = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _loadConsent();
-  }
-
-  Future<void> _loadConsent() async {
-    try {
-      final accepted = await FirstRunConsentScreen.hasAccepted();
-      if (mounted) setState(() => _hasAcceptedDocuments = accepted);
-    } catch (_) {
-      if (mounted) setState(() => _hasAcceptedDocuments = false);
-    }
+  /// Critical startup only: two local preference reads that decide the
+  /// first screen and its colors. Network work (catalog, plugins, update
+  /// checks) starts from Home after its first frame.
+  Future<bool> _initialize() async {
+    final results = await Future.wait<Object?>([
+      FirstRunConsentScreen.hasAccepted().catchError((Object _) => false),
+      // A failed read keeps the default accent rather than blocking startup.
+      widget.accentSettings.load().catchError((Object _) {}),
+    ]);
+    return results.first! as bool;
   }
 
   @override
-  Widget build(BuildContext context) {
-    final hasAcceptedDocuments = _hasAcceptedDocuments;
-    if (hasAcceptedDocuments == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-    if (hasAcceptedDocuments) {
-      return HomeScreen(accentSettings: widget.accentSettings);
-    }
-    return FirstRunConsentScreen(
-      onAccepted: () => setState(() => _hasAcceptedDocuments = true),
-    );
-  }
+  Widget build(BuildContext context) => SplashGate<bool>(
+    initialize: _initialize,
+    builder: (context, hasAcceptedDocuments) {
+      if (hasAcceptedDocuments || _acceptedThisSession) {
+        return HomeScreen(accentSettings: widget.accentSettings);
+      }
+      return FirstRunConsentScreen(
+        onAccepted: () => setState(() => _acceptedThisSession = true),
+      );
+    },
+  );
 }

@@ -156,6 +156,8 @@ void main() {
     tester,
   ) async {
     await _pump(tester, const CreditsScreen(), size: const Size(360, 740));
+    // The content disclaimer comes first; TMDB follows it.
+    await _scrollTo(tester, find.text('The Movie Database (TMDB)'));
     expect(find.text('DATA & METADATA'), findsOneWidget);
     expect(_logo, findsOneWidget);
     expect(find.text('The Movie Database (TMDB)'), findsOneWidget);
@@ -239,4 +241,43 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(BottomSheet), findsNothing);
   });
+
+  // Last: the credits test above must be the first to read package info.
+  contentDisclaimerTests();
+}
+
+void contentDisclaimerTests() {
+  testWidgets(
+    'content disclaimer follows TMDB on Credits and opens the Terms',
+    (tester) async {
+      const opening =
+          'Reelish is a media discovery and playback application. Reelish does '
+          'not host, store, upload, or distribute films, television programs, '
+          'or any other copyrighted content';
+      expect(LegalInformationScreen.contentDisclaimer.$2, startsWith(opening));
+
+      await _pump(tester, const CreditsScreen(), size: const Size(360, 740));
+      // TMDB leads the page; the disclaimer is below it.
+      final tmdbTop = tester.getTopLeft(find.text('DATA & METADATA')).dy;
+      await _scrollTo(tester, find.text('CONTENT DISCLAIMER'));
+      expect(find.textContaining(opening), findsOneWidget);
+      final scrolled = tester
+          .state<ScrollableState>(find.byType(Scrollable).first)
+          .position
+          .pixels;
+      expect(
+        tester.getTopLeft(find.text('CONTENT DISCLAIMER')).dy + scrolled,
+        greaterThan(tmdbTop),
+      );
+
+      await _pump(
+        tester,
+        const LegalInformationScreen(document: LegalDocument.terms),
+        size: const Size(360, 740),
+      );
+      expect(find.text('Content disclaimer'), findsOneWidget);
+      expect(find.textContaining(opening), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
 }

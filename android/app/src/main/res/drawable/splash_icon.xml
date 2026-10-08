@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12+ splash icon. Without an icon background the system draws
+     this at 288dp and masks it to a 192dp circle; the 80dp inset shows the
+     whole rounded logo at 128dp, matching Flutter's first frame. -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/reelish_splash"
+    android:inset="80dp" />

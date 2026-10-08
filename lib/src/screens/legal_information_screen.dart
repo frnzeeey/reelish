@@ -17,7 +17,29 @@ class LegalInformationScreen extends StatefulWidget {
   final LegalDocument document;
   final bool requireReadToEnd;
 
-  static const _effectiveDate = 'October 6, 2026';
+  static const _effectiveDate = 'October 8, 2026';
+
+  /// What Reelish is and is not responsible for. Shown first in the Terms of
+  /// use and on the Credits screen; keep the wording exact.
+  static const contentDisclaimer = (
+    'Content disclaimer',
+    'Reelish is a media discovery and playback application. Reelish does not '
+        'host, store, upload, or distribute films, television programs, or '
+        'any other copyrighted content, and no such content is stored on '
+        'servers operated by Reelish.\n\n'
+        'All streams are provided by independent third-party plugins and '
+        'external services that users choose to install. Reelish does not '
+        'own, operate, control, or endorse these sources, is not affiliated '
+        'with their providers, and makes no representations regarding the '
+        'legality, availability, accuracy, or quality of the content they '
+        'provide. Users are solely responsible for ensuring that their use of '
+        'any third-party source complies with the laws applicable in their '
+        'jurisdiction.\n\n'
+        'Movie and television metadata, including titles, descriptions, '
+        'artwork, and ratings, is provided by The Movie Database (TMDB). All '
+        'trademarks, logos, and content remain the property of their '
+        'respective owners.',
+  );
 
   /// Credits and third-party notices; also shown on the Credits screen.
   static const noticeSections = <(String, String)>[
@@ -249,6 +271,7 @@ class _LegalInformationScreenState extends State<LegalInformationScreen> {
   ];
 
   static const _termsSections = <(String, String)>[
+    LegalInformationScreen.contentDisclaimer,
     (
       'Using the app',
       'These terms cover your use of Reelish. By using '
