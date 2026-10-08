@@ -30,8 +30,7 @@ class SoftGlassDock extends StatelessWidget {
       blurSigma: 9,
       opacity: .82,
       borderRadius: 26,
-      showBorder: false,
-      showTopHighlight: false,
+      elevation: 1.2,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       child: SizedBox(
         height: 72,
@@ -90,14 +89,16 @@ class _DockItem extends StatelessWidget {
               curve: Curves.easeOutCubic,
               margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
               decoration: BoxDecoration(
+                // Coral light pooled in the active tab, brightest at the top
+                // where the dock catches the light.
                 gradient: selected
                     ? LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
                         colors: [
-                          GlassTheme.primary.withValues(alpha: .22),
-                          GlassTheme.primary.withValues(alpha: .09),
-                          Colors.white.withValues(alpha: .025),
+                          GlassTheme.primary.withValues(alpha: .24),
+                          GlassTheme.primary.withValues(alpha: .10),
+                          GlassTheme.primary.withValues(alpha: .05),
                         ],
                       )
                     : null,
@@ -151,8 +152,8 @@ class _DockItem extends StatelessWidget {
                       boxShadow: selected
                           ? [
                               BoxShadow(
-                                color: GlassTheme.primary.withValues(alpha: .6),
-                                blurRadius: 7,
+                                color: GlassTheme.primary.withValues(alpha: .4),
+                                blurRadius: 6,
                               ),
                             ]
                           : null,

@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 
 import 'liquid_glass.dart';
 
+/// Lightweight glass panel for content in scrolling pages and dialogs.
+///
+/// Uses the painted [LiquidGlassQuality.low] material, with no backdrop
+/// blur, and presses in when [onTap] is set.
 class GlassBox extends StatelessWidget {
   const GlassBox({
     super.key,
@@ -15,18 +19,10 @@ class GlassBox extends StatelessWidget {
   final double radius;
   final VoidCallback? onTap;
   @override
-  Widget build(BuildContext context) => LiquidGlass(
-    quality: LiquidGlassQuality.low,
-    opacity: .8,
-    borderRadius: radius,
+  Widget build(BuildContext context) => ReelishGlassCard(
     padding: padding,
-    child: Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(radius),
-        child: child,
-      ),
-    ),
+    borderRadius: radius,
+    onTap: onTap,
+    child: child,
   );
 }
