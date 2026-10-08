@@ -30,6 +30,8 @@ import '../widgets/app_update_flow.dart';
 import '../widgets/category_chip.dart';
 import '../widgets/glass_box.dart';
 import '../widgets/media_card.dart';
+import '../widgets/settings/settings_components.dart';
+import '../widgets/settings/tmdb_attribution.dart';
 import '../widgets/soft_glass_dock.dart';
 import '../widgets/player/custom_video_player.dart';
 import '../widgets/player/episode_panel.dart';
@@ -1686,15 +1688,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ),
             ),
           const SliverToBoxAdapter(child: SizedBox(height: 22)),
-          const SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(18, 0, 18, 20),
-              child: Text(
-                'Movie and TV metadata from TMDB. This product is not endorsed or certified by TMDB.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: GlassTheme.muted, fontSize: 10),
-              ),
+          // Clears the floating dock so the TMDB notice stays readable.
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(
+              18,
+              0,
+              18,
+              SettingsMetrics.dockClearance +
+                  MediaQuery.paddingOf(context).bottom,
             ),
+            sliver: const SliverToBoxAdapter(child: TmdbAttributionFooter()),
           ),
         ],
       ),
