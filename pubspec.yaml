@@ -85,6 +85,7 @@ flutter:
     - assets/fonts/Montserrat-OFL.txt
     - assets/icons/reelish_icon.png
     - assets/data/plugins.json
+    - assets/images/tmdb/tmdb_logo_alt_short.png
 
   fonts:
     - family: Montserrat

@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../theme/glass_theme.dart';
+import '../services/app_metadata.dart';
+import '../widgets/settings/settings_components.dart';
 
 enum LegalDocument { privacy, terms, notices }
 
@@ -16,8 +17,46 @@ class LegalInformationScreen extends StatefulWidget {
   final LegalDocument document;
   final bool requireReadToEnd;
 
-  static const _projectUrl = 'https://github.com/frnzeeey/reelish';
   static const _effectiveDate = 'October 6, 2026';
+
+  /// Credits and third-party notices; also shown on the Credits screen.
+  static const noticeSections = <(String, String)>[
+    (
+      'Catalog data and artwork',
+      'This product uses the TMDB API but is not endorsed or certified by '
+          'TMDB. TMDB supplies catalog metadata and imagery. TMDB trademarks '
+          'and content remain with their respective owners; see TMDB’s terms '
+          'and attribution requirements before redistributing any material.',
+    ),
+    (
+      'Plugin library',
+      'The plugin library lists provider repositories from a '
+          'community-maintained catalog curated by wolf knight. Repository '
+          'names, descriptions, logos and manifests belong to their authors, '
+          'who build and maintain each provider independently of Reelish. '
+          'A listing is not an endorsement or a verification of a provider.',
+    ),
+    (
+      'External content',
+      'Streams, subtitles, descriptions, artwork and add-on results come from '
+          'third parties or user-configured sources. The app publisher does '
+          'not verify ownership, licensing, accuracy, availability or safety '
+          'of those materials and does not grant rights to them. Remove an '
+          'add-on or stop playback if you believe a source violates rights or '
+          'local law. Rights holders should use the support contact on the '
+          'store listing to identify the material and relevant rights; do not '
+          'include sensitive personal information in a public issue.',
+    ),
+    (
+      'Reporting and support',
+      'For technical issues, visit the project page. For a copyright or other '
+          'legal notice, contact the developer using the up-to-date contact '
+          'details on the app’s store listing and include enough information '
+          'to identify the material and the right asserted. This in-app '
+          'information is not a substitute for a formal notice required by '
+          'your jurisdiction.',
+    ),
+  ];
 
   @override
   State<LegalInformationScreen> createState() => _LegalInformationScreenState();
@@ -31,6 +70,12 @@ class _LegalInformationScreenState extends State<LegalInformationScreen> {
     LegalDocument.privacy => 'Privacy policy',
     LegalDocument.terms => 'Terms of use',
     LegalDocument.notices => 'Credits & third-party notices',
+  };
+
+  IconData get _icon => switch (widget.document) {
+    LegalDocument.privacy => Symbols.shield_rounded,
+    LegalDocument.terms => Symbols.gavel_rounded,
+    LegalDocument.notices => Symbols.handshake_rounded,
   };
 
   @override
@@ -65,90 +110,16 @@ class _LegalInformationScreenState extends State<LegalInformationScreen> {
     final sections = switch (widget.document) {
       LegalDocument.privacy => _privacySections,
       LegalDocument.terms => _termsSections,
-      LegalDocument.notices => _noticeSections,
+      LegalDocument.notices => LegalInformationScreen.noticeSections,
     };
 
-    return Scaffold(
-      appBar: AppBar(title: Text(_title)),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView(
-              controller: _scrollController,
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 36),
-              children: [
-                Text(
-                  'Reelish · Updated ${LegalInformationScreen._effectiveDate}',
-                  style: const TextStyle(color: GlassTheme.muted, fontSize: 12),
-                ),
-                const SizedBox(height: 16),
-                for (final section in sections) ...[
-                  Container(
-                    padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      color: GlassTheme.surface,
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: GlassTheme.border),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          section.$1,
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: -.15,
-                              ),
-                        ),
-                        const SizedBox(height: 9),
-                        Text(
-                          section.$2,
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(
-                                color: Colors.white.withValues(alpha: .78),
-                                height: 1.6,
-                              ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                ],
-                OutlinedButton.icon(
-                  onPressed: () async {
-                    final uri = Uri.parse(LegalInformationScreen._projectUrl);
-                    if (!await launchUrl(
-                          uri,
-                          mode: LaunchMode.externalApplication,
-                        ) &&
-                        context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Could not open the project page.'),
-                        ),
-                      );
-                    }
-                  },
-                  icon: const Icon(Symbols.open_in_new_rounded),
-                  label: const Text('Project page & support'),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'For privacy requests, use the developer contact published on the '
-                  'store listing. Do not post personal information in public issue '
-                  'trackers.',
-                  style: TextStyle(
-                    color: GlassTheme.muted,
-                    height: 1.45,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (widget.requireReadToEnd)
-            SafeArea(
+    return SettingsScaffold(
+      title: _title,
+      subtitle: 'Reelish · Updated ${LegalInformationScreen._effectiveDate}',
+      icon: _icon,
+      controller: _scrollController,
+      bottomBar: widget.requireReadToEnd
+          ? SafeArea(
               top: false,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
@@ -165,9 +136,44 @@ class _LegalInformationScreenState extends State<LegalInformationScreen> {
                   ),
                 ),
               ),
+            )
+          : null,
+      children: [
+        SettingsSection(
+          children: [
+            for (final section in sections)
+              SettingsParagraph(title: section.$1, text: section.$2),
+          ],
+        ),
+        SettingsSection(
+          label: 'CONTACT',
+          description:
+              'For privacy requests, use the developer contact published on '
+              'the store listing. Do not post personal information in public '
+              'issue trackers.',
+          children: [
+            SettingsTile(
+              icon: Symbols.open_in_new_rounded,
+              title: 'Project page & support',
+              description: 'github.com/frnzeeey/reelish',
+              onTap: () async {
+                final uri = Uri.parse(AppMetadata.projectUrl);
+                if (!await launchUrl(
+                      uri,
+                      mode: LaunchMode.externalApplication,
+                    ) &&
+                    context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Could not open the project page.'),
+                    ),
+                  );
+                }
+              },
             ),
-        ],
-      ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -303,44 +309,6 @@ class _LegalInformationScreenState extends State<LegalInformationScreen> {
           'here. Applicable mandatory consumer protections remain in force. '
           'Any governing-law or dispute rules are those that apply to the '
           'publisher and user under applicable law.',
-    ),
-  ];
-
-  static const _noticeSections = <(String, String)>[
-    (
-      'Catalog data and artwork',
-      'This product uses the TMDB API but is not endorsed or certified by '
-          'TMDB. TMDB supplies catalog metadata and imagery. TMDB trademarks '
-          'and content remain with their respective owners; see TMDB’s terms '
-          'and attribution requirements before redistributing any material.',
-    ),
-    (
-      'Plugin library',
-      'The plugin library lists provider repositories from a '
-          'community-maintained catalog curated by wolf knight. Repository '
-          'names, descriptions, logos and manifests belong to their authors, '
-          'who build and maintain each provider independently of Reelish. '
-          'A listing is not an endorsement or a verification of a provider.',
-    ),
-    (
-      'External content',
-      'Streams, subtitles, descriptions, artwork and add-on results come from '
-          'third parties or user-configured sources. The app publisher does '
-          'not verify ownership, licensing, accuracy, availability or safety '
-          'of those materials and does not grant rights to them. Remove an '
-          'add-on or stop playback if you believe a source violates rights or '
-          'local law. Rights holders should use the support contact on the '
-          'store listing to identify the material and relevant rights; do not '
-          'include sensitive personal information in a public issue.',
-    ),
-    (
-      'Reporting and support',
-      'For technical issues, visit the project page. For a copyright or other '
-          'legal notice, contact the developer using the up-to-date contact '
-          'details on the app’s store listing and include enough information '
-          'to identify the material and the right asserted. This in-app '
-          'information is not a substitute for a formal notice required by '
-          'your jurisdiction.',
     ),
   ];
 }
