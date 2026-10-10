@@ -32,10 +32,8 @@ class _FirstRunConsentScreenState extends State<FirstRunConsentScreen> {
   Future<void> _readDocument(LegalDocument document) async {
     final readToEnd = await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
-        builder: (_) => LegalInformationScreen(
-          document: document,
-          requireReadToEnd: true,
-        ),
+        builder: (_) =>
+            LegalInformationScreen(document: document, requireReadToEnd: true),
       ),
     );
     if (!mounted || readToEnd != true) return;
@@ -208,32 +206,42 @@ class _DocumentConsentTile extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       border: Border.all(color: GlassTheme.border),
     ),
-    child: Column(
-      children: [
-        ListTile(
-          leading: Icon(
-            read ? Symbols.check_circle_rounded : Symbols.description_rounded,
-            fill: read ? 1 : 0,
-            color: read ? GlassTheme.coralBright : GlassTheme.muted,
+    // The tiles' ink (including remote focus) draws on this surface, not
+    // hidden behind the decoration.
+    child: Material(
+      type: MaterialType.transparency,
+      borderRadius: BorderRadius.circular(16),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          ListTile(
+            leading: Icon(
+              read ? Symbols.check_circle_rounded : Symbols.description_rounded,
+              fill: read ? 1 : 0,
+              color: read ? GlassTheme.coralBright : GlassTheme.muted,
+            ),
+            title: Text(
+              title,
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+            subtitle: Text(read ? 'Read to the end' : 'Read the full document'),
+            trailing: TextButton(
+              onPressed: onRead,
+              child: Text(read ? 'Read again' : 'Read'),
+            ),
           ),
-          title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
-          subtitle: Text(read ? 'Read to the end' : 'Read the full document'),
-          trailing: TextButton(
-            onPressed: onRead,
-            child: Text(read ? 'Read again' : 'Read'),
+          CheckboxListTile(
+            value: agreed,
+            onChanged: onChanged,
+            controlAffinity: ListTileControlAffinity.leading,
+            dense: true,
+            title: Text(
+              'I have read and agree to the ${title.toLowerCase()}.',
+              style: const TextStyle(fontSize: 12, height: 1.35),
+            ),
           ),
-        ),
-        CheckboxListTile(
-          value: agreed,
-          onChanged: onChanged,
-          controlAffinity: ListTileControlAffinity.leading,
-          dense: true,
-          title: Text(
-            'I have read and agree to the ${title.toLowerCase()}.',
-            style: const TextStyle(fontSize: 12, height: 1.35),
-          ),
-        ),
-      ],
+        ],
+      ),
     ),
   );
 }

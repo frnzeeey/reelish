@@ -131,6 +131,53 @@ abstract final class GlassTheme {
       ),
     ),
   );
+
+  /// [dark] for Android TV. Same palette and components; focus, the only
+  /// cursor a remote has, is drawn as a coral tint on every [InkWell] and a
+  /// tint plus ring on Material buttons, so it is visible from across the
+  /// room. Call sites that set their own `side` keep it and show the tint.
+  static ThemeData get tv {
+    final base = dark;
+    WidgetStateProperty<Color?> overlay(Color focused) =>
+        WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.focused)
+              ? focused
+              : states.contains(WidgetState.pressed)
+              ? Colors.white.withValues(alpha: .12)
+              : null,
+        );
+    WidgetStateProperty<BorderSide?> ring(Color color, {BorderSide? rest}) =>
+        WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.focused)
+              ? BorderSide(color: color, width: 2.5)
+              : rest,
+        );
+    final tint = primary.withValues(alpha: .26);
+    return base.copyWith(
+      focusColor: tint,
+      filledButtonTheme: FilledButtonThemeData(
+        style: ButtonStyle(
+          overlayColor: overlay(Colors.white.withValues(alpha: .22)),
+          side: ring(Colors.white),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: ButtonStyle(
+          overlayColor: overlay(tint),
+          side: ring(
+            coralBright,
+            rest: BorderSide(color: Colors.white.withValues(alpha: .3)),
+          ),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: ButtonStyle(overlayColor: overlay(tint), side: ring(primary)),
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style: ButtonStyle(overlayColor: overlay(tint), side: ring(primary)),
+      ),
+    );
+  }
 }
 
 class AccentPalette {

@@ -5,6 +5,7 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import '../../models/episode_context.dart';
 import '../../models/episode_progress.dart';
+import '../../platform/device_capabilities.dart';
 import '../../theme/glass_theme.dart';
 import '../category_chip.dart';
 import 'paused_overlay.dart';
@@ -550,6 +551,8 @@ class _EpisodeCardState extends State<_EpisodeCard> {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: widget.aired ? widget.onTap : null,
+        // A remote opens the panel on the playing or last watched episode.
+        autofocus: current && DeviceCapabilities.isTv,
         child: Padding(
           padding: const EdgeInsets.all(10),
           child: Row(

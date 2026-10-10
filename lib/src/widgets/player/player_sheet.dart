@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
+import '../../platform/device_capabilities.dart';
 import '../../theme/glass_theme.dart';
 
 /// Shared frame for the player's selection sheets: a drag handle, icon and
@@ -125,6 +126,8 @@ class PlayerSheetOption extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
+        // A remote opens the sheet on the current choice.
+        autofocus: selected && DeviceCapabilities.isTv,
         child: Semantics(
           selected: selected,
           button: true,

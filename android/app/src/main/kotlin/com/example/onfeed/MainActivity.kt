@@ -5,6 +5,8 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import android.os.Build
 import android.app.PictureInPictureParams
+import android.app.UiModeManager
+import android.content.res.Configuration
 import android.util.Rational
 import android.view.WindowManager
 import android.content.ActivityNotFoundException
@@ -21,10 +23,17 @@ import java.security.MessageDigest
 class MainActivity : FlutterActivity() {
     private val channelName = "onfeed/player"
     private val updateChannelName = "onfeed/app_update"
+    private val deviceChannelName = "onfeed/device"
     private var originalBrightness: Float? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, deviceChannelName).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "capabilities" -> result.success(deviceCapabilities())
+                else -> result.notImplemented()
+            }
+        }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channelName).setMethodCallHandler { call, result ->
             when (call.method) {
                 "setBrightness" -> {
@@ -176,6 +185,27 @@ class MainActivity : FlutterActivity() {
             Build.PRODUCT.contains("simulator")
     } catch (_: Throwable) {
         false
+    }
+
+    /**
+     * What kind of device this is, read once at startup to choose between
+     * the mobile and the TV interface. Television is decided by the UI mode
+     * Android reports for TVs, or by the leanback feature every Android TV
+     * and Google TV device declares; screen size is never used.
+     */
+    private fun deviceCapabilities(): Map<String, Any> {
+        val uiMode = getSystemService(UiModeManager::class.java)
+        val televisionMode = uiMode?.currentModeType == Configuration.UI_MODE_TYPE_TELEVISION
+        val leanback = packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
+        return mapOf(
+            "isTelevision" to (televisionMode || leanback),
+            "hasLeanback" to leanback,
+            "hasTouchscreen" to packageManager.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN),
+            "supportsPictureInPicture" to (
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+                    packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
+                ),
+        )
     }
 
     private fun canInstallPackages(): Boolean =

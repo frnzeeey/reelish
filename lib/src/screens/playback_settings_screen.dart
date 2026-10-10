@@ -7,6 +7,7 @@ import '../services/accent_settings_controller.dart';
 import '../services/playback_settings_controller.dart';
 import '../theme/glass_theme.dart';
 import '../widgets/settings/settings_components.dart';
+import '../widgets/tv/tv_focus.dart';
 import 'app_information_screens.dart';
 import 'credits_screen.dart';
 import 'legal_information_screen.dart';
@@ -832,12 +833,14 @@ class PlaybackSettingsScreen extends StatelessWidget {
           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
       Expanded(
-        child: Slider(
-          value: value.clamp(min, max).toDouble(),
-          min: min,
-          max: max,
-          divisions: max > 1 ? 36 : 20,
-          onChanged: onChanged,
+        child: TvSliderNavigation(
+          child: Slider(
+            value: value.clamp(min, max).toDouble(),
+            min: min,
+            max: max,
+            divisions: max > 1 ? 36 : 20,
+            onChanged: onChanged,
+          ),
         ),
       ),
     ],

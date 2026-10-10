@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../../theme/glass_theme.dart';
+import '../tv/tv_focus.dart';
 import 'tmdb_attribution.dart';
 
 /// Shared measurements for every settings page, so sub-screens line up.
@@ -56,7 +57,33 @@ class SettingsPage extends StatelessWidget {
     final bottom =
         bottomClearance +
         (applyBottomInset ? MediaQuery.paddingOf(context).bottom : 0);
-    final scroll = CustomScrollView(
+    // On TV, the D-pad scrolls text that has nothing to focus, such as the
+    // legal documents that must be read to the end, and phone-width
+    // settings stay readable: centered, not stretched.
+    return TvKeyScroll(
+      controller: controller,
+      builder: (context, controller) {
+        final scroll = _scrollView(controller, bottom);
+        if (_isRoot) return TvReadableWidth(child: scroll);
+        return TvReadableWidth(
+          child: Column(
+            children: [
+              SettingsHeader(
+                title: title,
+                subtitle: subtitle,
+                icon: icon,
+                onBack: onBack!,
+              ),
+              Expanded(child: scroll),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _scrollView(ScrollController? controller, double bottom) =>
+      CustomScrollView(
       controller: controller,
       slivers: [
         if (_isRoot)
@@ -89,19 +116,6 @@ class SettingsPage extends StatelessWidget {
         ),
       ],
     );
-    if (_isRoot) return scroll;
-    return Column(
-      children: [
-        SettingsHeader(
-          title: title,
-          subtitle: subtitle,
-          icon: icon,
-          onBack: onBack!,
-        ),
-        Expanded(child: scroll),
-      ],
-    );
-  }
 }
 
 /// [SettingsPage] in its own scaffold, for pages pushed as routes.
@@ -623,13 +637,15 @@ class SettingsSliderTile extends StatelessWidget {
             height: 1.4,
           ),
         ),
-        Slider(
-          value: value.clamp(min, max).toDouble(),
-          min: min,
-          max: max,
-          divisions: divisions,
-          label: valueLabel,
-          onChanged: onChanged,
+        TvSliderNavigation(
+          child: Slider(
+            value: value.clamp(min, max).toDouble(),
+            min: min,
+            max: max,
+            divisions: divisions,
+            label: valueLabel,
+            onChanged: onChanged,
+          ),
         ),
       ],
     ),

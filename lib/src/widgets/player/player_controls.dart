@@ -18,6 +18,10 @@ const playerFade = Duration(milliseconds: 220);
 const _glassFill = Color(0x6B000000);
 const _glassBorder = Color(0x2EFFFFFF);
 
+/// Remote focus on a player control: a strong accent fill that reads over
+/// any frame of video. Touch never shows it.
+Color get _focusFill => GlassTheme.primary.withValues(alpha: .55);
+
 /// The playback controls drawn over the video. It never contains the video
 /// itself, so showing, hiding or updating controls leaves the surface alone.
 class PlayerControlsOverlay extends StatelessWidget {
@@ -48,6 +52,7 @@ class PlayerControlsOverlay extends StatelessWidget {
     this.onSpeedReset,
     this.pauseScreen,
     this.onLock,
+    this.playFocusNode,
   });
 
   final VideoPlayerController controller;
@@ -74,8 +79,11 @@ class PlayerControlsOverlay extends StatelessWidget {
   /// Opens the episode panel; null for movies, which hides the button.
   final VoidCallback? onEpisodes;
   final VoidCallback onSettings;
-  final VoidCallback onPip;
-  final VoidCallback onRotate;
+
+  /// Picture in picture and the rotation lock; null hides the button (TV
+  /// has no rotation, and most TVs no picture in picture).
+  final VoidCallback? onPip;
+  final VoidCallback? onRotate;
 
   /// Set while the next episode is offered; shown as a bottom-row pill.
   final VoidCallback? onNextEpisode;
@@ -90,6 +98,10 @@ class PlayerControlsOverlay extends StatelessWidget {
 
   /// Locks the controls against accidental touches; null hides the button.
   final VoidCallback? onLock;
+
+  /// Focus of the center play button, where a remote lands when the
+  /// controls appear.
+  final FocusNode? playFocusNode;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
@@ -137,6 +149,7 @@ class PlayerControlsOverlay extends StatelessWidget {
                       playSize: wide ? 76 : 68,
                       onTogglePlay: onTogglePlay,
                       onSeekBy: onSeekBy,
+                      playFocusNode: playFocusNode,
                     ),
                   ),
                 ),
@@ -172,9 +185,9 @@ class PlayerControlsOverlay extends StatelessWidget {
   );
 }
 
-/// Fades [child] out, and makes it untappable, while the pause screen shows.
-/// Hidden, it runs no animations (a scrolling title would otherwise keep
-/// drawing frames for the whole pause).
+/// Fades [child] out, and makes it untappable and unfocusable, while the
+/// pause screen shows. Hidden, it runs no animations (a scrolling title would
+/// otherwise keep drawing frames for the whole pause).
 class _HiddenDuringPauseScreen extends StatelessWidget {
   const _HiddenDuringPauseScreen({
     required this.pauseScreen,
@@ -192,11 +205,15 @@ class _HiddenDuringPauseScreen extends StatelessWidget {
       valueListenable: listenable,
       builder: (context, hidden, child) => IgnorePointer(
         ignoring: hidden,
-        child: AnimatedOpacity(
-          opacity: hidden ? 0 : 1,
-          duration: playerFade,
-          curve: Curves.easeOutCubic,
-          child: TickerMode(enabled: !hidden, child: child!),
+        // A remote must not land on controls nobody can see.
+        child: ExcludeFocus(
+          excluding: hidden,
+          child: AnimatedOpacity(
+            opacity: hidden ? 0 : 1,
+            duration: playerFade,
+            curve: Curves.easeOutCubic,
+            child: TickerMode(enabled: !hidden, child: child!),
+          ),
         ),
       ),
       child: child,
@@ -299,6 +316,7 @@ class _CenterControls extends StatelessWidget {
     required this.playSize,
     required this.onTogglePlay,
     required this.onSeekBy,
+    this.playFocusNode,
   });
 
   final VideoPlayerController controller;
@@ -306,6 +324,7 @@ class _CenterControls extends StatelessWidget {
   final double playSize;
   final VoidCallback onTogglePlay;
   final ValueChanged<Duration> onSeekBy;
+  final FocusNode? playFocusNode;
 
   @override
   Widget build(BuildContext context) => Row(
@@ -327,6 +346,7 @@ class _CenterControls extends StatelessWidget {
           buffering: state.buffering && state.playing,
           completed: state.completed && !state.playing,
           onPressed: onTogglePlay,
+          focusNode: playFocusNode,
         ),
       ),
       SizedBox(width: gap),
@@ -358,6 +378,7 @@ class _PlayButton extends StatelessWidget {
     required this.buffering,
     required this.completed,
     required this.onPressed,
+    this.focusNode,
   });
 
   final double size;
@@ -365,6 +386,7 @@ class _PlayButton extends StatelessWidget {
   final bool buffering;
   final bool completed;
   final VoidCallback onPressed;
+  final FocusNode? focusNode;
 
   @override
   Widget build(BuildContext context) {
@@ -382,6 +404,8 @@ class _PlayButton extends StatelessWidget {
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onPressed,
+          focusNode: focusNode,
+          focusColor: _focusFill,
           child: SizedBox.square(
             dimension: size,
             child: Stack(
@@ -451,8 +475,8 @@ class _BottomBar extends StatelessWidget {
   final VoidCallback onSources;
   final VoidCallback? onEpisodes;
   final VoidCallback onSettings;
-  final VoidCallback onPip;
-  final VoidCallback onRotate;
+  final VoidCallback? onPip;
+  final VoidCallback? onRotate;
 
   /// Set while the next episode is offered; shown as a bottom-row pill.
   final VoidCallback? onNextEpisode;
@@ -554,18 +578,20 @@ class _BottomBar extends StatelessWidget {
                 selected: true,
               ),
             ),
-          PlayerIconButton(
-            icon: Symbols.picture_in_picture_alt_rounded,
-            label: 'Picture in picture',
-            onPressed: onPip,
-          ),
-          PlayerIconButton(
-            icon: landscapeLocked
-                ? Symbols.screen_rotation_alt_rounded
-                : Symbols.stay_current_landscape_rounded,
-            label: landscapeLocked ? 'Allow rotation' : 'Lock to landscape',
-            onPressed: onRotate,
-          ),
+          if (onPip case final pip?)
+            PlayerIconButton(
+              icon: Symbols.picture_in_picture_alt_rounded,
+              label: 'Picture in picture',
+              onPressed: pip,
+            ),
+          if (onRotate case final rotate?)
+            PlayerIconButton(
+              icon: landscapeLocked
+                  ? Symbols.screen_rotation_alt_rounded
+                  : Symbols.stay_current_landscape_rounded,
+              label: landscapeLocked ? 'Allow rotation' : 'Lock to landscape',
+              onPressed: rotate,
+            ),
         ],
       ),
     ],
@@ -661,6 +687,7 @@ class PlayerIconButton extends StatelessWidget {
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onPressed,
+          focusColor: _focusFill,
           child: SizedBox.square(
             dimension: size,
             child: Stack(
@@ -725,6 +752,7 @@ class _PillButton extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onPressed,
+        focusColor: _focusFill,
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 40),
           child: Padding(
@@ -1072,6 +1100,7 @@ class PlayerErrorPanel extends StatelessWidget {
     required this.sourceDetails,
     required this.onRetry,
     required this.onTryAnother,
+    this.primaryFocusNode,
   });
 
   final bool canTryAnother;
@@ -1079,6 +1108,9 @@ class PlayerErrorPanel extends StatelessWidget {
   final String sourceDetails;
   final VoidCallback onRetry;
   final VoidCallback onTryAnother;
+
+  /// Focus of the first action, where a remote starts on this panel.
+  final FocusNode? primaryFocusNode;
 
   @override
   Widget build(BuildContext context) => ConstrainedBox(
@@ -1137,6 +1169,7 @@ class PlayerErrorPanel extends StatelessWidget {
             children: [
               if (canTryAnother)
                 FilledButton.icon(
+                  focusNode: primaryFocusNode,
                   onPressed: onTryAnother,
                   icon: const Icon(Symbols.video_library_rounded, size: 18),
                   label: const Text('Try another source'),
@@ -1150,6 +1183,7 @@ class PlayerErrorPanel extends StatelessWidget {
                       style: _buttonStyle(filled: false),
                     )
                   : FilledButton.icon(
+                      focusNode: primaryFocusNode,
                       onPressed: onRetry,
                       icon: const Icon(Symbols.refresh_rounded, size: 18),
                       label: const Text('Retry'),
