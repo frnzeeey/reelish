@@ -104,6 +104,14 @@ class CreditsScreen extends StatelessWidget {
           ],
         ),
         SettingsSection(
+          label: 'CONTENT DISCLAIMER',
+          children: [
+            SettingsParagraph(
+              text: LegalInformationScreen.contentDisclaimer.$2,
+            ),
+          ],
+        ),
+        SettingsSection(
           label: 'THIRD-PARTY SERVICES',
           children: [
             const SettingsTile(

@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Modify this file to customize your launch splash screen -->
+<!-- Launch screen before Android 12. Keep the background, logo size and
+     centering in step with SplashSpec in lib/src/screens/splash_screen.dart,
+     which draws the same logo on Flutter's first frame. -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:drawable="@color/splash_background" />
-    <item>
-        <bitmap
-            android:gravity="center"
-            android:src="@drawable/reelish_splash" />
-    </item>
+    <item
+        android:width="128dp"
+        android:height="128dp"
+        android:gravity="center"
+        android:drawable="@drawable/reelish_splash" />
 </layer-list>

@@ -27,6 +27,7 @@ import '../../services/subtitle_loader.dart';
 import '../../services/torrent_source_preparer.dart';
 import 'audio_track_sheet.dart';
 import 'episode_panel.dart';
+import 'external_cue_clock.dart';
 import 'gesture_touch_layer.dart';
 import 'paused_overlay.dart';
 import 'player_controls.dart';
@@ -172,6 +173,9 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   late double _speed;
   SubtitleTrack? _subtitle;
   List<SubtitleCue> _cues = [];
+
+  /// The downloaded subtitle text to show, timed from the player clock.
+  final _externalCue = ExternalCueClock();
   List<VideoTrack> _videoTracks = [];
   List<VideoAudioTrack> _audioTracks = [];
   VideoTrack? _selectedVideoTrack;
@@ -407,6 +411,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
       _subtitle = null;
       _cues = [];
     }
+    _syncExternalCue();
     _unbindEmbeddedSubtitles();
     try {
       final isTorrent = source.isTorrent;
@@ -1572,6 +1577,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
       _subtitleDelay = result.subtitleDelay;
       _selectedVideoTrack = result.videoTrack;
     });
+    if (delayChanged) _syncExternalCue();
     final active = identical(controller, _controller) ? controller : null;
     try {
       if (speedChanged) await active?.setPlaybackSpeed(_speed);
@@ -1725,6 +1731,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
         _cues = [];
       }
     });
+    _syncExternalCue();
     _refreshSubtitleMenu();
     if (previous.preferredAudioLanguage != _playback.preferredAudioLanguage ||
         previous.secondaryAudioLanguage != _playback.secondaryAudioLanguage) {
@@ -1949,6 +1956,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
       _subtitle = track;
       _cues = [];
     });
+    _syncExternalCue();
     _refreshSubtitleMenu();
     PlaybackLog.log(
       'Subtitle',
@@ -1983,6 +1991,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
       _subtitle = null;
       _cues = [];
     });
+    _syncExternalCue();
     _embeddedLines.value = const [];
     final controller = _controller;
     if (_engine.id == PlayerEngineId.mediaKit && controller != null) {
@@ -2210,6 +2219,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
       // Ignore a download that finished after another subtitle was chosen.
       if (mounted && _subtitle?.key == track.key) {
         setState(() => _cues = cues);
+        _syncExternalCue();
       }
     } on SubtitleLoadException catch (error) {
       if (mounted && _subtitle?.key == track.key) {
@@ -2264,6 +2274,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     _unbindEmbeddedSubtitles();
     _subtitleMenu.dispose();
     _embeddedLines.dispose();
+    _externalCue.dispose();
     _controller?.dispose();
     _torrentSession?.stop();
     // When another episode's player replaced this one, it is already
@@ -2280,9 +2291,29 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     super.dispose();
   }
 
+  /// Hands the downloaded subtitle and the player's clock to [_externalCue].
+  /// Embedded tracks are timed by libmpv itself, so they never use it.
+  void _syncExternalCue() {
+    final subtitle = _subtitle;
+    final external =
+        subtitle != null && subtitle.source != SubtitleSource.embedded;
+    _externalCue.setCues(
+      external ? _cues : const <SubtitleCue>[],
+      delay: _subtitleDelay,
+    );
+    final value = _controller?.value;
+    if (value == null || !value.isInitialized) return;
+    _externalCue.sync(
+      position: value.position,
+      playing: value.isPlaying && !value.isBuffering,
+      speed: value.playbackSpeed,
+    );
+  }
+
   void _tick() {
     final c = _controller;
     if (c == null) return;
+    _syncExternalCue();
     _setKeepScreenOn(c.value.isPlaying);
     // The pause screen follows a viewer pause, after a short hold so the
     // paused frame registers first and quick pause/play taps do not flash
@@ -2466,7 +2497,8 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
               ),
               child: IgnorePointer(
                 // Embedded tracks: libmpv's current text. Others: cues
-                // from the downloaded file, shifted by the subtitle delay.
+                // from the downloaded file, shifted by the subtitle delay
+                // and timed from the player clock (see ExternalCueClock).
                 child: _subtitle == null
                     ? _positionedSubtitleBox('')
                     : _subtitle!.source == SubtitleSource.embedded
@@ -2479,16 +2511,10 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
                               .join('\n'),
                         ),
                       )
-                    : ValueListenableBuilder<VideoPlayerValue>(
-                        valueListenable: c,
-                        builder: (context, v, _) {
-                          final t =
-                              v.position.inMilliseconds / 1000 - _subtitleDelay;
-                          final cue = _cues
-                              .where((e) => t >= e.start && t <= e.end)
-                              .firstOrNull;
-                          return _positionedSubtitleBox(cue?.text ?? '');
-                        },
+                    : ValueListenableBuilder<String>(
+                        valueListenable: _externalCue,
+                        builder: (context, text, _) =>
+                            _positionedSubtitleBox(text),
                       ),
               ),
             ),
