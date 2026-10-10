@@ -20,6 +20,7 @@ import '../services/perf_timeline.dart';
 import '../services/storage_service.dart';
 import '../services/tmdb_response_cache.dart';
 import '../services/stream_discovery.dart';
+import '../services/torrent_source_preparer.dart';
 import '../services/tmdb_service.dart';
 import '../services/plugin_library_repository.dart';
 import '../services/provider_plugin_service.dart';
@@ -763,9 +764,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       final streamCacheKey = item.type == 'series'
           ? '${item.type}:${item.id}:s${season ?? 0}:e${episode ?? 0}'
           : '${item.type}:${item.id}';
-      final allowTorrents =
-          playback.p2pStreaming &&
-          defaultTargetPlatform == TargetPlatform.android;
+      final allowTorrents = playback.p2pStreaming && TorrentSupport.available;
       StreamDiscovery? discovery;
       StreamSource? source;
       var sourceFromCache = false;
@@ -915,8 +914,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               episode: episode,
               allowedPluginIds: current.allowedProviderIds,
               allowTorrents:
-                  current.p2pStreaming &&
-                  defaultTargetPlatform == TargetPlatform.android,
+                  current.p2pStreaming && TorrentSupport.available,
             );
           },
           episodeLabel: season == null || episode == null

@@ -5,6 +5,7 @@ import '../models/playback_settings.dart';
 import '../navigation/app_transitions.dart';
 import '../services/accent_settings_controller.dart';
 import '../services/playback_settings_controller.dart';
+import '../services/torrent_source_preparer.dart';
 import '../theme/glass_theme.dart';
 import '../widgets/settings/settings_components.dart';
 import '../widgets/tv/tv_focus.dart';
@@ -598,12 +599,24 @@ class PlaybackSettingsScreen extends StatelessWidget {
             ),
           ]),
           _section('P2P STREAMING', [
-            _switchRow(
-              'P2P streaming',
-              'Allow torrent sources from installed providers on Android.',
-              settings.p2pStreaming,
-              (value) => _save(settings.copyWith(p2pStreaming: value)),
-            ),
+            if (TorrentSupport.available)
+              _switchRow(
+                'P2P streaming',
+                'Allow torrent sources from installed providers on Android.',
+                settings.p2pStreaming,
+                (value) => _save(settings.copyWith(p2pStreaming: value)),
+              )
+            else
+              SettingsSwitchTile(
+                title: 'P2P streaming',
+                description:
+                    'Not available on this device. Torrent playback needs '
+                    '64-bit Android, and this device runs 32-bit Android '
+                    '(common on TVs and streaming sticks).',
+                value: false,
+                enabled: false,
+                onChanged: (_) {},
+              ),
             _actionRow(
               'Clear torrent cache',
               'Remove files stored by torrent playback.',

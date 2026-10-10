@@ -735,6 +735,18 @@ void main() {
       expect(formatReleaseNotes(notes), '• Cinematic pause screen');
     });
 
+    test('drops a "What\'s new" heading the dialog already shows', () {
+      const notes = '''
+## What's new
+
+### Reelish on Android TV
+- Find Reelish on your TV's home screen.''';
+      expect(
+        formatReleaseNotes(notes),
+        "Reelish on Android TV\n• Find Reelish on your TV's home screen.",
+      );
+    });
+
     test('empty notes stay empty', () {
       expect(formatReleaseNotes(''), '');
       expect(

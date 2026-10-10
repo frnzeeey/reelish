@@ -1,10 +1,32 @@
 import 'dart:async';
+import 'dart:ffi' show Abi;
+import 'dart:io' show Platform;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_go_torrent_streamer/flutter_go_torrent_streamer.dart';
 
 import '../models/stream_source.dart';
 import 'network_target_policy.dart';
 import 'storage_service.dart';
+
+/// Whether torrent playback can work in this app process.
+///
+/// It needs the torrent streamer's native library, which is built for
+/// arm64-v8a and x86_64 only. A 32-bit Android process (armeabi-v7a) cannot
+/// load it. That includes many Android TV and Google TV devices, such as
+/// Chromecast with Google TV, which run 32-bit Android on 64-bit chips. There,
+/// torrent sources are neither requested nor offered, instead of failing
+/// each time one is played.
+abstract final class TorrentSupport {
+  static bool get available {
+    if (defaultTargetPlatform != TargetPlatform.android) return false;
+    // Only a real Android process has an ABI that decides this; widget tests
+    // on a desktop host keep the Android behavior.
+    if (!Platform.isAndroid) return true;
+    final abi = Abi.current();
+    return abi == Abi.androidArm64 || abi == Abi.androidX64;
+  }
+}
 
 /// Turns a torrent source into a playable loopback stream: validates its info
 /// hash and trackers, starts a streaming session, waits for the torrent's

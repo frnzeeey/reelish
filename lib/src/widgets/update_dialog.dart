@@ -13,7 +13,8 @@ import '../theme/glass_theme.dart';
 /// plain text. Returns an empty string when nothing meaningful remains.
 String formatReleaseNotes(String markdown) {
   final skipped = RegExp(
-    r"^(what's changed|new contributors)$|^full changelog|made their first contribution"
+    // "What's new" is the dialog's own label for the notes.
+    r"^(what's changed|what's new|new contributors)$|^full changelog|made their first contribution"
     // Build provenance the release workflow adds for verification; useful
     // on GitHub, noise in the app.
     r'|^(version|commit|apk sha-256|built by):',

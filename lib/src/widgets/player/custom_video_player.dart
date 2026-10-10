@@ -1951,9 +1951,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   bool _isSourceAllowed(StreamSource source) => isPlaybackSourceAllowed(
     source,
     allowedProviderIds: _playback.allowedProviderIds,
-    allowTorrents:
-        _playback.p2pStreaming &&
-        defaultTargetPlatform == TargetPlatform.android,
+    allowTorrents: _playback.p2pStreaming && TorrentSupport.available,
   );
 
   Future<void> _applyPreferredAudio(VideoPlayerController controller) async {
