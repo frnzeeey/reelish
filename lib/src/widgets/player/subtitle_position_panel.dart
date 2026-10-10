@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../../models/playback_settings.dart';
+import '../tv/tv_focus.dart';
 
 /// A compact panel at the top of the player for moving subtitles while they
 /// stay in view. Changes apply live through [onChanged]; [onCommit] is called
@@ -14,12 +15,16 @@ class SubtitlePositionPanel extends StatelessWidget {
     required this.onChanged,
     required this.onCommit,
     required this.onDone,
+    this.sliderFocusNode,
   });
 
   final ValueListenable<double> position;
   final ValueChanged<double> onChanged;
   final ValueChanged<double> onCommit;
   final VoidCallback onDone;
+
+  /// Focus of the slider, where a remote starts in the panel.
+  final FocusNode? sliderFocusNode;
 
   static const _step = .02;
 
@@ -84,13 +89,16 @@ class SubtitlePositionPanel extends StatelessWidget {
                         icon: const Icon(Symbols.arrow_downward_rounded),
                       ),
                       Expanded(
-                        child: Slider(
-                          value: value,
-                          min: PlaybackSettings.subtitlePositionMin,
-                          max: PlaybackSettings.subtitlePositionMax,
-                          divisions: 25,
-                          onChanged: onChanged,
-                          onChangeEnd: onCommit,
+                        child: TvSliderNavigation(
+                          child: Slider(
+                            focusNode: sliderFocusNode,
+                            value: value,
+                            min: PlaybackSettings.subtitlePositionMin,
+                            max: PlaybackSettings.subtitlePositionMax,
+                            divisions: 25,
+                            onChanged: onChanged,
+                            onChangeEnd: onCommit,
+                          ),
                         ),
                       ),
                       IconButton(

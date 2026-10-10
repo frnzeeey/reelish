@@ -12,6 +12,7 @@ import '../models/media_item.dart';
 import '../models/resume_summary.dart';
 import '../models/stream_source.dart';
 import '../navigation/app_transitions.dart';
+import '../platform/device_capabilities.dart';
 import '../services/media_catalog_rules.dart';
 import '../services/media_discovery_ranking.dart';
 import '../services/paged_feed_controller.dart';
@@ -37,6 +38,10 @@ import '../widgets/player/custom_video_player.dart';
 import '../widgets/player/episode_panel.dart';
 import '../widgets/player/stream_selector_sheet.dart';
 import '../widgets/provider_search_dialog.dart';
+import '../widgets/tv/tv_focus.dart';
+import 'tv/tv_details_screen.dart';
+import 'tv/tv_home_shell.dart';
+import 'tv/tv_pages.dart';
 import 'plugins_screen.dart';
 import 'library_screen.dart';
 import 'player_screen.dart';
@@ -122,6 +127,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Timer? _debounce;
   Timer? _spotlightTimer;
 
+  /// The page the TV navigation rail shows. TV only; mobile uses [_tab].
+  TvDestination _tvDestination = TvDestination.home;
+
   @override
   void initState() {
     super.initState();
@@ -140,6 +148,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   void _startSpotlightTimer() {
     _spotlightTimer?.cancel();
+    // The TV hero follows focus instead of rotating on its own.
+    if (DeviceCapabilities.isTv) return;
     _spotlightTimer = Timer.periodic(const Duration(seconds: 6), (_) {
       if (!mounted ||
           MediaQuery.disableAnimationsOf(context) ||
@@ -481,18 +491,34 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         AppPageRoute<void>(
           context: context,
           details: true,
-          builder: (_) => MediaDetailsScreen(
-            item: item,
-            tmdb: _tmdb,
-            onPlay: (detailsContext) =>
-                _openItem(item, presentationContext: detailsContext),
-            onPlayEpisode: (detailsContext, season, episode) => _openItem(
-              item,
-              presentationContext: detailsContext,
-              selectedSeason: season,
-              selectedEpisode: episode,
-            ),
-          ),
+          builder: (_) => DeviceCapabilities.isTv
+              ? TvMediaDetailsScreen(
+                  item: item,
+                  tmdb: _tmdb,
+                  isFavorite: _favoriteKeys.contains(_favoriteKey(item)),
+                  onToggleFavorite: () => _toggleFavorite(item),
+                  onPlay: (detailsContext) =>
+                      _openItem(item, presentationContext: detailsContext),
+                  onPlayEpisode: (detailsContext, season, episode) =>
+                      _openItem(
+                        item,
+                        presentationContext: detailsContext,
+                        selectedSeason: season,
+                        selectedEpisode: episode,
+                      ),
+                )
+              : MediaDetailsScreen(
+                  item: item,
+                  tmdb: _tmdb,
+                  onPlay: (detailsContext) =>
+                      _openItem(item, presentationContext: detailsContext),
+                  onPlayEpisode: (detailsContext, season, episode) => _openItem(
+                    item,
+                    presentationContext: detailsContext,
+                    selectedSeason: season,
+                    selectedEpisode: episode,
+                  ),
+                ),
         ),
       );
     } finally {
@@ -831,7 +857,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             action: SnackBarAction(
               label: 'PLUGINS',
               onPressed: () {
-                setState(() => _tab = 1);
+                setState(() {
+                  _tab = 1;
+                  _tvDestination = TvDestination.plugins;
+                });
                 if (presentationContext?.mounted == true) {
                   Navigator.of(presentationContext!).pop();
                 }
@@ -2042,6 +2071,133 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ],
         ),
       );
+  /// Why the TV catalog is empty, once both rows have failed; null while
+  /// either has titles or is still loading.
+  String? get _tvCatalogError {
+    final feeds = [_movies, _series];
+    if (feeds.any(
+      (feed) =>
+          feed.state.items.isNotEmpty ||
+          feed.state.status == PagedFeedStatus.idle ||
+          feed.state.status == PagedFeedStatus.loading,
+    )) {
+      return null;
+    }
+    final error = feeds.map((feed) => feed.state.error).nonNulls.firstOrNull;
+    return error == null ? null : _catalogFailureMessage(error);
+  }
+
+  /// The same refreshes the mobile dock runs when a tab opens.
+  void _onTvDestinationChanged(TvDestination destination) {
+    setState(() {
+      _tvDestination = destination;
+      if (destination == TvDestination.library) _libraryRefreshToken++;
+    });
+    if (destination == TvDestination.library) unawaited(_loadHistory());
+    if (destination == TvDestination.home) {
+      unawaited(_loadFavorites());
+      _revalidateStaleFeeds();
+    }
+  }
+
+  /// The TV interface: the same catalog, storage, plugins and play flow as
+  /// mobile, presented for a remote. See [TvHomeShell].
+  Widget _buildTv(
+    List<({String id, String name, String repository})> availablePlugins,
+  ) {
+    final catalog = TvCatalog(
+      tmdb: _tmdb,
+      movies: _movies,
+      series: _series,
+      releases: _releases,
+      top10: _top10,
+      spotlight: _spotlightItems,
+      continueWatching: _continueWatching,
+      catalogSettled: _catalogSettled,
+      resumeFraction: (item) => _resumeSummary(item).fraction,
+      favoriteKeys: _favoriteKeys,
+      hasSources: _providerPlugins.repositories.isNotEmpty,
+      catalogError: _tvCatalogError,
+    );
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        TvHomeShell(
+          destination: _tvDestination,
+          onDestinationChanged: _onTvDestinationChanged,
+          pageBuilder: (context, destination) => switch (destination) {
+            TvDestination.home => TvHomePage(
+              catalog: catalog,
+              onOpen: _showDetails,
+              onRetry: () => unawaited(_reloadActiveFeed()),
+              onAddSource: () =>
+                  ProviderInstallerModal.show(context, _providerPlugins),
+            ),
+            TvDestination.movies => TvCatalogPage(
+              title: 'Movies',
+              feed: _movies,
+              onOpen: _showDetails,
+              isFavorite: catalog.isFavorite,
+            ),
+            TvDestination.series => TvCatalogPage(
+              title: 'Series',
+              feed: _series,
+              onOpen: _showDetails,
+              isFavorite: catalog.isFavorite,
+            ),
+            TvDestination.search => TvSearchPage(
+              tmdb: _tmdb,
+              onOpen: _showDetails,
+              isFavorite: catalog.isFavorite,
+            ),
+            TvDestination.library => TvLibraryPage(
+              storage: _storage,
+              onOpen: _showDetails,
+              refreshToken: _libraryRefreshToken,
+            ),
+            TvDestination.plugins => TvReadableWidth(
+              maxWidth: 900,
+              child: PluginsScreen(
+                pluginService: _providerPlugins,
+                pluginLibrary: _pluginLibrary,
+              ),
+            ),
+            TvDestination.settings => SettingsScreen(
+              accentSettings: widget.accentSettings,
+              onAppearanceSettings: () =>
+                  unawaited(_openAppearanceSettings()),
+              onPlaybackSettings: () =>
+                  unawaited(_openPlaybackSettings(availablePlugins)),
+            ),
+          },
+        ),
+        if (_resolvingStreams) _resolvingOverlay(),
+      ],
+    );
+  }
+
+  Widget _resolvingOverlay() => ColoredBox(
+    color: Colors.black.withValues(alpha: 0.72),
+    child: Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          CircularProgressIndicator(color: GlassTheme.primary),
+          const SizedBox(height: 16),
+          Text(
+            'Searching providers…',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'This can take a moment while sources are checked.',
+            style: TextStyle(color: GlassTheme.muted, fontSize: 12),
+          ),
+        ],
+      ),
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
     final availablePlugins = [
@@ -2053,6 +2209,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             repository: repository.name,
           ),
     ];
+    if (DeviceCapabilities.isTv) return _buildTv(availablePlugins);
     final pages = [
       TabPageTransition(active: _tab == 0, child: _home()),
       TabPageTransition(
@@ -2111,28 +2268,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ),
             ),
           ),
-          if (_resolvingStreams)
-            ColoredBox(
-              color: Colors.black.withValues(alpha: 0.72),
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CircularProgressIndicator(color: GlassTheme.primary),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Searching providers…',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 6),
-                    const Text(
-                      'This can take a moment while sources are checked.',
-                      style: TextStyle(color: GlassTheme.muted, fontSize: 12),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+          if (_resolvingStreams) _resolvingOverlay(),
         ],
       ),
     );

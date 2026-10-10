@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 import 'package:flutter_go_torrent_streamer/flutter_go_torrent_streamer.dart';
@@ -13,6 +14,7 @@ import '../../models/media_item.dart';
 import '../../models/playback_settings.dart';
 import '../../models/stream_source.dart';
 import '../../models/subtitle_language.dart';
+import '../../platform/device_capabilities.dart';
 import '../../services/storage_service.dart';
 import '../../services/playback_settings_controller.dart';
 import '../../services/stream_discovery.dart';
@@ -136,6 +138,25 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   /// Whether controls are really on screen: visible and not locked. The
   /// layers that make room for the controls follow this.
   final ValueNotifier<bool> _controlsShown = ValueNotifier(true);
+
+  /// What Back depends on.
+  late final Listenable _backState = Listenable.merge([
+    _locked,
+    _controlsShown,
+  ]);
+
+  /// Remote control, on TV. [_playerFocus] is the player itself: it holds
+  /// focus whenever no control does, so every key reaches [_onRemoteKey].
+  /// The play buttons are where focus lands when the controls appear.
+  final FocusNode _playerFocus = FocusNode(debugLabel: 'Player');
+  final FocusNode _playButtonFocus = FocusNode(debugLabel: 'Play');
+  final FocusNode _pausePlayFocus = FocusNode(debugLabel: 'Resume');
+  final FocusNode _errorActionFocus = FocusNode(debugLabel: 'Error action');
+  final FocusNode _subtitlePositionFocus = FocusNode(
+    debugLabel: 'Subtitle position',
+  );
+  ModalRoute<Object?>? _route;
+  static bool get _tv => DeviceCapabilities.isTv;
 
   /// Live subtitle position, so moving subtitles rebuilds only their layer.
   late final ValueNotifier<double> _subtitlePosition;
@@ -292,6 +313,10 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     _controlsVisible.addListener(_syncControlsShown);
     _locked.addListener(_syncControlsShown);
     widget.playbackSettings.addListener(_onPlaybackSettingsChanged);
+    if (_tv) {
+      FocusManager.instance.addListener(_keepRemoteFocus);
+      _pauseOverlay.addListener(_followPauseScreen);
+    }
     _sources = List.of(widget.sources);
     _playbackCoordinator.replaceCandidates(_sources);
     _source = widget.source;
@@ -1116,9 +1141,177 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
 
   void _scheduleHide() {
     _hide?.cancel();
-    _hide = Timer(const Duration(milliseconds: 3500), () {
+    // Read from across the room with a remote, TV controls stay up longer.
+    _hide = Timer(Duration(milliseconds: _tv ? 5000 : 3500), () {
       if (mounted && _canAutoHide) _controlsVisible.value = false;
     });
+  }
+
+  static final _arrowKeys = {
+    LogicalKeyboardKey.arrowUp,
+    LogicalKeyboardKey.arrowDown,
+    LogicalKeyboardKey.arrowLeft,
+    LogicalKeyboardKey.arrowRight,
+  };
+  static final _selectKeys = {
+    LogicalKeyboardKey.select,
+    LogicalKeyboardKey.enter,
+    LogicalKeyboardKey.numpadEnter,
+    LogicalKeyboardKey.gameButtonA,
+  };
+
+  /// The remote, on TV. Keys reach this while the player or one of its
+  /// controls has focus; a sheet or dialog over the player takes its own.
+  ///
+  /// Media keys always act on playback. While the controls are hidden the
+  /// D-pad drives playback itself: Left/Right seek 10 s (quick presses add
+  /// up, as double-taps do) and Up, Down or Select bring the controls up
+  /// with focus on play. With a control focused, the D-pad moves between
+  /// controls as usual and every press keeps them on screen.
+  KeyEventResult _onRemoteKey(FocusNode node, KeyEvent event) {
+    if (event is KeyUpEvent) return KeyEventResult.ignored;
+    final key = event.logicalKey;
+    final repeat = event is KeyRepeatEvent;
+    final c = _controller;
+    final playable = c != null && _ready;
+    if (key == LogicalKeyboardKey.mediaPlayPause) {
+      if (!repeat) _togglePlay();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.mediaPlay ||
+        key == LogicalKeyboardKey.mediaPause) {
+      final play = key == LogicalKeyboardKey.mediaPlay;
+      if (!repeat && playable && c.value.isPlaying != play) _togglePlay();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.mediaFastForward ||
+        key == LogicalKeyboardKey.mediaRewind) {
+      if (playable) {
+        _doubleTapSeek(key == LogicalKeyboardKey.mediaFastForward);
+      }
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.mediaTrackNext) {
+      if (!repeat &&
+          widget.onPlayEpisode != null &&
+          _hasNextEpisode &&
+          !_switchingEpisode) {
+        unawaited(_startNextEpisode());
+      }
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.closedCaptionToggle) {
+      if (!repeat && playable) unawaited(_pickSubtitles());
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.contextMenu ||
+        key == LogicalKeyboardKey.info) {
+      if (!repeat && playable) unawaited(_settings());
+      return KeyEventResult.handled;
+    }
+    final arrow = _arrowKeys.contains(key);
+    if (!arrow && !_selectKeys.contains(key)) return KeyEventResult.ignored;
+    if (!node.hasPrimaryFocus) {
+      // A control has focus.
+      if (_controlsVisible.value) _scheduleHide();
+      return KeyEventResult.ignored;
+    }
+    if (!playable || _adjustingSubtitles) {
+      // The loading and error views, and the subtitle position panel, have
+      // no playback to drive: the D-pad starts on their controls.
+      _focusViewControl();
+      return KeyEventResult.handled;
+    }
+    if (!_controlsShown.value &&
+        (key == LogicalKeyboardKey.arrowLeft ||
+            key == LogicalKeyboardKey.arrowRight)) {
+      _doubleTapSeek(key == LogicalKeyboardKey.arrowRight);
+      return KeyEventResult.handled;
+    }
+    if (!repeat) _showControlsFromRemote();
+    return KeyEventResult.handled;
+  }
+
+  /// Where the D-pad starts when there is no playback to drive: the subtitle
+  /// position slider, the error view's first action, or else the one control
+  /// the loading view has (Back).
+  void _focusViewControl() {
+    final target = _adjustingSubtitles
+        ? _subtitlePositionFocus
+        : _error
+        ? _errorActionFocus
+        : null;
+    if (target != null && target.context != null && target.canRequestFocus) {
+      target.requestFocus();
+    } else {
+      _playerFocus.traversalDescendants.firstOrNull?.requestFocus();
+    }
+  }
+
+  /// The pause screen covers the center play button with its own, and
+  /// takes it away again on resume; focus moves across instead of being
+  /// dropped.
+  void _followPauseScreen() {
+    final paused = _pauseOverlay.value;
+    final from = paused ? _playButtonFocus : _pausePlayFocus;
+    if (!from.hasFocus) return;
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _pauseOverlay.value != paused) return;
+      final to = paused ? _pausePlayFocus : _playButtonFocus;
+      if (to.context != null && to.canRequestFocus) {
+        to.requestFocus();
+      } else {
+        _playerFocus.requestFocus();
+      }
+    });
+  }
+
+  /// Brings the controls up with focus on the play button, or on the pause
+  /// screen's own button while it shows. Hidden controls cannot take focus,
+  /// so focus moves once they are built visible, after this frame.
+  void _showControlsFromRemote() {
+    _show();
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_playerFocus.hasPrimaryFocus) return;
+      final target = _pauseOverlay.value ? _pausePlayFocus : _playButtonFocus;
+      if (target.context != null && target.canRequestFocus) {
+        target.requestFocus();
+      } else {
+        _playerFocus.traversalDescendants.firstOrNull?.requestFocus();
+      }
+    });
+    SchedulerBinding.instance.ensureVisualUpdate();
+  }
+
+  /// While the player is the top screen on TV, focus stays inside it.
+  /// Otherwise keys would land on the route itself and never reach
+  /// [_onRemoteKey], such as when controls hide while one of them is
+  /// focused, or a sheet closes over a control that has since hidden.
+  void _keepRemoteFocus() {
+    final route = _route;
+    if (!mounted || route == null || !route.isCurrent) return;
+    if (_playerFocus.hasFocus) return;
+    // The route's focus scope encloses the player.
+    final scope = Focus.maybeOf(
+      context,
+      scopeOk: true,
+      createDependency: false,
+    )?.nearestScope;
+    if (scope == null) return;
+    final primary = FocusManager.instance.primaryFocus;
+    // Focus in another route, such as a sheet still closing, is left alone.
+    if (primary != null &&
+        primary != scope &&
+        !primary.ancestors.contains(scope)) {
+      return;
+    }
+    _playerFocus.requestFocus();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_tv) _route = ModalRoute.of(context);
   }
 
   void _show() {
@@ -1159,6 +1352,12 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     _hide?.cancel();
     _controlsVisible.value = false;
     setState(() => _adjustingSubtitles = true);
+    // A remote starts on the slider: Left/Right move the subtitles.
+    if (_tv) {
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _adjustingSubtitles) _focusViewControl();
+      });
+    }
   }
 
   void _closeSubtitlePosition() {
@@ -1269,7 +1468,8 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   /// Wide video starts in landscape once per session. The rotate control
   /// changes this; it is a layout change and never reopens the stream.
   void _decideOrientation(VideoPlayerController c) {
-    if (_orientationDecided) return;
+    // A TV is always landscape and cannot rotate.
+    if (_orientationDecided || _tv) return;
     _orientationDecided = true;
     final ratio = c.value.aspectRatio;
     if (ratio > 1.05 && !_landscapeLocked) _toggleLandscape();
@@ -2246,6 +2446,8 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     // Stop starting further providers for a lookup this screen started.
     _rediscovery?.cancel();
     widget.playbackSettings.removeListener(_onPlaybackSettingsChanged);
+    FocusManager.instance.removeListener(_keepRemoteFocus);
+    _pauseOverlay.removeListener(_followPauseScreen);
     _initializationGeneration++;
     final openCancellation = _openCancellation;
     if (openCancellation != null && !openCancellation.isCompleted) {
@@ -2269,6 +2471,11 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     _scrubbing.dispose();
     _pauseOverlay.dispose();
     _seekFlash.dispose();
+    _playerFocus.dispose();
+    _playButtonFocus.dispose();
+    _pausePlayFocus.dispose();
+    _errorActionFocus.dispose();
+    _subtitlePositionFocus.dispose();
     // Invalidate an in-flight subtitle search; its result is then ignored.
     _subtitleSearchGeneration++;
     _unbindEmbeddedSubtitles();
@@ -2409,30 +2616,46 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
       if (current?.providerName.isNotEmpty == true) current!.providerName,
     ].join(' · ');
     // Back while locked shows the unlock button instead of leaving, and
-    // closes the subtitle position panel first. Never blocks back while the
-    // lock overlay is not up (loading, errors), so the viewer cannot be
-    // trapped.
-    return ValueListenableBuilder<bool>(
-      valueListenable: _locked,
-      builder: (context, locked, player) => PopScope(
-        canPop: !(locked && playable) && !_adjustingSubtitles,
-        onPopInvokedWithResult: (didPop, _) {
-          if (didPop) return;
-          if (locked && playable) {
-            _revealUnlock();
-          } else {
-            _closeSubtitlePosition();
-          }
-        },
-        child: player!,
-      ),
-      child: _buildPlayer(
-        c,
-        current: current,
-        sourceDetails: sourceDetails,
-        alternatives: alternatives,
-        sourceLabel: sourceLabel,
-      ),
+    // closes the subtitle position panel first. On TV, Back while watching
+    // brings the controls up, so a single press never ends playback; Back
+    // with the controls up leaves. Never blocks back while the lock overlay
+    // is not up (loading, errors), so the viewer cannot be trapped.
+    final player = _buildPlayer(
+      c,
+      current: current,
+      sourceDetails: sourceDetails,
+      alternatives: alternatives,
+      sourceLabel: sourceLabel,
+    );
+    return ListenableBuilder(
+      listenable: _backState,
+      builder: (context, player) {
+        final locked = _locked.value;
+        final revealControls = _tv && playable && !_controlsShown.value;
+        return PopScope(
+          canPop:
+              !(locked && playable) && !_adjustingSubtitles && !revealControls,
+          onPopInvokedWithResult: (didPop, _) {
+            if (didPop) return;
+            if (locked && playable) {
+              _revealUnlock();
+            } else if (_adjustingSubtitles) {
+              _closeSubtitlePosition();
+            } else if (revealControls) {
+              _showControlsFromRemote();
+            }
+          },
+          child: player!,
+        );
+      },
+      child: _tv
+          ? Focus(
+              focusNode: _playerFocus,
+              autofocus: true,
+              onKeyEvent: _onRemoteKey,
+              child: player,
+            )
+          : player,
     );
   }
 
@@ -2564,6 +2787,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
               content: _pauseContent(),
               artworkWidth: _pauseArtworkWidth,
               onPlay: _resumeFromPauseScreen,
+              playFocusNode: _pausePlayFocus,
             ),
           // 5. Temporary feedback.
           if (playable) PlayerSeekFeedback(flashes: _seekFlash),
@@ -2600,13 +2824,17 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
               valueListenable: _controlsShown,
               builder: (context, visible, child) => IgnorePointer(
                 ignoring: !visible,
-                child: AnimatedOpacity(
-                  opacity: visible ? 1 : 0,
-                  duration: playerFade,
-                  curve: Curves.easeOutCubic,
-                  // Hidden controls run no animations (the title marquee,
-                  // button transitions) while the fade-out still completes.
-                  child: TickerMode(enabled: visible, child: child!),
+                // Hidden controls cannot be reached by the remote either.
+                child: ExcludeFocus(
+                  excluding: !visible,
+                  child: AnimatedOpacity(
+                    opacity: visible ? 1 : 0,
+                    duration: playerFade,
+                    curve: Curves.easeOutCubic,
+                    // Hidden controls run no animations (the title marquee,
+                    // button transitions) while the fade-out still completes.
+                    child: TickerMode(enabled: visible, child: child!),
+                  ),
                 ),
               ),
               child: PlayerControlsOverlay(
@@ -2640,25 +2868,31 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
                     ? () => unawaited(_openEpisodes())
                     : null,
                 onSettings: _settings,
-                onPip: () async {
-                  _hide?.cancel();
-                  _controlsVisible.value = false;
-                  try {
-                    await const MethodChannel(
-                      'onfeed/player',
-                    ).invokeMethod<bool>('enterPip', {
-                      'ratio': c.value.aspectRatio,
-                    });
-                  } catch (_) {}
-                },
-                onRotate: _toggleLandscape,
+                // TV: no rotation, no touch lock, and picture in picture
+                // only where the TV supports it.
+                onPip:
+                    _tv && !DeviceCapabilities.current.supportsPictureInPicture
+                    ? null
+                    : () async {
+                        _hide?.cancel();
+                        _controlsVisible.value = false;
+                        try {
+                          await const MethodChannel(
+                            'onfeed/player',
+                          ).invokeMethod<bool>('enterPip', {
+                            'ratio': c.value.aspectRatio,
+                          });
+                        } catch (_) {}
+                      },
+                onRotate: _tv ? null : _toggleLandscape,
                 onNextEpisode: _nextEpisodePromptVisible && !_switchingEpisode
                     ? () => unawaited(_startNextEpisode())
                     : null,
                 nextEpisodeCountdown: _nextEpisodeCountdown,
                 onSpeedReset: _resetSpeed,
                 pauseScreen: _pauseOverlay,
-                onLock: _lockControls,
+                onLock: _tv ? null : _lockControls,
+                playFocusNode: _playButtonFocus,
               ),
             ),
           // The floating card shows while controls are hidden; with controls
@@ -2669,10 +2903,13 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
               valueListenable: _controlsShown,
               builder: (context, controlsVisible, card) => IgnorePointer(
                 ignoring: controlsVisible && playable,
-                child: AnimatedOpacity(
-                  opacity: controlsVisible && playable ? 0 : 1,
-                  duration: playerFade,
-                  child: card,
+                child: ExcludeFocus(
+                  excluding: controlsVisible && playable,
+                  child: AnimatedOpacity(
+                    opacity: controlsVisible && playable ? 0 : 1,
+                    duration: playerFade,
+                    child: card,
+                  ),
                 ),
               ),
               child: SafeArea(
@@ -2700,6 +2937,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
               onChanged: (value) => _subtitlePosition.value = value,
               onCommit: _commitSubtitlePosition,
               onDone: _closeSubtitlePosition,
+              sliderFocusNode: _subtitlePositionFocus,
             ),
           // Lock: one layer over everything that takes touches, so no
           // gesture or control beneath it can react. Only while a frame
@@ -2731,6 +2969,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
                       sourceDetails: sourceDetails,
                       onRetry: _retryPlayback,
                       onTryAnother: _pickStream,
+                      primaryFocusNode: _errorActionFocus,
                     )
                   : null,
             ),

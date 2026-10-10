@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/services.dart';
+import '../platform/device_capabilities.dart';
 import '../services/provider_plugin_service.dart';
 import '../theme/glass_theme.dart';
 import 'glass_box.dart';
+import 'tv/tv_focus.dart';
 
 class ProviderInstallerModal extends StatefulWidget {
   const ProviderInstallerModal({super.key, required this.pluginService});
@@ -113,21 +115,46 @@ class _ProviderInstallerModalState extends State<ProviderInstallerModal> {
                 style: TextStyle(color: GlassTheme.muted),
               ),
               const SizedBox(height: 16),
-              TextField(
-                controller: _url,
-                keyboardType: TextInputType.url,
-                textInputAction: TextInputAction.done,
-                onSubmitted: (_) => _busy ? null : _install(),
-                decoration: InputDecoration(
-                  hintText: 'Provider manifest URL',
-                  prefixIcon: const Icon(Symbols.link_rounded),
-                  suffixIcon: IconButton(
-                    tooltip: 'Paste from clipboard',
-                    onPressed: _busy ? null : _paste,
-                    icon: const Icon(Symbols.content_paste_rounded),
+              if (DeviceCapabilities.isTv)
+                // The TV keyboard edits the URL in a dialog, so the remote
+                // is never trapped in the field.
+                Row(
+                  children: [
+                    Expanded(
+                      child: TvTextField(
+                        autofocus: true,
+                        value: _url.text,
+                        hint: 'Provider manifest URL',
+                        icon: Symbols.link_rounded,
+                        keyboardType: TextInputType.url,
+                        onChanged: (value) => setState(() => _url.text = value),
+                        onSubmitted: (_) => _busy ? null : _install(),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    IconButton(
+                      tooltip: 'Paste from clipboard',
+                      onPressed: _busy ? null : _paste,
+                      icon: const Icon(Symbols.content_paste_rounded),
+                    ),
+                  ],
+                )
+              else
+                TextField(
+                  controller: _url,
+                  keyboardType: TextInputType.url,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => _busy ? null : _install(),
+                  decoration: InputDecoration(
+                    hintText: 'Provider manifest URL',
+                    prefixIcon: const Icon(Symbols.link_rounded),
+                    suffixIcon: IconButton(
+                      tooltip: 'Paste from clipboard',
+                      onPressed: _busy ? null : _paste,
+                      icon: const Icon(Symbols.content_paste_rounded),
+                    ),
                   ),
                 ),
-              ),
               if (_error != null) ...[
                 const SizedBox(height: 10),
                 Text(_error!, style: const TextStyle(color: Colors.redAccent)),

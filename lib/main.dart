@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'src/platform/device_capabilities.dart';
 import 'src/screens/home_screen.dart';
 import 'src/screens/splash_screen.dart';
 import 'src/screens/first_run_consent_screen.dart';
@@ -6,6 +7,7 @@ import 'src/services/perf_timeline.dart';
 import 'src/services/player_engine.dart';
 import 'src/services/accent_settings_controller.dart';
 import 'src/theme/glass_theme.dart';
+import 'src/widgets/tv/tv_focus.dart';
 
 void main() {
   PerfTimeline.appStarted();
@@ -25,6 +27,9 @@ class _ReelishAppState extends State<ReelishApp> {
   // Loaded once, by the splash gate, before the first screen appears.
   final _accentSettings = AccentSettingsController();
 
+  /// Focuses a control in each dialog and sheet on TV.
+  final _popupFocus = TvPopupFocusObserver();
+
   @override
   void dispose() {
     _accentSettings.dispose();
@@ -33,13 +38,22 @@ class _ReelishAppState extends State<ReelishApp> {
 
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
-    animation: _accentSettings,
-    builder: (context, _) => MaterialApp(
-      title: 'Reelish',
-      debugShowCheckedModeBanner: false,
-      theme: GlassTheme.dark,
-      home: _StartupScreen(accentSettings: _accentSettings),
-    ),
+    // The device is known before the splash gate opens, so a TV gets its
+    // theme and remote navigation before the first screen appears.
+    animation: Listenable.merge([
+      _accentSettings,
+      DeviceCapabilities.listenable,
+    ]),
+    builder: (context, _) {
+      final tv = DeviceCapabilities.isTv;
+      return MaterialApp(
+        title: 'Reelish',
+        debugShowCheckedModeBanner: false,
+        theme: tv ? GlassTheme.tv : GlassTheme.dark,
+        navigatorObservers: [if (tv) _popupFocus],
+        home: _StartupScreen(accentSettings: _accentSettings),
+      );
+    },
   );
 }
 
@@ -56,13 +70,16 @@ class _StartupScreenState extends State<_StartupScreen> {
   bool _acceptedThisSession = false;
 
   /// Critical startup only: two local preference reads that decide the
-  /// first screen and its colors. Network work (catalog, plugins, update
+  /// first screen and its colors, and the device type that decides between
+  /// the mobile and TV interfaces. Network work (catalog, plugins, update
   /// checks) starts from Home after its first frame.
   Future<bool> _initialize() async {
     final results = await Future.wait<Object?>([
       FirstRunConsentScreen.hasAccepted().catchError((Object _) => false),
       // A failed read keeps the default accent rather than blocking startup.
       widget.accentSettings.load().catchError((Object _) {}),
+      // Never fails; an unanswered query keeps the mobile interface.
+      DeviceCapabilities.load(),
     ]);
     return results.first! as bool;
   }

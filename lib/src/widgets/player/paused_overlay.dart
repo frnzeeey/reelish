@@ -142,6 +142,7 @@ class ReelishPausedOverlay extends StatefulWidget {
     required this.content,
     required this.artworkWidth,
     required this.onPlay,
+    this.playFocusNode,
   });
 
   /// Whether playback is paused long enough to show the pause screen.
@@ -155,6 +156,9 @@ class ReelishPausedOverlay extends StatefulWidget {
   /// Decode width for the artwork, in physical pixels.
   final int artworkWidth;
   final VoidCallback onPlay;
+
+  /// Focus of the resume button, where a remote lands while paused.
+  final FocusNode? playFocusNode;
 
   @override
   State<ReelishPausedOverlay> createState() => _ReelishPausedOverlayState();
@@ -362,8 +366,10 @@ class _ReelishPausedOverlayState extends State<ReelishPausedOverlay>
           child: ValueListenableBuilder<bool>(
             valueListenable: widget.visible,
             // Not tappable while fading out.
-            builder: (context, visible, child) =>
-                IgnorePointer(ignoring: !visible, child: child),
+            builder: (context, visible, child) => IgnorePointer(
+              ignoring: !visible,
+              child: ExcludeFocus(excluding: !visible, child: child!),
+            ),
             child: FadeTransition(
               opacity: _button,
               child: ScaleTransition(
@@ -371,6 +377,7 @@ class _ReelishPausedOverlayState extends State<ReelishPausedOverlay>
                 child: _PausePlayButton(
                   size: playSize,
                   onPressed: widget.onPlay,
+                  focusNode: widget.playFocusNode,
                 ),
               ),
             ),
@@ -689,10 +696,15 @@ class _Scrim extends StatelessWidget {
 
 /// The large resume button: a translucent glass disc with a soft accent glow.
 class _PausePlayButton extends StatelessWidget {
-  const _PausePlayButton({required this.size, required this.onPressed});
+  const _PausePlayButton({
+    required this.size,
+    required this.onPressed,
+    this.focusNode,
+  });
 
   final double size;
   final VoidCallback onPressed;
+  final FocusNode? focusNode;
 
   @override
   Widget build(BuildContext context) => Semantics(
@@ -727,6 +739,8 @@ class _PausePlayButton extends StatelessWidget {
           ),
           child: InkWell(
             onTap: onPressed,
+            focusNode: focusNode,
+            focusColor: GlassTheme.primary.withValues(alpha: .55),
             child: SizedBox.square(
               dimension: size,
               child: Icon(

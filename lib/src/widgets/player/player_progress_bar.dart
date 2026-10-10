@@ -1,8 +1,11 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 
+import '../../platform/device_capabilities.dart';
 import '../../theme/glass_theme.dart';
 
 /// Formats a playback time as `m:ss` or `h:mm:ss`.
@@ -116,11 +119,65 @@ class _PlayerProgressBarState extends State<PlayerProgressBar> {
   }
 
   void _end() {
+    _keyCommit?.cancel();
     final drag = _drag;
     if (drag == null) return;
     widget.onSeek(_at(drag));
     setState(() => _drag = null);
     widget.onScrubChanged?.call(false);
+  }
+
+  /// Remote focus (TV only). Focused, the bar thickens and Left/Right scrub:
+  /// each press previews 10 s further, a held key speeds up to 30 s and then
+  /// 60 s steps, and the seek happens once the keys rest (or on Select), so a
+  /// long scrub costs one seek instead of one per press.
+  bool _focused = false;
+  Timer? _keyCommit;
+  int _keyRepeats = 0;
+
+  KeyEventResult _onKey(FocusNode node, KeyEvent event) {
+    final key = event.logicalKey;
+    final forward = key == LogicalKeyboardKey.arrowRight;
+    if (forward || key == LogicalKeyboardKey.arrowLeft) {
+      if (event is KeyUpEvent) return KeyEventResult.handled;
+      final duration = _duration;
+      if (duration <= Duration.zero) return KeyEventResult.ignored;
+      _keyRepeats = event is KeyRepeatEvent ? _keyRepeats + 1 : 0;
+      final seconds = _keyRepeats > 15
+          ? 60
+          : _keyRepeats > 5
+          ? 30
+          : 10;
+      final position = widget.controller.value.position.inMilliseconds;
+      final base = _drag ?? position / duration.inMilliseconds;
+      final step = seconds * 1000 / duration.inMilliseconds;
+      if (_drag == null) widget.onScrubChanged?.call(true);
+      setState(() => _drag = (base + (forward ? step : -step)).clamp(0, 1));
+      _keyCommit?.cancel();
+      _keyCommit = Timer(const Duration(milliseconds: 700), _end);
+      return KeyEventResult.handled;
+    }
+    final select =
+        key == LogicalKeyboardKey.select ||
+        key == LogicalKeyboardKey.enter ||
+        key == LogicalKeyboardKey.numpadEnter;
+    if (select && _drag != null) {
+      if (event is KeyDownEvent) _end();
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  void _onFocusChange(bool focused) {
+    // Leaving the bar mid-scrub seeks to the previewed time.
+    if (!focused && _keyCommit?.isActive == true) _end();
+    setState(() => _focused = focused);
+  }
+
+  @override
+  void dispose() {
+    _keyCommit?.cancel();
+    super.dispose();
   }
 
   @override
@@ -134,81 +191,86 @@ class _PlayerProgressBarState extends State<PlayerProgressBar> {
         value: formatPlaybackTime(
           drag == null ? widget.controller.value.position : _at(drag),
         ),
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onHorizontalDragStart: (details) =>
-              _start(_fractionAt(details.localPosition.dx, width)),
-          onHorizontalDragUpdate: (details) =>
-              _update(_fractionAt(details.localPosition.dx, width)),
-          onHorizontalDragEnd: (_) => _end(),
-          onHorizontalDragCancel: () {
-            setState(() => _drag = null);
-            widget.onScrubChanged?.call(false);
-          },
-          onTapUp: (details) {
-            if (_duration <= Duration.zero) return;
-            widget.onSeek(_at(_fractionAt(details.localPosition.dx, width)));
-          },
-          child: SizedBox(
-            height: 36,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Positioned.fill(
-                  child: TweenAnimationBuilder<double>(
-                    tween: Tween(end: drag == null ? 0 : 1),
-                    duration: const Duration(milliseconds: 160),
-                    curve: Curves.easeOutCubic,
-                    builder: (context, emphasis, _) => CustomPaint(
-                      painter: _ProgressPainter(
-                        controller: widget.controller,
-                        dragFraction: drag,
-                        emphasis: emphasis,
-                        accent: GlassTheme.primary,
-                      ),
-                    ),
-                  ),
+        child: Focus(
+          canRequestFocus: DeviceCapabilities.isTv,
+          skipTraversal: !DeviceCapabilities.isTv,
+          onKeyEvent: _onKey,
+          onFocusChange: _onFocusChange,
+          child: _gestures(width, drag),
+        ),
+      );
+    },
+  );
+
+  Widget _gestures(double width, double? drag) => GestureDetector(
+    behavior: HitTestBehavior.opaque,
+    onHorizontalDragStart: (details) =>
+        _start(_fractionAt(details.localPosition.dx, width)),
+    onHorizontalDragUpdate: (details) =>
+        _update(_fractionAt(details.localPosition.dx, width)),
+    onHorizontalDragEnd: (_) => _end(),
+    onHorizontalDragCancel: () {
+      setState(() => _drag = null);
+      widget.onScrubChanged?.call(false);
+    },
+    onTapUp: (details) {
+      if (_duration <= Duration.zero) return;
+      widget.onSeek(_at(_fractionAt(details.localPosition.dx, width)));
+    },
+    child: SizedBox(
+      height: 36,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned.fill(
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(end: drag == null && !_focused ? 0 : 1),
+              duration: const Duration(milliseconds: 160),
+              curve: Curves.easeOutCubic,
+              builder: (context, emphasis, _) => CustomPaint(
+                painter: _ProgressPainter(
+                  controller: widget.controller,
+                  dragFraction: drag,
+                  emphasis: emphasis,
+                  accent: GlassTheme.primary,
                 ),
-                if (drag != null)
-                  Positioned(
-                    left: (drag * width - 36).clamp(
-                      0.0,
-                      math.max(0, width - 72),
+              ),
+            ),
+          ),
+          if (drag != null)
+            Positioned(
+              left: (drag * width - 36).clamp(0.0, math.max(0, width - 72)),
+              bottom: 30,
+              width: 72,
+              child: IgnorePointer(
+                child: Center(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: const Color(0xE6101015),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0x26FFFFFF)),
                     ),
-                    bottom: 30,
-                    width: 72,
-                    child: IgnorePointer(
-                      child: Center(
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: const Color(0xE6101015),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: const Color(0x26FFFFFF)),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            child: Text(
-                              formatPlaybackTime(_at(drag)),
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                fontFeatures: [FontFeature.tabularFigures()],
-                              ),
-                            ),
-                          ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      child: Text(
+                        formatPlaybackTime(_at(drag)),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          fontFeatures: [FontFeature.tabularFigures()],
                         ),
                       ),
                     ),
                   ),
-              ],
+                ),
+              ),
             ),
-          ),
-        ),
-      );
-    },
+        ],
+      ),
+    ),
   );
 }
 
