@@ -2,18 +2,20 @@
 IN-DEPTH PRODUCT CASE STUDY
 
 Project type: Cross-platform media discovery and playback app
-Platform: Flutter application
+Platform: Flutter application; one Android APK for phones, tablets, Android TV, and Google TV
 Project naming: The repository is named Onfeed; the application title and README identify the product as Reelish. This case study uses Reelish (Onfeed) to make that naming clear.
 
 OVERVIEW
 
-Reelish brings entertainment discovery, personal watch tracking, and stream playback into one dark, cinematic interface. People can browse and search a TMDB-powered catalog, explore title and episode details, configure compatible provider add-ons, find available streams, and continue playback with subtitles and personalized player settings. The product is a catalog and playback client: catalog data, add-ons, streams, subtitles, and artwork come from external services and providers.
+Reelish brings entertainment discovery, personal watch tracking, and stream playback into one dark, cinematic interface. People can browse and search a TMDB-powered catalog, explore title and episode details, configure compatible provider add-ons, find available streams, and continue playback with subtitles and personalized player settings. The same app runs on phones and on Android TV and Google TV, where it switches to an interface built for a remote control. The product is a catalog and playback client: catalog data, add-ons, streams, subtitles, and artwork come from external services and providers.
 
 THE PROBLEM
 
 The viewing journey is fragmented. Someone may discover a movie in one catalog, look up its details elsewhere, check multiple providers for a playable source, then switch again to watch it. The experience becomes especially awkward for TV series, where season and episode selection, source choice, subtitle configuration, and remembering progress all matter.
 
 There is also a product and engineering challenge behind the interface: source availability depends on independently maintained providers and returned URLs. Responses may be incomplete, duplicated, malformed, slow, or unsuitable for playback. A client must coordinate those providers while keeping the user informed, protect itself from untrusted network destinations, and still present a coherent player experience across platforms.
+
+The living room adds a different constraint. Movies are usually watched on a television, but a phone interface does not carry over: a TV has no touchscreen, the remote has a D-pad, and the screen is read from across the room. Every control has to be reachable without touch, focus has to be visible at all times, and the low-power hardware in many streaming sticks cannot afford the blur and glass effects the phone interface uses.
 
 THE SOLUTION
 
@@ -23,6 +25,7 @@ Reelish combines discovery and playback in a single app, while treating catalog 
 • Exploration: Title details include metadata and artwork; series pages load seasons and episodes so users can move from a show to a specific episode.
 • Extensible source discovery: Users can install Nuvio-compatible provider manifests, enable or disable individual providers, and discover sources for a title. Stream normalization and validation turn provider results into a consistent set of playable choices.
 • Playback: A custom player provides playback controls, stream selection, episode navigation, subtitle selection, and configurable viewing preferences. Supported text subtitles include WebVTT and SRT. Playback settings cover gestures, playback speed, next-episode behavior, language preferences, and subtitle appearance.
+• Living-room experience: On Android TV and Google TV, the same APK shows a remote-first interface: a side navigation rail, a hero that previews the focused title, poster rows that remember focus, TV details pages with season and episode rows, and search through the TV keyboard. The player responds to the remote's media keys and D-pad, and Back while watching first reveals the controls instead of ending playback.
 • Continuity: A local library keeps favorites and watch history, including saved playback progress. The app can retain a recently used stream for optional reuse.
 • Resilience and trust boundaries: TMDB requests use response caching, in-flight request deduplication, bounded concurrency, and retry handling. Provider code runs in a bounded QuickJS environment. Network requests validate public destinations and redirects, while provider-returned sources are normalized and checked before playback.
 
@@ -34,16 +37,19 @@ THE EXPERIENCE FLOW
 4. Watch with the player controls and subtitle options that fit the viewing setup.
 5. Return later through the library and resume from saved progress.
 
+On a TV, the same flow runs entirely on the remote: move through the rail and poster rows with the D-pad, press Select to open a title and play it, and use the remote's media keys during playback.
+
 TECH STACK
 
 • Flutter and Dart for the cross-platform application and interface.
-• Material widgets with a custom dark glass visual theme, Montserrat typography, and Feather icons.
+• Material widgets with a custom dark glass visual theme, Montserrat typography, and Material Symbols icons.
 • TMDB API for catalog, search, metadata, recommendation, season, and episode data; the http package handles API requests.
 • Stremio-compatible add-on support documented by the project, plus Nuvio-compatible provider manifests and a locally bundled Cheerio JavaScript bundle for provider compatibility.
 • flutter_js with a bundled QuickJS runtime to execute provider scripts in an isolated, resource-bounded environment.
 • video_player as the app-facing playback API, with Android video_player/Media3 registration and a local MediaKit adapter available in the project; other platforms use the registered Flutter video player implementation. The player engine is abstracted behind a Dart interface.
 • shared_preferences for on-device library, provider, and playback preferences; path_provider for application storage and torrent cache paths.
 • http, url_launcher, package_info_plus, and platform-specific Flutter packages for networking, external links, app version information, and playback support.
+• Android TV support through a Kotlin platform channel that reports the device type (UiModeManager television mode or the leanback feature), a leanback launcher entry and TV banner, and Flutter's focus system (focus scopes, traversal policies, and key event handling) for remote navigation. No new dependencies were added.
 
 MY ROLE
 
@@ -55,6 +61,7 @@ I worked as the end-to-end Flutter app developer, shaping the product flow and i
 • Designing the provider installation and execution flow, including script isolation, scheduling, stream normalization, and source validation.
 • Connecting the custom player to platform playback engines and implementing playback, subtitles, resume progress, and user preferences.
 • Adding network destination checks and request bounds around external metadata, provider, and subtitle traffic.
+• Extending the app to Android TV and Google TV: device detection, the TV navigation shell and pages, remote control of the player, remote-safe dialogs and text entry, and validation on an Android TV emulator.
 
 The codebase supports describing the role as hands-on product engineering across the client. It does not establish team size, project dates, research activities, or measurable business outcomes, so those are intentionally not claimed here.
 
@@ -68,16 +75,26 @@ Bound untrusted provider work. Provider scripts run without direct filesystem or
 
 Make repeat use local and immediate. Favorites, history, progress, and preferences are stored on device, so the app has a personal library without requiring an account backend.
 
+Add TV as a second interface, not a second app. Phones and TVs share one codebase and one APK, and the TV pages reuse the same catalog controllers, storage, provider runtime, play flow, and playback engines; only the presentation differs. The device is identified by what Android reports about it rather than by screen size, so a large tablet keeps the touch interface and a small TV still gets the remote one. Everything TV-specific sits behind that single check, which keeps the phone experience unchanged.
+
+Design focus as the cursor. With a remote, focus is the only pointer, so it is always drawn, hidden controls are removed from focus rather than just faded out, rows keep the focused poster in a fixed position and remember it, and dialogs open with the safe action selected so Select never confirms something by accident.
+
+Test on a real TV image, not only in widget tests. Running the app on an Android TV emulator with the D-pad alone found problems the automated tests had missed: focus that disappeared onto disabled controls, legal documents that could not be scrolled to the end with a remote (which would have blocked first launch on a TV), a focus highlight hidden behind a card, dialogs that opened with nothing focused, and a focus handler that overrode a field's own autofocus. Each was fixed and given a regression test.
+
 OUTCOME
 
 The result is a feature-complete client architecture that connects browsing, provider-based source discovery, and playback in one application. Its strongest product contribution is the joined-up viewing flow; its strongest technical contribution is the boundary it creates between a polished client experience and variable external provider behavior.
 
-The repository contains automated Flutter tests for areas including discovery ranking, provider fetching, stream discovery, playback settings and pipeline, app transitions, and network destination validation. No performance, adoption, or user research results are stated here because those figures are not established by the project files.
+The same client now extends to the living room: Android TV and Google TV support shipped in version 1.10.0 as part of the single release APK, without changing the phone interface.
+
+The repository contains automated Flutter tests for areas including discovery ranking, provider fetching, stream discovery, playback settings and pipeline, app transitions, network destination validation, and TV behavior (device detection, focus navigation and memory, the rail and Back order, D-pad scrubbing, remote text entry, and the TV home screen). No performance, adoption, or user research results are stated here because those figures are not established by the project files.
 
 SCOPE AND LIMITATIONS
 
-Reelish does not host or supply a media library. Availability and quality depend on external catalogs, configured providers, hosts, and networks. The README states that direct HTTP(S) stream URLs supported by the platform player can be played; torrent-only or other non-direct sources require a resolver or compatible backend. Provider repositories are user-configured executable code and are not cryptographically signed by the current repository format. Native playback and torrent networking have limits that are described in docs/streaming_security.md, so the client-side network checks do not mean every native media request is pinned or inspected.
+Reelish does not host or supply a media library. Availability and quality depend on external catalogs, configured providers, hosts, and networks. The README states that direct HTTP(S) stream URLs supported by the platform player can be played; on Android, compatible torrent sources returned by providers can also be played through a built-in torrent streamer, which other platforms do not offer. Provider repositories are user-configured executable code and are not cryptographically signed by the current repository format. Native playback and torrent networking have limits that are described in docs/streaming_security.md, so the client-side network checks do not mean every native media request is pinned or inspected.
+
+TV support was validated with widget tests and on an Android TV emulator using the D-pad only. Remote control of the player has not yet been tested on a TV with a provider installed, frame timing has not been measured on low-end TV hardware, and Google Play's TV quality review has not been pursued, since releases are distributed through GitHub. Known TV limitations are listed in docs/android_tv.md.
 
 PORTFOLIO SUMMARY
 
-I built Reelish (Onfeed), a Flutter streaming catalog client that connects TMDB discovery with configurable provider-based stream lookup and a customizable video player. I focused on making the end-to-end viewing journey feel coherent while building the service boundaries, local library, playback controls, and safeguards needed to handle variable third-party data.
+I built Reelish (Onfeed), a Flutter streaming catalog client that connects TMDB discovery with configurable provider-based stream lookup and a customizable video player, on phones and on Android TV and Google TV from a single APK. I focused on making the end-to-end viewing journey feel coherent, on a touchscreen or with a remote, while building the service boundaries, local library, playback controls, and safeguards needed to handle variable third-party data.

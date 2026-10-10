@@ -12,6 +12,7 @@ Reelish is an open-source Flutter app for discovering movies and TV series and w
 - Install provider repositories from a manifest URL, enable the providers you want, and choose which providers can be used for playback.
 - Play supported direct streams, with source selection, resume progress, playback controls, and configurable subtitles.
 - On Android, allow compatible providers to return torrent sources for P2P playback.
+- Use Reelish on Android TV and Google TV with an interface built for the remote, from the same APK as phones and tablets.
 - Choose an accent color and customize playback, subtitle appearance, language preferences, and gestures.
 - Read the privacy policy, terms of use, and third-party credits in the app.
 
@@ -49,6 +50,31 @@ Choose a source from the title's stream list to start playback. Reelish supports
 
 The player supports external SRT and WebVTT subtitles, with language selection and display settings. Reelish can search OpenSubtitles for subtitles. Stream and subtitle availability, formats, and behavior vary by source and platform.
 
+## Android TV and Google TV
+
+The same APK runs on phones, tablets, Android TV, and Google TV. Reelish checks at startup whether it's on a TV and, if so, shows an interface built for the remote:
+
+- A side menu for Home, Movies, Series, Search, My library, Plugins, and Settings.
+- A large preview of the focused title above rows of posters; each row remembers where you left off.
+- Details pages with seasons and episodes you can browse with the remote, and search with the TV's keyboard.
+- Remote playback controls: play/pause, fast forward, rewind, next episode, captions, and D-pad seeking. Back while watching shows the controls first instead of leaving.
+
+Phones and tablets keep the touch interface.
+
+### Installing on a TV
+
+Android TV has no browser for downloads, so install the APK once by sideloading it. The easiest way is the **Downloader** app from the Play Store: enter the link below, install, and allow installs from Downloader when Android asks.
+
+```
+https://github.com/frnzeeey/reelish/releases/latest/download/reelish.apk
+```
+
+From a computer, enable **USB debugging** (or **Network debugging**) in the TV's Developer options, then run `adb connect <tv-ip>:5555` and `adb install reelish.apk`.
+
+After the first install, Reelish updates itself like on a phone. The first time you update, allow **Install unknown apps** for Reelish in the TV's settings.
+
+Details on TV detection, remote navigation, and known limitations are in [docs/android_tv.md](docs/android_tv.md).
+
 ## TMDB configuration
 
 Reelish uses [The Movie Database (TMDB)](https://www.themoviedb.org/) for catalog data, search, artwork, and title details. A TMDB API key is required to run the app. Create the ignored local file `lib/tmdb_config.local.dart` with:
@@ -68,9 +94,11 @@ flutter pub get
 flutter run
 ```
 
+To try the TV interface on a phone or a regular emulator, use `flutter run --dart-define=REELISH_FORCE_TV=true` (arrow keys and Enter act as the remote). On an Android TV emulator, see the testing notes in [docs/android_tv.md](docs/android_tv.md).
+
 ## Android releases
 
-Release builds are published on [GitHub Releases](https://github.com/frnzeeey/reelish/releases). Android can check for a newer stable release and offer to download its APK; installation is confirmed through Android's package installer. See [docs/releasing.md](docs/releasing.md) for how releases are made.
+Release builds are published on [GitHub Releases](https://github.com/frnzeeey/reelish/releases). One `reelish.apk` covers phones, tablets, and TVs. Android can check for a newer stable release and offer to download its APK; installation is confirmed through Android's package installer. See [docs/releasing.md](docs/releasing.md) for how releases are made.
 
 ## Privacy and terms
 
