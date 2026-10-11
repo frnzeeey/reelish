@@ -52,6 +52,10 @@ The player supports external SRT and WebVTT subtitles, with language selection a
 
 ## Android TV and Google TV
 
+<p align="center">
+  <img src="assets/images/TV.png" alt="Reelish on Android TV: the side menu, a large preview of the featured title, and a row of movie posters" width="720">
+</p>
+
 The same APK runs on phones, tablets, Android TV, and Google TV. Reelish checks at startup whether it's on a TV and, if so, shows an interface built for the remote:
 
 - A side menu for Home, Movies, Series, Search, My library, Plugins, and Settings.
