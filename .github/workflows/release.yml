@@ -125,9 +125,13 @@ jobs:
           KEY_ALIAS: ${{ secrets.ONFEED_RELEASE_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.ONFEED_RELEASE_KEY_PASSWORD }}
           TMDB_API_KEY: ${{ secrets.ONFEED_TMDB_API_KEY }}
+          # Encrypts the debug symbols kept for each release (see the
+          # "Upload encrypted debug symbols" step). Checked here so a missing
+          # secret fails in seconds, not after the build.
+          SYMBOLS_PASSPHRASE: ${{ secrets.ONFEED_SYMBOLS_PASSPHRASE }}
         run: |
           set -euo pipefail
-          for name in KEYSTORE_BASE64 STORE_PASSWORD KEY_ALIAS KEY_PASSWORD TMDB_API_KEY; do
+          for name in KEYSTORE_BASE64 STORE_PASSWORD KEY_ALIAS KEY_PASSWORD TMDB_API_KEY SYMBOLS_PASSPHRASE; do
             if [[ -z "${!name}" ]]; then
               echo "::error::Missing GitHub Actions secret for $name (see docs/releasing.md)."
               exit 1
@@ -175,13 +179,7 @@ jobs:
           # Caches the SDK and pub packages only; build/ is never cached.
           cache: true
 
-      - name: Clean build
-        id: build
-        env:
-          ONFEED_RELEASE_STORE_PASSWORD: ${{ secrets.ONFEED_RELEASE_STORE_PASSWORD }}
-          ONFEED_RELEASE_KEY_ALIAS: ${{ secrets.ONFEED_RELEASE_KEY_ALIAS }}
-          ONFEED_RELEASE_KEY_PASSWORD: ${{ secrets.ONFEED_RELEASE_KEY_PASSWORD }}
-          TAG: ${{ github.ref_name }}
+      - name: Clean and resolve dependencies
         run: |
           set -euo pipefail
           flutter --version
@@ -192,9 +190,47 @@ jobs:
           fi
           flutter pub get --enforce-lockfile
 
+      - name: Static analysis
+        # Errors and warnings fail the release; style infos are reported only.
+        # Reelish's own code: the vendored packages under packages/ and
+        # third_party/ are separate pub packages that the root `pub get` does
+        # not resolve, so analyzing them here would only report missing imports.
+        run: flutter analyze --no-fatal-infos lib test integration_test
+
+      - name: Tests
+        run: |
+          set -euo pipefail
+          # The provider sandbox tests load QuickJS through FFI; on Linux the
+          # library comes from the vendored flutter_js build.
+          export LIBQUICKJSC_TEST_PATH="$GITHUB_WORKSPACE/third_party/flutter_js/linux/shared/libquickjs_c_bridge_plugin.so"
+          flutter test
+
+      - name: Clean build
+        id: build
+        env:
+          ONFEED_RELEASE_STORE_PASSWORD: ${{ secrets.ONFEED_RELEASE_STORE_PASSWORD }}
+          ONFEED_RELEASE_KEY_ALIAS: ${{ secrets.ONFEED_RELEASE_KEY_ALIAS }}
+          ONFEED_RELEASE_KEY_PASSWORD: ${{ secrets.ONFEED_RELEASE_KEY_PASSWORD }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          # Debug symbols go outside the workspace: never into the APK, the
+          # build/ directory, or anything published. They are encrypted and
+          # kept privately for deobfuscating stack traces.
+          SYMBOLS_DIR="$RUNNER_TEMP/symbols/$TAG"
+          rm -rf "$SYMBOLS_DIR"
+          echo "SYMBOLS_DIR=$SYMBOLS_DIR" >> "$GITHUB_ENV"
+
           echo "started_epoch=$(date -u +%s)" >> "$GITHUB_OUTPUT"
           # The commit and tag are compiled in and shown under Settings > About.
+          # --obfuscate renames Dart classes, functions and libraries in the
+          # compiled snapshot. String literals, assets and provider scripts are
+          # unchanged, so JSON keys, method channel and JavaScript bridge names
+          # keep working. Android code is shrunk and obfuscated by R8, which
+          # the Flutter Gradle plugin enables for release builds.
           flutter build apk --release \
+            --obfuscate \
+            --split-debug-info="$SYMBOLS_DIR" \
             --dart-define="REELISH_GIT_SHA=$GITHUB_SHA" \
             --dart-define="REELISH_BUILD_TAG=$TAG"
 
@@ -244,8 +280,84 @@ jobs:
             exit 1
           fi
 
+          # Obfuscation check. Every unobfuscated build contains these Dart
+          # class names and library paths; an obfuscated one contains none.
+          # The provider bridge contract (channel names, the provider entry
+          # point) is made of string literals and must still be there.
+          for abi in arm64-v8a armeabi-v7a; do
+            LIBAPP="$RUNNER_TEMP/libapp-$abi.so"
+            unzip -p "$APK_PATH" "lib/$abi/libapp.so" > "$LIBAPP"
+            for name in ProviderFetchBridge TmdbService PlaybackCoordinator 'package:onfeed/src'; do
+              if grep -qaF "$name" "$LIBAPP"; then
+                echo "::error::lib/$abi/libapp.so is not obfuscated: it contains '$name'."
+                exit 1
+              fi
+            done
+            for contract in OnfeedFetch OnfeedTimer getStreams; do
+              if ! grep -qaF "$contract" "$LIBAPP"; then
+                echo "::error::lib/$abi/libapp.so lost the provider bridge string '$contract'."
+                exit 1
+              fi
+            done
+            rm -f "$LIBAPP"
+          done
+          for abi in arm64 arm; do
+            if [[ ! -s "$SYMBOLS_DIR/app.android-$abi.symbols" ]]; then
+              echo "::error::Debug symbols for android-$abi were not generated in $SYMBOLS_DIR."
+              exit 1
+            fi
+          done
+
           "$BUILD_TOOLS/apksigner" verify --print-certs "$APK_PATH"
           echo "sha256=$(sha256sum "$APK_PATH" | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
+
+      - name: Package encrypted debug symbols
+        env:
+          TAG: ${{ github.ref_name }}
+          VERSION: ${{ steps.source.outputs.version }}
+          BUILD_NUMBER: ${{ steps.source.outputs.build_number }}
+          APK_SHA256: ${{ steps.apk.outputs.sha256 }}
+          SYMBOLS_PASSPHRASE: ${{ secrets.ONFEED_SYMBOLS_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          # Dart symbols (needed to read obfuscated stack traces with
+          # `flutter symbolize`) and R8's mapping (for Android stack traces),
+          # identified by the release they belong to. They would undo the
+          # obfuscation if published, so they are encrypted before upload:
+          # artifacts of a public repository can be downloaded by any
+          # signed-in GitHub user.
+          MAPPING="build/app/outputs/mapping/release/mapping.txt"
+          if [[ -f "$MAPPING" ]]; then
+            cp -- "$MAPPING" "$SYMBOLS_DIR/r8-mapping.txt"
+          else
+            echo "::warning::R8 mapping not found at $MAPPING."
+          fi
+          {
+            echo "tag=$TAG"
+            echo "version=$VERSION"
+            echo "build_number=$BUILD_NUMBER"
+            echo "commit=$GITHUB_SHA"
+            echo "apk_sha256=$APK_SHA256"
+            echo "flutter=$FLUTTER_VERSION"
+          } > "$SYMBOLS_DIR/release.txt"
+          OUT="$RUNNER_TEMP/symbols-out"
+          mkdir -p "$OUT"
+          ARCHIVE="$OUT/reelish-$TAG-symbols.tar.gz.enc"
+          tar -czf - -C "$SYMBOLS_DIR" . \
+            | openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt -pass env:SYMBOLS_PASSPHRASE -out "$ARCHIVE"
+          # Prove the archive decrypts before anything is published.
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -pass env:SYMBOLS_PASSPHRASE -in "$ARCHIVE" \
+            | tar -tzf - > /dev/null
+          echo "SYMBOLS_ARCHIVE=$ARCHIVE" >> "$GITHUB_ENV"
+          ls -l "$ARCHIVE"
+
+      - name: Upload encrypted debug symbols
+        uses: actions/upload-artifact@v7
+        with:
+          name: reelish-${{ github.ref_name }}-symbols
+          path: ${{ env.SYMBOLS_ARCHIVE }}
+          if-no-files-found: error
+          retention-days: 90
 
       - name: Create GitHub Release
         env:
@@ -280,6 +392,6 @@ jobs:
             --generate-notes \
             --latest
 
-      - name: Remove signing keystore
+      - name: Remove signing keystore and plain symbols
         if: always()
-        run: rm -f "$RUNNER_TEMP/onfeed-release.jks"
+        run: rm -rf "$RUNNER_TEMP/onfeed-release.jks" "$RUNNER_TEMP/symbols"

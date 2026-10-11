@@ -10,10 +10,16 @@ commit → push main → tag that commit → push tag
   → checkout exact tagged commit
   → validate: tag format, checkout == tag == event SHA, commit on origin/main,
               pubspec version == tag, release does not exist, newer than latest
-  → check signing keystore + alias, write TMDB config
-  → flutter clean → pub get (locked) → flutter build apk --release
+  → check signing keystore + alias, symbols passphrase, write TMDB config
+  → flutter clean → pub get (locked)
+  → flutter analyze (lib, test, integration_test; warnings and errors fail)
+  → flutter test
+  → flutter build apk --release --obfuscate --split-debug-info=<outside the workspace>
   → verify APK: exists, non-empty, built this run, applicationId,
-                versionName/versionCode, commit SHA embedded, signature
+                versionName/versionCode, commit SHA embedded,
+                Dart code obfuscated, provider bridge strings intact,
+                debug symbols generated, signature
+  → encrypt Dart symbols + R8 mapping, upload as workflow artifact
   → create GitHub Release for the tag with reelish.apk + reelish.apk.sha256
 ```
 
@@ -85,6 +91,10 @@ workflow is what prevents such a release from existing.
 | `The key '…' could not be unlocked with ONFEED_RELEASE_KEY_PASSWORD` | The key password secret is wrong (this is what failed the first v1.2.0 run: Gradle's `Cannot recover key`). Re-set `ONFEED_RELEASE_KEY_PASSWORD`. |
 | `… is not newer than the latest release` | Pick a version above the current latest release. |
 | `… which is not on origin/main` | Merge your branch into `main`, push `main`, then tag a `main` commit. |
+| `Missing GitHub Actions secret for SYMBOLS_PASSPHRASE` | Set `ONFEED_SYMBOLS_PASSPHRASE` (see Repository secrets). |
+| `libapp.so is not obfuscated` | The build ran without `--obfuscate`. Restore the flag in the workflow's build step. |
+| `lost the provider bridge string` | Provider bridge names must stay string literals; something renamed or removed them. Don't release until provider tests pass on a device. |
+| `Static analysis` or `Tests` fails | Fix the failure on `main`; the release never builds past a failing check. |
 
 ## Verifying a release
 
@@ -108,6 +118,7 @@ Under **Settings > Secrets and variables > Actions**:
 | `ONFEED_RELEASE_KEY_ALIAS`       | Key alias inside the keystore |
 | `ONFEED_RELEASE_KEY_PASSWORD`    | Key password |
 | `ONFEED_TMDB_API_KEY`            | TMDB API key, written to `lib/tmdb_config.local.dart` |
+| `ONFEED_SYMBOLS_PASSPHRASE`      | Passphrase that encrypts each release's debug symbols (see below). Long and random; keep a copy in your password manager, since symbols can't be decrypted without it |
 
 ```bash
 keytool -list -keystore /path/to/onfeed-upload.jks   # shows the alias name
@@ -116,10 +127,36 @@ gh secret set ONFEED_RELEASE_STORE_PASSWORD
 gh secret set ONFEED_RELEASE_KEY_ALIAS
 gh secret set ONFEED_RELEASE_KEY_PASSWORD
 gh secret set ONFEED_TMDB_API_KEY
+# A random passphrase for the debug symbols; store it in your password manager too.
+openssl rand -base64 48 | gh secret set ONFEED_SYMBOLS_PASSPHRASE
 ```
 
 Always sign with the same key. Android won't update an installed app from an
 APK signed with a different key.
+
+## Debug symbols
+
+Release builds are obfuscated (see [code_protection.md](code_protection.md)),
+so a crash's Dart stack trace shows renamed functions. Each release run
+uploads `reelish-vX.Y.Z-symbols`: an encrypted archive with the Dart symbols
+for every ABI, R8's `r8-mapping.txt` for Android stack traces, and a
+`release.txt` naming the tag, commit and APK SHA-256 it belongs to.
+
+Workflow artifacts expire after **90 days**. Download each release's archive
+and keep it somewhere private; without it, that release's stack traces can't
+be read.
+
+```bash
+gh run download <run-id> -n reelish-vX.Y.Z-symbols
+openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 \
+  -in reelish-vX.Y.Z-symbols.tar.gz.enc -out symbols.tar.gz   # prompts for the passphrase
+mkdir symbols && tar -xzf symbols.tar.gz -C symbols
+flutter symbolize -i stacktrace.txt -d symbols/app.android-arm64.symbols
+```
+
+Use `app.android-arm.symbols` for 32-bit devices (Chromecast with Google TV
+and many other TVs). Never attach the decrypted symbols or the mapping to a
+release: they undo the obfuscation.
 
 ## Toolchain
 

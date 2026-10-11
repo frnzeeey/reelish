@@ -17,6 +17,16 @@ part './isolate.dart';
 part './object.dart';
 part './wrapper.dart';
 
+/// Reelish: runtime diagnostics (JavaScript exceptions, promise rejections
+/// from provider scripts) can quote request URLs, so release builds keep them
+/// out of the device log. Debug and profile builds still print them.
+const bool _kReleaseMode = bool.fromEnvironment('dart.vm.product');
+
+void _log(Object? message) {
+  // ignore: avoid_print
+  if (!_kReleaseMode) print(message);
+}
+
 /// Handler function to manage js module.
 typedef _JsModuleHandler = String Function(String name);
 
@@ -97,7 +107,7 @@ class QuickJsRuntime2 extends JavascriptRuntime {
             if (hostPromiseRejectionHandler != null) {
               hostPromiseRejectionHandler!(err);
             } else {
-              print('unhandled promise rejection: $err');
+              _log('unhandled promise rejection: $err');
             }
             return nullptr;
           case JSChannelType.FREE_OBJECT:
@@ -108,11 +118,11 @@ class QuickJsRuntime2 extends JavascriptRuntime {
         throw JSError('call channel with wrong type');
       } catch (e) {
         if (type == JSChannelType.FREE_OBJECT) {
-          print('DartObject release error: $e');
+          _log('DartObject release error: $e');
           return nullptr;
         }
         if (type == JSChannelType.MODULE) {
-          print('host Promise Rejection Handler error: $e');
+          _log('host Promise Rejection Handler error: $e');
           return nullptr;
         }
         final throwObj = _dartToJs(ctx, e);
@@ -168,7 +178,7 @@ class QuickJsRuntime2 extends JavascriptRuntime {
     while (true) {
       int err = jsExecutePendingJob(rt);
       if (err <= 0) {
-        if (err < 0) print(_parseJSException(ctx));
+        if (err < 0) _log(_parseJSException(ctx));
         break;
       }
     }
@@ -228,7 +238,7 @@ class QuickJsRuntime2 extends JavascriptRuntime {
       port.close(); // stop dispatch loop
       close(); // close engine
     } on JSError catch (e) {
-      print(e); // catch reference leak exception
+      _log(e); // catch reference leak exception
     }
   }
 
@@ -263,10 +273,10 @@ class QuickJsRuntime2 extends JavascriptRuntime {
         if (channelFunctions.containsKey(channelName)) {
           return channelFunctions[channelName]!.call(jsonDecode(message));
         } else {
-          print('No channel $channelName registered');
+          _log('No channel $channelName registered');
         }
         if (JavascriptRuntime.debugEnabled) {
-          print('CHANNEL: $channelName - Message: $message');
+          _log('CHANNEL: $channelName - Message: $message');
         }
       }
     ]);

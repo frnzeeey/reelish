@@ -19,3 +19,21 @@ alone does not stop synchronous code such as `while (true) {}` on every
 build, and a script stuck there never returns. The handler replaces any
 handler the native bridge installed. Builds that do not export the symbol
 (the Windows test DLL) keep their previous behaviour; the lookup returns null.
+
+## No runtime diagnostics in release logs
+
+`lib/quickjs/quickjs_runtime2.dart` printed JavaScript exceptions, unhandled
+promise rejections and channel errors with `print`, which also runs in
+release builds. Provider error messages can quote request URLs, so these now
+go through `_log`, which prints only when the build is not a release build
+(`dart.vm.product`). Debug and profile builds log exactly as before. No
+behaviour other than logging changes.
+
+## Obfuscation note
+
+`_DartFunction.invoke` (`lib/quickjs/object.dart`) decides whether to pass
+`thisVal` by matching `thisVal` in the function's `runtimeType` string, which
+Dart obfuscation can rename. Reelish registers no callback with a `thisVal`
+parameter (its bridge uses `sendMessage` channels with JSON payloads), so the
+check is false with and without obfuscation. A future callback that needs
+`thisVal` must be tested in an obfuscated release build.
