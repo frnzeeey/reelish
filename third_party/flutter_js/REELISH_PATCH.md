@@ -37,3 +37,11 @@ Dart obfuscation can rename. Reelish registers no callback with a `thisVal`
 parameter (its bridge uses `sendMessage` channels with JSON payloads), so the
 check is false with and without obfuscation. A future callback that needs
 `thisVal` must be tested in an obfuscated release build.
+
+## JitPack limited to the QuickJS runtime
+
+Upstream adds `https://jitpack.io` to every project in the build. Reelish
+wraps it in `exclusiveContent` in `android/build.gradle`: JitPack serves only
+`com.github.fast-development.android-js-runtimes` (the QuickJS runtime, which
+has no transitive dependencies), and that group is never requested from any
+other repository. No other dependency can be resolved from JitPack.

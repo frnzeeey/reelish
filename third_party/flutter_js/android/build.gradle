@@ -5,7 +5,16 @@ rootProject.allprojects {
     repositories {
         google()
         mavenCentral()
-        maven { url 'https://jitpack.io' }
+        // Reelish: JitPack serves only the QuickJS runtime, and that group is
+        // never looked up anywhere else (see REELISH_PATCH.md).
+        exclusiveContent {
+            forRepository {
+                maven { url 'https://jitpack.io' }
+            }
+            filter {
+                includeGroup 'com.github.fast-development.android-js-runtimes'
+            }
+        }
     }
 }
 

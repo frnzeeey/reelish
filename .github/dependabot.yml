@@ -1,0 +1,12 @@
+# Workflow actions are pinned to commit SHAs (see docs/security/SECURITY_AUDIT.md,
+# SEC-02). Dependabot opens a PR when a pinned action has a new release.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns:
+          - "*"
