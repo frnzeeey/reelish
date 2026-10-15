@@ -1158,7 +1158,8 @@ class PlayerErrorPanel extends StatelessWidget {
               textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Colors.white38, fontSize: 12),
+              // white54 keeps 12px text above 4.5:1 on the dark overlay.
+              style: const TextStyle(color: Colors.white54, fontSize: 12),
             ),
           ],
           const SizedBox(height: 22),

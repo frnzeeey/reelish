@@ -11,6 +11,21 @@ import 'package:video_player/video_player.dart';
 
 final _today = DateTime(2026, 10, 5);
 
+/// The panel reads the real clock, so "next week" is relative to it; a fixed
+/// date would turn into an aired episode once it passes.
+final _nextWeek = () {
+  final now = DateTime.now();
+  return DateTime(now.year, now.month, now.day + 7);
+}();
+
+String _airs(DateTime date) {
+  const months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', //
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ];
+  return 'Airs ${months[date.month - 1]} ${date.day}, ${date.year}';
+}
+
 /// Season 1: 10 episodes; season 2: 3 episodes, the last airing next week.
 List<EpisodeRef> _series() => [
   for (var e = 1; e <= 10; e++)
@@ -27,7 +42,7 @@ List<EpisodeRef> _series() => [
       episode: e,
       title: 'Two $e',
       overview: e == 1 ? 'A long synopsis. ' * 12 : '',
-      airDate: e == 3 ? DateTime(2026, 10, 12) : DateTime(2026, 1, e),
+      airDate: e == 3 ? _nextWeek : DateTime(2026, 1, e),
     ),
 ];
 
@@ -246,7 +261,7 @@ void main() {
 
     testWidgets('an unaired episode cannot be chosen', (tester) async {
       final results = await open(tester, size: tablet, context: _at(2, 1));
-      expect(find.textContaining('Airs Oct 12, 2026'), findsOneWidget);
+      expect(find.textContaining(_airs(_nextWeek)), findsOneWidget);
       await tester.tap(find.text('Two 3'));
       await tester.pumpAndSettle();
       expect(results, isEmpty);

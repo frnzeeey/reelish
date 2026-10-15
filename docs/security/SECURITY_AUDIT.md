@@ -15,6 +15,9 @@ boundary, SEC-01) and
 
 ## Summary
 
+*Updated 2026-10-13: SEC-06 fixed, SEC-05 tried and reverted, NET-02
+added.*
+
 No critical or high-severity issues were found. The networking, provider
 sandbox, update and storage layers already have the controls that this kind
 of audit usually has to add. The open items are supply-chain hardening of the
@@ -26,8 +29,9 @@ build (two medium findings) and a few low or informational gaps.
 | SEC-02 | Medium | Supply chain | Workflow actions are pinned to movable tags inside the job that holds the signing secrets | **Fixed**: SHA pins plus Dependabot |
 | SEC-03 | Medium | Supply chain | No Gradle dependency verification; JitPack is added as a repository for every project | **Partly fixed**: JitPack restricted; checksum verification pending |
 | SEC-04 | Low | Credentials | The TMDB API key ships in the APK | Accepted by design, documented |
-| SEC-05 | Low | Network | Provider logos load with `Image.network`, outside the DNS-pinned destination policy | Proposed |
-| SEC-06 | Informational | Network | The IPv6 documentation prefix `3fff::/20` is treated as public | Proposed |
+| SEC-05 | Low | Network | Provider logos load with `Image.network`, outside the DNS-pinned destination policy | Fix tried and reverted (logos failed to load); blocked by NET-02 |
+| SEC-06 | Informational | Network | The IPv6 documentation prefix `3fff::/20` is treated as public | **Fixed** (2026-10-13) |
+| NET-02 | Medium (reliability) | Network | The pinned client connects to one resolved address and never fails over to the others | Proposed, needs approval |
 | SEC-07 | Informational | Dependencies | A few transitive packages are one patch or minor version behind | No action needed |
 
 ## Architecture and trust boundaries
@@ -182,6 +186,17 @@ build (two medium findings) and a few low or informational gaps.
   playback or providers.
 - **Test:** A widget test that a logo resolving to a private address shows the
   monogram fallback, and that a public one still loads.
+- **Status (2026-10-13): fix tried and reverted.** The loader built for this
+  passed its unit tests, but against the real catalog it was clearly worse.
+  Fetching the 54 `i.postimg.cc` logos six at a time:
+
+  | Loader | Logos loaded | Time |
+  |---|---|---|
+  | `Image.network` | 54 of 54 | 40 s |
+  | Validated loader | 42 and 39 of 54 (two runs) | 113-177 s |
+
+  Every failure was a 20 s TCP connect timeout. The cause is NET-02. Fix
+  NET-02 first, then this loader can be used.
 
 ### SEC-06 — `3fff::/20` accepted as a public IPv6 address (Informational)
 
@@ -193,9 +208,40 @@ build (two medium findings) and a few low or informational gaps.
   connection to it fails anyway.
 - **Fix:** Reject `bytes[0] == 0x3f && bytes[1] == 0xff && (bytes[2] & 0xf0) == 0x00`
   and add a case to the policy tests.
-- **Compatibility risk:** None in practice. The validator is listed under
-  "network policies affecting streams", so this is proposed rather than
-  applied.
+- **Compatibility risk:** None in practice. The range isn't routed on the
+  internet, so no real stream host can be in it.
+- **Status: fixed (2026-10-13).** `_isPublic` rejects `3fff::/20`. Test:
+  `network_destination_validator_test.dart`, "rejects IPv6 documentation
+  prefixes but not neighbours". `3fff:1000::1` and `2606:4700::1111` are
+  still accepted.
+
+### NET-02 — Pinned connections never fail over to another address (Medium, reliability)
+
+- **Where:** `lib/src/services/network_target_policy.dart:87-97`
+  (`createPinnedClient`, `connectionFactory`). This client serves TMDB,
+  catalog, plugin install, subtitle and provider requests.
+- **Evidence:** Each connection picks one validated address in rotation
+  (`addresses[nextAddress++ % addresses.length]`) and waits for it alone.
+  Dart's normal `HttpClient` moves on to the next address when one doesn't
+  answer. Measured against a real host with three IPv4 addresses
+  (`i.postimg.cc`, one of which answered in 9 s):
+  - The pinned path failed 12-15 of 54 fetches on 20 s connect timeouts.
+  - A plain `HttpClient` loaded all 54.
+- **Impact:** When a host has a slow or unresponsive address (common behind
+  CDNs and load balancers), requests that land on it stall for the connect
+  timeout and then fail. Users would see slow or failed provider lookups,
+  catalog loads or subtitle searches on some networks.
+- **Fix:** In `connectionFactory`, try the validated addresses in turn: on a
+  connect error or a short per-address timeout (for example 3 s), move to
+  the next. The pin stays: only already-validated addresses are ever used.
+- **Compatibility risk:** Medium. It changes how every app request connects,
+  including provider fetches, but not which hosts are allowed. Needs your
+  approval, plus a provider integration test on an emulator.
+- **Test:**
+  1. A unit test with a fake socket connector: the first address never
+     connects and the second does. The request should succeed within the
+     per-address timeout.
+  2. Repeat the 54-logo comparison.
 
 ### SEC-07 — Minor dependency drift (Informational)
 

@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:onfeed/src/models/app_update.dart';
+import 'package:onfeed/src/models/media_item.dart';
 import 'package:onfeed/src/screens/home_screen.dart';
 import 'package:onfeed/src/widgets/category_chip.dart';
 import 'package:onfeed/src/services/accent_settings_controller.dart';
@@ -316,7 +317,10 @@ void main() {
       await tester.pump(const Duration(milliseconds: 60));
     }
     await settle(tester);
-    expect(urls.where((url) => url.path.contains('recommendations')), isNotEmpty);
+    expect(
+      urls.where((url) => url.path.contains('recommendations')),
+      isNotEmpty,
+    );
     final releaseQueries = urls.where(isNewReleasesQuery).toList();
     expect(releaseQueries, hasLength(3));
     final movieReleases = releaseQueries.firstWhere(
@@ -417,4 +421,67 @@ void main() {
 
     await disposeHome(tester, accentSettings, client);
   });
+
+  test('details, seasons and IMDb ID lookup share one request', () async {
+    final paths = <String>[];
+    final client = MockClient((request) async {
+      paths.add(request.url.path);
+      expect(
+        request.url.queryParameters['append_to_response'],
+        'credits,external_ids',
+      );
+      return http.Response(
+        jsonEncode({
+          'id': 42,
+          'name': 'Series',
+          'credits': {'cast': <Object>[]},
+          'seasons': [
+            {'season_number': 0, 'name': 'Specials'},
+            {'season_number': 1, 'name': 'Season 1'},
+          ],
+          'external_ids': {'imdb_id': 'tt0042042'},
+        }),
+        200,
+      );
+    });
+    final tmdb = service(client);
+    const series = MediaItem(id: '42', type: 'series', name: 'Series');
+
+    await tmdb.details(series);
+    final seasons = await tmdb.seasons(series);
+    final resolved = await tmdb.resolveIds(series);
+
+    expect(seasons.map((season) => season['season_number']), [1]);
+    expect(resolved.externalId, 'tt0042042');
+    expect(paths, ['/3/tv/42']);
+  });
+
+  test(
+    'IMDb ID lookup falls back to the movie field and tolerates nulls',
+    () async {
+      final client = MockClient(
+        (request) async => http.Response(
+          request.url.path.endsWith('/7')
+              ? jsonEncode({'id': 7, 'title': 'Movie', 'imdb_id': 'tt0000007'})
+              : jsonEncode({
+                  'id': 8,
+                  'title': 'No IDs',
+                  'external_ids': {'imdb_id': null},
+                }),
+          200,
+        ),
+      );
+      final tmdb = service(client);
+
+      final withId = await tmdb.resolveIds(
+        const MediaItem(id: '7', type: 'movie', name: 'Movie'),
+      );
+      final withoutId = await tmdb.resolveIds(
+        const MediaItem(id: '8', type: 'movie', name: 'No IDs'),
+      );
+
+      expect(withId.externalId, 'tt0000007');
+      expect(withoutId.externalId, '');
+    },
+  );
 }

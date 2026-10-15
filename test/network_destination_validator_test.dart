@@ -35,6 +35,23 @@ void main() {
       }
     });
 
+    test('rejects IPv6 documentation prefixes but not neighbours', () async {
+      Future<void> resolve(String address) => NetworkDestinationValidator(
+        lookup: (_) async => [InternetAddress(address)],
+      ).resolveDestination(Uri.https('provider.example.org', '/'));
+
+      for (final address in ['2001:db8::1', '3fff::1', '3fff:fff::1']) {
+        await expectLater(
+          resolve(address),
+          throwsFormatException,
+          reason: address,
+        );
+      }
+      for (final address in ['3fff:1000::1', '2606:4700::1111']) {
+        await expectLater(resolve(address), completes, reason: address);
+      }
+    });
+
     test(
       'rejects hostnames if any IPv4 or IPv6 DNS answer is private',
       () async {

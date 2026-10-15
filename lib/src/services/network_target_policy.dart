@@ -272,6 +272,10 @@ class NetworkDestinationValidator {
     if (is2001 && secondHextet == 0x0db8) {
       return false;
     }
+    // 3fff::/20 is the second documentation prefix (RFC 9637).
+    if (bytes[0] == 0x3f && bytes[1] == 0xff && bytes[2] < 0x10) {
+      return false;
+    }
     // 6to4 embeds an IPv4 destination that cannot be validated from the IPv6
     // address alone, so it is rejected along with Teredo/special transition.
     if (bytes[0] == 0x20 && bytes[1] == 0x02) {

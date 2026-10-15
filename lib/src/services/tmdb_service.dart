@@ -40,7 +40,10 @@ class TmdbService {
   static const defaultBaseUrl = 'https://api.themoviedb.org/3';
   static const requestTimeout = Duration(seconds: 12);
   static const maxResponseBytes = 5 * 1024 * 1024;
-  static const _detailsParams = {'append_to_response': 'credits'};
+
+  /// Shared by [details], [seasons] and [resolveIds]: one cached request
+  /// answers all three when a title is opened and then played.
+  static const _detailsParams = {'append_to_response': 'credits,external_ids'};
 
   final String baseUrl;
   final String apiKey;
@@ -601,12 +604,17 @@ class TmdbService {
     }
     final type = item.type == 'series' ? 'tv' : 'movie';
     try {
+      // The details request (already made when the title was opened) carries
+      // the IDs, so playback normally needs no extra TMDB request here.
       final result = await _get(
-        '/$type/${Uri.encodeComponent(item.id)}/external_ids',
+        '/$type/${Uri.encodeComponent(item.id)}',
+        params: _detailsParams,
         forceRefresh: forceRefresh,
-        ttl: TmdbCacheTtl.identifiers,
+        ttl: TmdbCacheTtl.metadata,
       );
-      return item.copyWith(externalId: '${result['imdb_id'] ?? ''}');
+      final ids = result['external_ids'];
+      final imdbId = ids is Map ? ids['imdb_id'] : result['imdb_id'];
+      return item.copyWith(externalId: '${imdbId ?? ''}');
     } catch (_) {
       return item;
     }

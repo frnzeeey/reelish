@@ -17,7 +17,9 @@ Still open:
 
 - **SEC-03, step 2 (Gradle checksum file):** it must be generated on Linux
   to match CI.
-- **SEC-05 and SEC-06:** they still need your approval.
+- **NET-02 (pinned connections never fail over):** needs your approval; see SECURITY_AUDIT.md.
+- **SEC-05:** a fix was tried on 2026-10-13 and reverted, because logos failed to load. It waits on NET-02.
+- **SEC-06:** fixed on 2026-10-13.
 
 ## Baseline verification (run 2026-10-11, Windows, Flutter 3.44.8)
 
@@ -35,8 +37,9 @@ No device or emulator testing was done, because no runtime code changed.
 |---|---|---|---|---|---|
 | 1 | SEC-02 | High (release workflow) | Pin the four actions to commit SHAs and add `.github/dependabot.yml` for `github-actions` | **Done** | Workflow run on a test tag; the release job's existing APK checks |
 | 2 | SEC-03 | High (build and release) | Restrict JitPack to `com.github.fast-development.*` (**done**), and commit Gradle `verification-metadata.xml` generated on Linux (**pending**) | Checksum file still to come | Clean CI build; compare `classes.dex` and native libraries byte for byte with the previous APK |
-| 3 | SEC-05 | Medium (UI networking) | Load plugin logos through `NetworkDestinationValidator` (512 KiB cap) in a custom `ImageProvider` | Your approval of the approach | Widget tests for private-address rejection, public success and monogram fallback |
-| 4 | SEC-06 | Low effect, but in the policy that guards stream preflight | Reject `3fff::/20` in `_isPublic` | Your approval | New case in the network policy tests; full suite; provider integration test on an emulator |
+| 3 | NET-02 | Medium (connects every request, including provider fetches) | Fail over between validated addresses in `connectionFactory` (per-address timeout of about 3 s) | Your approval | Fake-connector unit test (first address hangs, second works); provider integration test on an emulator; repeat the 54-logo comparison |
+| 4 | SEC-05 | Medium (UI networking) | Load plugin logos through `NetworkDestinationValidator` (4 MiB, 5 redirects, 45 s) | After NET-02. **Tried and reverted 2026-10-13:** loaded 42 and 39 of 54 real logos, against 54 of 54 with `Image.network` | Unit tests (written, then reverted with the fix) plus the live 54-logo comparison |
+| 5 | SEC-06 | Low effect, but in the policy that guards stream preflight | Reject `3fff::/20` in `_isPublic` | **Done** 2026-10-13 | New case in the network policy tests; full suite; provider integration test on an emulator |
 | — | SEC-01 | High (playback) | Local media proxy for native player requests | Separate design and approval; not planned | Playback matrix (HLS, DASH, MP4, torrents, subtitles) on phone and TV |
 | — | SEC-04 | High (backend) | TMDB proxy | Only if TMDB throttles or revokes the key | — |
 | — | SEC-07 | Low | Patch upgrades (`shared_preferences` 2.5.6 and transitive packages) | Do with a normal release, not as a security fix | Full suite plus a playback check |
