@@ -263,17 +263,20 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
             )
           else
             ColoredBox(color: GlassTheme.elevatedSurface),
+          // Ends in the page colour, fully opaque, so the header blends into
+          // the content below without a seam.
           const DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  Color(0x99080B12),
-                  Color(0x22080B12),
-                  Color(0xF7080B12),
+                  Color(0x990B0B0F),
+                  Color(0x220B0B0F),
+                  Color(0xE60B0B0F),
+                  GlassTheme.background,
                 ],
-                stops: [0, .42, 1],
+                stops: [0, .42, .9, 1],
               ),
             ),
           ),
@@ -467,191 +470,225 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
         : item.description;
 
     return Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(child: _header(context)),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 22, 20, 28),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _sectionTitle('Synopsis'),
-                  Text(
-                    synopsis.isNotEmpty
-                        ? synopsis
-                        : 'No synopsis is available for this title.',
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      height: 1.55,
-                      fontSize: 14,
-                    ),
-                  ),
-                  if (_details?.genres.isNotEmpty == true) ...[
-                    const SizedBox(height: 22),
-                    _sectionTitle('Genres'),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        for (final genre in _details!.genres) _metadata(genre),
-                      ],
-                    ),
+      body: Stack(
+        children: [_content(context, item, synopsis), const _StatusBarScrim()],
+      ),
+      bottomNavigationBar: _playBar(context, item),
+    );
+  }
+
+  Widget _content(
+    BuildContext context,
+    MediaItem item,
+    String synopsis,
+  ) => CustomScrollView(
+    slivers: [
+      SliverToBoxAdapter(child: _header(context)),
+      SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 22, 20, 28),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _sectionTitle('Synopsis'),
+              Text(
+                synopsis.isNotEmpty
+                    ? synopsis
+                    : 'No synopsis is available for this title.',
+                style: const TextStyle(
+                  color: Colors.white70,
+                  height: 1.55,
+                  fontSize: 14,
+                ),
+              ),
+              if (_details?.genres.isNotEmpty == true) ...[
+                const SizedBox(height: 22),
+                _sectionTitle('Genres'),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final genre in _details!.genres) _metadata(genre),
                   ],
-                  if (_details?.status.isNotEmpty == true) ...[
-                    const SizedBox(height: 18),
-                    Text(
-                      'Status: ${_details!.status}',
-                      style: const TextStyle(
-                        color: GlassTheme.muted,
-                        fontSize: 12,
+                ),
+              ],
+              if (_details?.status.isNotEmpty == true) ...[
+                const SizedBox(height: 18),
+                Text(
+                  'Status: ${_details!.status}',
+                  style: const TextStyle(color: GlassTheme.muted, fontSize: 12),
+                ),
+              ],
+              if (_loading) ...[
+                const SizedBox(height: 22),
+                Center(
+                  child: CircularProgressIndicator(color: GlassTheme.primary),
+                ),
+              ],
+              if (_error != null) ...[
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        _error!,
+                        style: const TextStyle(color: GlassTheme.muted),
                       ),
                     ),
+                    TextButton.icon(
+                      onPressed: _loadDetails,
+                      icon: const Icon(Symbols.refresh_rounded),
+                      label: const Text('Retry'),
+                    ),
                   ],
-                  if (_loading) ...[
-                    const SizedBox(height: 22),
-                    Center(
+                ),
+              ],
+              if (_details?.cast.isNotEmpty == true) ...[
+                const SizedBox(height: 24),
+                _sectionTitle('Cast'),
+                SizedBox(
+                  height: 142,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _details!.cast.length,
+                    separatorBuilder: (_, _) => const SizedBox(width: 8),
+                    itemBuilder: (context, index) =>
+                        _castMember(_details!.cast[index]),
+                  ),
+                ),
+              ],
+              if (item.type == 'series') ...[
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(child: _sectionTitle('Episodes')),
+                    if (_seasons.isNotEmpty)
+                      DropdownButton<int>(
+                        value: _selectedSeason,
+                        underline: const SizedBox.shrink(),
+                        items: [
+                          for (final season in _seasons)
+                            DropdownMenuItem(
+                              value: (season['season_number'] as num).toInt(),
+                              child: Text(
+                                'Season ${(season['season_number'] as num).toInt()}',
+                              ),
+                            ),
+                        ],
+                        onChanged: (season) {
+                          if (season != null && season != _selectedSeason) {
+                            _loadEpisodes(season);
+                          }
+                        },
+                      ),
+                  ],
+                ),
+                if (_loadingEpisodes)
+                  Padding(
+                    padding: EdgeInsets.symmetric(vertical: 24),
+                    child: Center(
                       child: CircularProgressIndicator(
                         color: GlassTheme.primary,
                       ),
                     ),
-                  ],
-                  if (_error != null) ...[
-                    const SizedBox(height: 18),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            _error!,
-                            style: const TextStyle(color: GlassTheme.muted),
-                          ),
+                  )
+                else if (_episodeError != null)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          _episodeError!,
+                          style: const TextStyle(color: GlassTheme.muted),
                         ),
-                        TextButton.icon(
-                          onPressed: _loadDetails,
-                          icon: const Icon(Symbols.refresh_rounded),
-                          label: const Text('Retry'),
-                        ),
-                      ],
-                    ),
-                  ],
-                  if (_details?.cast.isNotEmpty == true) ...[
-                    const SizedBox(height: 24),
-                    _sectionTitle('Cast'),
-                    SizedBox(
-                      height: 142,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: _details!.cast.length,
-                        separatorBuilder: (_, _) => const SizedBox(width: 8),
-                        itemBuilder: (context, index) =>
-                            _castMember(_details!.cast[index]),
                       ),
-                    ),
-                  ],
-                  if (item.type == 'series') ...[
-                    const SizedBox(height: 24),
-                    Row(
-                      children: [
-                        Expanded(child: _sectionTitle('Episodes')),
-                        if (_seasons.isNotEmpty)
-                          DropdownButton<int>(
-                            value: _selectedSeason,
-                            underline: const SizedBox.shrink(),
-                            items: [
-                              for (final season in _seasons)
-                                DropdownMenuItem(
-                                  value: (season['season_number'] as num)
-                                      .toInt(),
-                                  child: Text(
-                                    'Season ${(season['season_number'] as num).toInt()}',
-                                  ),
-                                ),
-                            ],
-                            onChanged: (season) {
-                              if (season != null && season != _selectedSeason) {
-                                _loadEpisodes(season);
-                              }
-                            },
-                          ),
-                      ],
-                    ),
-                    if (_loadingEpisodes)
-                      Padding(
-                        padding: EdgeInsets.symmetric(vertical: 24),
-                        child: Center(
-                          child: CircularProgressIndicator(
-                            color: GlassTheme.primary,
-                          ),
-                        ),
-                      )
-                    else if (_episodeError != null)
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              _episodeError!,
-                              style: const TextStyle(color: GlassTheme.muted),
-                            ),
-                          ),
-                          TextButton.icon(
-                            onPressed: _seasons.isEmpty
-                                ? _loadSeasons
-                                : () => _loadEpisodes(_selectedSeason!),
-                            icon: const Icon(Symbols.refresh_rounded),
-                            label: const Text('Retry'),
-                          ),
-                        ],
-                      )
-                    else if (_episodes.isEmpty)
-                      const Text(
-                        'No episodes are available for this season.',
-                        style: TextStyle(color: GlassTheme.muted),
+                      TextButton.icon(
+                        onPressed: _seasons.isEmpty
+                            ? _loadSeasons
+                            : () => _loadEpisodes(_selectedSeason!),
+                        icon: const Icon(Symbols.refresh_rounded),
+                        label: const Text('Retry'),
                       ),
-                  ],
-                ],
+                    ],
+                  )
+                else if (_episodes.isEmpty)
+                  const Text(
+                    'No episodes are available for this season.',
+                    style: TextStyle(color: GlassTheme.muted),
+                  ),
+              ],
+            ],
+          ),
+        ),
+      ),
+      if (item.type == 'series' &&
+          !_loadingEpisodes &&
+          _episodeError == null &&
+          _episodes.isNotEmpty)
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
+          sliver: SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, index) => _episodeCard(_episodes[index]),
+              childCount: _episodes.length,
+            ),
+          ),
+        ),
+    ],
+  );
+
+  Widget? _playBar(BuildContext context, MediaItem item) =>
+      item.type == 'series'
+      ? null
+      : SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(18, 10, 18, 12),
+            child: SizedBox(
+              height: 54,
+              child: FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: GlassTheme.primary,
+                  foregroundColor: GlassTheme.background,
+                ),
+                onPressed: () => widget.onPlay(context),
+                icon: const Icon(Symbols.play_arrow_rounded, fill: 1),
+                label: Text(
+                  item.type == 'series'
+                      ? 'Choose episode and play'
+                      : 'Play movie',
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
               ),
             ),
           ),
-          if (item.type == 'series' &&
-              !_loadingEpisodes &&
-              _episodeError == null &&
-              _episodes.isNotEmpty)
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) => _episodeCard(_episodes[index]),
-                  childCount: _episodes.length,
-                ),
-              ),
+        );
+}
+
+/// Shades the status bar once content scrolls beneath it, so the clock and
+/// icons never sit on top of text.
+class _StatusBarScrim extends StatelessWidget {
+  const _StatusBarScrim();
+
+  @override
+  Widget build(BuildContext context) {
+    final inset = MediaQuery.paddingOf(context).top;
+    if (inset == 0) return const SizedBox.shrink();
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      height: inset + 24,
+      child: const IgnorePointer(
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color(0xE60B0B0F), Color(0x000B0B0F)],
             ),
-        ],
+          ),
+        ),
       ),
-      bottomNavigationBar: item.type == 'series'
-          ? null
-          : SafeArea(
-              top: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(18, 10, 18, 12),
-                child: SizedBox(
-                  height: 54,
-                  child: FilledButton.icon(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: GlassTheme.primary,
-                      foregroundColor: GlassTheme.background,
-                    ),
-                    onPressed: () => widget.onPlay(context),
-                    icon: const Icon(Symbols.play_arrow_rounded, fill: 1),
-                    label: Text(
-                      item.type == 'series'
-                          ? 'Choose episode and play'
-                          : 'Play movie',
-                      style: const TextStyle(fontWeight: FontWeight.w800),
-                    ),
-                  ),
-                ),
-              ),
-            ),
     );
   }
 }

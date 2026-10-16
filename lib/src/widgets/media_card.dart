@@ -4,6 +4,7 @@ import 'package:material_symbols_icons/symbols.dart';
 import '../models/media_item.dart';
 import '../theme/glass_theme.dart';
 import 'liquid_glass.dart';
+import 'poster_image.dart';
 
 class MediaCard extends StatefulWidget {
   const MediaCard({
@@ -14,6 +15,7 @@ class MediaCard extends StatefulWidget {
     this.progressLabel = '',
     this.onFavorite,
     this.isFavorite = false,
+    this.showTypeBadge = true,
   });
 
   final MediaItem item;
@@ -25,6 +27,10 @@ class MediaCard extends StatefulWidget {
   final String progressLabel;
   final VoidCallback? onFavorite;
   final bool isFavorite;
+
+  /// The FILM / SERIES badge in the top-right corner. Callers that put their
+  /// own control there (such as Remove in the library) turn it off.
+  final bool showTypeBadge;
 
   @override
   State<MediaCard> createState() => _MediaCardState();
@@ -153,24 +159,16 @@ class _MediaCardState extends State<MediaCard> {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  if (item.poster.isEmpty)
-                    const ColoredBox(
-                      color: GlassTheme.elevatedSurface,
-                      child: Icon(
-                        Symbols.movie_rounded,
-                        size: 36,
-                        color: Colors.white30,
-                      ),
-                    )
-                  else
+                  // Shown while the poster loads, when it fails, and when
+                  // there is none, so a card is never an empty dark slab.
+                  const PosterPlaceholder(),
+                  if (item.poster.isNotEmpty)
                     Image.network(
                       item.poster,
                       fit: BoxFit.cover,
                       cacheWidth: (146 * imagePixelRatio).round(),
-                      errorBuilder: (_, _, _) => const ColoredBox(
-                        color: GlassTheme.elevatedSurface,
-                        child: Icon(Symbols.movie_rounded),
-                      ),
+                      frameBuilder: posterFadeIn(context),
+                      errorBuilder: (_, _, _) => const SizedBox.shrink(),
                     ),
                   const Positioned.fill(
                     child: DecoratedBox(
@@ -188,27 +186,28 @@ class _MediaCardState extends State<MediaCard> {
                       ),
                     ),
                   ),
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: _frosted(
-                      radius: 30,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 5,
-                        ),
-                        child: Text(
-                          item.type == 'series' ? 'SERIES' : 'FILM',
-                          style: const TextStyle(
-                            fontSize: 8,
-                            letterSpacing: .5,
-                            fontWeight: FontWeight.w800,
+                  if (widget.showTypeBadge)
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: _frosted(
+                        radius: 30,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 5,
+                          ),
+                          child: Text(
+                            item.type == 'series' ? 'SERIES' : 'FILM',
+                            style: const TextStyle(
+                              fontSize: 8,
+                              letterSpacing: .5,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
                   if (widget.onFavorite != null)
                     Positioned(
                       left: 6,

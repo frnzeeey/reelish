@@ -171,9 +171,15 @@ class _PluginsHeader extends StatelessWidget {
           ],
         ),
       ),
-      IconButton(
+      // Same circular shape as Refresh, in neutral white, so the pair reads
+      // as one group with Refresh as the primary action.
+      IconButton.filledTonal(
         tooltip: 'Paste a manifest URL',
         onPressed: onPaste,
+        style: IconButton.styleFrom(
+          foregroundColor: Colors.white,
+          backgroundColor: Colors.white.withValues(alpha: .07),
+        ),
         icon: const Icon(Symbols.add_link_rounded),
       ),
       const SizedBox(width: 4),
@@ -203,7 +209,9 @@ class _PluginsHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(20),
+    // The card clips its decorative circle to its own rounded shape. Inside
+    // the padding, the Stack cut it off with a hard rectangle.
+    clipBehavior: Clip.antiAlias,
     decoration: BoxDecoration(
       borderRadius: BorderRadius.circular(25),
       gradient: LinearGradient(
@@ -220,8 +228,8 @@ class _PluginsHero extends StatelessWidget {
     child: Stack(
       children: [
         Positioned(
-          right: -26,
-          top: -34,
+          right: -6,
+          top: -14,
           child: Container(
             width: 142,
             height: 142,
@@ -231,68 +239,78 @@ class _PluginsHero extends StatelessWidget {
             ),
           ),
         ),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    color: GlassTheme.primary.withValues(alpha: .16),
-                    borderRadius: BorderRadius.circular(14),
+        Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: GlassTheme.primary.withValues(alpha: .16),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Icon(Symbols.hub_rounded, color: GlassTheme.primary),
                   ),
-                  child: Icon(Symbols.hub_rounded, color: GlassTheme.primary),
-                ),
-                const SizedBox(width: 12),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'SOURCE OVERVIEW',
-                        style: TextStyle(
-                          color: GlassTheme.muted,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1.4,
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'SOURCE OVERVIEW',
+                          style: TextStyle(
+                            color: GlassTheme.muted,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.4,
+                          ),
                         ),
-                      ),
-                      SizedBox(height: 3),
-                      Text(
-                        'Your sources',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
+                        SizedBox(height: 3),
+                        Text(
+                          'Your sources',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                Icon(Symbols.bolt_rounded, color: GlassTheme.primary, size: 22),
-              ],
-            ),
-            const SizedBox(height: 14),
-            const Text(
-              'Choose which trusted providers Reelish can search when you press play.',
-              style: TextStyle(
-                color: Colors.white70,
-                height: 1.4,
-                fontSize: 12,
+                  Icon(
+                    Symbols.bolt_rounded,
+                    color: GlassTheme.primary,
+                    size: 22,
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: 17),
-            Row(
-              children: [
-                _MetricPill(value: '$enabledCount', label: 'active'),
-                const SizedBox(width: 8),
-                _MetricPill(value: '$providerCount', label: 'providers'),
-                const SizedBox(width: 8),
-                _MetricPill(value: '$repositoryCount', label: 'repos'),
-              ],
-            ),
-          ],
+              const SizedBox(height: 14),
+              const Text(
+                'Choose which trusted providers Reelish can search when you press play.',
+                style: TextStyle(
+                  color: Colors.white70,
+                  height: 1.4,
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(height: 17),
+              Row(
+                children: [
+                  _MetricPill(value: '$enabledCount', label: 'active'),
+                  const SizedBox(width: 8),
+                  _MetricPill(value: '$providerCount', label: 'providers'),
+                  const SizedBox(width: 8),
+                  _MetricPill(
+                    value: '$repositoryCount',
+                    label: repositoryCount == 1 ? 'repo' : 'repos',
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ],
     ),

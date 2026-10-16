@@ -489,6 +489,8 @@ class _MediaSection extends StatelessWidget {
                         isFavorite: favorite,
                         onTap: () => onPlay(item),
                         progress: resume.fraction,
+                        // Remove takes the badge's corner.
+                        showTypeBadge: onRemove == null,
                         onFavorite: favorite && onFavorite != null
                             ? () => onFavorite!(item)
                             : null,

@@ -1382,9 +1382,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       setState(() => _searchVisible = true);
                       _searchFocus.requestFocus();
                     },
+                    // Dark glass like the details back button, so it stays
+                    // visible over bright artwork.
                     style: IconButton.styleFrom(
-                      backgroundColor: Colors.white.withValues(alpha: .09),
+                      backgroundColor: Colors.black.withValues(alpha: .38),
                       foregroundColor: Colors.white,
+                      side: BorderSide(
+                        color: Colors.white.withValues(alpha: .14),
+                      ),
                     ),
                     icon: const Icon(Symbols.search_rounded),
                   ),
@@ -1396,7 +1401,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Widget _filtersAndSearch() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 8, 18, 10),
+      // Side padding lives inside the list, so chips scroll to the screen
+      // edge instead of being cut off 18 px before it.
+      padding: const EdgeInsets.fromLTRB(0, 8, 0, 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1404,6 +1411,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             height: 39,
             child: ListView(
               scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 18),
               children: [
                 for (final category in [
                   'For you',
