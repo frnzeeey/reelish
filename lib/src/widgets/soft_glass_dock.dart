@@ -22,18 +22,21 @@ class SoftGlassDock extends StatelessWidget {
   ];
 
   @override
-  Widget build(BuildContext context) => SafeArea(
-    top: false,
-    minimum: const EdgeInsets.fromLTRB(22, 6, 22, 10),
-    child: LiquidGlass(
+  Widget build(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
+    final metrics = DockMetrics.forSize(size);
+    final dock = LiquidGlass(
       quality: LiquidGlassQuality.balanced,
       blurSigma: 9,
       opacity: .82,
-      borderRadius: 26,
+      borderRadius: metrics.radius,
       elevation: 1.2,
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      padding: EdgeInsets.symmetric(
+        horizontal: metrics.innerPadding,
+        vertical: 6,
+      ),
       child: SizedBox(
-        height: 72,
+        height: metrics.height,
         child: Row(
           children: [
             for (var i = 0; i < _destinations.length; i++)
@@ -43,14 +46,86 @@ class SoftGlassDock extends StatelessWidget {
                   selectedIcon: _destinations[i].$2,
                   label: _destinations[i].$3,
                   selected: selectedIndex == i,
+                  iconSize: metrics.iconSize,
+                  labelSize: metrics.labelSize,
                   onTap: () => onSelected(i),
                 ),
               ),
           ],
         ),
       ),
-    ),
+    );
+    final width = metrics.width;
+    return SafeArea(
+      top: false,
+      minimum: metrics.margin,
+      child: width == null
+          ? dock
+          : Center(
+              heightFactor: 1,
+              child: SizedBox(width: width, child: dock),
+            ),
+    );
+  }
+}
+
+/// Dock proportions for the device class. Phones keep the original
+/// full-width dock; tablets (shortest side of at least 600 dp, in either
+/// orientation) get a compact, centered dock that never stretches across
+/// the screen.
+@immutable
+class DockMetrics {
+  const DockMetrics._({
+    required this.width,
+    required this.height,
+    required this.iconSize,
+    required this.labelSize,
+    required this.radius,
+    required this.innerPadding,
+    required this.margin,
+  });
+
+  static const tabletBreakpoint = 600.0;
+  static const minTabletWidth = 380.0;
+  static const maxTabletWidth = 440.0;
+
+  static const phone = DockMetrics._(
+    width: null,
+    height: 72,
+    iconSize: 22,
+    labelSize: 10,
+    radius: 26,
+    innerPadding: 8,
+    margin: EdgeInsets.fromLTRB(22, 6, 22, 10),
   );
+
+  factory DockMetrics.forSize(Size size) {
+    if (size.shortestSide < tabletBreakpoint) return phone;
+    return DockMetrics._(
+      // Half the screen, kept between 380 and 440 dp: 400 dp on an 800 dp
+      // portrait tablet, 440 dp on anything wider.
+      width: (size.width * .5).clamp(minTabletWidth, maxTabletWidth),
+      height: 64,
+      iconSize: 24,
+      labelSize: 11,
+      radius: 24,
+      innerPadding: 10,
+      margin: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+    );
+  }
+
+  /// Fixed dock width, or null to fill the space between [margin]s.
+  final double? width;
+
+  /// Height of the item row, inside the glass's 6 dp vertical padding.
+  final double height;
+  final double iconSize;
+  final double labelSize;
+  final double radius;
+  final double innerPadding;
+
+  /// Minimum space around the dock; the system inset wins when larger.
+  final EdgeInsets margin;
 }
 
 class _DockItem extends StatelessWidget {
@@ -59,6 +134,8 @@ class _DockItem extends StatelessWidget {
     required this.selectedIcon,
     required this.label,
     required this.selected,
+    required this.iconSize,
+    required this.labelSize,
     required this.onTap,
   });
 
@@ -66,6 +143,8 @@ class _DockItem extends StatelessWidget {
   final IconData selectedIcon;
   final String label;
   final bool selected;
+  final double iconSize;
+  final double labelSize;
   final VoidCallback onTap;
 
   @override
@@ -122,7 +201,7 @@ class _DockItem extends StatelessWidget {
                     curve: Curves.easeOutCubic,
                     child: Icon(
                       selected ? selectedIcon : icon,
-                      size: 22,
+                      size: iconSize,
                       color: selected ? GlassTheme.primary : Colors.white70,
                     ),
                   ),
@@ -131,7 +210,7 @@ class _DockItem extends StatelessWidget {
                     duration: duration,
                     curve: Curves.easeOutCubic,
                     style: TextStyle(
-                      fontSize: 10,
+                      fontSize: labelSize,
                       height: 1,
                       color: selected ? GlassTheme.primary : GlassTheme.muted,
                       fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
