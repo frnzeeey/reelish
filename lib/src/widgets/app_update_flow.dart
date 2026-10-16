@@ -47,8 +47,12 @@ abstract final class AppUpdateFlow {
   /// "Later" the same release is offered again on the next app launch.
   static final _offeredThisSession = <String>{};
 
+  /// Android installs the APK; Windows downloads the portable ZIP, verifies
+  /// it and shows it in File Explorer for a manual replace.
   static bool get isSupported =>
-      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.windows);
 
   /// Background check for app start and resume. Shows nothing unless a newer
   /// release with an APK exists; failures are silent.
@@ -163,6 +167,10 @@ abstract final class AppUpdateFlow {
     File apk,
     AppUpdate update,
   ) async {
+    if (defaultTargetPlatform == TargetPlatform.windows) {
+      await _revealOnWindows(context, apk, update);
+      return;
+    }
     if (!await GitHubUpdateService.canInstallPackages()) {
       if (!context.mounted) return;
       final openSettings = await showDialog<bool>(
@@ -210,6 +218,37 @@ abstract final class AppUpdateFlow {
         await _notice(
           context,
           title: 'Unable to install the update',
+          message: error.message,
+        );
+      }
+    }
+  }
+
+  /// Windows has no package installer to hand over to, and a running app
+  /// cannot replace its own files: the verified ZIP goes to Downloads, and
+  /// the user swaps the folder after closing Reelish.
+  static Future<void> _revealOnWindows(
+    BuildContext context,
+    File zip,
+    AppUpdate update,
+  ) async {
+    try {
+      final saved = await GitHubUpdateService.revealWindowsUpdate(zip, update);
+      if (!context.mounted) return;
+      await _notice(
+        context,
+        title: 'Reelish ${update.latestVersion} downloaded',
+        message:
+            'The update was verified and saved to ${saved.path}. Close '
+            'Reelish, extract the ZIP, and replace your Reelish folder with '
+            'the extracted one. Your settings and library are kept.',
+        icon: Symbols.download_done_rounded,
+      );
+    } on UpdateException catch (error) {
+      if (context.mounted) {
+        await _notice(
+          context,
+          title: 'Unable to save the update',
           message: error.message,
         );
       }

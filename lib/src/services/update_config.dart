@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 /// Settings for the GitHub Releases based Android updater.
 ///
 /// Releases are published only by `.github/workflows/release.yml` (see
@@ -13,6 +15,16 @@ abstract final class UpdateConfig {
   /// The only release asset the updater downloads. The release workflow
   /// uploads the APK under exactly this name.
   static const apkAssetName = 'reelish.apk';
+
+  /// The Windows release asset: a portable ZIP of the whole app folder,
+  /// published by `.github/workflows/release-windows.yml`.
+  static const windowsAssetName = 'Reelish-Windows-x64.zip';
+
+  /// The asset this platform updates from.
+  static String get assetName =>
+      defaultTargetPlatform == TargetPlatform.windows
+      ? windowsAssetName
+      : apkAssetName;
 
   /// Minimum time between automatic GitHub API requests. Unauthenticated
   /// requests are limited to 60 per hour per IP address, which may be shared

@@ -127,7 +127,7 @@ class PlayerSheetOption extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         // A remote opens the sheet on the current choice.
-        autofocus: selected && DeviceCapabilities.isTv,
+        autofocus: selected && DeviceCapabilities.usesTvLayout,
         child: Semantics(
           selected: selected,
           button: true,

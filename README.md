@@ -13,6 +13,7 @@ Reelish is an open-source Flutter app for discovering movies and TV series and w
 - Play supported direct streams, with source selection, resume progress, playback controls, and configurable subtitles.
 - On Android, allow compatible providers to return torrent sources for P2P playback.
 - Use Reelish on Android TV and Google TV with an interface built for the remote, from the same APK as phones and tablets.
+- Run Reelish on Windows 10 and 11 as a desktop app with the TV interface, mouse and keyboard controls, and fullscreen playback.
 - Choose an accent color and customize playback, subtitle appearance, language preferences, and gestures.
 - Read the privacy policy, terms of use, and third-party credits in the app.
 
@@ -79,6 +80,12 @@ After the first install, Reelish updates itself like on a phone. The first time 
 
 Details on TV detection, remote navigation, and known limitations are in [docs/android_tv.md](docs/android_tv.md).
 
+## Windows
+
+Download `Reelish-Windows-x64.zip` from the [latest release](https://github.com/frnzeeey/reelish/releases/latest), extract it, and run `Reelish\Reelish.exe`. Windows uses the TV interface with mouse and keyboard controls: click or use the arrow keys, Escape or Backspace to go back, F11 for fullscreen, and Space, Left/Right and F in the player. P2P playback is Android-only. **Settings > About > Check for updates** downloads and verifies a new ZIP and shows it in File Explorer; the app is not code-signed yet, so SmartScreen may ask before the first launch.
+
+Details, building from source, and the release workflow are in [docs/windows.md](docs/windows.md).
+
 ## TMDB configuration
 
 Reelish uses [The Movie Database (TMDB)](https://www.themoviedb.org/) for catalog data, search, artwork, and title details. A TMDB API key is required to run the app. Create the ignored local file `lib/tmdb_config.local.dart` with:
@@ -106,4 +113,4 @@ Release builds are published on [GitHub Releases](https://github.com/frnzeeey/re
 
 ## Privacy and terms
 
-On first launch, read and accept the privacy policy and terms of use shown in the app. Favorites, playback history, settings, and provider choices are stored locally. TMDB, provider publishers, stream hosts, and subtitle services receive requests needed for the features you use. The plugin library downloads its catalog from GitHub and loads provider logos from their listed hosts, and Android may contact GitHub for update checks. See the in-app **Privacy policy** and **Terms of use** for details.
+On first launch, read and accept the privacy policy and terms of use shown in the app. Favorites, playback history, settings, and provider choices are stored locally. TMDB, provider publishers, stream hosts, and subtitle services receive requests needed for the features you use. The plugin library downloads its catalog from GitHub and loads provider logos from their listed hosts, and Android and Windows may contact GitHub for update checks. See the in-app **Privacy policy** and **Terms of use** for details.

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -61,6 +62,38 @@ void main() {
   });
 
   group('DeviceCapabilities', () {
+    test('layout mode: phone mobile, TV television, Windows desktop', () {
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      DeviceCapabilities.debugOverride = const DeviceCapabilities();
+      expect(DeviceCapabilities.current.layoutMode, ReelishLayoutMode.mobile);
+      expect(DeviceCapabilities.usesTvLayout, isFalse);
+
+      DeviceCapabilities.debugOverride = const DeviceCapabilities(
+        isTelevision: true,
+        hasTouchscreen: false,
+      );
+      expect(
+        DeviceCapabilities.current.layoutMode,
+        ReelishLayoutMode.television,
+      );
+      expect(DeviceCapabilities.usesTvLayout, isTrue);
+      expect(DeviceCapabilities.isDesktop, isFalse);
+
+      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+      DeviceCapabilities.debugOverride = const DeviceCapabilities(
+        hasTouchscreen: false,
+        supportsPictureInPicture: false,
+      );
+      expect(DeviceCapabilities.current.layoutMode, ReelishLayoutMode.desktop);
+      expect(DeviceCapabilities.usesTvLayout, isTrue);
+      expect(DeviceCapabilities.isDesktop, isTrue);
+      // Windows reuses the TV interface without pretending to be a TV, so
+      // TV-hardware behaviour (Back reveals controls, low glass) stays off.
+      expect(DeviceCapabilities.isTv, isFalse);
+      expect(LiquidGlass.qualityCeiling, LiquidGlassQuality.high);
+    });
+
     test('a device reporting television gets the TV interface', () async {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(

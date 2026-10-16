@@ -17,7 +17,7 @@ class LegalInformationScreen extends StatefulWidget {
   final LegalDocument document;
   final bool requireReadToEnd;
 
-  static const _effectiveDate = 'October 8, 2026';
+  static const _effectiveDate = 'October 16, 2026';
 
   /// What Reelish is and is not responsible for. Shown first in the Terms of
   /// use and on the Credits screen; keep the wording exact.
@@ -234,9 +234,10 @@ class _LegalInformationScreenState extends State<LegalInformationScreen> {
           'needed for your request and may send them to their own servers. '
           'Direct streams, subtitle files and torrent/P2P playback connect to '
           'the selected source or peers; those operators can receive your IP '
-          'address and request data. Android may contact GitHub to check for '
-          'app updates and download an APK when you choose an update. Android '
-          'uses its package installer after you confirm the installation.',
+          'address and request data. Android and Windows may contact GitHub '
+          'to check for app updates. When you choose an update, Android '
+          'downloads an APK and uses its package installer after you confirm; '
+          'Windows downloads a ZIP to your Downloads folder for you to install.',
     ),
     (
       'Third-party services and add-ons',

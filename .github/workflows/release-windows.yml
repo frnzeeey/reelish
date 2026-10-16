@@ -1,0 +1,261 @@
+name: Release (Windows)
+
+# Builds the portable Windows app and attaches it to the GitHub Release that
+# release.yml publishes for the same vMAJOR.MINOR.PATCH tag. This workflow
+# never creates, edits or replaces a release or the APK: it only adds
+# Reelish-Windows-x64.zip and its .sha256, so a failed Windows build can never
+# block or alter an Android release. Run it manually (workflow_dispatch) to
+# build and verify the ZIP as a workflow artifact without publishing.
+# See docs/windows.md.
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-windows-${{ github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  # Keep in step with release.yml and the local `flutter --version`.
+  FLUTTER_VERSION: '3.44.8'
+  ASSET_NAME: Reelish-Windows-x64.zip
+  RELEASE_DIR: build/windows/x64/runner/Release
+  # SHA-256 of the QuickJS bridge committed in third_party (see
+  # third_party/flutter_js/REELISH_PATCH.md). A different DLL fails the build.
+  QUICKJS_BRIDGE_SHA256: e08ccf396e071894d18ba6c818cfe7cf2ec4f13ee87c4a1fd421a14e7a35fb69
+
+jobs:
+  build:
+    name: Build Windows ${{ github.ref_name }}
+    runs-on: windows-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Check out the commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Read and check the application version
+        id: version
+        run: |
+          set -euo pipefail
+          PUBSPEC_VERSION="$(sed -nE 's/^version:[[:space:]]*([^[:space:]#]+).*$/\1/p' pubspec.yaml | tr -d '\r')"
+          if [[ ! "$PUBSPEC_VERSION" =~ ^([0-9]+\.[0-9]+\.[0-9]+)\+([0-9]+)$ ]]; then
+            echo "::error::pubspec.yaml version '$PUBSPEC_VERSION' must be MAJOR.MINOR.PATCH+BUILD."
+            exit 1
+          fi
+          VERSION="${BASH_REMATCH[1]}"
+          if [[ "$GITHUB_REF_TYPE" == "tag" && "v$VERSION" != "$GITHUB_REF_NAME" ]]; then
+            echo "::error::Git tag ($GITHUB_REF_NAME) does not match pubspec.yaml version ($VERSION)."
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Building Reelish $VERSION for Windows from $(git rev-parse HEAD)"
+
+      - name: Verify the QuickJS bridge
+        shell: pwsh
+        run: |
+          $dll = 'third_party/flutter_js/windows/shared/quickjs_c_bridge.dll'
+          $hash = (Get-FileHash $dll -Algorithm SHA256).Hash.ToLower()
+          if ($hash -ne $env:QUICKJS_BRIDGE_SHA256) {
+            throw "quickjs_c_bridge.dll is $hash, expected $env:QUICKJS_BRIDGE_SHA256."
+          }
+          $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
+          $dumpbin = Get-ChildItem "$vs\VC\Tools\MSVC" -Recurse -Filter dumpbin.exe |
+            Where-Object FullName -like '*Hostx64\x64*' | Select-Object -First 1
+          $exports = & $dumpbin.FullName /nologo /exports $dll
+          foreach ($symbol in 'JS_SetMemoryLimit', 'JS_SetInterruptHandler', 'jsNewRuntime', 'jsEval') {
+            if (-not ($exports -match "\s$symbol$")) { throw "quickjs_c_bridge.dll does not export $symbol." }
+          }
+          Write-Host "quickjs_c_bridge.dll verified: $hash"
+
+      - name: Write TMDB config
+        env:
+          TMDB_API_KEY: ${{ secrets.ONFEED_TMDB_API_KEY }}
+          SYMBOLS_PASSPHRASE: ${{ secrets.ONFEED_SYMBOLS_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          for name in TMDB_API_KEY SYMBOLS_PASSPHRASE; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::Missing GitHub Actions secret for $name (see docs/releasing.md)."
+              exit 1
+            fi
+          done
+          if [[ ! "$TMDB_API_KEY" =~ ^[A-Za-z0-9._-]+$ ]]; then
+            echo "::error::ONFEED_TMDB_API_KEY contains unexpected characters."
+            exit 1
+          fi
+          printf "const tmdbApiKey = '%s';\n" "$TMDB_API_KEY" > lib/tmdb_config.local.dart
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Resolve dependencies
+        run: |
+          set -euo pipefail
+          flutter --version
+          flutter clean
+          flutter pub get --enforce-lockfile
+
+      - name: Windows tests
+        # The sandbox limits and engine selection that only Windows exercises.
+        run: >-
+          flutter test
+          test/quickjs_windows_limits_test.dart
+          test/provider_runner_test.dart
+          test/playback_pipeline_test.dart
+          test/github_update_check_test.dart
+
+      - name: Build
+        run: |
+          set -euo pipefail
+          SYMBOLS_DIR="$RUNNER_TEMP/symbols/$GITHUB_REF_NAME"
+          echo "SYMBOLS_DIR=$SYMBOLS_DIR" >> "$GITHUB_ENV"
+          flutter build windows --release \
+            --obfuscate --split-debug-info="$SYMBOLS_DIR" \
+            --dart-define="REELISH_GIT_SHA=$GITHUB_SHA" \
+            --dart-define="REELISH_BUILD_TAG=$GITHUB_REF_NAME"
+
+      - name: Verify the build
+        shell: pwsh
+        run: |
+          $dir = $env:RELEASE_DIR
+          $required = 'Reelish.exe', 'flutter_windows.dll', 'libmpv-2.dll',
+            'quickjs_c_bridge.dll', 'flutter_js_plugin.dll',
+            'media_kit_video_plugin.dll', 'url_launcher_windows_plugin.dll',
+            'data/app.so', 'data/icudtl.dat', 'data/flutter_assets/AssetManifest.bin'
+          foreach ($file in $required) {
+            if (-not (Test-Path (Join-Path $dir $file))) { throw "Missing $file in the build output." }
+          }
+          $version = (Get-Item (Join-Path $dir 'Reelish.exe')).VersionInfo
+          if ($version.ProductName -ne 'Reelish' -or $version.CompanyName -ne 'frnzeeey') {
+            throw "Unexpected Reelish.exe identity: $($version.ProductName) / $($version.CompanyName)."
+          }
+          if (-not $version.ProductVersion.StartsWith('${{ steps.version.outputs.version }}')) {
+            throw "Reelish.exe version $($version.ProductVersion) is not ${{ steps.version.outputs.version }}."
+          }
+          $bridge = (Get-FileHash (Join-Path $dir 'quickjs_c_bridge.dll') -Algorithm SHA256).Hash.ToLower()
+          if ($bridge -ne $env:QUICKJS_BRIDGE_SHA256) { throw 'The bundled QuickJS bridge is not the verified one.' }
+          # Obfuscated Dart code must not carry Reelish's class names.
+          $app = [System.IO.File]::ReadAllText((Join-Path $dir 'data/app.so'), [System.Text.Encoding]::GetEncoding(28591))
+          foreach ($name in 'ProviderFetchBridge', 'TmdbService', 'package:onfeed/src') {
+            if ($app.Contains($name)) { throw "app.so is not obfuscated ($name found)." }
+          }
+          foreach ($name in 'OnfeedFetch', 'getStreams', 'reelish/window') {
+            if (-not $app.Contains($name)) { throw "app.so lost the required string $name." }
+          }
+          Write-Host "Reelish.exe $($version.ProductVersion) verified."
+
+      - name: Package
+        shell: pwsh
+        run: |
+          $stage = Join-Path $env:RUNNER_TEMP 'package/Reelish'
+          New-Item -ItemType Directory -Force $stage | Out-Null
+          Copy-Item -Recurse -Path "$env:RELEASE_DIR/*" -Destination $stage
+          $zip = Join-Path $env:RUNNER_TEMP $env:ASSET_NAME
+          # Windows' bsdtar writes standard '/' entry paths (Compress-Archive
+          # and .NET Framework's ZipFile write '\'), with a top-level Reelish
+          # folder.
+          & "$env:SystemRoot\System32\tar.exe" -a -c -f $zip -C (Split-Path $stage) Reelish
+          if ($LASTEXITCODE -ne 0) { throw "tar failed ($LASTEXITCODE)." }
+          $hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
+          "$hash  $env:ASSET_NAME" | Out-File -Encoding ascii -NoNewline "$zip.sha256"
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Move-Item $zip, "$zip.sha256" dist/
+          Write-Host "$env:ASSET_NAME $((Get-Item dist/$env:ASSET_NAME).Length) bytes, SHA-256 $hash"
+
+      - name: Package encrypted debug symbols
+        env:
+          SYMBOLS_PASSPHRASE: ${{ secrets.ONFEED_SYMBOLS_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/symbols-package"
+          mkdir -p "$OUT"
+          tar -czf "$OUT/symbols.tar.gz" -C "$SYMBOLS_DIR" .
+          openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt \
+            -in "$OUT/symbols.tar.gz" -out "dist/reelish-windows-${GITHUB_REF_NAME}-symbols.tar.gz.enc" \
+            -pass env:SYMBOLS_PASSPHRASE
+          rm -rf "$OUT" "$SYMBOLS_DIR"
+
+      - name: Upload the ZIP (workflow artifact)
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: reelish-windows-${{ github.ref_name }}
+          path: |
+            dist/${{ env.ASSET_NAME }}
+            dist/${{ env.ASSET_NAME }}.sha256
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Upload encrypted debug symbols
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: reelish-windows-${{ github.ref_name }}-symbols
+          path: dist/reelish-windows-${{ github.ref_name }}-symbols.tar.gz.enc
+          retention-days: 90
+          if-no-files-found: error
+
+      - name: Remove the TMDB config
+        if: always()
+        run: rm -f lib/tmdb_config.local.dart
+
+  publish:
+    name: Attach to release ${{ github.ref_name }}
+    needs: build
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write
+    steps:
+      - name: Download the ZIP
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: reelish-windows-${{ github.ref_name }}
+          path: dist
+
+      - name: Wait for the Android release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # release.yml creates the release once its APK is verified. Wait for
+          # it rather than creating one: an Android failure means no release,
+          # and this job then fails without publishing anything.
+          for attempt in $(seq 1 80); do
+            if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --json tagName > /dev/null 2>&1; then
+              echo "Release $GITHUB_REF_NAME exists."
+              exit 0
+            fi
+            sleep 30
+          done
+          echo "::error::Release $GITHUB_REF_NAME was not published by release.yml within 40 minutes."
+          exit 1
+
+      - name: Attach the Windows ZIP
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cd dist
+          sha256sum -c "$ASSET_NAME.sha256"
+          # --clobber replaces only these two Windows assets on a re-run; the
+          # APK and every other asset are left as they are.
+          gh release upload "$GITHUB_REF_NAME" "$ASSET_NAME" "$ASSET_NAME.sha256" \
+            --repo "$GITHUB_REPOSITORY" --clobber

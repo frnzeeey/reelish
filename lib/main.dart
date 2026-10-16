@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'src/platform/desktop_window.dart';
 import 'src/platform/device_capabilities.dart';
 import 'src/screens/home_screen.dart';
 import 'src/screens/splash_screen.dart';
@@ -30,6 +31,9 @@ class _ReelishAppState extends State<ReelishApp> {
   /// Focuses a control in each dialog and sheet on TV.
   final _popupFocus = TvPopupFocusObserver();
 
+  /// Lets desktop keyboard shortcuts go back from any screen.
+  final _navigatorKey = GlobalKey<NavigatorState>();
+
   @override
   void dispose() {
     _accentSettings.dispose();
@@ -45,12 +49,17 @@ class _ReelishAppState extends State<ReelishApp> {
       DeviceCapabilities.listenable,
     ]),
     builder: (context, _) {
-      final tv = DeviceCapabilities.isTv;
+      final tv = DeviceCapabilities.usesTvLayout;
       return MaterialApp(
         title: 'Reelish',
         debugShowCheckedModeBanner: false,
         theme: tv ? GlassTheme.tv : GlassTheme.dark,
+        navigatorKey: _navigatorKey,
         navigatorObservers: [if (tv) _popupFocus],
+        builder: DeviceCapabilities.isDesktopPlatform
+            ? (context, child) =>
+                  DesktopShortcuts(navigatorKey: _navigatorKey, child: child!)
+            : null,
         home: _StartupScreen(accentSettings: _accentSettings),
       );
     },

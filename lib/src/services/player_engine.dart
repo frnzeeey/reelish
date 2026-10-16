@@ -62,9 +62,11 @@ class MpvPlayerEngine implements PlayerEngine {
 
   @override
   void activate() {
-    // Loads libmpv on first use rather than at app launch; it is the
-    // fallback engine, so most sessions never need it. Idempotent.
-    VideoPlayerMediaKit.ensureInitialized(android: true);
+    // Loads libmpv on first use rather than at app launch; on Android it is
+    // the fallback engine, so most sessions never need it. On Windows it is
+    // the only engine (libmpv comes from media_kit_libs_windows_video).
+    // Idempotent.
+    VideoPlayerMediaKit.ensureInitialized(android: true, windows: true);
     VideoPlayerMediaKit.registerWith();
   }
 
@@ -205,10 +207,13 @@ VideoFormat? _formatHint(StreamType type) => switch (type) {
 };
 
 class PlayerEngineFactory {
-  static PlayerEngine forCurrentPlatform() =>
-      defaultTargetPlatform == TargetPlatform.android
-      ? const Media3PlayerEngine()
-      : const FlutterPlatformPlayerEngine();
+  static PlayerEngine forCurrentPlatform() => switch (defaultTargetPlatform) {
+    TargetPlatform.android => const Media3PlayerEngine(),
+    // package:video_player has no Windows implementation; libmpv does all
+    // decoding, rendering and networking there.
+    TargetPlatform.windows => const MpvPlayerEngine(),
+    _ => const FlutterPlatformPlayerEngine(),
+  };
 
   /// The engine to try first for [url], given the session's [preferred]
   /// engine.
@@ -230,11 +235,15 @@ class PlayerEngineFactory {
     return Uri.tryParse(url.trim())?.scheme.toLowerCase() == 'https';
   }
 
-  static PlayerEngine? alternateFor(PlayerEngine engine) => switch (engine.id) {
-    PlayerEngineId.media3 => const MpvPlayerEngine(),
-    PlayerEngineId.mediaKit => const Media3PlayerEngine(),
-    PlayerEngineId.flutterPlatform => null,
-  };
+  static PlayerEngine? alternateFor(PlayerEngine engine) {
+    // Media3 exists only on Android; Windows has libmpv alone.
+    if (defaultTargetPlatform == TargetPlatform.windows) return null;
+    return switch (engine.id) {
+      PlayerEngineId.media3 => const MpvPlayerEngine(),
+      PlayerEngineId.mediaKit => const Media3PlayerEngine(),
+      PlayerEngineId.flutterPlatform => null,
+    };
+  }
 }
 
 /// Selects the default engine at launch. libmpv is loaded lazily by

@@ -14,6 +14,7 @@ import '../../models/media_item.dart';
 import '../../models/playback_settings.dart';
 import '../../models/stream_source.dart';
 import '../../models/subtitle_language.dart';
+import '../../platform/desktop_window.dart';
 import '../../platform/device_capabilities.dart';
 import '../../services/storage_service.dart';
 import '../../services/playback_settings_controller.dart';
@@ -139,6 +140,10 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   /// layers that make room for the controls follow this.
   final ValueNotifier<bool> _controlsShown = ValueNotifier(true);
 
+  /// Desktop: whether this player put the window into fullscreen, so
+  /// closing it restores the window (fullscreen from F11 is left alone).
+  bool _enteredFullscreen = false;
+
   /// What Back depends on.
   late final Listenable _backState = Listenable.merge([
     _locked,
@@ -156,7 +161,15 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     debugLabel: 'Subtitle position',
   );
   ModalRoute<Object?>? _route;
-  static bool get _tv => DeviceCapabilities.isTv;
+
+  /// TV interface (TVs and desktop): remote/keyboard handling, no rotation,
+  /// touch lock or brightness gestures.
+  static bool get _tv => DeviceCapabilities.usesTvLayout;
+
+  /// A real TV, where Back reveals the controls and they stay up longer.
+  static bool get _tvHardware => DeviceCapabilities.isTv;
+
+  static bool get _desktop => DeviceCapabilities.isDesktop;
 
   /// Live subtitle position, so moving subtitles rebuilds only their layer.
   late final ValueNotifier<double> _subtitlePosition;
@@ -313,6 +326,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     _controlsVisible.addListener(_syncControlsShown);
     _locked.addListener(_syncControlsShown);
     widget.playbackSettings.addListener(_onPlaybackSettingsChanged);
+    if (_desktop) DesktopWindow.fullscreen.addListener(_onFullscreenChanged);
     if (_tv) {
       FocusManager.instance.addListener(_keepRemoteFocus);
       _pauseOverlay.addListener(_followPauseScreen);
@@ -1142,7 +1156,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   void _scheduleHide() {
     _hide?.cancel();
     // Read from across the room with a remote, TV controls stay up longer.
-    _hide = Timer(Duration(milliseconds: _tv ? 5000 : 3500), () {
+    _hide = Timer(Duration(milliseconds: _tvHardware ? 5000 : 3500), () {
       if (mounted && _canAutoHide) _controlsVisible.value = false;
     });
   }
@@ -1174,6 +1188,21 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     final repeat = event is KeyRepeatEvent;
     final c = _controller;
     final playable = c != null && _ready;
+    if (_desktop) {
+      // Keyboard on desktop: Space plays or pauses wherever focus is in the
+      // player; F toggles fullscreen. Arrows keep the remote behaviour.
+      if (key == LogicalKeyboardKey.space) {
+        if (!repeat && playable) {
+          _togglePlay();
+          _show();
+        }
+        return KeyEventResult.handled;
+      }
+      if (key == LogicalKeyboardKey.keyF) {
+        if (!repeat) unawaited(_toggleFullscreen());
+        return KeyEventResult.handled;
+      }
+    }
     if (key == LogicalKeyboardKey.mediaPlayPause) {
       if (!repeat) _togglePlay();
       return KeyEventResult.handled;
@@ -1211,6 +1240,17 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     }
     final arrow = _arrowKeys.contains(key);
     if (!arrow && !_selectKeys.contains(key)) return KeyEventResult.ignored;
+    // Desktop: Left/Right always seek, even with the controls up (Tab moves
+    // between controls). A focused slider handles its arrows before this.
+    if (_desktop &&
+        playable &&
+        !_adjustingSubtitles &&
+        (key == LogicalKeyboardKey.arrowLeft ||
+            key == LogicalKeyboardKey.arrowRight)) {
+      _doubleTapSeek(key == LogicalKeyboardKey.arrowRight);
+      if (_controlsVisible.value) _scheduleHide();
+      return KeyEventResult.handled;
+    }
     if (!node.hasPrimaryFocus) {
       // A control has focus.
       if (_controlsVisible.value) _scheduleHide();
@@ -1318,6 +1358,33 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     _controlsVisible.value = true;
     _scheduleHide();
   }
+
+  /// Desktop: moving the mouse brings the controls up and keeps them there.
+  void _onPointerMove() {
+    if (_locked.value) return;
+    _show();
+  }
+
+  Future<void> _toggleFullscreen() async {
+    final enter = !DesktopWindow.fullscreen.value;
+    await DesktopWindow.setFullscreen(enter);
+    if (enter && DesktopWindow.fullscreen.value) _enteredFullscreen = true;
+  }
+
+  void _onFullscreenChanged() {
+    if (mounted) setState(() {});
+  }
+
+  /// Desktop: the mouse shows the controls, and the cursor hides with them.
+  Widget _withPointer(Widget child) => ValueListenableBuilder<bool>(
+    valueListenable: _controlsShown,
+    builder: (context, shown, child) => MouseRegion(
+      cursor: shown ? MouseCursor.defer : SystemMouseCursors.none,
+      onHover: (_) => _onPointerMove(),
+      child: child,
+    ),
+    child: child,
+  );
 
   void _syncControlsShown() =>
       _controlsShown.value = _controlsVisible.value && !_locked.value;
@@ -2438,6 +2505,12 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
 
   @override
   void dispose() {
+    if (_desktop) {
+      DesktopWindow.fullscreen.removeListener(_onFullscreenChanged);
+      if (_enteredFullscreen && DesktopWindow.fullscreen.value) {
+        unawaited(DesktopWindow.setFullscreen(false));
+      }
+    }
     // Detach first: nothing below may be notified after it is disposed.
     _controller?.removeListener(_tick);
     _discoverySubscription?.cancel();
@@ -2486,9 +2559,11 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     // showing: restoring the app's system UI and rotation would undo its.
     if (--_livePlayers == 0) {
       _setKeepScreenOn(false);
-      const MethodChannel(
-        'onfeed/player',
-      ).invokeMethod<void>('resetBrightness');
+      if (defaultTargetPlatform == TargetPlatform.android) {
+        const MethodChannel(
+          'onfeed/player',
+        ).invokeMethod<void>('resetBrightness').catchError((_) {});
+      }
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
       // Leave the rest of the app free to rotate again.
       SystemChrome.setPreferredOrientations(const []);
@@ -2629,7 +2704,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
       listenable: _backState,
       builder: (context, player) {
         final locked = _locked.value;
-        final revealControls = _tv && playable && !_controlsShown.value;
+        final revealControls = _tvHardware && playable && !_controlsShown.value;
         return PopScope(
           canPop:
               !(locked && playable) && !_adjustingSubtitles && !revealControls,
@@ -2651,7 +2726,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
               focusNode: _playerFocus,
               autofocus: true,
               onKeyEvent: _onRemoteKey,
-              child: player,
+              child: _desktop ? _withPointer(player) : player,
             )
           : player,
     );
@@ -2883,6 +2958,10 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
                         } catch (_) {}
                       },
                 onRotate: _tv ? null : _toggleLandscape,
+                onFullscreen: _desktop
+                    ? () => unawaited(_toggleFullscreen())
+                    : null,
+                fullscreen: DesktopWindow.fullscreen.value,
                 onNextEpisode: _nextEpisodePromptVisible && !_switchingEpisode
                     ? () => unawaited(_startNextEpisode())
                     : null,

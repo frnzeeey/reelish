@@ -193,8 +193,8 @@ class UpdateCheckResult {
     UpdateCheckStatus.upToDate => 'Reelish is up to date.',
     UpdateCheckStatus.noRelease => 'No releases have been published yet.',
     UpdateCheckStatus.missingApk =>
-      'Reelish ${latestVersion ?? 'update'} was released, but its Android '
-          'download is not available yet. Try again later.',
+      'Reelish ${latestVersion ?? 'update'} was released, but its download '
+          'for this device is not available yet. Try again later.',
     UpdateCheckStatus.networkError =>
       'Unable to check for updates. Please check your internet connection.',
     UpdateCheckStatus.rateLimited =>

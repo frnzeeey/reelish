@@ -552,7 +552,7 @@ class _EpisodeCardState extends State<_EpisodeCard> {
       child: InkWell(
         onTap: widget.aired ? widget.onTap : null,
         // A remote opens the panel on the playing or last watched episode.
-        autofocus: current && DeviceCapabilities.isTv,
+        autofocus: current && DeviceCapabilities.usesTvLayout,
         child: Padding(
           padding: const EdgeInsets.all(10),
           child: Row(

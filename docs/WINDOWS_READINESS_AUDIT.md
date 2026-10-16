@@ -1,5 +1,9 @@
 # Reelish Windows readiness audit
 
+> **Status:** the blockers below (P0-1 playback, P0-2 QuickJS limits, P0-3
+> app identity) and the P1–P3 items except code signing are implemented on
+> `feature/windows-desktop`. See [windows.md](windows.md) for the result.
+
 Date: 2026-10-16. Commit audited: `141b59b` (v1.10.2), plus the uncommitted
 tablet-dock change.
 

@@ -20,7 +20,8 @@ ProviderRunRequest _request(
   episode: 5,
   bundle: bundle,
   needsCryptoJs: crypto,
-  // The Windows test DLL has no JS_SetMemoryLimit export.
+  // Limits are covered in quickjs_windows_limits_test.dart (Windows) and
+  // integration_test/provider_runtime_test.dart (devices).
   memoryLimit: null,
 );
 
@@ -99,8 +100,9 @@ void main() {
   });
 
   test('a provider stuck in synchronous code still returns a timeout', () async {
-    // The desktop QuickJS build never interrupts this loop; without the
-    // run's own ceiling the caller (and its runtime slot) would wait forever.
+    // The run's own 2 s ceiling ends the wait long before the interrupt
+    // deadline, so the caller (and its runtime slot) never waits on a build
+    // whose engine cannot stop the loop.
     final watch = Stopwatch()..start();
     await expectLater(
       ProviderRunner.run(

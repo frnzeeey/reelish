@@ -271,7 +271,7 @@ abstract final class GitHubUpdateService {
     final asset = assets is List ? selectApkAsset(assets, tag: tag) : null;
     if (asset == null) {
       _log(
-        'Release $tag has no usable ${UpdateConfig.apkAssetName}; assets: '
+        'Release $tag has no usable ${UpdateConfig.assetName}; assets: '
         '${assets is List ? assets.whereType<Map>().map((a) => a['name']).join(', ') : 'none'}.',
       );
       return UpdateCheckResult(
@@ -334,7 +334,7 @@ abstract final class GitHubUpdateService {
       final url = asset['browser_download_url'];
       final size = asset['size'];
       final state = asset['state'];
-      if (name != UpdateConfig.apkAssetName || url is! String) return false;
+      if (name != UpdateConfig.assetName || url is! String) return false;
       if (state != null && state != 'uploaded') return false;
       if (size is! int || size <= 0 || size > UpdateConfig.maxApkBytes) {
         return false;
@@ -599,6 +599,45 @@ abstract final class GitHubUpdateService {
     if (expected == null) return true;
     final actual = await sha256.bind(file.openRead()).first;
     return actual.toString() == expected;
+  }
+
+  /// Windows: moves a verified update ZIP into the user's Downloads folder
+  /// and shows it in File Explorer. Nothing is extracted or run: the user
+  /// closes Reelish and replaces the app folder, so files of the running app
+  /// are never overwritten. The copy is checked against the release's size
+  /// and SHA-256 again before the original is removed.
+  static Future<File> revealWindowsUpdate(
+    File zip,
+    AppUpdate update, {
+    Future<Directory?> Function()? downloadsDirectory,
+    Future<void> Function(String path)? reveal,
+  }) async {
+    final downloads =
+        await (downloadsDirectory ?? getDownloadsDirectory)() ?? zip.parent;
+    final base = _safeName('Reelish-Windows-x64-${update.tagName}');
+    final separator = Platform.pathSeparator;
+    var target = File('${downloads.path}$separator$base.zip');
+    for (var copy = 2; await target.exists(); copy++) {
+      target = File('${downloads.path}$separator$base ($copy).zip');
+    }
+    final copied = await zip.copy(target.path);
+    if (!await _matchesExpected(copied, update)) {
+      await _deleteQuietly(copied);
+      throw const UpdateException(
+        'The downloaded update could not be verified. Try again later.',
+      );
+    }
+    await _deleteQuietly(zip);
+    await (reveal ?? _revealInExplorer)(copied.path);
+    return copied;
+  }
+
+  static Future<void> _revealInExplorer(String path) async {
+    try {
+      await Process.start('explorer.exe', ['/select,', path]);
+    } catch (_) {
+      // The file is in Downloads either way.
+    }
   }
 
   static Future<Directory> _updatesDirectory(

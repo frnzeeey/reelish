@@ -115,7 +115,7 @@ class _ProviderInstallerModalState extends State<ProviderInstallerModal> {
                 style: TextStyle(color: GlassTheme.muted),
               ),
               const SizedBox(height: 16),
-              if (DeviceCapabilities.isTv)
+              if (DeviceCapabilities.usesTvLayout)
                 // The TV keyboard edits the URL in a dialog, so the remote
                 // is never trapped in the field.
                 Row(

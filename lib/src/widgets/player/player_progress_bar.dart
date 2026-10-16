@@ -192,8 +192,8 @@ class _PlayerProgressBarState extends State<PlayerProgressBar> {
           drag == null ? widget.controller.value.position : _at(drag),
         ),
         child: Focus(
-          canRequestFocus: DeviceCapabilities.isTv,
-          skipTraversal: !DeviceCapabilities.isTv,
+          canRequestFocus: DeviceCapabilities.usesTvLayout,
+          skipTraversal: !DeviceCapabilities.usesTvLayout,
           onKeyEvent: _onKey,
           onFocusChange: _onFocusChange,
           child: _gestures(width, drag),

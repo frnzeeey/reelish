@@ -5,7 +5,8 @@
 /// Use of this source code is governed by MIT license that can be found in the LICENSE file.
 import 'dart:async';
 import 'dart:collection';
-import 'package:flutter/foundation.dart' show debugPrint, kDebugMode;
+import 'package:flutter/foundation.dart'
+    show debugPrint, defaultTargetPlatform, kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
@@ -132,6 +133,13 @@ class MediaKitVideoPlayer extends VideoPlayerPlatform {
             )
           : const VideoControllerConfiguration(),
     );
+    // VideoController creates its native output after the next frame, and
+    // Player.open waits for that. A post-frame callback does not request a
+    // frame, so on a still screen (nothing animating) opening would wait
+    // indefinitely. Ask for one. Windows only: Android output is unchanged.
+    if (defaultTargetPlatform == TargetPlatform.windows) {
+      WidgetsBinding.instance.ensureVisualUpdate();
+    }
     // NOTE: [StreamController] without broadcast buffers events.
     final streamController = StreamController<VideoEvent>();
     final streamSubscriptions = <StreamSubscription>[];

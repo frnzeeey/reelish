@@ -55,6 +55,28 @@ class TvFocusable extends StatefulWidget {
 
 class _TvFocusableState extends State<TvFocusable> {
   bool _focused = false;
+  bool _hovered = false;
+  FocusNode? _ownNode;
+
+  FocusNode get _node =>
+      widget.focusNode ?? (_ownNode ??= FocusNode(debugLabel: 'TvFocusable'));
+
+  @override
+  void dispose() {
+    _ownNode?.dispose();
+    super.dispose();
+  }
+
+  /// A click (desktop) focuses the item first, so the focus ring and
+  /// anything following focus, such as the featured preview, move with it.
+  void _onTap() {
+    if (!_node.hasFocus && _node.canRequestFocus) _node.requestFocus();
+    widget.onSelect?.call();
+  }
+
+  void _onHover(bool hovered) {
+    if (_hovered != hovered) setState(() => _hovered = hovered);
+  }
 
   void _onFocusChange(bool focused) {
     if (_focused != focused) setState(() => _focused = focused);
@@ -83,9 +105,13 @@ class _TvFocusableState extends State<TvFocusable> {
       button: true,
       label: widget.semanticLabel,
       child: FocusableActionDetector(
-        focusNode: widget.focusNode,
+        focusNode: _node,
         autofocus: widget.autofocus,
         onFocusChange: _onFocusChange,
+        onShowHoverHighlight: _onHover,
+        mouseCursor: onSelect == null
+            ? MouseCursor.defer
+            : SystemMouseCursors.click,
         actions: {
           ActivateIntent: CallbackAction<ActivateIntent>(
             onInvoke: (_) {
@@ -95,9 +121,14 @@ class _TvFocusableState extends State<TvFocusable> {
           ),
         },
         child: GestureDetector(
-          onTap: onSelect,
+          onTap: onSelect == null ? null : _onTap,
           child: AnimatedScale(
-            scale: _focused ? widget.focusScale : 1,
+            // Hover (mouse) lifts the item halfway to its focused size.
+            scale: _focused
+                ? widget.focusScale
+                : _hovered
+                ? 1 + (widget.focusScale - 1) / 2
+                : 1,
             duration: duration,
             curve: Curves.easeOutCubic,
             child: AnimatedContainer(
@@ -118,8 +149,12 @@ class _TvFocusableState extends State<TvFocusable> {
               foregroundDecoration: BoxDecoration(
                 borderRadius: radius,
                 border: Border.all(
-                  color: _focused ? GlassTheme.coralBright : Colors.transparent,
-                  width: 3,
+                  color: _focused
+                      ? GlassTheme.coralBright
+                      : _hovered
+                      ? Colors.white.withValues(alpha: .45)
+                      : Colors.transparent,
+                  width: _focused ? 3 : 2,
                 ),
               ),
               child: ClipRRect(borderRadius: radius, child: widget.child),
@@ -185,7 +220,7 @@ class TvReadableWidth extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!DeviceCapabilities.isTv) return child;
+    if (!DeviceCapabilities.usesTvLayout) return child;
     return Align(
       alignment: Alignment.topCenter,
       child: ConstrainedBox(
@@ -210,7 +245,7 @@ class TvSliderNavigation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!DeviceCapabilities.isTv) return child;
+    if (!DeviceCapabilities.usesTvLayout) return child;
     return MediaQuery(
       data: MediaQuery.of(
         context,
@@ -279,7 +314,7 @@ class _TvKeyScrollState extends State<TvKeyScroll> {
 
   @override
   Widget build(BuildContext context) {
-    if (!DeviceCapabilities.isTv) {
+    if (!DeviceCapabilities.usesTvLayout) {
       return widget.builder(context, widget.controller);
     }
     return Focus(

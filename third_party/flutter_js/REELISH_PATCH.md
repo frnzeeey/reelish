@@ -45,3 +45,26 @@ wraps it in `exclusiveContent` in `android/build.gradle`: JitPack serves only
 `com.github.fast-development.android-js-runtimes` (the QuickJS runtime, which
 has no transitive dependencies), and that group is never requested from any
 other repository. No other dependency can be resolved from JitPack.
+
+## Windows bridge DLL with resource limits
+
+`windows/shared/quickjs_c_bridge.dll` is rebuilt from
+[abner/quickjs-c-bridge](https://github.com/abner/quickjs-c-bridge) commit
+`7204d9b` (QuickJS 2021-03-27), the same source as the DLL flutter_js 0.8.7
+shipped: an unmodified rebuild has identical exports and dependencies. The
+upstream DLL did not export `JS_SetMemoryLimit` or `JS_SetInterruptHandler`,
+so on Windows the memory-limit lookup in `lib/quickjs/ffi.dart` threw and
+every provider run failed. Reelish's build adds, in CMake only:
+
+- `/EXPORT:JS_SetMemoryLimit` and `/EXPORT:JS_SetInterruptHandler`, QuickJS's
+  public API, under the names `ffi.dart` already resolves (as on Android).
+- `/Oi-` for QuickJS, because newer MSVC compiles `fabs`, `floor`, ... as
+  intrinsics whose addresses are not constants.
+
+Rebuild with `tool/build_quickjs_bridge_windows.ps1` (needs Visual Studio's
+C++ workload; MSVC output is not bit-reproducible, so compare exports, not
+hashes). The DLL is x64 only. `test/quickjs_windows_limits_test.dart`
+checks the heap cap and the interrupt deadline on Windows.
+
+Committed DLL SHA-256:
+`e08ccf396e071894d18ba6c818cfe7cf2ec4f13ee87c4a1fd421a14e7a35fb69`

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
@@ -609,25 +610,29 @@ class PlaybackSettingsScreen extends StatelessWidget {
             else
               SettingsSwitchTile(
                 title: 'P2P streaming',
-                description:
-                    'Not available on this device. Torrent playback needs '
-                    '64-bit Android, and this device runs 32-bit Android '
-                    '(common on TVs and streaming sticks).',
+                description: defaultTargetPlatform == TargetPlatform.android
+                    ? 'Not available on this device. Torrent playback needs '
+                          '64-bit Android, and this device runs 32-bit Android '
+                          '(common on TVs and streaming sticks).'
+                    : 'Torrent playback is available in the Android app only.',
                 value: false,
                 enabled: false,
                 onChanged: (_) {},
               ),
-            _actionRow(
-              'Clear torrent cache',
-              'Remove files stored by torrent playback.',
-              'Clear',
-              () => _confirmClearTorrentCache(context),
-            ),
-            _infoRow(
-              'Torrent cache limit',
-              '5 GB, checked at launch',
-              'Torrent data is deleted automatically the next time Reelish starts once it uses more than 5 GB. Clear torrent cache frees the space sooner.',
-            ),
+            // Torrent data only ever exists on Android.
+            if (defaultTargetPlatform == TargetPlatform.android) ...[
+              _actionRow(
+                'Clear torrent cache',
+                'Remove files stored by torrent playback.',
+                'Clear',
+                () => _confirmClearTorrentCache(context),
+              ),
+              _infoRow(
+                'Torrent cache limit',
+                '5 GB, checked at launch',
+                'Torrent data is deleted automatically the next time Reelish starts once it uses more than 5 GB. Clear torrent cache frees the space sooner.',
+              ),
+            ],
           ]),
           _section('STREAM SELECTION', [
             _switchRow(

@@ -89,8 +89,29 @@ void main() {
       final primary = PlayerEngineFactory.forCurrentPlatform();
       expect(primary, isA<Media3PlayerEngine>());
       expect(PlayerEngineFactory.alternateFor(primary), isA<MpvPlayerEngine>());
+      expect(
+        PlayerEngineFactory.alternateFor(const MpvPlayerEngine()),
+        isA<Media3PlayerEngine>(),
+      );
     },
   );
+
+  test('Windows plays everything through libmpv, with no fallback', () {
+    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+
+    final primary = PlayerEngineFactory.forCurrentPlatform();
+    expect(primary, isA<MpvPlayerEngine>());
+    expect(PlayerEngineFactory.alternateFor(primary), isNull);
+    for (final url in [
+      'https://cdn.example/a.m3u8',
+      'http://cdn.example/a.mp4',
+      'rtmp://live.example/stream',
+    ]) {
+      expect(PlayerEngineFactory.forSource(url, primary), same(primary));
+      expect(PlayerEngineFactory.canOpen(primary, url), isTrue);
+    }
+  });
 
   test('provider scheduler keeps separate worker and runtime bounds', () {
     final scheduler = ProviderExecutionScheduler();

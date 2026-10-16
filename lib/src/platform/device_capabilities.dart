@@ -13,8 +13,9 @@ import '../widgets/liquid_glass.dart';
 /// leanback feature (every Android TV and Google TV device does). Screen size
 /// is never used, so a large tablet stays a tablet and a small TV stays a TV.
 ///
-/// The interface reads [DeviceCapabilities.isTv] to choose between the mobile layouts and the
-/// TV ones; services, models and playback are the same on both.
+/// The interface reads [DeviceCapabilities.usesTvLayout] to choose between
+/// the mobile layouts and the TV ones; services, models and playback are the
+/// same on both. [DeviceCapabilities.isTv] stays specific to TV hardware.
 @immutable
 class DeviceCapabilities {
   const DeviceCapabilities({
@@ -46,8 +47,28 @@ class DeviceCapabilities {
   /// app can switch to the TV theme before the first screen appears.
   static ValueListenable<DeviceCapabilities> get listenable => _current;
 
-  /// Whether to show the TV interface.
+  /// Whether this is a TV (Android TV / Google TV, or [forceTv]).
   static bool get isTv => _current.value.isTelevision;
+
+  /// Which interface Reelish shows. Windows reuses the TV interface, driven
+  /// by mouse and keyboard, without claiming to be a TV.
+  ReelishLayoutMode get layoutMode {
+    if (isTelevision) return ReelishLayoutMode.television;
+    if (isDesktopPlatform) return ReelishLayoutMode.desktop;
+    return ReelishLayoutMode.mobile;
+  }
+
+  /// Whether to show the TV interface (TVs and desktop).
+  static bool get usesTvLayout =>
+      _current.value.layoutMode != ReelishLayoutMode.mobile;
+
+  /// Whether Reelish runs as a desktop app (Windows).
+  static bool get isDesktop =>
+      _current.value.layoutMode == ReelishLayoutMode.desktop;
+
+  /// Platforms that get the desktop interface.
+  static bool get isDesktopPlatform =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
 
   /// Replaces the detected device, for tests.
   @visibleForTesting
@@ -74,6 +95,14 @@ class DeviceCapabilities {
       } catch (_) {
         // Keep the mobile defaults.
       }
+    } else if (isDesktopPlatform) {
+      // A desktop has a mouse and keyboard, no touchscreen, and no
+      // picture-in-picture; it keeps full glass quality.
+      detected = const DeviceCapabilities(
+        isTelevision: forceTv,
+        hasTouchscreen: false,
+        supportsPictureInPicture: false,
+      );
     }
     _apply(detected);
     return detected;
@@ -113,3 +142,7 @@ class DeviceCapabilities {
   int get hashCode =>
       Object.hash(isTelevision, hasTouchscreen, supportsPictureInPicture);
 }
+
+/// The interface family Reelish shows. Tablets use the responsive mobile
+/// interface (see `DockMetrics`); desktop reuses the TV interface.
+enum ReelishLayoutMode { mobile, television, desktop }

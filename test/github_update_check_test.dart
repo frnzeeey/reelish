@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -954,6 +955,100 @@ void main() {
       expect(find.text('78%'), findsOneWidget);
       expect(find.text('78.0 MB / 100.0 MB'), findsOneWidget);
       expect(attempts, 2);
+    });
+  });
+
+  group('Windows updates', () {
+    setUp(() => debugDefaultTargetPlatformOverride = TargetPlatform.windows);
+    tearDown(() => debugDefaultTargetPlatformOverride = null);
+
+    test('offers the portable ZIP, never the APK', () {
+      final result = GitHubUpdateService.parseRelease(
+        _release(
+          'v1.0.1',
+          assets: [
+            _asset('v1.0.1', 'reelish.apk'),
+            _asset('v1.0.1', 'Reelish-Windows-x64.zip', size: 4000),
+            _asset('v1.0.1', 'Reelish-Windows-x64.zip.sha256', size: 90),
+          ],
+        ),
+        _v('1.0.0'),
+      );
+      expect(result.status, UpdateCheckStatus.updateAvailable);
+      expect(result.update!.assetName, 'Reelish-Windows-x64.zip');
+      expect(
+        result.update!.downloadUri.path,
+        endsWith('/v1.0.1/Reelish-Windows-x64.zip'),
+      );
+    });
+
+    test('an Android-only release is not offered on Windows', () {
+      final result = GitHubUpdateService.parseRelease(
+        _release('v1.0.1'),
+        _v('1.0.0'),
+      );
+      expect(result.status, UpdateCheckStatus.missingApk);
+    });
+
+    test('the verified ZIP is moved to Downloads and revealed', () async {
+      final root = await Directory.systemTemp.createTemp('reelish-win-upd-');
+      addTearDown(() => root.delete(recursive: true));
+      final downloads = await Directory('${root.path}/Downloads').create();
+      final bytes = utf8.encode('zip bytes');
+      final zip = await File('${root.path}/download.zip').writeAsBytes(bytes);
+      // An earlier download with the same name is never overwritten.
+      await File(
+        '${downloads.path}/Reelish-Windows-x64-v1.0.1.zip',
+      ).writeAsString('older');
+      final revealed = <String>[];
+      final update = _update(
+        size: bytes.length,
+        sha: sha256.convert(bytes).toString(),
+        url: '$_download/v1.0.1/Reelish-Windows-x64.zip',
+      );
+
+      final saved = await GitHubUpdateService.revealWindowsUpdate(
+        zip,
+        update,
+        downloadsDirectory: () async => downloads,
+        reveal: (path) async => revealed.add(path),
+      );
+
+      expect(saved.path, endsWith('Reelish-Windows-x64-v1.0.1 (2).zip'));
+      expect(await saved.readAsBytes(), bytes);
+      expect(await zip.exists(), isFalse);
+      expect(revealed, [saved.path]);
+      expect(
+        await File(
+          '${downloads.path}/Reelish-Windows-x64-v1.0.1.zip',
+        ).readAsString(),
+        'older',
+      );
+    });
+
+    test('a ZIP that fails verification is not kept', () async {
+      final root = await Directory.systemTemp.createTemp('reelish-win-upd-');
+      addTearDown(() => root.delete(recursive: true));
+      final zip = await File('${root.path}/download.zip').writeAsString('x');
+      final update = _update(size: 1, sha: '0' * 64);
+
+      await expectLater(
+        GitHubUpdateService.revealWindowsUpdate(
+          zip,
+          update,
+          downloadsDirectory: () async => root,
+          reveal: (_) async => fail('must not reveal'),
+        ),
+        throwsA(isA<UpdateException>()),
+      );
+      expect(
+        root.listSync().whereType<File>().map((f) => f.uri.pathSegments.last),
+        ['download.zip'],
+      );
+    });
+
+    test('the update flow runs on Windows', () {
+      expect(AppUpdateFlow.isSupported, isTrue);
     });
   });
 }

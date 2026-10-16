@@ -47,6 +47,8 @@ class PlayerControlsOverlay extends StatelessWidget {
     required this.onSettings,
     required this.onPip,
     required this.onRotate,
+    this.onFullscreen,
+    this.fullscreen = false,
     this.onNextEpisode,
     this.nextEpisodeCountdown,
     this.onSpeedReset,
@@ -84,6 +86,10 @@ class PlayerControlsOverlay extends StatelessWidget {
   /// has no rotation, and most TVs no picture in picture).
   final VoidCallback? onPip;
   final VoidCallback? onRotate;
+
+  /// Desktop: toggles window fullscreen; null hides the button.
+  final VoidCallback? onFullscreen;
+  final bool fullscreen;
 
   /// Set while the next episode is offered; shown as a bottom-row pill.
   final VoidCallback? onNextEpisode;
@@ -171,6 +177,8 @@ class PlayerControlsOverlay extends StatelessWidget {
                     onSettings: onSettings,
                     onPip: onPip,
                     onRotate: onRotate,
+                    onFullscreen: onFullscreen,
+                    fullscreen: fullscreen,
                     onNextEpisode: onNextEpisode,
                     nextEpisodeCountdown: nextEpisodeCountdown,
                     onSpeedReset: onSpeedReset,
@@ -459,6 +467,8 @@ class _BottomBar extends StatelessWidget {
     required this.onSettings,
     required this.onPip,
     required this.onRotate,
+    this.onFullscreen,
+    this.fullscreen = false,
     this.onNextEpisode,
     this.nextEpisodeCountdown,
     this.onSpeedReset,
@@ -477,6 +487,10 @@ class _BottomBar extends StatelessWidget {
   final VoidCallback onSettings;
   final VoidCallback? onPip;
   final VoidCallback? onRotate;
+
+  /// Desktop: toggles window fullscreen; null hides the button.
+  final VoidCallback? onFullscreen;
+  final bool fullscreen;
 
   /// Set while the next episode is offered; shown as a bottom-row pill.
   final VoidCallback? onNextEpisode;
@@ -591,6 +605,14 @@ class _BottomBar extends StatelessWidget {
                   : Symbols.stay_current_landscape_rounded,
               label: landscapeLocked ? 'Allow rotation' : 'Lock to landscape',
               onPressed: rotate,
+            ),
+          if (onFullscreen case final toggle?)
+            PlayerIconButton(
+              icon: fullscreen
+                  ? Symbols.fullscreen_exit_rounded
+                  : Symbols.fullscreen_rounded,
+              label: fullscreen ? 'Exit full screen (F)' : 'Full screen (F)',
+              onPressed: toggle,
             ),
         ],
       ),

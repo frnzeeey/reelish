@@ -69,6 +69,9 @@ class TvHomeShellState extends State<TvHomeShell> {
   /// Whether the rail has focus, which widens it. Only the rail rebuilds.
   final _railFocused = ValueNotifier(false);
 
+  /// Desktop: the rail also opens while the mouse is over it.
+  final _railHovered = ValueNotifier(false);
+
   @override
   void didUpdateWidget(covariant TvHomeShell oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -86,6 +89,7 @@ class TvHomeShellState extends State<TvHomeShell> {
   void dispose() {
     _railScope.dispose();
     _railFocused.dispose();
+    _railHovered.dispose();
     for (final node in _railNodes.values) {
       node.dispose();
     }
@@ -202,25 +206,29 @@ class TvHomeShellState extends State<TvHomeShell> {
             left: 0,
             top: 0,
             bottom: 0,
-            child: Focus(
-              canRequestFocus: false,
-              skipTraversal: true,
-              onKeyEvent: _onRailKey,
-              onFocusChange: (focused) => _railFocused.value = focused,
-              child: FocusScope(
-                node: _railScope,
-                child: ValueListenableBuilder<bool>(
-                  valueListenable: _railFocused,
-                  builder: (context, expanded, _) => _TvNavigationRail(
-                    expanded: expanded,
-                    selected: widget.destination,
-                    nodes: _railNodes,
-                    onFocused: (destination) {
-                      if (destination != widget.destination) {
-                        widget.onDestinationChanged(destination);
-                      }
-                    },
-                    onSelected: show,
+            child: MouseRegion(
+              onEnter: (_) => _railHovered.value = true,
+              onExit: (_) => _railHovered.value = false,
+              child: Focus(
+                canRequestFocus: false,
+                skipTraversal: true,
+                onKeyEvent: _onRailKey,
+                onFocusChange: (focused) => _railFocused.value = focused,
+                child: FocusScope(
+                  node: _railScope,
+                  child: ListenableBuilder(
+                    listenable: Listenable.merge([_railFocused, _railHovered]),
+                    builder: (context, _) => _TvNavigationRail(
+                      expanded: _railFocused.value || _railHovered.value,
+                      selected: widget.destination,
+                      nodes: _railNodes,
+                      onFocused: (destination) {
+                        if (destination != widget.destination) {
+                          widget.onDestinationChanged(destination);
+                        }
+                      },
+                      onSelected: show,
+                    ),
                   ),
                 ),
               ),
@@ -355,6 +363,7 @@ class _RailItem extends StatefulWidget {
 
 class _RailItemState extends State<_RailItem> {
   bool _focused = false;
+  bool _hovered = false;
 
   @override
   Widget build(BuildContext context) {
@@ -377,6 +386,12 @@ class _RailItemState extends State<_RailItem> {
           setState(() => _focused = focused);
           if (focused) widget.onFocused();
         },
+        // Mouse: hover highlights the item without focusing it, since a
+        // focused rail item switches the page.
+        onShowHoverHighlight: (hovered) {
+          if (_hovered != hovered) setState(() => _hovered = hovered);
+        },
+        mouseCursor: SystemMouseCursors.click,
         actions: {
           ActivateIntent: CallbackAction<ActivateIntent>(
             onInvoke: (_) {
@@ -396,7 +411,9 @@ class _RailItemState extends State<_RailItem> {
               color: _focused
                   ? accent
                   : widget.selected
-                  ? accent.withValues(alpha: .14)
+                  ? accent.withValues(alpha: _hovered ? .22 : .14)
+                  : _hovered
+                  ? Colors.white.withValues(alpha: .08)
                   : Colors.transparent,
               borderRadius: BorderRadius.circular(16),
             ),

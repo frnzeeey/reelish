@@ -150,7 +150,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void _startSpotlightTimer() {
     _spotlightTimer?.cancel();
     // The TV hero follows focus instead of rotating on its own.
-    if (DeviceCapabilities.isTv) return;
+    if (DeviceCapabilities.usesTvLayout) return;
     _spotlightTimer = Timer.periodic(const Duration(seconds: 6), (_) {
       if (!mounted ||
           MediaQuery.disableAnimationsOf(context) ||
@@ -492,7 +492,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         AppPageRoute<void>(
           context: context,
           details: true,
-          builder: (_) => DeviceCapabilities.isTv
+          builder: (_) => DeviceCapabilities.usesTvLayout
               ? TvMediaDetailsScreen(
                   item: item,
                   tmdb: _tmdb,
@@ -2215,7 +2215,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             repository: repository.name,
           ),
     ];
-    if (DeviceCapabilities.isTv) return _buildTv(availablePlugins);
+    if (DeviceCapabilities.usesTvLayout) return _buildTv(availablePlugins);
     final pages = [
       TabPageTransition(active: _tab == 0, child: _home()),
       TabPageTransition(
