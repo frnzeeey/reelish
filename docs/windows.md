@@ -1,8 +1,9 @@
 # Reelish for Windows
 
 Reelish runs on Windows 10 and 11 (x64) as a native desktop app built from
-the same Flutter code as Android. It uses the Android TV interface, driven
-by mouse and keyboard, and plays through libmpv.
+the same Flutter code as Android. It has its own desktop interface (a
+collapsible side menu, a featured banner, poster rows, and desktop details
+and search pages) built for a mouse and keyboard, and plays through libmpv.
 
 ## Install and update
 
@@ -35,13 +36,17 @@ runs or unpacks downloaded files itself.
 | Input | Action |
 |---|---|
 | Click | Select (and focus) a title, button or menu item |
-| Hover | Highlights cards; opens the side menu |
+| Hover | Highlights cards; shows scroll arrows on rows |
 | Mouse wheel, trackpad | Scroll pages; Shift+wheel or a trackpad scrolls rows sideways |
 | Arrow keys, Enter | Move focus and select, as with a TV remote |
 | Tab / Shift+Tab | Move between controls |
 | Escape | Leave fullscreen, otherwise go back or close a dialog |
 | Backspace | Go back (not while typing) |
 | F11 | Toggle fullscreen anywhere |
+| Ctrl+F | Open Search |
+
+The button at the bottom of the side menu collapses it to icons (with
+tooltips) or expands it; Reelish remembers the choice.
 
 **In the player:**
 
@@ -50,7 +55,9 @@ runs or unpacks downloaded files itself.
 | Move the mouse | Show the controls; they and the cursor hide when idle |
 | Space | Play or pause |
 | Left / Right | Seek 10 s (repeated presses add up) |
-| Up / Down | Show the controls and move between them |
+| Up / Down | Volume ±5% (when no control is focused) |
+| Mouse wheel | Volume ±5% |
+| M | Mute or restore the volume |
 | F, or the button in the controls | Toggle fullscreen |
 
 The window can be resized down to 960 × 600 logical pixels, maximized, and
@@ -62,15 +69,15 @@ made fullscreen on whichever monitor it's on.
   Windows.
 - **Picture-in-picture, rotation lock, touch lock and brightness gestures**
   are phone and TV features and don't appear on Windows.
-- **Text fields in the TV interface** open a small entry dialog, as on TV.
-  Type there and press Enter.
+- **Search** has a regular text box. Some fields in Settings and Plugins
+  still open a small entry dialog, as on TV; type there and press Enter.
 
 ## How it's built
 
 | Area | Windows | Shared with Android |
 |---|---|---|
-| Interface | `DeviceCapabilities.layoutMode == desktop` selects the TV interface (`usesTvLayout`). Windows isn't treated as a TV: `isTv` stays false, so TV-hardware behaviour (low glass quality, Back revealing player controls) is off | TV shell, rows, details, player chrome |
-| Mouse and keyboard | Hover and click focus in `TvFocusable` and the rail; `DesktopShortcuts` (`lib/src/platform/desktop_window.dart`); desktop keys in the player | TV focus traversal |
+| Interface | `DeviceCapabilities.isDesktop` selects the desktop interface in `lib/src/desktop/` (`DesktopShell`, `DesktopHero`, the desktop pages and `DesktopDetailsScreen`). Windows isn't treated as a TV: `isTv` stays false, so TV-hardware behaviour (low glass quality, Back revealing player controls) is off | Catalog data (`TvCatalog`), Settings and Plugins screens, player chrome |
+| Mouse and keyboard | Hover, click and keyboard focus in the desktop widgets; `DesktopShortcuts` (`lib/src/platform/desktop_window.dart`); desktop keys in the player | TV focus traversal |
 | Window | `windows/runner/flutter_window.cpp`: `reelish/window` channel (fullscreen), minimum size, saved placement | — |
 | Playback | `PlayerEngineFactory` selects `MpvPlayerEngine` (libmpv via media_kit); `media_kit_libs_windows_video` bundles libmpv | libmpv engine, headers, subtitles |
 | Providers | `quickjs_c_bridge.dll` with QuickJS's memory-limit and interrupt exports (`third_party/flutter_js/REELISH_PATCH.md`) | Provider bridge, sandbox, network policy |

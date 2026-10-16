@@ -137,6 +137,28 @@ void main() {
         timeout: const Duration(seconds: 10),
       );
 
+      // Down lowers the volume while no control is focused; M mutes and
+      // restores it.
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await until(
+        () => controller()!.value.volume < 1,
+        'Down to lower the volume',
+        timeout: const Duration(seconds: 5),
+      );
+      final lowered = controller()!.value.volume;
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyM);
+      await until(
+        () => controller()!.value.volume == 0,
+        'M to mute',
+        timeout: const Duration(seconds: 5),
+      );
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyM);
+      await until(
+        () => (controller()!.value.volume - lowered).abs() < .001,
+        'M to unmute',
+        timeout: const Duration(seconds: 5),
+      );
+
       // Escape (windowed) leaves the player like Back.
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
       await until(

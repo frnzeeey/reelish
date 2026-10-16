@@ -12,6 +12,9 @@ import '../models/media_item.dart';
 import '../models/resume_summary.dart';
 import '../models/stream_source.dart';
 import '../navigation/app_transitions.dart';
+import '../desktop/desktop_details_screen.dart';
+import '../desktop/desktop_pages.dart';
+import '../desktop/desktop_shell.dart';
 import '../platform/device_capabilities.dart';
 import '../services/media_catalog_rules.dart';
 import '../services/media_discovery_ranking.dart';
@@ -149,8 +152,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   void _startSpotlightTimer() {
     _spotlightTimer?.cancel();
-    // The TV hero follows focus instead of rotating on its own.
-    if (DeviceCapabilities.isTv) return;
+    // The TV hero follows focus instead of rotating on its own, and the
+    // desktop hero rotates itself; this timer drives the mobile spotlight.
+    if (DeviceCapabilities.isTv || DeviceCapabilities.isDesktop) return;
     _spotlightTimer = Timer.periodic(const Duration(seconds: 6), (_) {
       if (!mounted ||
           MediaQuery.disableAnimationsOf(context) ||
@@ -492,7 +496,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         AppPageRoute<void>(
           context: context,
           details: true,
-          builder: (_) => DeviceCapabilities.isTv
+          builder: (_) => DeviceCapabilities.isDesktop
+              ? DesktopDetailsScreen(
+                  item: item,
+                  tmdb: _tmdb,
+                  onPlay: (detailsContext, target) =>
+                      _openItem(target, presentationContext: detailsContext),
+                  onPlayEpisode: (detailsContext, target, season, episode) =>
+                      _openItem(
+                        target,
+                        presentationContext: detailsContext,
+                        selectedSeason: season,
+                        selectedEpisode: episode,
+                      ),
+                  isFavorite: (target) =>
+                      _favoriteKeys.contains(_favoriteKey(target)),
+                  onToggleFavorite: _toggleFavorite,
+                )
+              : DeviceCapabilities.isTv
               ? TvMediaDetailsScreen(
                   item: item,
                   tmdb: _tmdb,
@@ -2182,6 +2203,90 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
+  /// The Windows interface: the same catalog, storage, plugins and play
+  /// flow, in a desktop layout with the TV-style sidebar. See [DesktopShell].
+  Widget _buildDesktop(
+    List<({String id, String name, String repository})> availablePlugins,
+  ) {
+    final catalog = TvCatalog(
+      tmdb: _tmdb,
+      movies: _movies,
+      series: _series,
+      releases: _releases,
+      top10: _top10,
+      spotlight: _spotlightItems,
+      continueWatching: _continueWatching,
+      catalogSettled: _catalogSettled,
+      resumeFraction: (item) => _resumeSummary(item).fraction,
+      favoriteKeys: _favoriteKeys,
+      hasSources: _providerPlugins.repositories.isNotEmpty,
+      catalogError: _tvCatalogError,
+    );
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        DesktopShell(
+          destination: _tvDestination,
+          onDestinationChanged: _onTvDestinationChanged,
+          pageBuilder: (context, destination) => switch (destination) {
+            TvDestination.home => DesktopHomePage(
+              catalog: catalog,
+              onOpen: _showDetails,
+              // A series needs an episode first, so Play opens its page.
+              onPlay: (item) => item.type == 'series'
+                  ? unawaited(_showDetails(item))
+                  : unawaited(_openItem(item)),
+              onToggleFavorite: _toggleFavorite,
+              onRetry: () => unawaited(_reloadActiveFeed()),
+              onAddSource: () =>
+                  ProviderInstallerModal.show(context, _providerPlugins),
+            ),
+            TvDestination.movies => DesktopCatalogPage(
+              title: 'Movies',
+              subtitle: 'New and noteworthy films.',
+              feed: _movies,
+              onOpen: _showDetails,
+              isFavorite: catalog.isFavorite,
+            ),
+            TvDestination.series => DesktopCatalogPage(
+              title: 'Series',
+              subtitle: 'Shows worth the queue.',
+              feed: _series,
+              onOpen: _showDetails,
+              isFavorite: catalog.isFavorite,
+            ),
+            TvDestination.search => DesktopSearchPage(
+              tmdb: _tmdb,
+              onOpen: _showDetails,
+              isFavorite: catalog.isFavorite,
+            ),
+            TvDestination.library => DesktopLibraryPage(
+              storage: _storage,
+              onOpen: _showDetails,
+              refreshToken: _libraryRefreshToken,
+            ),
+            TvDestination.plugins => DesktopFramedPage(
+              child: PluginsScreen(
+                pluginService: _providerPlugins,
+                pluginLibrary: _pluginLibrary,
+              ),
+            ),
+            TvDestination.settings => DesktopFramedPage(
+              child: SettingsScreen(
+                accentSettings: widget.accentSettings,
+                onAppearanceSettings: () =>
+                    unawaited(_openAppearanceSettings()),
+                onPlaybackSettings: () =>
+                    unawaited(_openPlaybackSettings(availablePlugins)),
+              ),
+            ),
+          },
+        ),
+        if (_resolvingStreams) _resolvingOverlay(),
+      ],
+    );
+  }
+
   Widget _resolvingOverlay() => ColoredBox(
     color: Colors.black.withValues(alpha: 0.72),
     child: Center(
@@ -2215,6 +2320,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             repository: repository.name,
           ),
     ];
+    if (DeviceCapabilities.isDesktop) return _buildDesktop(availablePlugins);
     if (DeviceCapabilities.isTv) return _buildTv(availablePlugins);
     final pages = [
       TabPageTransition(active: _tab == 0, child: _home()),

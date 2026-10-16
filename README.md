@@ -13,7 +13,7 @@ Reelish is an open-source Flutter app for discovering movies and TV series and w
 - Play supported direct streams, with source selection, resume progress, playback controls, and configurable subtitles.
 - On Android, allow compatible providers to return torrent sources for P2P playback.
 - Use Reelish on Android TV and Google TV with an interface built for the remote, from the same APK as phones and tablets.
-- Run Reelish on Windows 10 and 11 as a desktop app with the TV interface, mouse and keyboard controls, and fullscreen playback.
+- Run Reelish on Windows 10 and 11 as a desktop app with its own desktop interface, mouse and keyboard controls, and fullscreen playback.
 - Choose an accent color and customize playback, subtitle appearance, language preferences, and gestures.
 - Read the privacy policy, terms of use, and third-party credits in the app.
 
@@ -82,7 +82,7 @@ Details on TV detection, remote navigation, and known limitations are in [docs/a
 
 ## Windows
 
-Download `Reelish-Windows-x64.zip` from the [latest release](https://github.com/frnzeeey/reelish/releases/latest), extract it, and run `Reelish\Reelish.exe`. Windows uses the TV interface with mouse and keyboard controls: click or use the arrow keys, Escape or Backspace to go back, F11 for fullscreen, and Space, Left/Right and F in the player. P2P playback is Android-only. **Settings > About > Check for updates** downloads and verifies a new ZIP and shows it in File Explorer; the app is not code-signed yet, so SmartScreen may ask before the first launch.
+Download `Reelish-Windows-x64.zip` from the [latest release](https://github.com/frnzeeey/reelish/releases/latest), extract it, and run `Reelish\Reelish.exe`. Windows has its own desktop interface with a collapsible side menu and mouse and keyboard controls: click or use the keyboard, Ctrl+F to search, Escape or Backspace to go back, F11 for fullscreen, and Space, Left/Right, Up/Down (volume), M and F in the player. P2P playback is Android-only. **Settings > About > Check for updates** downloads and verifies a new ZIP and shows it in File Explorer; the app is not code-signed yet, so SmartScreen may ask before the first launch.
 
 Details, building from source, and the release workflow are in [docs/windows.md](docs/windows.md).
 

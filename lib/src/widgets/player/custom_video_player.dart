@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
@@ -1202,6 +1203,19 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
         if (!repeat) unawaited(_toggleFullscreen());
         return KeyEventResult.handled;
       }
+      if (key == LogicalKeyboardKey.keyM) {
+        if (!repeat && playable) _toggleMute();
+        return KeyEventResult.handled;
+      }
+      // Up/Down are volume while no control is focused; with a control
+      // focused they move between controls, as on TV.
+      if (playable &&
+          node.hasPrimaryFocus &&
+          (key == LogicalKeyboardKey.arrowUp ||
+              key == LogicalKeyboardKey.arrowDown)) {
+        _nudgeVolume(key == LogicalKeyboardKey.arrowUp ? .05 : -.05);
+        return KeyEventResult.handled;
+      }
     }
     if (key == LogicalKeyboardKey.mediaPlayPause) {
       if (!repeat) _togglePlay();
@@ -1381,7 +1395,15 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     builder: (context, shown, child) => MouseRegion(
       cursor: shown ? MouseCursor.defer : SystemMouseCursors.none,
       onHover: (_) => _onPointerMove(),
-      child: child,
+      // The mouse wheel sets the volume, 5% per notch.
+      child: Listener(
+        onPointerSignal: (event) {
+          if (event is PointerScrollEvent && event.scrollDelta.dy != 0) {
+            _nudgeVolume(event.scrollDelta.dy < 0 ? .05 : -.05);
+          }
+        },
+        child: child,
+      ),
     ),
     child: child,
   );
@@ -2493,6 +2515,31 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
         ).showSnackBar(SnackBar(content: Text(error.message)));
       }
     }
+  }
+
+  /// Desktop volume (wheel, Up/Down, M), shown with the same hint as the
+  /// phone's swipe gesture.
+  double _volumeBeforeMute = 1;
+
+  void _nudgeVolume(double delta) {
+    final c = _controller;
+    if (c == null || !_ready) return;
+    _volume = (_volume + delta).clamp(0, 1).toDouble();
+    unawaited(c.setVolume(_volume));
+    _hintFor('Volume ${(_volume * 100).round()}%');
+  }
+
+  void _toggleMute() {
+    final c = _controller;
+    if (c == null || !_ready) return;
+    if (_volume > 0) {
+      _volumeBeforeMute = _volume;
+      _volume = 0;
+    } else {
+      _volume = _volumeBeforeMute > 0 ? _volumeBeforeMute : 1;
+    }
+    unawaited(c.setVolume(_volume));
+    _hintFor(_volume == 0 ? 'Muted' : 'Volume ${(_volume * 100).round()}%');
   }
 
   void _hintFor(String text) {
