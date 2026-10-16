@@ -5,7 +5,9 @@ name: Release (Windows)
 # never creates, edits or replaces a release or the APK: it only adds
 # Reelish-Windows-x64.zip and its .sha256, so a failed Windows build can never
 # block or alter an Android release. Run it manually (workflow_dispatch) to
-# build and verify the ZIP as a workflow artifact without publishing.
+# build and verify the ZIP as a workflow artifact without publishing, or with
+# release_tag set to build that tag's exact commit and attach the ZIP to its
+# existing release (for example after a failed Windows run).
 # See docs/windows.md.
 
 on:
@@ -13,15 +15,23 @@ on:
     tags:
       - 'v*.*.*'
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Existing release tag (vX.Y.Z) to build and attach to; empty builds the branch without publishing'
+        required: false
+        default: ''
 
 permissions:
   contents: read
 
 concurrency:
-  group: release-windows-${{ github.ref_name }}
+  group: release-windows-${{ inputs.release_tag || github.ref_name }}
   cancel-in-progress: false
 
 env:
+  # The release this run builds: the pushed tag, or the manual release_tag.
+  TAG: ${{ inputs.release_tag || github.ref_name }}
+  PUBLISH: ${{ github.ref_type == 'tag' || inputs.release_tag != '' }}
   # Keep in step with release.yml and the local `flutter --version`.
   FLUTTER_VERSION: '3.44.8'
   ASSET_NAME: Reelish-Windows-x64.zip
@@ -32,7 +42,7 @@ env:
 
 jobs:
   build:
-    name: Build Windows ${{ github.ref_name }}
+    name: Build Windows ${{ inputs.release_tag || github.ref_name }}
     runs-on: windows-latest
     timeout-minutes: 45
     defaults:
@@ -44,6 +54,8 @@ jobs:
       - name: Check out the commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          # A manual release_tag builds exactly that tag's commit.
+          ref: ${{ inputs.release_tag || github.ref }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -57,8 +69,8 @@ jobs:
             exit 1
           fi
           VERSION="${BASH_REMATCH[1]}"
-          if [[ "$GITHUB_REF_TYPE" == "tag" && "v$VERSION" != "$GITHUB_REF_NAME" ]]; then
-            echo "::error::Git tag ($GITHUB_REF_NAME) does not match pubspec.yaml version ($VERSION)."
+          if [[ "$PUBLISH" == "true" && "v$VERSION" != "$TAG" ]]; then
+            echo "::error::Release tag ($TAG) does not match pubspec.yaml version ($VERSION)."
             exit 1
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
@@ -125,12 +137,12 @@ jobs:
       - name: Build
         run: |
           set -euo pipefail
-          SYMBOLS_DIR="$RUNNER_TEMP/symbols/$GITHUB_REF_NAME"
+          SYMBOLS_DIR="$RUNNER_TEMP/symbols/$TAG"
           echo "SYMBOLS_DIR=$SYMBOLS_DIR" >> "$GITHUB_ENV"
           flutter build windows --release \
             --obfuscate --split-debug-info="$SYMBOLS_DIR" \
             --dart-define="REELISH_GIT_SHA=$GITHUB_SHA" \
-            --dart-define="REELISH_BUILD_TAG=$GITHUB_REF_NAME"
+            --dart-define="REELISH_BUILD_TAG=$TAG"
 
       - name: Verify the build
         shell: pwsh
@@ -187,16 +199,18 @@ jobs:
           set -euo pipefail
           OUT="$RUNNER_TEMP/symbols-package"
           mkdir -p "$OUT"
-          tar -czf "$OUT/symbols.tar.gz" -C "$SYMBOLS_DIR" .
+          # --force-local: Git Bash's tar would read the "D:" in a Windows path
+          # as a remote host.
+          tar --force-local -czf "$OUT/symbols.tar.gz" -C "$SYMBOLS_DIR" .
           openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt \
-            -in "$OUT/symbols.tar.gz" -out "dist/reelish-windows-${GITHUB_REF_NAME}-symbols.tar.gz.enc" \
+            -in "$OUT/symbols.tar.gz" -out "dist/reelish-windows-${TAG}-symbols.tar.gz.enc" \
             -pass env:SYMBOLS_PASSPHRASE
           rm -rf "$OUT" "$SYMBOLS_DIR"
 
       - name: Upload the ZIP (workflow artifact)
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: reelish-windows-${{ github.ref_name }}
+          name: reelish-windows-${{ env.TAG }}
           path: |
             dist/${{ env.ASSET_NAME }}
             dist/${{ env.ASSET_NAME }}.sha256
@@ -206,8 +220,8 @@ jobs:
       - name: Upload encrypted debug symbols
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: reelish-windows-${{ github.ref_name }}-symbols
-          path: dist/reelish-windows-${{ github.ref_name }}-symbols.tar.gz.enc
+          name: reelish-windows-${{ env.TAG }}-symbols
+          path: dist/reelish-windows-${{ env.TAG }}-symbols.tar.gz.enc
           retention-days: 90
           if-no-files-found: error
 
@@ -216,9 +230,9 @@ jobs:
         run: rm -f lib/tmdb_config.local.dart
 
   publish:
-    name: Attach to release ${{ github.ref_name }}
+    name: Attach to release ${{ inputs.release_tag || github.ref_name }}
     needs: build
-    if: github.ref_type == 'tag'
+    if: github.ref_type == 'tag' || inputs.release_tag != ''
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
@@ -227,7 +241,7 @@ jobs:
       - name: Download the ZIP
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: reelish-windows-${{ github.ref_name }}
+          name: reelish-windows-${{ env.TAG }}
           path: dist
 
       - name: Wait for the Android release
@@ -239,13 +253,13 @@ jobs:
           # it rather than creating one: an Android failure means no release,
           # and this job then fails without publishing anything.
           for attempt in $(seq 1 80); do
-            if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --json tagName > /dev/null 2>&1; then
-              echo "Release $GITHUB_REF_NAME exists."
+            if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json tagName > /dev/null 2>&1; then
+              echo "Release $TAG exists."
               exit 0
             fi
             sleep 30
           done
-          echo "::error::Release $GITHUB_REF_NAME was not published by release.yml within 40 minutes."
+          echo "::error::Release $TAG was not published by release.yml within 40 minutes."
           exit 1
 
       - name: Attach the Windows ZIP
@@ -257,5 +271,5 @@ jobs:
           sha256sum -c "$ASSET_NAME.sha256"
           # --clobber replaces only these two Windows assets on a re-run; the
           # APK and every other asset are left as they are.
-          gh release upload "$GITHUB_REF_NAME" "$ASSET_NAME" "$ASSET_NAME.sha256" \
+          gh release upload "$TAG" "$ASSET_NAME" "$ASSET_NAME.sha256" \
             --repo "$GITHUB_REPOSITORY" --clobber
