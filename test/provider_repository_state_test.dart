@@ -306,7 +306,18 @@ void main() {
       'onfeed.nuvio.plugin.repositories': [_alpha],
     });
     final files = await Directory.systemTemp.createTemp('manifest-cache-');
-    addTearDown(() => files.delete(recursive: true));
+    // A cache write can still be landing as the test ends (the v1.13.1
+    // release run failed on "Directory not empty"): retry briefly.
+    addTearDown(() async {
+      for (var attempt = 0; await files.exists(); attempt++) {
+        try {
+          await files.delete(recursive: true);
+        } on FileSystemException {
+          if (attempt >= 20) rethrow;
+          await Future<void>.delayed(const Duration(milliseconds: 50));
+        }
+      }
+    });
     var version = 'v1';
     final conditions = <String?>[];
     final client = MockClient((request) async {
