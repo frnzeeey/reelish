@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'src/platform/desktop_gamepad.dart';
 import 'src/platform/desktop_window.dart';
 import 'src/platform/device_capabilities.dart';
 import 'src/screens/home_screen.dart';
@@ -57,8 +58,13 @@ class _ReelishAppState extends State<ReelishApp> {
         navigatorKey: _navigatorKey,
         navigatorObservers: [if (tv) _popupFocus],
         builder: DeviceCapabilities.isDesktopPlatform
-            ? (context, child) =>
-                  DesktopShortcuts(navigatorKey: _navigatorKey, child: child!)
+            ? (context, child) => DesktopGamepad(
+                navigatorKey: _navigatorKey,
+                child: DesktopShortcuts(
+                  navigatorKey: _navigatorKey,
+                  child: child!,
+                ),
+              )
             : null,
         home: _StartupScreen(accentSettings: _accentSettings),
       );

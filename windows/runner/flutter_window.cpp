@@ -67,6 +67,8 @@ bool FlutterWindow::OnCreate() {
 
   app_update_channel_ = std::make_unique<AppUpdateChannel>(
       flutter_controller_->engine()->messenger(), GetHandle());
+  gamepad_channel_ = std::make_unique<GamepadChannel>(
+      flutter_controller_->engine()->messenger(), GetHandle());
 
   RestorePlacement();
 
@@ -87,6 +89,7 @@ void FlutterWindow::OnDestroy() {
   // Placement is saved on WM_CLOSE: by now the window handle is gone.
   window_channel_ = nullptr;
   app_update_channel_ = nullptr;
+  gamepad_channel_ = nullptr;
   if (flutter_controller_) {
     flutter_controller_ = nullptr;
   }
@@ -179,6 +182,12 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
   switch (message) {
     case WM_FONTCHANGE:
       flutter_controller_->engine()->ReloadSystemFonts();
+      break;
+    case WM_TIMER:
+      if (wparam == GamepadChannel::kTimerId && gamepad_channel_) {
+        gamepad_channel_->Poll();
+        return 0;
+      }
       break;
     case WM_CLOSE:
       SavePlacement();

@@ -55,6 +55,8 @@ class DesktopPosterCard extends StatefulWidget {
     this.progress = 0,
     this.isFavorite = false,
     this.rank,
+    this.onHighlightChanged,
+    this.onFocusChange,
   });
 
   final MediaItem item;
@@ -63,8 +65,15 @@ class DesktopPosterCard extends StatefulWidget {
   final double progress;
   final bool isFavorite;
 
-  /// Shown as a large number beside the poster in ranked rows.
+  /// The position in a ranked row (Top 10), read out first. The row draws
+  /// the numeral itself, beside the poster.
   final int? rank;
+
+  /// Whether the card is hovered or shows its focus ring, so a ranked row
+  /// can highlight the numeral with it.
+  final ValueChanged<bool>? onHighlightChanged;
+
+  final ValueChanged<bool>? onFocusChange;
 
   @override
   State<DesktopPosterCard> createState() => _DesktopPosterCardState();
@@ -73,6 +82,16 @@ class DesktopPosterCard extends StatefulWidget {
 class _DesktopPosterCardState extends State<DesktopPosterCard> {
   bool _hovered = false;
   bool _focused = false;
+
+  void _setHighlight({bool? hovered, bool? focused}) {
+    final was = _hovered || _focused;
+    setState(() {
+      _hovered = hovered ?? _hovered;
+      _focused = focused ?? _focused;
+    });
+    final now = _hovered || _focused;
+    if (now != was) widget.onHighlightChanged?.call(now);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -89,8 +108,9 @@ class _DesktopPosterCardState extends State<DesktopPosterCard> {
       width: width,
       child: FocusableActionDetector(
         mouseCursor: SystemMouseCursors.click,
-        onShowHoverHighlight: (value) => setState(() => _hovered = value),
-        onShowFocusHighlight: (value) => setState(() => _focused = value),
+        onShowHoverHighlight: (value) => _setHighlight(hovered: value),
+        onShowFocusHighlight: (value) => _setHighlight(focused: value),
+        onFocusChange: widget.onFocusChange,
         actions: {
           ActivateIntent: CallbackAction<ActivateIntent>(
             onInvoke: (_) {
@@ -103,7 +123,11 @@ class _DesktopPosterCardState extends State<DesktopPosterCard> {
           onTap: () => widget.onOpen(item),
           child: Semantics(
             button: true,
-            label: '${item.name}, $meta',
+            label: [
+              if (widget.rank case final rank?) 'Number $rank',
+              item.name,
+              meta,
+            ].join(', '),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -173,20 +197,6 @@ class _DesktopPosterCardState extends State<DesktopPosterCard> {
                                   fill: 1,
                                   size: 14,
                                   color: Colors.white,
-                                ),
-                              ),
-                            ),
-                          if (widget.rank case final rank?)
-                            Positioned(
-                              top: 8,
-                              right: 8,
-                              child: _Badge(
-                                child: Text(
-                                  '#$rank',
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w800,
-                                  ),
                                 ),
                               ),
                             ),
@@ -350,7 +360,6 @@ class DesktopMediaRow extends StatefulWidget {
     required this.onOpen,
     this.progressOf,
     this.isFavorite,
-    this.ranked = false,
     this.onNearEnd,
     this.loadingMore = false,
   });
@@ -360,7 +369,6 @@ class DesktopMediaRow extends StatefulWidget {
   final ValueChanged<MediaItem> onOpen;
   final double Function(MediaItem item)? progressOf;
   final bool Function(MediaItem item)? isFavorite;
-  final bool ranked;
   final VoidCallback? onNearEnd;
   final bool loadingMore;
 
@@ -477,13 +485,12 @@ class _DesktopMediaRowState extends State<DesktopMediaRow> {
                           onOpen: widget.onOpen,
                           progress: widget.progressOf?.call(item) ?? 0,
                           isFavorite: widget.isFavorite?.call(item) ?? false,
-                          rank: widget.ranked ? index + 1 : null,
                         );
                       },
                     ),
                   ),
                   if (_hovered && _canBack)
-                    _RowArrow(
+                    DesktopRowArrow(
                       alignment: Alignment.centerLeft,
                       icon: Symbols.chevron_left_rounded,
                       label: 'Scroll ${widget.title} back',
@@ -491,7 +498,7 @@ class _DesktopMediaRowState extends State<DesktopMediaRow> {
                       height: posterWidth * 1.5,
                     ),
                   if (_hovered && _canForward)
-                    _RowArrow(
+                    DesktopRowArrow(
                       alignment: Alignment.centerRight,
                       icon: Symbols.chevron_right_rounded,
                       label: 'Scroll ${widget.title} forward',
@@ -508,8 +515,9 @@ class _DesktopMediaRowState extends State<DesktopMediaRow> {
   );
 }
 
-class _RowArrow extends StatelessWidget {
-  const _RowArrow({
+class DesktopRowArrow extends StatelessWidget {
+  const DesktopRowArrow({
+    super.key,
     required this.alignment,
     required this.icon,
     required this.label,
@@ -557,7 +565,6 @@ class DesktopPagedRow extends StatelessWidget {
     required this.feed,
     required this.onOpen,
     this.isFavorite,
-    this.ranked = false,
     this.loadWhenShown = true,
   });
 
@@ -565,7 +572,6 @@ class DesktopPagedRow extends StatelessWidget {
   final PagedFeedController feed;
   final ValueChanged<MediaItem> onOpen;
   final bool Function(MediaItem item)? isFavorite;
-  final bool ranked;
   final bool loadWhenShown;
 
   @override
@@ -581,12 +587,12 @@ class DesktopPagedRow extends StatelessWidget {
       if (state.items.isEmpty) {
         return switch (state.status) {
           PagedFeedStatus.ready => const SizedBox.shrink(),
-          PagedFeedStatus.failed => _RowNotice(
+          PagedFeedStatus.failed => DesktopRowNotice(
             title: title,
             message: 'Could not load this row.',
             onRetry: () => unawaited(feed.retry()),
           ),
-          _ => _RowNotice(title: title, loading: true),
+          _ => DesktopRowNotice(title: title, loading: true),
         };
       }
       return DesktopMediaRow(
@@ -594,7 +600,6 @@ class DesktopPagedRow extends StatelessWidget {
         items: state.items,
         onOpen: onOpen,
         isFavorite: isFavorite,
-        ranked: ranked,
         loadingMore: state.isLoadingMore,
         onNearEnd: state.hasMore ? () => unawaited(feed.loadMore()) : null,
       );
@@ -602,8 +607,9 @@ class DesktopPagedRow extends StatelessWidget {
   );
 }
 
-class _RowNotice extends StatelessWidget {
-  const _RowNotice({
+class DesktopRowNotice extends StatelessWidget {
+  const DesktopRowNotice({
+    super.key,
     required this.title,
     this.message,
     this.loading = false,

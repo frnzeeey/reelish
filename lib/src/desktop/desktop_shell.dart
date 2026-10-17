@@ -71,8 +71,11 @@ class _DesktopShellState extends State<DesktopShell> {
           widget.onDestinationChanged(TvDestination.search),
     },
     // Holds focus when nothing inside does, so the shortcut always works.
+    // Never a traversal stop: it covers the window, so Tab, the arrow keys
+    // and a controller's D-pad would otherwise land on it, invisibly.
     child: Focus(
       autofocus: true,
+      skipTraversal: true,
       child: Scaffold(
         backgroundColor: GlassTheme.background,
         body: Row(

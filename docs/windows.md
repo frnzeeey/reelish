@@ -85,6 +85,36 @@ Downgrades are not offered, and the installer must name the offered version.
 The button at the bottom of the side menu collapses it to icons (with
 tooltips) or expands it; Reelish remembers the choice.
 
+From a fresh start, the first arrow key (or D-pad press) moves focus to the
+side menu's Home item; from there arrows move into the page, as on TV.
+
+**Top 10 recommendations** shows the same ten titles, in the same order, as
+Android and TV (one shared feed, ranking and cache), as outlined numerals
+beside their posters. All ten are reachable with the arrow keys or a D-pad,
+and the focused one, numeral included, is scrolled into view. The row also
+scrolls with a trackpad, Shift+wheel, a mouse drag or its hover arrows.
+Returning from a title's page puts focus back on the card you opened.
+
+### Game controllers
+
+Xbox controllers and other XInput-compatible pads navigate the whole
+interface, while Reelish is the active window:
+
+| Controller | Action |
+|---|---|
+| D-pad or left stick | Move focus (repeats while held) |
+| A, or Start | Select, like Enter |
+| B | Back, like Escape |
+
+The runner polls XInput (`windows/runner/gamepad_channel.cpp`) and reports
+state changes on the `reelish/gamepad` channel; `DesktopGamepad`
+(`lib/src/platform/desktop_gamepad.dart`) turns them into the same focus
+and activate actions as the keyboard. Focus rings stay visible while a
+controller is in use. In the player, B leaves it as Escape does; play,
+pause, seek and volume have no controller buttons yet, because the player
+reads those keys directly rather than through focus actions. Controllers
+that only speak DirectInput (no XInput mode) are not supported.
+
 **In the player:**
 
 | Input | Action |

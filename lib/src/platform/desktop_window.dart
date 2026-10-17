@@ -50,9 +50,30 @@ class DesktopShortcuts extends StatelessWidget {
         context.findAncestorStateOfType<EditableTextState>() != null;
   }
 
+  static final _arrows = {
+    LogicalKeyboardKey.arrowUp,
+    LogicalKeyboardKey.arrowDown,
+    LogicalKeyboardKey.arrowLeft,
+    LogicalKeyboardKey.arrowRight,
+  };
+
+  /// When focus rests on a container (the shell holds it at startup so its
+  /// shortcuts work) rather than a control, an arrow key or a controller's
+  /// D-pad has nowhere to go: no control lies beside a node that covers the
+  /// window. The first press then moves to the first control in order,
+  /// the sidebar's first item, as on TV. Returns whether it moved focus.
+  static bool focusFirstControl() {
+    final node = FocusManager.instance.primaryFocus;
+    if (node == null || node.traversalDescendants.isEmpty) return false;
+    return node.nextFocus();
+  }
+
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {
     if (event is KeyUpEvent) return KeyEventResult.ignored;
     final key = event.logicalKey;
+    if (_arrows.contains(key) && !_editingText() && focusFirstControl()) {
+      return KeyEventResult.handled;
+    }
     if (key == LogicalKeyboardKey.f11) {
       if (event is KeyDownEvent) DesktopWindow.toggleFullscreen();
       return KeyEventResult.handled;
@@ -61,12 +82,22 @@ class DesktopShortcuts extends StatelessWidget {
         key == LogicalKeyboardKey.escape ||
         (key == LogicalKeyboardKey.backspace && !_editingText());
     if (!back || event is KeyRepeatEvent) return KeyEventResult.ignored;
-    if (key == LogicalKeyboardKey.escape && DesktopWindow.fullscreen.value) {
+    if (key == LogicalKeyboardKey.escape) {
+      goBack(navigatorKey);
+    } else {
+      navigatorKey.currentState?.maybePop();
+    }
+    return KeyEventResult.handled;
+  }
+
+  /// Escape's Back, also used by a controller's B button: leaves
+  /// fullscreen first, otherwise goes back.
+  static void goBack(GlobalKey<NavigatorState> navigatorKey) {
+    if (DesktopWindow.fullscreen.value) {
       DesktopWindow.setFullscreen(false);
-      return KeyEventResult.handled;
+      return;
     }
     navigatorKey.currentState?.maybePop();
-    return KeyEventResult.handled;
   }
 
   @override

@@ -9,6 +9,7 @@ project(runner LANGUAGES CXX)
 add_executable(${BINARY_NAME} WIN32
   "app_update_channel.cpp"
   "flutter_window.cpp"
+  "gamepad_channel.cpp"
   "main.cpp"
   "utils.cpp"
   "win32_window.cpp"

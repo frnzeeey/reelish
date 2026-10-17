@@ -14,6 +14,7 @@ import '../services/tmdb_service.dart';
 import '../theme/glass_theme.dart';
 import '../widgets/settings/tmdb_attribution.dart';
 import 'desktop_hero.dart';
+import 'desktop_top_ten.dart';
 import 'desktop_widgets.dart';
 
 /// Desktop Home: the featured hero, then the catalog rows Home loads on
@@ -129,13 +130,11 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
         onOpen: widget.onOpen,
         isFavorite: catalog.isFavorite,
       ),
-      DesktopPagedRow(
+      DesktopTopTenRow(
         key: const ValueKey('row:top10'),
-        title: 'Top 10 recommendations',
         feed: catalog.top10,
         onOpen: widget.onOpen,
         isFavorite: catalog.isFavorite,
-        ranked: true,
         loadWhenShown: catalog.catalogSettled,
       ),
       DesktopPagedRow(
