@@ -88,6 +88,8 @@ class AppUpdate {
     this.releaseUri,
     this.sizeBytes,
     this.sha256,
+    this.checksumUri,
+    this.publishedAt,
   });
 
   final AppVersion currentVersion;
@@ -105,6 +107,28 @@ class AppUpdate {
   /// Lowercase hex SHA-256 reported by GitHub for the asset, when available.
   final String? sha256;
 
+  /// The release's `<asset>.sha256` file, read when GitHub reports no digest.
+  final Uri? checksumUri;
+
+  /// When the release was published, as reported by GitHub.
+  final DateTime? publishedAt;
+
+  /// This update with a SHA-256 read from its checksum file.
+  AppUpdate withSha256(String value) => AppUpdate(
+    currentVersion: currentVersion,
+    latestVersion: latestVersion,
+    tagName: tagName,
+    releaseName: releaseName,
+    releaseNotes: releaseNotes,
+    downloadUri: downloadUri,
+    assetName: assetName,
+    releaseUri: releaseUri,
+    sizeBytes: sizeBytes,
+    sha256: value,
+    checksumUri: checksumUri,
+    publishedAt: publishedAt,
+  );
+
   Map<String, Object?> toJson() => {
     'latestVersion': latestVersion.toString(),
     'tagName': tagName,
@@ -115,6 +139,8 @@ class AppUpdate {
     'releaseUri': releaseUri?.toString(),
     'sizeBytes': sizeBytes,
     'sha256': sha256,
+    'checksumUri': checksumUri?.toString(),
+    'publishedAt': publishedAt?.toUtc().toIso8601String(),
   };
 
   static AppUpdate? fromJson(Object? json, AppVersion currentVersion) {
@@ -132,6 +158,8 @@ class AppUpdate {
     final releaseUri = json['releaseUri'];
     final sizeBytes = json['sizeBytes'];
     final sha256 = json['sha256'];
+    final checksumUri = json['checksumUri'];
+    final publishedAt = json['publishedAt'];
     return AppUpdate(
       currentVersion: currentVersion,
       latestVersion: latest,
@@ -143,6 +171,10 @@ class AppUpdate {
       releaseUri: releaseUri is String ? Uri.tryParse(releaseUri) : null,
       sizeBytes: sizeBytes is int ? sizeBytes : null,
       sha256: sha256 is String ? sha256 : null,
+      checksumUri: checksumUri is String ? Uri.tryParse(checksumUri) : null,
+      publishedAt: publishedAt is String
+          ? DateTime.tryParse(publishedAt)
+          : null,
     );
   }
 }

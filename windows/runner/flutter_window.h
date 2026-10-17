@@ -8,6 +8,7 @@
 
 #include <memory>
 
+#include "app_update_channel.h"
 #include "win32_window.h"
 
 // A window that hosts a Flutter view, plus Reelish's desktop window
@@ -39,6 +40,9 @@ class FlutterWindow : public Win32Window {
 
   std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>>
       window_channel_;
+
+  // Inspects and starts a downloaded update installer (Windows updater).
+  std::unique_ptr<AppUpdateChannel> app_update_channel_;
 
   bool fullscreen_ = false;
   bool start_maximized_ = false;

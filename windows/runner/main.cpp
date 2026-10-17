@@ -2,6 +2,7 @@
 #include <flutter/flutter_view_controller.h>
 #include <windows.h>
 
+#include "app_update_channel.h"
 #include "flutter_window.h"
 #include "utils.h"
 
@@ -12,6 +13,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   if (!::AttachConsole(ATTACH_PARENT_PROCESS) && ::IsDebuggerPresent()) {
     CreateAndAttachConsole();
   }
+
+  // Held until Reelish exits: an update installer waits for it to be
+  // released before replacing any file of this app.
+  HANDLE app_mutex = ::CreateMutexW(nullptr, FALSE, kReelishAppMutex);
 
   // Initialize COM, so that it is available for use in the library and/or
   // plugins.
@@ -39,5 +44,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   }
 
   ::CoUninitialize();
+  if (app_mutex != nullptr) {
+    ::CloseHandle(app_mutex);
+  }
   return EXIT_SUCCESS;
 }

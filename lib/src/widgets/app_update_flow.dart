@@ -5,8 +5,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
+import '../desktop/desktop_update_dialogs.dart';
 import '../models/app_update.dart';
 import '../services/github_update_service.dart';
+import '../services/windows_update_controller.dart';
 import 'update_dialog.dart';
 
 /// What the update flow is doing. One value, so states such as "checking"
@@ -41,7 +43,22 @@ abstract final class AppUpdateFlow {
     _phase = UpdateFlowPhase.idle;
     _owner++;
     _offeredThisSession.clear();
+    _windowsStartupDelayDone = false;
   }
+
+  static bool get _isWindows =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
+
+  /// Windows waits this long after launch before its first automatic check,
+  /// so it never competes with the catalog, plugin and artwork requests of
+  /// startup.
+  @visibleForTesting
+  static Duration windowsStartupDelay = const Duration(seconds: 20);
+  static bool _windowsStartupDelayDone = false;
+
+  /// The Windows update state shared with Settings; replaced in tests.
+  static WindowsUpdateController windowsController =
+      WindowsUpdateController.instance;
 
   /// Releases already offered automatically during this app session. After
   /// "Later" the same release is offered again on the next app launch.
@@ -61,20 +78,38 @@ abstract final class AppUpdateFlow {
     Future<UpdateCheckResult> Function()? checker,
   }) async {
     if (!isSupported || _phase != UpdateFlowPhase.idle) return;
+    final windows = _isWindows ? windowsController : null;
+    if (windows != null) {
+      await windows.load();
+      // Manual checks from About work regardless.
+      if (!windows.autoCheck) return;
+      if (!_windowsStartupDelayDone && windowsStartupDelay > Duration.zero) {
+        _windowsStartupDelayDone = true;
+        await Future<void>.delayed(windowsStartupDelay);
+        if (!context.mounted || _phase != UpdateFlowPhase.idle) return;
+      }
+    }
     final owner = ++_owner;
     _phase = UpdateFlowPhase.checkingInBackground;
     try {
-      final result = await (checker ?? GitHubUpdateService.checkForUpdate)();
+      final result =
+          await (checker ??
+              (windows != null
+                  ? windows.check
+                  : GitHubUpdateService.checkForUpdate))();
       // A manual check started meanwhile reports the outcome itself.
       if (owner != _owner) return;
       final update = result.update;
       if (!result.hasUpdate || update == null || !context.mounted) return;
       if (_offeredThisSession.contains(update.tagName)) return;
+      // "Later" on Windows: not offered automatically again (About still
+      // shows it).
+      if (windows != null && windows.isDismissed(update)) return;
       // Never interrupt playback or another screen; the next resume retries.
       if (ModalRoute.of(context)?.isCurrent == false) return;
       _offeredThisSession.add(update.tagName);
       _phase = UpdateFlowPhase.updating;
-      await _offer(context, update);
+      await _offer(context, update, automatic: true);
     } catch (_) {
       // Update checks must never disturb normal app use.
     } finally {
@@ -111,7 +146,11 @@ abstract final class AppUpdateFlow {
       );
       final result =
           await (checker ??
-              () => GitHubUpdateService.checkForUpdate(forceRefresh: true))();
+              (_isWindows
+                  ? () => windowsController.check(force: true)
+                  : () => GitHubUpdateService.checkForUpdate(
+                      forceRefresh: true,
+                    )))();
       if (owner != _owner || !context.mounted) return;
       messenger?.hideCurrentSnackBar();
       final update = result.update;
@@ -147,12 +186,51 @@ abstract final class AppUpdateFlow {
     }
   }
 
-  static Future<void> _offer(BuildContext context, AppUpdate update) async {
-    final accepted = await showDialog<bool>(
-      context: context,
-      builder: (_) => UpdateAvailableDialog(update: update),
-    );
-    if (accepted != true || !context.mounted) return;
+  /// Settings → About on Windows: offers [update], or (with [confirm] false,
+  /// after the user already chose to update there) starts it directly.
+  static Future<void> updateFromSettings(
+    BuildContext context,
+    AppUpdate update, {
+    bool confirm = true,
+  }) async {
+    if (_phase == UpdateFlowPhase.updating) return;
+    final owner = ++_owner;
+    _phase = UpdateFlowPhase.updating;
+    try {
+      await _offer(context, update, confirm: confirm);
+    } finally {
+      if (owner == _owner) _phase = UpdateFlowPhase.idle;
+    }
+  }
+
+  static Future<void> _offer(
+    BuildContext context,
+    AppUpdate update, {
+    bool automatic = false,
+    bool confirm = true,
+  }) async {
+    if (_isWindows && windowsController.canInstallInApp) {
+      await _offerWindowsInstall(
+        context,
+        update,
+        automatic: automatic,
+        confirm: confirm,
+      );
+      return;
+    }
+    final accepted =
+        !confirm ||
+        await showDialog<bool>(
+              context: context,
+              builder: (_) => _isWindows
+                  ? DesktopUpdateAvailableDialog(update: update)
+                  : UpdateAvailableDialog(update: update),
+            ) ==
+            true;
+    if (!accepted && automatic && _isWindows) {
+      await windowsController.dismiss(update);
+    }
+    if (!accepted || !context.mounted) return;
     final apk = await showDialog<File>(
       context: context,
       barrierDismissible: false,
@@ -160,6 +238,43 @@ abstract final class AppUpdateFlow {
     );
     if (apk == null || !context.mounted) return;
     await _install(context, apk, update);
+  }
+
+  /// Installed Windows copies: the download runs in [windowsController], so
+  /// it keeps going when the dialog is closed, and the installer starts only
+  /// from "Restart and install".
+  static Future<void> _offerWindowsInstall(
+    BuildContext context,
+    AppUpdate update, {
+    required bool automatic,
+    required bool confirm,
+  }) async {
+    final controller = windowsController;
+    final started = switch (controller.stage) {
+      WindowsUpdateStage.downloading ||
+      WindowsUpdateStage.verifying ||
+      WindowsUpdateStage.ready ||
+      WindowsUpdateStage.installing => true,
+      _ => false,
+    };
+    if (!started) {
+      if (confirm) {
+        final accepted = await showDialog<bool>(
+          context: context,
+          builder: (_) => DesktopUpdateAvailableDialog(update: update),
+        );
+        if (accepted != true) {
+          if (automatic) await controller.dismiss(update);
+          return;
+        }
+        if (!context.mounted) return;
+      }
+      unawaited(controller.download());
+    }
+    await showDialog<void>(
+      context: context,
+      builder: (_) => DesktopUpdateProgressDialog(controller: controller),
+    );
   }
 
   static Future<void> _install(

@@ -1,9 +1,11 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../desktop/desktop_update_section.dart';
 import '../navigation/app_transitions.dart';
 import '../services/app_metadata.dart';
 import '../theme/glass_theme.dart';
@@ -116,7 +118,19 @@ class AboutScreen extends StatelessWidget {
           );
         },
       ),
-      if (AppUpdateFlow.isSupported)
+      if (AppUpdateFlow.isSupported &&
+          defaultTargetPlatform == TargetPlatform.windows)
+        FutureBuilder<PackageInfo>(
+          future: AppMetadata.packageInfo,
+          builder: (context, snapshot) => WindowsUpdateSection(
+            installedVersion:
+                snapshot.data?.version ??
+                (snapshot.connectionState == ConnectionState.done
+                    ? 'Unavailable'
+                    : 'Loading…'),
+          ),
+        )
+      else if (AppUpdateFlow.isSupported)
         SettingsSection(
           label: 'UPDATES',
           children: [

@@ -37,6 +37,7 @@ abstract final class GitHubUpdateService {
   static const _installerChannel = MethodChannel('onfeed/app_update');
   static const _nextCheckKey = 'onfeed.update.github.nextCheckAt.v2';
   static const _lastResultKey = 'onfeed.update.github.lastResult.v2';
+  static const _lastCheckedKey = 'onfeed.update.github.lastCheckedAt';
   static const _updatesDirectoryName = 'updates';
   static final _digestPattern = RegExp(r'^sha256:([0-9a-fA-F]{64})$');
 
@@ -154,6 +155,10 @@ abstract final class GitHubUpdateService {
       );
 
       if (_isDefinitive(result.status)) {
+        await storage.saveSetting(
+          _lastCheckedKey,
+          now.toUtc().toIso8601String(),
+        );
         await _saveCachedResult(storage, result, installed);
         if (result.status == UpdateCheckStatus.upToDate) {
           await deleteDownloadedUpdates();
@@ -167,6 +172,21 @@ abstract final class GitHubUpdateService {
     } catch (error) {
       _log('GitHub check failed: $error');
       return const UpdateCheckResult(UpdateCheckStatus.invalidResponse);
+    }
+  }
+
+  /// When GitHub last answered a check definitively (an update, up to date,
+  /// no release, or no asset for this device). Null before the first one.
+  static Future<DateTime?> lastSuccessfulCheck({
+    StorageService? storage,
+  }) async {
+    try {
+      final raw = await (storage ?? StorageService()).readSetting(
+        _lastCheckedKey,
+      );
+      return raw == null ? null : DateTime.tryParse(raw)?.toLocal();
+    } catch (_) {
+      return null;
     }
   }
 
@@ -286,10 +306,23 @@ abstract final class GitHubUpdateService {
       'URL ${asset['browser_download_url']}.',
     );
     final digest = _digestPattern.firstMatch(asset['digest'] as String? ?? '');
+    final checksumAsset = digest == null && assets is List
+        ? selectChecksumAsset(assets, tag: tag, assetName: asset['name'])
+        : null;
+    if (UpdateConfig.requiresChecksum &&
+        digest == null &&
+        checksumAsset == null) {
+      _log('Release $tag publishes no SHA-256 for ${asset['name']}.');
+      return UpdateCheckResult(
+        UpdateCheckStatus.missingApk,
+        latestVersion: latest,
+      );
+    }
     final size = asset['size'];
     final htmlUrl = release['html_url'];
     final name = release['name'];
     final body = release['body'];
+    final published = release['published_at'];
     return UpdateCheckResult(
       UpdateCheckStatus.updateAvailable,
       latestVersion: latest,
@@ -306,8 +339,38 @@ abstract final class GitHubUpdateService {
         releaseUri: htmlUrl is String ? Uri.tryParse(htmlUrl) : null,
         sizeBytes: size is int ? size : null,
         sha256: digest?.group(1)?.toLowerCase(),
+        checksumUri: checksumAsset == null
+            ? null
+            : Uri.parse(checksumAsset['browser_download_url'] as String),
+        publishedAt: published is String ? DateTime.tryParse(published) : null,
       ),
     );
+  }
+
+  /// The `<asset>.sha256` file of release [tag], under the same rules as the
+  /// asset itself.
+  @visibleForTesting
+  static Map<String, dynamic>? selectChecksumAsset(
+    List<dynamic> assets, {
+    required String tag,
+    required Object? assetName,
+  }) {
+    if (assetName is! String) return null;
+    final expected = UpdateConfig.checksumAssetName(assetName);
+    final matches = assets.whereType<Map<String, dynamic>>().where((asset) {
+      final url = asset['browser_download_url'];
+      final size = asset['size'];
+      final state = asset['state'];
+      if (asset['name'] != expected || url is! String) return false;
+      if (state != null && state != 'uploaded') return false;
+      if (size is! int || size <= 0 || size > UpdateConfig.maxChecksumBytes) {
+        return false;
+      }
+      final uri = Uri.tryParse(url);
+      return uri != null &&
+          UpdateConfig.isReleaseAssetUri(uri, tag: tag, name: expected);
+    }).toList();
+    return matches.length == 1 ? matches.single : null;
   }
 
   /// The version a release tag names. Only the workflow's `vMAJOR.MINOR.PATCH`
@@ -402,6 +465,12 @@ abstract final class GitHubUpdateService {
       }
       final update = AppUpdate.fromJson(cached['update'], installed);
       if (update == null ||
+          // Cached for another asset, e.g. the ZIP of a copy that has since
+          // been installed with the installer.
+          update.assetName != UpdateConfig.assetName ||
+          (UpdateConfig.requiresChecksum &&
+              update.sha256 == null &&
+              update.checksumUri == null) ||
           update.latestVersion != latest ||
           releaseVersion(update.tagName) != update.latestVersion ||
           !UpdateConfig.isReleaseAssetUri(
@@ -448,12 +517,31 @@ abstract final class GitHubUpdateService {
     }),
   );
 
-  /// Downloads the release APK into `<cache>/updates`, verifying its size and,
-  /// when GitHub provides one, its SHA-256 digest. A verified download from an
+  /// Downloads the release asset (the APK, or on Windows the installer or
+  /// ZIP) into `<cache>/updates`, verifying its size and SHA-256: GitHub's
+  /// digest, or on Windows the release's `.sha256` file when GitHub reports
+  /// none. Windows refuses to download without a SHA-256, and follows
+  /// redirects only to GitHub's own hosts. A verified download from an
   /// earlier attempt is reused. Partial or invalid files are always deleted.
   ///
   /// Throws [UpdateException] with a user-facing message on failure.
   static Future<File> downloadApk(
+    AppUpdate update, {
+    void Function(int received, int? total)? onProgress,
+    UpdateDownloadCancellation? cancellation,
+    http.Client? client,
+    Future<Directory> Function()? cacheDirectory,
+  }) async => (await downloadUpdate(
+    update,
+    onProgress: onProgress,
+    cancellation: cancellation,
+    client: client,
+    cacheDirectory: cacheDirectory,
+  )).file;
+
+  /// [downloadApk], also returning the update with the SHA-256 the file was
+  /// verified against, for checking it again later.
+  static Future<({File file, AppUpdate update})> downloadUpdate(
     AppUpdate update, {
     void Function(int received, int? total)? onProgress,
     UpdateDownloadCancellation? cancellation,
@@ -470,14 +558,148 @@ abstract final class GitHubUpdateService {
         'The update download link is not a Reelish release.',
       );
     }
+    final httpClient = client ?? http.Client();
+    cancellation?._onCancel = httpClient.close;
+    try {
+      final verifiable = await _withChecksum(update, httpClient, cancellation);
+      final file = await _download(
+        verifiable,
+        httpClient,
+        onProgress: onProgress,
+        cancellation: cancellation,
+        cacheDirectory: cacheDirectory,
+      );
+      return (file: file, update: verifiable);
+    } finally {
+      cancellation?._onCancel = null;
+      if (client == null) httpClient.close();
+    }
+  }
+
+  /// [update] with the SHA-256 it must match. On Windows a missing digest is
+  /// read from the release's `<asset>.sha256` file, and no checksum at all
+  /// means no download.
+  static Future<AppUpdate> _withChecksum(
+    AppUpdate update,
+    http.Client client,
+    UpdateDownloadCancellation? cancellation,
+  ) async {
+    if (update.sha256 != null || !UpdateConfig.requiresChecksum) return update;
+    final uri = update.checksumUri;
+    final name = UpdateConfig.checksumAssetName(update.assetName);
+    if (uri == null ||
+        !UpdateConfig.isReleaseAssetUri(uri, tag: update.tagName, name: name)) {
+      throw const UpdateException(
+        'This release has no checksum to verify the update with.',
+      );
+    }
+    try {
+      final response = await _sendTrusted(client, uri);
+      if (response.statusCode != 200) {
+        throw UpdateException(
+          'The update checksum could not be downloaded '
+          '(HTTP ${response.statusCode}).',
+        );
+      }
+      final bytes = <int>[];
+      await for (final chunk in response.stream.timeout(
+        UpdateConfig.downloadIdleTimeout,
+      )) {
+        bytes.addAll(chunk);
+        if (bytes.length > UpdateConfig.maxChecksumBytes) {
+          throw const UpdateException('The update checksum file is invalid.');
+        }
+      }
+      final sha = parseChecksumFile(utf8.decode(bytes), update.assetName);
+      if (sha == null) {
+        throw const UpdateException('The update checksum file is invalid.');
+      }
+      return update.withSha256(sha);
+    } catch (error) {
+      if (cancellation?.isCancelled ?? false) {
+        throw const UpdateDownloadCancelled();
+      }
+      _log('Checksum download failed: $error');
+      if (error is UpdateException) rethrow;
+      throw const UpdateException(
+        'The update checksum could not be downloaded. Check your connection '
+        'and try again.',
+      );
+    }
+  }
+
+  /// The SHA-256 in a `sha256sum`-style file (`<hex>  <name>`) for
+  /// [assetName]. A file that names another file is rejected.
+  @visibleForTesting
+  static String? parseChecksumFile(String contents, String assetName) {
+    final lines = const LineSplitter()
+        .convert(contents.replaceFirst('﻿', ''))
+        .map((line) => line.trim())
+        .where((line) => line.isNotEmpty)
+        .toList();
+    if (lines.length != 1) return null;
+    final match = RegExp(
+      r'^([0-9a-fA-F]{64})(?:\s+\*?(.+))?$',
+    ).firstMatch(lines.single);
+    if (match == null) return null;
+    final name = match.group(2)?.trim();
+    if (name != null && name != assetName) return null;
+    return match.group(1)!.toLowerCase();
+  }
+
+  /// GETs [uri]. On Windows redirects are followed by hand, at most five,
+  /// and only to HTTPS GitHub hosts ([UpdateConfig.isTrustedRedirectUri]).
+  static Future<http.StreamedResponse> _sendTrusted(
+    http.Client client,
+    Uri uri,
+  ) async {
+    final restrict = UpdateConfig.requiresChecksum;
+    var target = uri;
+    for (var hop = 0; ; hop++) {
+      final request = http.Request('GET', target)
+        ..followRedirects = !restrict
+        ..headers['User-Agent'] = UpdateConfig.userAgent
+        ..headers['Accept'] = 'application/octet-stream';
+      final response = await client
+          .send(request)
+          .timeout(UpdateConfig.requestTimeout * 3);
+      if (!restrict || !response.isRedirect && !_isRedirect(response)) {
+        return response;
+      }
+      // The body of a redirect is not needed.
+      unawaited(response.stream.drain<void>().catchError((_) {}));
+      final location = response.headers['location'];
+      final next = location == null ? null : target.resolve(location);
+      if (hop >= 4 ||
+          next == null ||
+          !UpdateConfig.isTrustedRedirectUri(next)) {
+        _log('Refusing redirect from $target to $location.');
+        throw const UpdateException(
+          'The update download was redirected to an unexpected address.',
+        );
+      }
+      target = next;
+    }
+  }
+
+  static bool _isRedirect(http.BaseResponse response) =>
+      const {301, 302, 303, 307, 308}.contains(response.statusCode);
+
+  static Future<File> _download(
+    AppUpdate update,
+    http.Client httpClient, {
+    required void Function(int received, int? total)? onProgress,
+    required UpdateDownloadCancellation? cancellation,
+    required Future<Directory> Function()? cacheDirectory,
+  }) async {
     final Directory directory;
     final File file;
     try {
       directory = await _updatesDirectory(cacheDirectory);
-      // One deterministic name per version, so an APK of another version is
-      // never mistaken for this one.
+      // One deterministic name per version, so a download of another version
+      // is never mistaken for this one. The extension is the asset's.
       file = File(
-        '${directory.path}${Platform.pathSeparator}reelish-${_safeName(update.latestVersion.toString())}.apk',
+        '${directory.path}${Platform.pathSeparator}reelish-${_safeName(update.latestVersion.toString())}${_extension(update.assetName)}',
       );
       if (await file.exists()) {
         if (await _matchesExpected(file, update)) {
@@ -505,16 +727,9 @@ abstract final class GitHubUpdateService {
       '${update.downloadUri} (${update.sizeBytes ?? 'unknown'} bytes).',
     );
 
-    final httpClient = client ?? http.Client();
-    cancellation?._onCancel = httpClient.close;
     IOSink? sink;
     try {
-      final request = http.Request('GET', update.downloadUri)
-        ..headers['User-Agent'] = UpdateConfig.userAgent
-        ..headers['Accept'] = 'application/octet-stream';
-      final response = await httpClient
-          .send(request)
-          .timeout(UpdateConfig.requestTimeout * 3);
+      final response = await _sendTrusted(httpClient, update.downloadUri);
       if (response.statusCode != 200) {
         throw UpdateException(switch (response.statusCode) {
           404 => 'The update file was removed from GitHub.',
@@ -585,9 +800,26 @@ abstract final class GitHubUpdateService {
           'The download was interrupted. Check your connection and try again.',
         ),
       };
-    } finally {
-      cancellation?._onCancel = null;
-      if (client == null) httpClient.close();
+    }
+  }
+
+  static String _extension(String assetName) {
+    final dot = assetName.lastIndexOf('.');
+    final extension = dot < 0 ? '' : assetName.substring(dot).toLowerCase();
+    return const {'.apk', '.zip', '.exe'}.contains(extension)
+        ? extension
+        : '.apk';
+  }
+
+  /// Whether [file] still has [update]'s size and SHA-256. Windows checks
+  /// this again immediately before starting an installer. Never true without
+  /// a SHA-256 where one is required.
+  static Future<bool> verifyDownload(File file, AppUpdate update) async {
+    try {
+      if (UpdateConfig.requiresChecksum && update.sha256 == null) return false;
+      return await file.exists() && await _matchesExpected(file, update);
+    } catch (_) {
+      return false;
     }
   }
 
@@ -640,16 +872,29 @@ abstract final class GitHubUpdateService {
     }
   }
 
+  /// The folder downloads are kept in; created when missing.
+  static Future<Directory> updatesDirectory({
+    Future<Directory> Function()? cacheDirectory,
+  }) => _updatesDirectory(cacheDirectory);
+
   static Future<Directory> _updatesDirectory(
     Future<Directory> Function()? cacheDirectory,
   ) async {
     final cache = await (cacheDirectory ?? getTemporaryDirectory)();
-    // Must match the FileProvider path in res/xml/update_file_paths.xml.
-    final directory = Directory(
-      '${cache.path}${Platform.pathSeparator}$_updatesDirectoryName',
-    );
+    final directory = Directory(_updatesPath(cache));
     await directory.create(recursive: true);
     return directory;
+  }
+
+  /// Android: must match the FileProvider path in
+  /// res/xml/update_file_paths.xml. Windows: the temporary directory is the
+  /// user's shared %TEMP%, so updates go in a folder of Reelish's own, never
+  /// in a generic `updates` folder that other programs may use.
+  static String _updatesPath(Directory cache) {
+    final separator = Platform.pathSeparator;
+    return defaultTargetPlatform == TargetPlatform.windows
+        ? '${cache.path}${separator}Reelish$separator$_updatesDirectoryName'
+        : '${cache.path}$separator$_updatesDirectoryName';
   }
 
   /// Removes downloaded update APKs, including files from older app versions
@@ -659,9 +904,7 @@ abstract final class GitHubUpdateService {
   }) async {
     try {
       final cache = await (cacheDirectory ?? getTemporaryDirectory)();
-      final updates = Directory(
-        '${cache.path}${Platform.pathSeparator}$_updatesDirectoryName',
-      );
+      final updates = Directory(_updatesPath(cache));
       if (await updates.exists()) await updates.delete(recursive: true);
       await for (final entity in cache.list()) {
         final name = entity.uri.pathSegments.last;

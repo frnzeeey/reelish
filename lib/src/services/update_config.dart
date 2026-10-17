@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import '../platform/windows_installation.dart';
+
 /// Settings for the GitHub Releases based Android updater.
 ///
 /// Releases are published only by `.github/workflows/release.yml` (see
@@ -20,11 +22,31 @@ abstract final class UpdateConfig {
   /// published by `.github/workflows/release-windows.yml`.
   static const windowsAssetName = 'Reelish-Windows-x64.zip';
 
-  /// The asset this platform updates from.
-  static String get assetName =>
-      defaultTargetPlatform == TargetPlatform.windows
-      ? windowsAssetName
-      : apkAssetName;
+  /// The Windows installer (Inno Setup, per user, no administrator rights),
+  /// published by the same workflow. Installed copies update from it.
+  static const windowsInstallerAssetName = 'Reelish-Setup-x64.exe';
+
+  /// The asset this platform updates from: the APK on Android; on Windows
+  /// the installer for installed copies and the ZIP for portable ones.
+  static String get assetName {
+    if (defaultTargetPlatform != TargetPlatform.windows) return apkAssetName;
+    return WindowsInstallation.usesInstaller
+        ? windowsInstallerAssetName
+        : windowsAssetName;
+  }
+
+  /// Windows updates are only offered with a SHA-256: GitHub's asset digest,
+  /// or else the `<asset>.sha256` file the workflow publishes beside it.
+  /// Android keeps its size check, since Android itself verifies the APK's
+  /// signature against the installed app.
+  static bool get requiresChecksum =>
+      defaultTargetPlatform == TargetPlatform.windows;
+
+  /// The checksum file published next to [assetName].
+  static String checksumAssetName(String assetName) => '$assetName.sha256';
+
+  /// Upper bound on a `.sha256` file (`<64 hex>  <name>`).
+  static const maxChecksumBytes = 4096;
 
   /// Minimum time between automatic GitHub API requests. Unauthenticated
   /// requests are limited to 60 per hour per IP address, which may be shared
@@ -76,6 +98,16 @@ abstract final class UpdateConfig {
         tag,
         name,
       ]);
+
+  /// Hosts a Windows download may be redirected to: GitHub serves release
+  /// assets from github.com through its githubusercontent.com storage.
+  /// Integrity still comes from the SHA-256, not from the host.
+  static bool isTrustedRedirectUri(Uri uri) =>
+      uri.scheme == 'https' &&
+      !uri.hasFragment &&
+      (uri.host == 'github.com' ||
+          (uri.host.endsWith('.githubusercontent.com') &&
+              uri.host != 'raw.githubusercontent.com'));
 
   static bool _sameSegments(List<String> a, List<String> b) {
     if (a.length != b.length) return false;

@@ -1,10 +1,11 @@
 name: Release (Windows)
 
-# Builds the portable Windows app and attaches it to the GitHub Release that
+# Builds the Windows app and attaches it to the GitHub Release that
 # release.yml publishes for the same vMAJOR.MINOR.PATCH tag. This workflow
 # never creates, edits or replaces a release or the APK: it only adds
-# Reelish-Windows-x64.zip and its .sha256, so a failed Windows build can never
-# block or alter an Android release. Run it manually (workflow_dispatch) to
+# Reelish-Windows-x64.zip (portable), Reelish-Setup-x64.exe (the per-user
+# installer the in-app updater uses) and their .sha256 files, so a failed
+# Windows build can never block or alter an Android release. Run it manually (workflow_dispatch) to
 # build and verify the ZIP as a workflow artifact without publishing, or with
 # release_tag set to build that tag's exact commit and attach the ZIP to its
 # existing release (for example after a failed Windows run).
@@ -35,6 +36,9 @@ env:
   # Keep in step with release.yml and the local `flutter --version`.
   FLUTTER_VERSION: '3.44.8'
   ASSET_NAME: Reelish-Windows-x64.zip
+  # The per-user installer the in-app updater installs from
+  # (windows/installer/reelish.iss). Keep in step with UpdateConfig.
+  INSTALLER_NAME: Reelish-Setup-x64.exe
   RELEASE_DIR: build/windows/x64/runner/Release
   # SHA-256 of the QuickJS bridge committed in third_party (see
   # third_party/flutter_js/REELISH_PATCH.md). A different DLL fails the build.
@@ -133,6 +137,7 @@ jobs:
           test/provider_runner_test.dart
           test/playback_pipeline_test.dart
           test/github_update_check_test.dart
+          test/windows_update_test.dart
 
       - name: Build
         run: |
@@ -192,6 +197,67 @@ jobs:
           Move-Item $zip, "$zip.sha256" dist/
           Write-Host "$env:ASSET_NAME $((Get-Item dist/$env:ASSET_NAME).Length) bytes, SHA-256 $hash"
 
+      - name: Build the installer
+        shell: pwsh
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          function Find-Iscc {
+            "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe", "$env:ProgramFiles\Inno Setup 6\ISCC.exe",
+              "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe" |
+              Where-Object { Test-Path $_ } | Select-Object -First 1
+          }
+          $iscc = Find-Iscc
+          if (-not $iscc) {
+            choco install innosetup --yes --no-progress
+            if ($LASTEXITCODE -ne 0) { throw "Installing Inno Setup failed ($LASTEXITCODE)." }
+            $iscc = Find-Iscc
+          }
+          if (-not $iscc) { throw 'ISCC.exe was not found.' }
+          Write-Host "Inno Setup $((Get-Item $iscc).VersionInfo.ProductVersion)"
+          $out = Join-Path $env:RUNNER_TEMP 'installer'
+          New-Item -ItemType Directory -Force $out | Out-Null
+          & $iscc /Qp "/DAppVersion=$env:VERSION" "/DSourceDir=$((Resolve-Path $env:RELEASE_DIR).Path)" "/DOutputDir=$out" windows/installer/reelish.iss
+          if ($LASTEXITCODE -ne 0) { throw "ISCC failed ($LASTEXITCODE)." }
+          $setup = Join-Path $out $env:INSTALLER_NAME
+          if (-not (Test-Path $setup)) { throw "$env:INSTALLER_NAME was not generated." }
+          # The in-app updater refuses an installer that does not identify as
+          # Reelish by frnzeeey at exactly the release version.
+          # Inno Setup pads these strings with spaces.
+          $info = (Get-Item $setup).VersionInfo
+          if ($info.ProductName.Trim() -ne 'Reelish' -or $info.CompanyName.Trim() -ne 'frnzeeey') {
+            throw "Unexpected installer identity: $($info.ProductName) / $($info.CompanyName)."
+          }
+          $v = "$($info.ProductMajorPart).$($info.ProductMinorPart).$($info.ProductBuildPart)"
+          if ($v -ne $env:VERSION) { throw "Installer version $v is not $env:VERSION." }
+          $hash = (Get-FileHash $setup -Algorithm SHA256).Hash.ToLower()
+          "$hash  $env:INSTALLER_NAME" | Out-File -Encoding ascii -NoNewline "$setup.sha256"
+          Move-Item $setup, "$setup.sha256" dist/
+          Write-Host "$env:INSTALLER_NAME $((Get-Item dist/$env:INSTALLER_NAME).Length) bytes, SHA-256 $hash"
+
+      - name: Test the installer
+        # A real per-user install and uninstall on the runner, without
+        # administrator rights, with the arguments the in-app updater uses
+        # (except /RELAUNCH, so nothing is opened).
+        shell: pwsh
+        run: |
+          $dir = Join-Path $env:RUNNER_TEMP 'install-test\Reelish'
+          $log = Join-Path $env:RUNNER_TEMP 'install-test.log'
+          $setup = Resolve-Path "dist/$env:INSTALLER_NAME"
+          $p = Start-Process $setup -Wait -PassThru -ArgumentList '/SP-', '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/CLOSEAPPLICATIONS', "/DIR=`"$dir`"", "/LOG=`"$log`""
+          if ($p.ExitCode -ne 0) { Get-Content $log -ErrorAction SilentlyContinue; throw "Setup exited with $($p.ExitCode)." }
+          foreach ($file in 'Reelish.exe', 'unins000.exe', 'unins000.dat', 'data/app.so', 'libmpv-2.dll') {
+            if (-not (Test-Path (Join-Path $dir $file))) { throw "The installation has no $file." }
+          }
+          $built = (Get-FileHash (Join-Path $env:RELEASE_DIR 'Reelish.exe')).Hash
+          if ((Get-FileHash (Join-Path $dir 'Reelish.exe')).Hash -ne $built) { throw 'The installed Reelish.exe is not the built one.' }
+          $p = Start-Process (Join-Path $dir 'unins000.exe') -Wait -PassThru -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART'
+          if ($p.ExitCode -ne 0) { throw "Uninstall exited with $($p.ExitCode)." }
+          # The uninstaller removes itself shortly after it exits.
+          for ($i = 0; $i -lt 20 -and (Test-Path (Join-Path $dir 'Reelish.exe')); $i++) { Start-Sleep -Milliseconds 500 }
+          if (Test-Path (Join-Path $dir 'Reelish.exe')) { throw 'Uninstall left Reelish.exe behind.' }
+          Write-Host 'Installer installed and uninstalled cleanly.'
+
       - name: Package encrypted debug symbols
         env:
           SYMBOLS_PASSPHRASE: ${{ secrets.ONFEED_SYMBOLS_PASSPHRASE }}
@@ -214,6 +280,8 @@ jobs:
           path: |
             dist/${{ env.ASSET_NAME }}
             dist/${{ env.ASSET_NAME }}.sha256
+            dist/${{ env.INSTALLER_NAME }}
+            dist/${{ env.INSTALLER_NAME }}.sha256
           retention-days: 30
           if-no-files-found: error
 
@@ -262,14 +330,16 @@ jobs:
           echo "::error::Release $TAG was not published by release.yml within 40 minutes."
           exit 1
 
-      - name: Attach the Windows ZIP
+      - name: Attach the Windows ZIP and installer
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           cd dist
           sha256sum -c "$ASSET_NAME.sha256"
-          # --clobber replaces only these two Windows assets on a re-run; the
-          # APK and every other asset are left as they are.
+          sha256sum -c "$INSTALLER_NAME.sha256"
+          # --clobber replaces only these Windows assets on a re-run; the APK
+          # and every other asset are left as they are.
           gh release upload "$TAG" "$ASSET_NAME" "$ASSET_NAME.sha256" \
+            "$INSTALLER_NAME.sha256" "$INSTALLER_NAME" \
             --repo "$GITHUB_REPOSITORY" --clobber

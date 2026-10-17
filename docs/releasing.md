@@ -27,7 +27,7 @@ If any step fails, no release is created.
 
 ## Windows
 
-The same tag also runs `.github/workflows/release-windows.yml`, which builds `Reelish-Windows-x64.zip` on a Windows runner and attaches it, with its `.sha256`, to the release once `release.yml` has published it. It never creates or edits the release or the APK, and a failed Windows build leaves the Android release untouched; re-run that workflow to attach the ZIP later. It needs the `ONFEED_TMDB_API_KEY` and `ONFEED_SYMBOLS_PASSPHRASE` secrets and no signing key. See [windows.md](windows.md).
+The same tag also runs `.github/workflows/release-windows.yml`, which builds `Reelish-Windows-x64.zip` (portable) and `Reelish-Setup-x64.exe` (the per-user installer the Windows in-app updater installs from) on a Windows runner, test-installs the installer, and attaches both, with their `.sha256` files, to the release once `release.yml` has published it. Installed Windows copies are offered a release only once its installer is attached. It never creates or edits the release or the APK, and a failed Windows build leaves the Android release untouched; re-run that workflow to attach the ZIP later. It needs the `ONFEED_TMDB_API_KEY` and `ONFEED_SYMBOLS_PASSPHRASE` secrets and no signing key. See [windows.md](windows.md).
 
 ## Version
 

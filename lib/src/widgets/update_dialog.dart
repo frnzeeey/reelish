@@ -44,21 +44,24 @@ String formatReleaseNotes(String markdown) {
   return lines.join('\n');
 }
 
-String _megabytes(int bytes) => (bytes / (1024 * 1024)).toStringAsFixed(1);
+String formatMegabytes(int bytes) => (bytes / (1024 * 1024)).toStringAsFixed(1);
 
 /// Card-style dialog frame matching Reelish's surfaces.
-class _UpdateDialogFrame extends StatelessWidget {
-  const _UpdateDialogFrame({
+class UpdateDialogFrame extends StatelessWidget {
+  const UpdateDialogFrame({
+    super.key,
     required this.icon,
     required this.title,
     required this.children,
     required this.actions,
+    this.maxWidth = 420,
   });
 
   final IconData icon;
   final String title;
   final List<Widget> children;
   final List<Widget> actions;
+  final double maxWidth;
 
   @override
   Widget build(BuildContext context) => Dialog(
@@ -70,7 +73,7 @@ class _UpdateDialogFrame extends StatelessWidget {
       side: const BorderSide(color: GlassTheme.border),
     ),
     child: ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 420),
+      constraints: BoxConstraints(maxWidth: maxWidth),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(22, 24, 22, 18),
         child: Column(
@@ -112,16 +115,19 @@ class _UpdateDialogFrame extends StatelessWidget {
   );
 }
 
-class _DialogButton extends StatelessWidget {
-  const _DialogButton({
+class UpdateDialogButton extends StatelessWidget {
+  const UpdateDialogButton({
+    super.key,
     required this.label,
     required this.onPressed,
     this.primary = false,
+    this.autofocus = false,
   });
 
   final String label;
   final VoidCallback? onPressed;
   final bool primary;
+  final bool autofocus;
 
   @override
   Widget build(BuildContext context) {
@@ -133,6 +139,7 @@ class _DialogButton extends StatelessWidget {
     return primary
         ? FilledButton(
             onPressed: onPressed,
+            autofocus: autofocus,
             style: FilledButton.styleFrom(
               minimumSize: size,
               shape: shape,
@@ -142,6 +149,7 @@ class _DialogButton extends StatelessWidget {
           )
         : TextButton(
             onPressed: onPressed,
+            autofocus: autofocus,
             style: TextButton.styleFrom(
               minimumSize: size,
               shape: shape,
@@ -154,7 +162,7 @@ class _DialogButton extends StatelessWidget {
   }
 }
 
-TextStyle? _bodyStyle(BuildContext context) => Theme.of(
+TextStyle? updateDialogBodyStyle(BuildContext context) => Theme.of(
   context,
 ).textTheme.bodyMedium?.copyWith(color: GlassTheme.muted, height: 1.5);
 
@@ -167,15 +175,15 @@ class UpdateAvailableDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final notes = formatReleaseNotes(update.releaseNotes);
-    return _UpdateDialogFrame(
+    return UpdateDialogFrame(
       icon: Symbols.cloud_download_rounded,
       title: 'New Reelish update available',
       actions: [
-        _DialogButton(
+        UpdateDialogButton(
           label: 'Later',
           onPressed: () => Navigator.pop(context, false),
         ),
-        _DialogButton(
+        UpdateDialogButton(
           label: 'Update now',
           primary: true,
           onPressed: () => Navigator.pop(context, true),
@@ -185,13 +193,13 @@ class UpdateAvailableDialog extends StatelessWidget {
         Text(
           'Version ${update.latestVersion} is now available. '
           "You're currently using version ${update.currentVersion}.",
-          style: _bodyStyle(context),
+          style: updateDialogBodyStyle(context),
         ),
         if (update.sizeBytes != null) ...[
           const SizedBox(height: 6),
           Text(
-            'Download size: ${_megabytes(update.sizeBytes!)} MB',
-            style: _bodyStyle(context)?.copyWith(fontSize: 12.5),
+            'Download size: ${formatMegabytes(update.sizeBytes!)} MB',
+            style: updateDialogBodyStyle(context)?.copyWith(fontSize: 12.5),
           ),
         ],
         if (notes.isNotEmpty) ...[
@@ -219,7 +227,7 @@ class UpdateAvailableDialog extends StatelessWidget {
                   width: double.infinity,
                   child: Text(
                     notes,
-                    style: _bodyStyle(context)?.copyWith(
+                    style: updateDialogBodyStyle(context)?.copyWith(
                       color: GlassTheme.textPrimary.withValues(alpha: .86),
                     ),
                   ),
@@ -341,27 +349,27 @@ class _UpdateDownloadDialogState extends State<UpdateDownloadDialog> {
         if (!didPop) _close();
       },
       child: error != null
-          ? _UpdateDialogFrame(
+          ? UpdateDialogFrame(
               icon: Symbols.error_rounded,
               title: 'Download failed',
               actions: [
-                _DialogButton(label: 'Close', onPressed: _close),
-                _DialogButton(
+                UpdateDialogButton(label: 'Close', onPressed: _close),
+                UpdateDialogButton(
                   label: 'Retry',
                   primary: true,
                   onPressed: () => setState(_start),
                 ),
               ],
-              children: [Text(error, style: _bodyStyle(context))],
+              children: [Text(error, style: updateDialogBodyStyle(context))],
             )
-          : _UpdateDialogFrame(
+          : UpdateDialogFrame(
               icon: Symbols.download_rounded,
               title: 'Downloading Reelish ${widget.update.latestVersion}',
-              actions: [_DialogButton(label: 'Cancel', onPressed: _close)],
+              actions: [UpdateDialogButton(label: 'Cancel', onPressed: _close)],
               children: [
                 Text(
                   'Keep Reelish open until the download finishes.',
-                  style: _bodyStyle(context),
+                  style: updateDialogBodyStyle(context),
                 ),
                 const SizedBox(height: 18),
                 ClipRRect(
@@ -386,9 +394,9 @@ class _UpdateDownloadDialogState extends State<UpdateDownloadDialog> {
                     const Spacer(),
                     Text(
                       total != null && total > 0
-                          ? '${_megabytes(_received)} MB / ${_megabytes(total)} MB'
-                          : '${_megabytes(_received)} MB',
-                      style: _bodyStyle(context),
+                          ? '${formatMegabytes(_received)} MB / ${formatMegabytes(total)} MB'
+                          : '${formatMegabytes(_received)} MB',
+                      style: updateDialogBodyStyle(context),
                     ),
                   ],
                 ),
@@ -404,15 +412,15 @@ class InstallPermissionDialog extends StatelessWidget {
   const InstallPermissionDialog({super.key});
 
   @override
-  Widget build(BuildContext context) => _UpdateDialogFrame(
+  Widget build(BuildContext context) => UpdateDialogFrame(
     icon: Symbols.shield_rounded,
     title: 'Allow Reelish to install updates',
     actions: [
-      _DialogButton(
+      UpdateDialogButton(
         label: 'Not now',
         onPressed: () => Navigator.pop(context, false),
       ),
-      _DialogButton(
+      UpdateDialogButton(
         label: 'Open settings',
         primary: true,
         onPressed: () => Navigator.pop(context, true),
@@ -423,7 +431,7 @@ class InstallPermissionDialog extends StatelessWidget {
         'Android requires permission for Reelish to install downloaded '
         'updates.\n\nTurn on "Allow from this source" for Reelish, then '
         'return to Reelish to continue.',
-        style: _bodyStyle(context),
+        style: updateDialogBodyStyle(context),
       ),
     ],
   );
@@ -443,16 +451,16 @@ class UpdateNoticeDialog extends StatelessWidget {
   final IconData icon;
 
   @override
-  Widget build(BuildContext context) => _UpdateDialogFrame(
+  Widget build(BuildContext context) => UpdateDialogFrame(
     icon: icon,
     title: title,
     actions: [
-      _DialogButton(
+      UpdateDialogButton(
         label: 'OK',
         primary: true,
         onPressed: () => Navigator.pop(context),
       ),
     ],
-    children: [Text(message, style: _bodyStyle(context))],
+    children: [Text(message, style: updateDialogBodyStyle(context))],
   );
 }

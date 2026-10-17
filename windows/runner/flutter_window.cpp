@@ -65,6 +65,9 @@ bool FlutterWindow::OnCreate() {
         }
       });
 
+  app_update_channel_ = std::make_unique<AppUpdateChannel>(
+      flutter_controller_->engine()->messenger(), GetHandle());
+
   RestorePlacement();
 
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
@@ -83,6 +86,7 @@ bool FlutterWindow::OnCreate() {
 void FlutterWindow::OnDestroy() {
   // Placement is saved on WM_CLOSE: by now the window handle is gone.
   window_channel_ = nullptr;
+  app_update_channel_ = nullptr;
   if (flutter_controller_) {
     flutter_controller_ = nullptr;
   }
