@@ -3,11 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
-import '../models/episode_progress.dart';
 import '../models/media_item.dart';
 import '../models/resume_summary.dart';
 import '../services/storage_service.dart';
 import '../theme/glass_theme.dart';
+import '../viewmodels/library_view_model.dart';
 import '../widgets/media_card.dart';
 
 enum _LibraryFilter { all, continueWatching, favorites }
@@ -29,10 +29,13 @@ class LibraryScreen extends StatefulWidget {
 }
 
 class _LibraryScreenState extends State<LibraryScreen> {
-  List<MediaItem> _history = [];
-  List<MediaItem> _favorites = [];
-  bool _loading = true;
+  late final _model = LibraryViewModel(storage: widget.storage);
   _LibraryFilter _filter = _LibraryFilter.all;
+
+  // The page renders from the shared LibraryViewModel.
+  List<MediaItem> get _history => _model.history;
+  List<MediaItem> get _favorites => _model.favorites;
+  bool get _loading => _model.loading;
 
   List<MediaItem> get _continueWatching =>
       _history.where((item) => item.resumeMs > 0).toList();
@@ -40,6 +43,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
   @override
   void initState() {
     super.initState();
+    _model.addListener(_onModelChanged);
     _load();
   }
 
@@ -49,46 +53,21 @@ class _LibraryScreenState extends State<LibraryScreen> {
     if (oldWidget.refreshToken != widget.refreshToken) unawaited(_load());
   }
 
-  Future<void> _load() async {
-    final values = await Future.wait([
-      widget.storage.history(),
-      widget.storage.favorites(),
-    ]);
-    // Series cards follow the episode watched last.
-    final progress = <String, SeriesProgress>{};
-    for (final item in values[0]) {
-      if (item.type != 'series' || item.resumeMs <= 0) continue;
-      try {
-        progress['${item.type}:${item.id}'] = await widget.storage
-            .seriesProgress(item);
-      } catch (_) {}
-    }
-    if (!mounted) return;
-    setState(() {
-      _history = values[0];
-      _favorites = values[1];
-      _seriesProgress = progress;
-      _loading = false;
-    });
+  @override
+  void dispose() {
+    _model.removeListener(_onModelChanged);
+    _model.dispose();
+    super.dispose();
   }
 
-  /// Per-episode progress of the series in watch history, by `type:id`.
-  Map<String, SeriesProgress> _seriesProgress = const {};
-
-  ResumeSummary _resumeSummary(MediaItem item) => ResumeSummary.of(
-    item,
-    series: _seriesProgress['${item.type}:${item.id}'],
-  );
-
-  Future<void> _removeHistory(MediaItem item) async {
-    await widget.storage.removeHistory(item);
-    await _load();
+  void _onModelChanged() {
+    if (mounted) setState(() {});
   }
 
-  Future<void> _toggleFavorite(MediaItem item) async {
-    await widget.storage.toggleFavorite(item);
-    await _load();
-  }
+  Future<void> _load() => _model.load();
+  ResumeSummary _resumeSummary(MediaItem item) => _model.resumeSummary(item);
+  Future<void> _removeHistory(MediaItem item) => _model.removeFromHistory(item);
+  Future<void> _toggleFavorite(MediaItem item) => _model.toggleFavorite(item);
 
   @override
   Widget build(BuildContext context) {

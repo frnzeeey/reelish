@@ -4,14 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
-import '../models/episode_progress.dart';
 import '../models/media_item.dart';
-import '../models/resume_summary.dart';
-import '../screens/tv/tv_pages.dart' show TvCatalog;
+import '../viewmodels/home_catalog.dart';
 import '../services/paged_feed_controller.dart';
 import '../services/storage_service.dart';
 import '../services/tmdb_service.dart';
 import '../theme/glass_theme.dart';
+import '../viewmodels/library_view_model.dart';
+import '../viewmodels/search_view_model.dart';
 import '../widgets/settings/tmdb_attribution.dart';
 import 'desktop_hero.dart';
 import 'desktop_top_ten.dart';
@@ -336,108 +336,49 @@ class DesktopSearchPage extends StatefulWidget {
 }
 
 class _DesktopSearchPageState extends State<DesktopSearchPage> {
-  static const _maxPages = 10;
+  late final _model = SearchViewModel(tmdb: widget.tmdb);
   final _controller = TextEditingController();
   final _focus = FocusNode(debugLabel: 'Desktop search');
   final _scroll = ScrollController();
-  Timer? _debounce;
-  int _request = 0;
-  String _query = '';
-  List<MediaItem> _results = const [];
-  bool _loading = false;
-  bool _loadingMore = false;
-  bool _hasMore = false;
-  int _page = 1;
-  String? _error;
+
+  // The page renders from the shared SearchViewModel.
+  String get _query => _model.query;
+  List<MediaItem> get _results => _model.results;
+  bool get _loading => _model.loading;
+  bool get _loadingMore => _model.loadingMore;
+  String? get _error => _model.failed
+      ? 'Search failed. Check your connection and try again.'
+      : null;
 
   @override
   void initState() {
     super.initState();
+    _model.addListener(_onModelChanged);
     _scroll.addListener(_onScroll);
   }
 
   @override
   void dispose() {
-    _debounce?.cancel();
+    _model.removeListener(_onModelChanged);
+    _model.dispose();
     _controller.dispose();
     _focus.dispose();
     _scroll.dispose();
     super.dispose();
   }
 
-  void _onChanged(String value) {
-    _debounce?.cancel();
-    _debounce = Timer(
-      const Duration(milliseconds: 400),
-      () => _search(value.trim()),
-    );
+  void _onModelChanged() {
+    if (mounted) setState(() {});
   }
 
-  Future<void> _search(String query) async {
-    _debounce?.cancel();
-    final request = ++_request;
-    if (query.isEmpty) {
-      setState(() {
-        _query = '';
-        _results = const [];
-        _loading = false;
-        _hasMore = false;
-        _error = null;
-      });
-      return;
-    }
-    setState(() {
-      _query = query;
-      _loading = true;
-      _error = null;
-    });
-    try {
-      final items = await widget.tmdb.search(query);
-      if (!mounted || request != _request) return;
-      setState(() {
-        _results = items;
-        _page = 1;
-        _hasMore = items.isNotEmpty;
-        _loading = false;
-      });
-    } catch (_) {
-      if (!mounted || request != _request) return;
-      setState(() {
-        _loading = false;
-        _error = 'Search failed. Check your connection and try again.';
-      });
-    }
-  }
+  void _onChanged(String value) => _model.queryChanged(value);
+
+  Future<void> _search(String query) => _model.search(query);
 
   void _onScroll() {
     final position = _scroll.position;
     if (position.extentAfter < position.viewportDimension) {
-      unawaited(_loadMore());
-    }
-  }
-
-  Future<void> _loadMore() async {
-    if (_loadingMore || !_hasMore || _page >= _maxPages || _query.isEmpty) {
-      return;
-    }
-    final request = _request;
-    setState(() => _loadingMore = true);
-    try {
-      final items = await widget.tmdb.search(_query, page: _page + 1);
-      if (!mounted || request != _request) return;
-      final known = {for (final item in _results) '${item.type}:${item.id}'};
-      setState(() {
-        _page++;
-        _results = [
-          ..._results,
-          for (final item in items)
-            if (known.add('${item.type}:${item.id}')) item,
-        ];
-        _hasMore = items.isNotEmpty;
-        _loadingMore = false;
-      });
-    } catch (_) {
-      if (mounted) setState(() => _loadingMore = false);
+      unawaited(_model.loadMore());
     }
   }
 
@@ -581,50 +522,40 @@ class DesktopLibraryPage extends StatefulWidget {
 }
 
 class _DesktopLibraryPageState extends State<DesktopLibraryPage> {
-  List<MediaItem> _history = const [];
-  List<MediaItem> _favorites = const [];
-  Map<String, SeriesProgress> _seriesProgress = const {};
-  bool _loading = true;
+  late final _model = LibraryViewModel(storage: widget.storage);
+
+  // The page renders from the shared LibraryViewModel.
+  List<MediaItem> get _history => _model.history;
+  List<MediaItem> get _favorites => _model.favorites;
+  bool get _loading => _model.loading;
 
   @override
   void initState() {
     super.initState();
-    unawaited(_load());
+    _model.addListener(_onModelChanged);
+    unawaited(_model.load());
   }
 
   @override
   void didUpdateWidget(covariant DesktopLibraryPage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.refreshToken != widget.refreshToken) unawaited(_load());
-  }
-
-  Future<void> _load() async {
-    final values = await Future.wait([
-      widget.storage.history(),
-      widget.storage.favorites(),
-    ]);
-    // Series follow the episode watched last, as on mobile and TV.
-    final progress = <String, SeriesProgress>{};
-    for (final item in values[0]) {
-      if (item.type != 'series' || item.resumeMs <= 0) continue;
-      try {
-        progress['${item.type}:${item.id}'] = await widget.storage
-            .seriesProgress(item);
-      } catch (_) {}
+    if (oldWidget.refreshToken != widget.refreshToken) {
+      unawaited(_model.load());
     }
-    if (!mounted) return;
-    setState(() {
-      _history = values[0];
-      _favorites = values[1];
-      _seriesProgress = progress;
-      _loading = false;
-    });
   }
 
-  double _progress(MediaItem item) => ResumeSummary.of(
-    item,
-    series: _seriesProgress['${item.type}:${item.id}'],
-  ).fraction;
+  @override
+  void dispose() {
+    _model.removeListener(_onModelChanged);
+    _model.dispose();
+    super.dispose();
+  }
+
+  void _onModelChanged() {
+    if (mounted) setState(() {});
+  }
+
+  double _progress(MediaItem item) => _model.resumeSummary(item).fraction;
 
   @override
   Widget build(BuildContext context) {
