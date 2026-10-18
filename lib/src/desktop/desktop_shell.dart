@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../screens/tv/tv_home_shell.dart' show TvDestination;
+import '../navigation/app_destination.dart';
 import '../theme/glass_theme.dart';
 import 'desktop_widgets.dart';
 
