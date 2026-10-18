@@ -95,6 +95,16 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
         )
       else
         const SizedBox(key: ValueKey('hero-space'), height: 32),
+      // Windows shows Top 10 right under the Spotlight; phone and TV Home
+      // keep it further down. It still loads only once Movies and Series
+      // (its seeds) have, showing its placeholders until then.
+      DesktopTopTenRow(
+        key: const ValueKey('row:top10'),
+        feed: catalog.top10,
+        onOpen: widget.onOpen,
+        isFavorite: catalog.isFavorite,
+        loadWhenShown: catalog.catalogSettled,
+      ),
       if (!catalog.hasSources)
         _AddSourceBanner(
           key: const ValueKey('add-source'),
@@ -129,13 +139,6 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
         feed: catalog.series,
         onOpen: widget.onOpen,
         isFavorite: catalog.isFavorite,
-      ),
-      DesktopTopTenRow(
-        key: const ValueKey('row:top10'),
-        feed: catalog.top10,
-        onOpen: widget.onOpen,
-        isFavorite: catalog.isFavorite,
-        loadWhenShown: catalog.catalogSettled,
       ),
       DesktopPagedRow(
         key: const ValueKey('row:releases'),

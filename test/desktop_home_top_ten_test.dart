@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/testing.dart';
 import 'package:http/http.dart' as http;
+import 'package:onfeed/src/desktop/desktop_hero.dart';
 import 'package:onfeed/src/desktop/desktop_pages.dart';
 import 'package:onfeed/src/desktop/desktop_top_ten.dart';
 import 'package:onfeed/src/desktop/desktop_widgets.dart';
@@ -100,8 +101,11 @@ void main() {
     }
   }
 
-  Future<void> pumpHome(WidgetTester tester) async {
-    tester.view.physicalSize = const Size(1600, 1000);
+  Future<void> pumpHome(
+    WidgetTester tester, {
+    Size size = const Size(1600, 1000),
+  }) async {
+    tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
     urls = [];
     client = MockClient((request) async {
@@ -238,14 +242,77 @@ void main() {
       expect(rect.top, greaterThanOrEqualTo(0));
       expect(rect.bottom, lessThanOrEqualTo(1000));
 
-      // Right moves to the next rank; Up leaves the row upward.
+      // Right moves to the next rank; Up leaves the row for the Spotlight
+      // above it.
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
       await settle(tester, rounds: 6);
       expect(focusedCard()!.rank, first.rank! + 1);
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
       await settle(tester, rounds: 6);
       expect(inTopTen(), isFalse);
-      expect(focusedCard(), isNotNull);
+      expect(
+        FocusManager.instance.primaryFocus?.context
+            ?.findAncestorWidgetOfExactType<DesktopHero>(),
+        isNotNull,
+      );
+
+      await disposeHome(tester);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+
+  testWidgets(
+    'Top 10 sits directly under the Spotlight; the other rows keep their order',
+    (tester) async {
+      // Tall enough that every row is built without scrolling.
+      await pumpHome(tester, size: const Size(1600, 6000));
+      final hero = tester.getRect(find.byType(DesktopHero));
+      final top10 = tester.getRect(topTen());
+      // Nothing in between, and no gap beyond the rows' usual spacing.
+      expect(top10.top, greaterThanOrEqualTo(hero.bottom - .5));
+      expect(top10.top - hero.bottom, lessThan(1));
+
+      double topOf(String key) => tester.getRect(find.byKey(ValueKey(key))).top;
+      // Spotlight, Top 10, then every other row in its previous order. Rows
+      // with nothing to show are left out, as in the app (here: Continue
+      // watching, and Trending, whose fake data lacks media types).
+      final order = [
+        'hero',
+        'row:top10',
+        'add-source',
+        'row:trending',
+        'row:movies',
+        'row:series',
+        'row:releases',
+        'footer',
+      ].where((key) => find.byKey(ValueKey(key)).evaluate().isNotEmpty);
+      final shown = order.toList();
+      // Everything that must show here does.
+      expect(
+        shown,
+        containsAll([
+          'hero',
+          'row:top10',
+          'row:movies',
+          'row:series',
+          'row:releases',
+          'footer',
+        ]),
+      );
+      for (var i = 1; i < shown.length; i++) {
+        expect(
+          topOf(shown[i]),
+          greaterThan(topOf(shown[i - 1])),
+          reason: '${shown[i]} below ${shown[i - 1]}',
+        );
+      }
+      // Top 10 shows the real ranked feed, loaded once its seeds were in.
+      final cards = find.descendant(
+        of: topTen(),
+        matching: find.byType(DesktopPosterCard),
+      );
+      expect(tester.widgetList(cards), hasLength(10));
+      expect(urls.where(isRecommendations), hasLength(2));
 
       await disposeHome(tester);
     },
