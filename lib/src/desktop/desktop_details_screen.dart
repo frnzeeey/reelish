@@ -5,9 +5,10 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import '../models/media_details.dart';
 import '../models/media_item.dart';
-import '../services/perf_timeline.dart';
+import '../models/tv_season.dart';
 import '../services/tmdb_service.dart';
 import '../theme/glass_theme.dart';
+import '../viewmodels/details_view_model.dart';
 import '../widgets/poster_image.dart';
 import 'desktop_widgets.dart';
 
@@ -47,102 +48,52 @@ class DesktopDetailsScreen extends StatefulWidget {
 }
 
 class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
-  MediaDetails? _details;
-  bool _loading = true;
+  late final _model = DetailsViewModel(
+    item: widget.item,
+    tmdb: widget.tmdb,
+    loadsRelated: true,
+    keepsEpisodesOnError: true,
+  );
   late bool _favorite = widget.isFavorite(widget.item);
-  List<Map<String, dynamic>> _seasons = const [];
-  List<Map<String, dynamic>> _episodes = const [];
-  int? _selectedSeason;
-  bool _loadingEpisodes = false;
-  String? _episodeError;
-  List<MediaItem> _related = const [];
+
+  // The page renders from the shared DetailsViewModel; these keep its
+  // wording and the names the layout below reads.
+  MediaDetails? get _details => _model.details;
+  bool get _loading => _model.loadingDetails;
+  List<TvSeason> get _seasons => _model.seasons;
+  List<TvEpisode> get _episodes => _model.episodes;
+  int? get _selectedSeason => _model.selectedSeason;
+  bool get _loadingEpisodes => _model.loadingEpisodes;
+  String? get _episodeError => switch (_model.episodeError) {
+    EpisodeLoadError.seasons => 'Could not load episodes.',
+    EpisodeLoadError.season => 'Could not load this season.',
+    null => null,
+  };
+  List<MediaItem> get _related => _model.related;
 
   MediaItem get _item => widget.item;
-  bool get _isSeries => _item.type == 'series';
+  bool get _isSeries => _model.isSeries;
 
   @override
   void initState() {
     super.initState();
-    unawaited(_loadDetails());
-    unawaited(_loadRelated());
-    if (_isSeries) unawaited(_loadSeasons());
+    _model.addListener(_onModelChanged);
+    _model.start();
   }
 
-  Future<void> _loadDetails() async {
-    try {
-      final details = await widget.tmdb.details(_item);
-      if (!mounted) return;
-      PerfTimeline.end('DETAIL_OPEN', 'DETAIL_READY', finish: true);
-      setState(() {
-        _details = details;
-        _loading = false;
-      });
-    } catch (_) {
-      if (mounted) setState(() => _loading = false);
-    }
+  @override
+  void dispose() {
+    _model.removeListener(_onModelChanged);
+    _model.dispose();
+    super.dispose();
   }
 
-  Future<void> _loadRelated() async {
-    try {
-      final related = await widget.tmdb.recommendations(_item);
-      if (mounted) setState(() => _related = related);
-    } catch (_) {
-      // An extra row; the page works without it.
-    }
+  void _onModelChanged() {
+    if (mounted) setState(() {});
   }
 
-  Future<void> _loadSeasons() async {
-    setState(() {
-      _loadingEpisodes = true;
-      _episodeError = null;
-    });
-    try {
-      final seasons = await widget.tmdb.seasons(_item);
-      if (!mounted) return;
-      setState(() => _seasons = seasons);
-      final first = seasons.isEmpty
-          ? null
-          : (seasons.first['season_number'] as num).toInt();
-      if (first != null) {
-        await _loadEpisodes(first);
-      } else {
-        setState(() => _loadingEpisodes = false);
-      }
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _loadingEpisodes = false;
-        _episodeError = 'Could not load episodes.';
-      });
-    }
-  }
-
-  Future<void> _loadEpisodes(int season) async {
-    setState(() {
-      _selectedSeason = season;
-      _loadingEpisodes = true;
-      _episodeError = null;
-    });
-    try {
-      final episodes = await widget.tmdb.episodes(_item, season);
-      if (!mounted || _selectedSeason != season) return;
-      episodes.sort(
-        (a, b) => ((a['episode_number'] as num?) ?? 0).compareTo(
-          (b['episode_number'] as num?) ?? 0,
-        ),
-      );
-      setState(() {
-        _episodes = episodes;
-        _loadingEpisodes = false;
-      });
-    } catch (_) {
-      if (!mounted || _selectedSeason != season) return;
-      setState(() {
-        _loadingEpisodes = false;
-        _episodeError = 'Could not load this season.';
-      });
-    }
-  }
+  Future<void> _loadSeasons() => _model.loadSeasons();
+  Future<void> _loadEpisodes(int season) => _model.selectSeason(season);
 
   Future<void> _toggleFavorite() async {
     final now = await widget.onToggleFavorite(_item);
@@ -154,21 +105,13 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
       widget.onPlay(context, _item);
       return;
     }
-    final firstAired = _episodes.where(_aired).firstOrNull;
+    final number = _episodes.where(_aired).firstOrNull?.number;
     final season = _selectedSeason;
-    if (firstAired == null || season == null) return;
-    widget.onPlayEpisode(
-      context,
-      _item,
-      season,
-      (firstAired['episode_number'] as num).toInt(),
-    );
+    if (number == null || season == null) return;
+    widget.onPlayEpisode(context, _item, season, number);
   }
 
-  static bool _aired(Map<String, dynamic> episode) {
-    final date = DateTime.tryParse('${episode['air_date'] ?? ''}');
-    return date == null || !date.isAfter(DateTime.now());
-  }
+  static bool _aired(TvEpisode episode) => episode.airedBy(DateTime.now());
 
   void _openRelated(MediaItem item) {
     Navigator.of(context).push(
@@ -535,14 +478,9 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
                 children: [
                   for (final season in _seasons)
                     _SeasonChip(
-                      label:
-                          '${season['name'] ?? 'Season ${season['season_number']}'}',
-                      selected:
-                          (season['season_number'] as num).toInt() ==
-                          _selectedSeason,
-                      onTap: () => unawaited(
-                        _loadEpisodes((season['season_number'] as num).toInt()),
-                      ),
+                      label: season.name ?? 'Season ${season.number}',
+                      selected: season.number == _selectedSeason,
+                      onTap: () => unawaited(_loadEpisodes(season.number)),
                     ),
                 ],
               )
@@ -616,8 +554,7 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
               ),
               delegate: SliverChildBuilderDelegate((context, index) {
                 final episode = _episodes[index];
-                final number =
-                    (episode['episode_number'] as num?)?.toInt() ?? index + 1;
+                final number = episode.number ?? index + 1;
                 final season = _selectedSeason ?? 1;
                 return _EpisodeTile(
                   episode: episode,
@@ -734,7 +671,7 @@ class _EpisodeTile extends StatefulWidget {
     required this.onPlay,
   });
 
-  final Map<String, dynamic> episode;
+  final TvEpisode episode;
   final int number;
   final bool aired;
   final VoidCallback onPlay;
@@ -750,11 +687,11 @@ class _EpisodeTileState extends State<_EpisodeTile> {
   @override
   Widget build(BuildContext context) {
     final episode = widget.episode;
-    final title = '${episode['name'] ?? 'Episode ${widget.number}'}';
-    final overview = '${episode['overview'] ?? ''}';
-    final still = '${episode['still_path'] ?? ''}';
-    final runtime = (episode['runtime'] as num?)?.toInt();
-    final airDate = '${episode['air_date'] ?? ''}';
+    final title = episode.name ?? 'Episode ${widget.number}';
+    final overview = episode.overview;
+    final still = episode.stillPath;
+    final runtime = episode.runtime;
+    final airDate = episode.airDate;
     final enabled = widget.aired;
     final lifted = enabled && (_hovered || _focused);
     return FocusableActionDetector(

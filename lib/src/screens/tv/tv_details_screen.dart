@@ -5,9 +5,10 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import '../../models/media_details.dart';
 import '../../models/media_item.dart';
-import '../../services/perf_timeline.dart';
+import '../../models/tv_season.dart';
 import '../../services/tmdb_service.dart';
 import '../../theme/glass_theme.dart';
+import '../../viewmodels/details_view_model.dart';
 import '../../widgets/tv/tv_focus.dart';
 
 /// A movie or series on TV: the backdrop fills the screen behind the title,
@@ -42,108 +43,50 @@ class TvMediaDetailsScreen extends StatefulWidget {
 }
 
 class _TvMediaDetailsScreenState extends State<TvMediaDetailsScreen> {
-  MediaDetails? _details;
-  bool _loading = true;
-  String? _error;
+  late final _model = DetailsViewModel(item: widget.item, tmdb: widget.tmdb);
   late bool _favorite = widget.isFavorite;
-
-  List<Map<String, dynamic>> _seasons = const [];
-  List<Map<String, dynamic>> _episodes = const [];
-  int? _selectedSeason;
-  bool _loadingEpisodes = false;
-  String? _episodeError;
   Timer? _seasonFocus;
 
-  bool get _isSeries => widget.item.type == 'series';
+  // The page renders from the shared DetailsViewModel; these keep its
+  // wording and the names the layout below reads.
+  MediaDetails? get _details => _model.details;
+  bool get _loading => _model.loadingDetails;
+  String? get _error =>
+      _model.detailsFailed ? 'Could not load extra details.' : null;
+  bool get _loadingEpisodes => _model.loadingEpisodes;
+  String? get _episodeError => switch (_model.episodeError) {
+    EpisodeLoadError.seasons => 'Could not load episodes.',
+    EpisodeLoadError.season => 'Could not load this season.',
+    null => null,
+  };
+  List<TvSeason> get _seasons => _model.seasons;
+  List<TvEpisode> get _episodes => _model.episodes;
+  int? get _selectedSeason => _model.selectedSeason;
+
+  bool get _isSeries => _model.isSeries;
 
   @override
   void initState() {
     super.initState();
-    unawaited(_loadDetails());
-    if (_isSeries) unawaited(_loadSeasons());
+    _model.addListener(_onModelChanged);
+    _model.start();
   }
 
   @override
   void dispose() {
     _seasonFocus?.cancel();
+    _model.removeListener(_onModelChanged);
+    _model.dispose();
     super.dispose();
   }
 
-  Future<void> _loadDetails() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-    try {
-      final details = await widget.tmdb.details(widget.item);
-      if (!mounted) return;
-      PerfTimeline.end('DETAIL_OPEN', 'DETAIL_READY', finish: true);
-      setState(() {
-        _details = details;
-        _loading = false;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _loading = false;
-        _error = 'Could not load extra details.';
-      });
-    }
+  void _onModelChanged() {
+    if (mounted) setState(() {});
   }
 
-  Future<void> _loadSeasons() async {
-    setState(() {
-      _loadingEpisodes = true;
-      _episodeError = null;
-    });
-    try {
-      final seasons = await widget.tmdb.seasons(widget.item);
-      if (!mounted) return;
-      setState(() => _seasons = seasons);
-      final first = seasons.isEmpty
-          ? null
-          : (seasons.first['season_number'] as num).toInt();
-      if (first != null) {
-        await _loadEpisodes(first);
-      } else {
-        setState(() => _loadingEpisodes = false);
-      }
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _loadingEpisodes = false;
-        _episodeError = 'Could not load episodes.';
-      });
-    }
-  }
-
-  Future<void> _loadEpisodes(int season) async {
-    setState(() {
-      _selectedSeason = season;
-      _loadingEpisodes = true;
-      _episodeError = null;
-    });
-    try {
-      final episodes = await widget.tmdb.episodes(widget.item, season);
-      if (!mounted || _selectedSeason != season) return;
-      episodes.sort(
-        (a, b) => ((a['episode_number'] as num?) ?? 0).compareTo(
-          (b['episode_number'] as num?) ?? 0,
-        ),
-      );
-      setState(() {
-        _episodes = episodes;
-        _loadingEpisodes = false;
-      });
-    } catch (_) {
-      if (!mounted || _selectedSeason != season) return;
-      setState(() {
-        _episodes = const [];
-        _loadingEpisodes = false;
-        _episodeError = 'Could not load this season.';
-      });
-    }
-  }
+  Future<void> _loadDetails() => _model.loadDetails();
+  Future<void> _loadSeasons() => _model.loadSeasons();
+  Future<void> _loadEpisodes(int season) => _model.selectSeason(season);
 
   /// A season shows its episodes once focus rests on it, so moving across
   /// the seasons does not load each one on the way.
@@ -407,7 +350,7 @@ class _TvMediaDetailsScreenState extends State<TvMediaDetailsScreen> {
           itemCount: _seasons.length,
           separatorBuilder: (_, _) => const SizedBox(width: 10),
           itemBuilder: (context, index) {
-            final season = (_seasons[index]['season_number'] as num).toInt();
+            final season = _seasons[index].number;
             final selected = season == _selectedSeason;
             return TvFocusable(
               borderRadius: 22,
@@ -476,7 +419,7 @@ class _TvMediaDetailsScreenState extends State<TvMediaDetailsScreen> {
           separatorBuilder: (_, _) => const SizedBox(width: 18),
           itemBuilder: (context, index) {
             final episode = _episodes[index];
-            final number = (episode['episode_number'] as num?)?.toInt() ?? 0;
+            final number = episode.number ?? 0;
             final season = _selectedSeason;
             return _EpisodeCard(
               episode: episode,
@@ -498,7 +441,7 @@ class _EpisodeCard extends StatelessWidget {
     required this.onSelect,
   });
 
-  final Map<String, dynamic> episode;
+  final TvEpisode episode;
   final int number;
   final VoidCallback? onSelect;
 
@@ -508,10 +451,10 @@ class _EpisodeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final title = '${episode['name'] ?? 'Episode $number'}';
-    final overview = '${episode['overview'] ?? ''}';
-    final still = '${episode['still_path'] ?? ''}';
-    final runtime = (episode['runtime'] as num?)?.toInt();
+    final title = episode.name ?? 'Episode $number';
+    final overview = episode.overview;
+    final still = episode.stillPath;
+    final runtime = episode.runtime;
     return SizedBox(
       width: width,
       height: height,

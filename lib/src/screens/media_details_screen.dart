@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import '../models/media_details.dart';
 import '../models/media_item.dart';
-import '../services/perf_timeline.dart';
+import '../models/tv_season.dart';
 import '../services/tmdb_service.dart';
 import '../theme/glass_theme.dart';
+import '../viewmodels/details_view_model.dart';
 
 class MediaDetailsScreen extends StatefulWidget {
   const MediaDetailsScreen({
@@ -26,88 +27,56 @@ class MediaDetailsScreen extends StatefulWidget {
 }
 
 class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
-  MediaDetails? _details;
-  bool _loading = true;
-  String? _error;
-  bool _loadingEpisodes = false;
-  String? _episodeError;
-  List<Map<String, dynamic>> _seasons = [];
-  List<Map<String, dynamic>> _episodes = [];
-  int? _selectedSeason;
+  late final _model = DetailsViewModel(item: widget.item, tmdb: widget.tmdb);
+
+  // The page renders from the shared DetailsViewModel; these keep its
+  // wording and the names the layout below reads.
+  MediaDetails? get _details => _model.details;
+  bool get _loading => _model.loadingDetails;
+  String? get _error =>
+      _model.detailsFailed ? 'Could not load extra details. Try again.' : null;
+  bool get _loadingEpisodes => _model.loadingEpisodes;
+  String? get _episodeError => switch (_model.episodeError) {
+    EpisodeLoadError.seasons => 'Could not load episodes. Try again.',
+    EpisodeLoadError.season => 'Could not load this season. Try again.',
+    null => null,
+  };
+  List<TvSeason> get _seasons => _model.seasons;
+  List<TvEpisode> get _episodes => _model.episodes;
+  int? get _selectedSeason => _model.selectedSeason;
 
   @override
   void initState() {
     super.initState();
-    _loadDetails();
-    if (widget.item.type == 'series') _loadSeasons();
+    _model.addListener(_onModelChanged);
+    _model.start();
   }
 
-  Future<void> _loadSeasons() async {
-    setState(() {
-      _loadingEpisodes = true;
-      _episodeError = null;
-    });
-    try {
-      final seasons = await widget.tmdb.seasons(widget.item);
-      if (!mounted) return;
-      final firstSeason = seasons.isEmpty
-          ? null
-          : (seasons.first['season_number'] as num).toInt();
-      setState(() {
-        _seasons = seasons;
-        _selectedSeason = firstSeason;
-      });
-      if (firstSeason != null)
-        await _loadEpisodes(firstSeason);
-      else if (mounted)
-        setState(() => _loadingEpisodes = false);
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _loadingEpisodes = false;
-        _episodeError = 'Could not load episodes. Try again.';
-      });
-    }
+  @override
+  void dispose() {
+    _model.removeListener(_onModelChanged);
+    _model.dispose();
+    super.dispose();
   }
 
-  Future<void> _loadEpisodes(int season) async {
-    setState(() {
-      _selectedSeason = season;
-      _loadingEpisodes = true;
-      _episodeError = null;
-    });
-    try {
-      final episodes = await widget.tmdb.episodes(widget.item, season);
-      if (!mounted || _selectedSeason != season) return;
-      episodes.sort(
-        (a, b) => ((a['episode_number'] as num?) ?? 0).compareTo(
-          (b['episode_number'] as num?) ?? 0,
-        ),
-      );
-      setState(() {
-        _episodes = episodes;
-        _loadingEpisodes = false;
-      });
-    } catch (_) {
-      if (!mounted || _selectedSeason != season) return;
-      setState(() {
-        _episodes = [];
-        _loadingEpisodes = false;
-        _episodeError = 'Could not load this season. Try again.';
-      });
-    }
+  void _onModelChanged() {
+    if (mounted) setState(() {});
   }
+
+  Future<void> _loadDetails() => _model.loadDetails();
+  Future<void> _loadSeasons() => _model.loadSeasons();
+  Future<void> _loadEpisodes(int season) => _model.selectSeason(season);
 
   String _imageUrl(String path) =>
       path.isEmpty ? '' : 'https://image.tmdb.org/t/p/w342$path';
 
-  Widget _episodeCard(Map<String, dynamic> episode) {
-    final number = (episode['episode_number'] as num?)?.toInt() ?? 0;
+  Widget _episodeCard(TvEpisode episode) {
+    final number = episode.number ?? 0;
     final season = _selectedSeason;
-    final title = '${episode['name'] ?? 'Episode $number'}';
-    final overview = '${episode['overview'] ?? ''}';
-    final rating = (episode['vote_average'] as num?) ?? 0;
-    final image = _imageUrl('${episode['still_path'] ?? ''}');
+    final title = episode.name ?? 'Episode $number';
+    final overview = episode.overview;
+    final rating = episode.rating;
+    final image = _imageUrl(episode.stillPath);
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Material(
@@ -215,28 +184,6 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
         ),
       ),
     );
-  }
-
-  Future<void> _loadDetails() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-    try {
-      final details = await widget.tmdb.details(widget.item);
-      if (!mounted) return;
-      PerfTimeline.end('DETAIL_OPEN', 'DETAIL_READY', finish: true);
-      setState(() {
-        _details = details;
-        _loading = false;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _loading = false;
-        _error = 'Could not load extra details. Try again.';
-      });
-    }
   }
 
   Widget _header(BuildContext context) {
@@ -569,10 +516,8 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                         items: [
                           for (final season in _seasons)
                             DropdownMenuItem(
-                              value: (season['season_number'] as num).toInt(),
-                              child: Text(
-                                'Season ${(season['season_number'] as num).toInt()}',
-                              ),
+                              value: season.number,
+                              child: Text('Season ${season.number}'),
                             ),
                         ],
                         onChanged: (season) {
