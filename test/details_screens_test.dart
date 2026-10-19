@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:onfeed/src/desktop/desktop_details_screen.dart';
@@ -164,6 +166,120 @@ void main() {
     testWidgets('a movie asks for no seasons', (tester) async {
       await _pump(tester, screen(_movie));
       expect(tmdb.calls, ['details']);
+    });
+
+    testWidgets('no My list button where the page offers none', (
+      tester,
+    ) async {
+      await _pump(tester, screen(_movie));
+      expect(find.text('My list'), findsNothing);
+      expect(find.text('In My list'), findsNothing);
+    });
+
+    testWidgets('My list saves once per tap and says it is saved', (
+      tester,
+    ) async {
+      var saved = false;
+      var toggles = 0;
+      var pending = Completer<void>();
+      await _pump(
+        tester,
+        MediaDetailsScreen(
+          item: _movie,
+          tmdb: tmdb,
+          onPlay: (_) {},
+          onPlayEpisode: (_, _, _) {},
+          onToggleFavorite: () async {
+            toggles++;
+            await pending.future;
+            return saved = !saved;
+          },
+        ),
+      );
+      await tester.tap(find.text('My list'));
+      await tester.pump();
+      // A second tap while it saves is ignored.
+      await tester.tap(find.text('My list'));
+      pending.complete();
+      await tester.pumpAndSettle();
+      expect(toggles, 1);
+      expect(find.text('In My list'), findsOneWidget);
+
+      pending = Completer<void>()..complete();
+      await tester.tap(find.text('In My list'));
+      await tester.pumpAndSettle();
+      expect((toggles, saved), (2, false));
+      expect(find.text('My list'), findsOneWidget);
+    });
+
+    testWidgets('a title already saved opens as In My list', (tester) async {
+      await _pump(
+        tester,
+        MediaDetailsScreen(
+          item: _movie,
+          tmdb: tmdb,
+          onPlay: (_) {},
+          onPlayEpisode: (_, _, _) {},
+          isFavorite: true,
+          onToggleFavorite: () async => false,
+        ),
+      );
+      expect(find.text('In My list'), findsOneWidget);
+    });
+
+    testWidgets('a failed save says so and changes nothing', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: GlassTheme.dark,
+          home: MediaDetailsScreen(
+            item: _movie,
+            tmdb: tmdb,
+            onPlay: (_) {},
+            onPlayEpisode: (_, _, _) {},
+            onToggleFavorite: () async => throw Exception('disk full'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('My list'));
+      await tester.pump();
+      expect(find.text('Could not update My list. Try again.'), findsOneWidget);
+      expect(find.text('My list'), findsOneWidget);
+    });
+
+    testWidgets('Back stays on screen while the page scrolls', (tester) async {
+      tester.view.physicalSize = const Size(400, 400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: GlassTheme.dark,
+          home: Builder(
+            builder: (context) => TextButton(
+              onPressed: () => Navigator.of(
+                context,
+              ).push(MaterialPageRoute<void>(builder: (_) => screen(_series))),
+              child: const Text('Open'),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+      // Scroll to the end, well past the header.
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -3000));
+      await tester.pumpAndSettle();
+      final scrolled = tester
+          .state<ScrollableState>(find.byType(Scrollable).first)
+          .position
+          .pixels;
+      // The 440-pixel header, where Back used to sit, is off screen.
+      expect(scrolled, greaterThan(440));
+
+      await tester.tap(find.byTooltip('Back').hitTestable());
+      await tester.pumpAndSettle();
+      expect(find.text('Open'), findsOneWidget);
+      expect(find.byType(MediaDetailsScreen), findsNothing);
     });
   });
 

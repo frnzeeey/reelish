@@ -16,7 +16,12 @@ class MediaCard extends StatefulWidget {
     this.onFavorite,
     this.isFavorite = false,
     this.showTypeBadge = true,
+    this.width = defaultWidth,
   });
+
+  /// A card's size in a row. Other widths keep the same shape.
+  static const double defaultWidth = 146;
+  static const double defaultHeight = 264;
 
   final MediaItem item;
   final FutureOr<void> Function() onTap;
@@ -31,6 +36,9 @@ class MediaCard extends StatefulWidget {
   /// The FILM / SERIES badge in the top-right corner. Callers that put their
   /// own control there (such as Remove in the library) turn it off.
   final bool showTypeBadge;
+
+  /// Wider in a grid that fills the screen; the height follows.
+  final double width;
 
   @override
   State<MediaCard> createState() => _MediaCardState();
@@ -114,9 +122,10 @@ class _MediaCardState extends State<MediaCard> {
         MediaQuery.maybeOf(context)?.disableAnimations ?? false;
     // Only a press rebuilds this frame; the poster and panels below are the
     // cached `child` of the builders, so scrolling repaints nothing new.
+    final width = widget.width;
     return SizedBox(
-      width: 146,
-      height: 264,
+      width: width,
+      height: width * MediaCard.defaultHeight / MediaCard.defaultWidth,
       child: ValueListenableBuilder<bool>(
         valueListenable: _pressed,
         builder: (context, pressed, child) => TweenAnimationBuilder<double>(
@@ -166,7 +175,7 @@ class _MediaCardState extends State<MediaCard> {
                     Image.network(
                       item.poster,
                       fit: BoxFit.cover,
-                      cacheWidth: (146 * imagePixelRatio).round(),
+                      cacheWidth: (width * imagePixelRatio).round(),
                       frameBuilder: posterFadeIn(context),
                       errorBuilder: (_, _, _) => const SizedBox.shrink(),
                     ),

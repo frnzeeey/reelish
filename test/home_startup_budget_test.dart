@@ -7,11 +7,13 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:onfeed/src/models/app_update.dart';
 import 'package:onfeed/src/screens/home_screen.dart';
+import 'package:onfeed/src/screens/media_details_screen.dart';
 import 'package:onfeed/src/services/accent_settings_controller.dart';
 import 'package:onfeed/src/services/media_catalog_rules.dart';
 import 'package:onfeed/src/services/network_target_policy.dart';
 import 'package:onfeed/src/services/tmdb_response_cache.dart';
 import 'package:onfeed/src/services/tmdb_service.dart';
+import 'package:onfeed/src/widgets/media_card.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Home's network budget: what a cold start fetches on a phone-sized
@@ -61,6 +63,8 @@ void main() {
                     'genre_ids': [18],
                   }
                 : {
+                    // Search mixes types, so it names each one.
+                    if (url.path.contains('/search/')) 'media_type': 'movie',
                     'id': base + i,
                     'title': 'Movie ${base + i}',
                     'release_date': daysAgo(20 + i),
@@ -241,6 +245,37 @@ void main() {
     }
 
     expect(urls, hasLength(before));
+    await disposeHome(tester);
+  });
+
+  testWidgets('search results fill the screen in columns', (tester) async {
+    await pumpHome(tester);
+    await settle(tester, rounds: 40);
+    await tester.tap(find.byTooltip('Search'));
+    await settle(tester, rounds: 5);
+    await tester.enterText(find.byType(TextField), 'movie');
+    await settle(tester, rounds: 40);
+    expect(find.text('Search results'), findsOneWidget);
+    expect(urls.where((u) => u.path.endsWith('/search/multi')), isNotEmpty);
+
+    final cards = find.byType(MediaCard);
+    final first = tester.getRect(cards.at(0));
+    final second = tester.getRect(cards.at(1));
+    final third = tester.getRect(cards.at(2));
+    // Two side by side on a 430-wide phone, filling it between the
+    // 18-pixel margins, and the third starts the next line.
+    expect(second.top, first.top);
+    expect(first.left, closeTo(18, .5));
+    expect(second.right, closeTo(430 - 18, .5));
+    expect(third.left, closeTo(18, .5));
+    expect(third.top, greaterThan(first.bottom));
+    // Cards keep their shape when widened.
+    expect(first.width / first.height, closeTo(146 / 264, .001));
+
+    // A result still opens its details page.
+    await tester.tap(cards.at(0));
+    await settle(tester, rounds: 20);
+    expect(find.byType(MediaDetailsScreen), findsOneWidget);
     await disposeHome(tester);
   });
 }

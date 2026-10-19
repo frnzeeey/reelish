@@ -14,6 +14,8 @@ class MediaDetailsScreen extends StatefulWidget {
     required this.tmdb,
     required this.onPlay,
     required this.onPlayEpisode,
+    this.isFavorite = false,
+    this.onToggleFavorite,
   });
 
   final MediaItem item;
@@ -21,6 +23,13 @@ class MediaDetailsScreen extends StatefulWidget {
   final ValueChanged<BuildContext> onPlay;
   final void Function(BuildContext context, int season, int episode)
   onPlayEpisode;
+
+  /// Whether the title is on My list when the page opens.
+  final bool isFavorite;
+
+  /// Adds or removes the title and returns whether it is now on My list.
+  /// Without it the page shows no My list button.
+  final Future<bool> Function()? onToggleFavorite;
 
   @override
   State<MediaDetailsScreen> createState() => _MediaDetailsScreenState();
@@ -61,6 +70,27 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
 
   void _onModelChanged() {
     if (mounted) setState(() {});
+  }
+
+  late bool _favorite = widget.isFavorite;
+  bool _savingFavorite = false;
+
+  Future<void> _toggleFavorite() async {
+    final toggle = widget.onToggleFavorite;
+    if (toggle == null || _savingFavorite) return;
+    setState(() => _savingFavorite = true);
+    try {
+      final favorite = await toggle();
+      if (mounted) setState(() => _favorite = favorite);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+          const SnackBar(content: Text('Could not update My list. Try again.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _savingFavorite = false);
+    }
   }
 
   Future<void> _loadDetails() => _model.loadDetails();
@@ -228,29 +258,6 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
             ),
           ),
           Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: SafeArea(
-              bottom: false,
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 14, top: 6),
-                  child: IconButton.filledTonal(
-                    tooltip: 'Back',
-                    style: IconButton.styleFrom(
-                      backgroundColor: Colors.black.withValues(alpha: .48),
-                      foregroundColor: Colors.white,
-                    ),
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Symbols.arrow_back_rounded),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          Positioned(
             left: 22,
             right: 22,
             bottom: 24,
@@ -318,6 +325,10 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                     ),
                   ),
                 ],
+                if (widget.onToggleFavorite != null) ...[
+                  const SizedBox(height: 14),
+                  _myListButton(),
+                ],
               ],
             ),
           ),
@@ -325,6 +336,33 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
       ),
     );
   }
+
+  /// Styled as the Spotlight's My list button; it also says when the title
+  /// is already saved.
+  Widget _myListButton() => OutlinedButton.icon(
+    style: OutlinedButton.styleFrom(
+      foregroundColor: _favorite ? GlassTheme.primary : Colors.white,
+      backgroundColor: Colors.black.withValues(alpha: .28),
+      shape: const StadiumBorder(),
+      side: BorderSide(
+        color: _favorite
+            ? GlassTheme.primary.withValues(alpha: .55)
+            : Colors.white.withValues(alpha: .35),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 19, vertical: 13),
+    ),
+    // Kept enabled while saving, so a second tap is ignored rather than
+    // falling through; the guard is in _toggleFavorite.
+    onPressed: _toggleFavorite,
+    icon: Icon(
+      _favorite ? Symbols.check_rounded : Symbols.add_rounded,
+      size: 19,
+    ),
+    label: Text(
+      _favorite ? 'In My list' : 'My list',
+      style: const TextStyle(fontWeight: FontWeight.w700),
+    ),
+  );
 
   Widget _metadata(String text, {bool highlight = false}) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -418,7 +456,30 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
 
     return Scaffold(
       body: Stack(
-        children: [_content(context, item, synopsis), const _StatusBarScrim()],
+        children: [
+          _content(context, item, synopsis),
+          const _StatusBarScrim(),
+          // Stays on screen while the page scrolls.
+          Positioned(
+            top: 0,
+            left: 0,
+            child: SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.only(left: 14, top: 6),
+                child: IconButton.filledTonal(
+                  tooltip: 'Back',
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.black.withValues(alpha: .48),
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Symbols.arrow_back_rounded),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
       bottomNavigationBar: _playBar(context, item),
     );

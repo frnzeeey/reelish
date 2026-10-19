@@ -445,6 +445,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               : MediaDetailsScreen(
                   item: item,
                   tmdb: _tmdb,
+                  isFavorite: _favoriteKeys.contains(_favoriteKey(item)),
+                  onToggleFavorite: () => _toggleFavoriteAndSay(item),
                   onPlay: (detailsContext) =>
                       _openItem(item, presentationContext: detailsContext),
                   onPlayEpisode: (detailsContext, season, episode) => _openItem(
@@ -1102,6 +1104,94 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     ),
   );
 
+  Widget _mediaCard(MediaItem item, {double width = MediaCard.defaultWidth}) {
+    // Real progress for watch-history entries; catalog items have none.
+    final resume = item.resumeMs > 0
+        ? _resumeSummary(item)
+        : ResumeSummary.unknown;
+    return MediaCard(
+      item: item,
+      width: width,
+      isFavorite: _favoriteKeys.contains(_favoriteKey(item)),
+      progress: resume.fraction,
+      progressLabel: resume.label,
+      onTap: () => _showDetails(item),
+      onFavorite: () => _toggleFavoriteAndSay(item),
+    );
+  }
+
+  /// Toggles My list and says what happened, as every phone heart does.
+  Future<bool> _toggleFavoriteAndSay(MediaItem item) async {
+    final isFavorite = await _toggleFavorite(item);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isFavorite
+                ? '${item.name} saved to your list'
+                : '${item.name} removed from your list',
+          ),
+        ),
+      );
+    }
+    return isFavorite;
+  }
+
+  /// Search results fill the screen in columns instead of one sideways row.
+  List<Widget> _resultGrid(String title, List<MediaItem> items) {
+    const gutter = 18.0;
+    const spacing = 13.0;
+    return [
+      SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(gutter, 8, gutter, 13),
+          child: Text(
+            title,
+            style: const TextStyle(
+              fontSize: 19,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -.35,
+            ),
+          ),
+        ),
+      ),
+      SliverPadding(
+        padding: const EdgeInsets.fromLTRB(gutter, 0, gutter, 22),
+        // Cards' frosted panels never overlap, so the grid shares one
+        // backdrop blur pass, as a row does.
+        sliver: BackdropGroup(
+          child: SliverLayoutBuilder(
+            builder: (context, constraints) {
+              final available = constraints.crossAxisExtent;
+              // As many row-sized cards as fit, at least two, then widened
+              // to fill the line exactly.
+              final columns =
+                  ((available + spacing) /
+                          (MediaCard.defaultWidth + spacing))
+                      .floor()
+                      .clamp(2, 8);
+              final width =
+                  (available - spacing * (columns - 1)) / columns;
+              return SliverGrid(
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: columns,
+                  crossAxisSpacing: spacing,
+                  mainAxisSpacing: spacing,
+                  childAspectRatio:
+                      MediaCard.defaultWidth / MediaCard.defaultHeight,
+                ),
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) => _mediaCard(items[index], width: width),
+                  childCount: items.length,
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    ];
+  }
+
   Widget _rowList(
     List<MediaItem> items,
     bool showRanks,
@@ -1118,32 +1208,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     itemBuilder: (context, index) {
       if (index == items.length) return trailing!;
       final item = items[index];
-      // Real progress for watch-history entries; catalog items
-      // have none.
-      final resume = item.resumeMs > 0
-          ? _resumeSummary(item)
-          : ResumeSummary.unknown;
-      final card = MediaCard(
-        item: item,
-        isFavorite: _favoriteKeys.contains(_favoriteKey(item)),
-        progress: resume.fraction,
-        progressLabel: resume.label,
-        onTap: () => _showDetails(item),
-        onFavorite: () async {
-          final isFavorite = await _toggleFavorite(item);
-          if (mounted) {
-            ScaffoldMessenger.of(this.context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  isFavorite
-                      ? '${item.name} saved to your list'
-                      : '${item.name} removed from your list',
-                ),
-              ),
-            );
-          }
-        },
-      );
+      final card = _mediaCard(item);
       if (!showRanks) return card;
 
       final rank = '${index + 1}';
@@ -1576,14 +1641,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 reserveSpace: _catalogSettled,
               ),
             ),
-          if (((_category == 'Movies' && isSearch) ||
-                  _category == 'Trending') &&
+          if (_category == 'Trending' && !isSearch && _shown.isNotEmpty)
+            SliverToBoxAdapter(child: _section('Trending now', _shown)),
+          if ((_category == 'Movies' || _category == 'Trending') &&
+              isSearch &&
               _shown.isNotEmpty)
-            SliverToBoxAdapter(
-              child: _section(
-                _category == 'Trending' ? 'Trending now' : 'Movies',
-                _shown,
-              ),
+            ..._resultGrid(
+              _category == 'Trending' ? 'Trending now' : 'Movies',
+              _shown,
             ),
           if (_category == 'Movies' && !isSearch)
             SliverToBoxAdapter(
@@ -1594,7 +1659,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ),
             ),
           if (_category == 'Series' && isSearch && _shown.isNotEmpty)
-            SliverToBoxAdapter(child: _section('Series to get into', _shown)),
+            ..._resultGrid('Series to get into', _shown),
           if (_category == 'Series' && !isSearch)
             SliverToBoxAdapter(
               child: _pagedRow(
@@ -1604,7 +1669,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ),
             ),
           if (_category == 'For you' && isSearch && _shown.isNotEmpty)
-            SliverToBoxAdapter(child: _section('Search results', _shown)),
+            ..._resultGrid('Search results', _shown),
           if (_category == 'For you' && !isSearch)
             SliverToBoxAdapter(
               child: _pagedRow(
@@ -1951,20 +2016,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                             vertical: 15,
                           ),
                         ),
-                        onPressed: () async {
-                          final isFavorite = await _toggleFavorite(item);
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  isFavorite
-                                      ? '${item.name} saved to your list'
-                                      : '${item.name} removed from your list',
-                                ),
-                              ),
-                            );
-                          }
-                        },
+                        onPressed: () => _toggleFavoriteAndSay(item),
                         icon: const Icon(Symbols.add_rounded, size: 19),
                         label: const Text('My list'),
                       ),
