@@ -5,9 +5,12 @@
 // Covers launch, the Plugins tab and the Plugin Library. Playback is not
 // covered: it depends on third-party providers and live streams, which would
 // make this test flaky.
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:onfeed/main.dart' as app;
+import 'package:onfeed/src/desktop/desktop_shell.dart';
 import 'package:onfeed/src/widgets/soft_glass_dock.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -35,11 +38,20 @@ void main() {
     await preferences.setBool('reelish.legal.documentsAccepted.v1', true);
 
     app.main();
-    final dock = find.byType(SoftGlassDock);
-    await pumpUntil(tester, dock);
+    // Phones and TVs navigate with the dock; Windows with its sidebar,
+    // which labels each page in text or, when compact, in a tooltip.
+    final desktop = Platform.isWindows;
+    final navigation = find.byType(desktop ? DesktopShell : SoftGlassDock);
+    await pumpUntil(tester, navigation);
 
+    final pluginsLabel = find.descendant(
+      of: navigation,
+      matching: find.text('Plugins'),
+    );
     await tester.tap(
-      find.descendant(of: dock, matching: find.text('Plugins')),
+      desktop && pluginsLabel.evaluate().isEmpty
+          ? find.byTooltip('Plugins').first
+          : pluginsLabel.first,
     );
     await pumpUntil(tester, find.text('Browse Reelish Plugins'));
     expect(find.byTooltip('Paste a manifest URL'), findsOneWidget);
