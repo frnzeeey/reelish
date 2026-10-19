@@ -18,7 +18,11 @@ class SourcePreparer {
     bool allowLoopback = false,
   }) async {
     _validator.validate(source);
-    final headers = Map<String, String>.of(source.headers);
+    // The player manages its own connections, so connection headers a
+    // provider attached to the stream are left out, as for its requests.
+    final headers = NetworkDestinationValidator.withoutHopByHopHeaders(
+      source.headers,
+    );
     NetworkDestinationValidator.validateHeaders(headers);
     if (source.isTorrent) {
       return PlayableSource(

@@ -252,7 +252,12 @@ class SubtitleLoader {
 
   Future<List<int>> _fetch(SubtitleTrack track) async {
     var current = Uri.parse(track.url);
-    final headers = Map<String, String>.of(track.headers);
+    // Provider subtitles carry the provider's headers, which can include
+    // connection headers (VidLink sends `Connection: keep-alive`); they are
+    // left out, as for its streams and requests, instead of failing.
+    final headers = NetworkDestinationValidator.withoutHopByHopHeaders(
+      track.headers,
+    );
     for (var redirects = 0; redirects <= 5; redirects++) {
       final request = http.Request('GET', current)
         ..followRedirects = false

@@ -382,6 +382,28 @@ void main() {
     SubtitleLoader loader(MockClient client) =>
         SubtitleLoader(network: _network(), testClient: client);
 
+    test('a provider subtitle with connection headers still loads', () async {
+      // As VidLink returns them: with its request headers, which include
+      // `Connection: keep-alive`.
+      const providerTrack = SubtitleTrack(
+        url: 'https://subs.example.com/file/2',
+        headers: {
+          'User-Agent': 'Provider/1.0',
+          'Connection': 'keep-alive',
+          'Referer': 'https://site.example.org/',
+        },
+      );
+      Map<String, String>? sent;
+      final client = MockClient((request) async {
+        sent = request.headers;
+        return http.Response.bytes(utf8.encode(srt), 200);
+      });
+      expect((await loader(client).load(providerTrack)).single.text, 'Hello');
+      final names = sent!.keys.map((h) => h.toLowerCase()).toSet();
+      expect(names, containsAll(['user-agent', 'referer']));
+      expect(names, isNot(contains('connection')));
+    });
+
     test('downloads once and reuses the parsed file', () async {
       var requests = 0;
       final client = MockClient((_) async {

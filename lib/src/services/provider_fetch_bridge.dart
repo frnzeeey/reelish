@@ -69,6 +69,41 @@ class ProviderFetchBridge {
     });
   }
 
+  /// A cookie's `Expires` date, or null when it cannot be read (the cookie
+  /// then lasts for this run). Besides the HTTP date forms it accepts what
+  /// browsers do (RFC 6265): dashes with a four-digit year, as in
+  /// `Mon, 19-Oct-2026 10:00:00 GMT`, and two-digit years, 70-99 as 19xx
+  /// and 00-69 as 20xx. A bad date never fails the request:
+  /// [HttpDate.parse] throws [HttpException] for one.
+  static DateTime? cookieExpiry(String value) {
+    for (final candidate in [
+      value,
+      value.replaceAllMapped(
+        RegExp(r'(\d{1,2})-([A-Za-z]{3})-(\d{4})'),
+        (m) => '${m[1]!.padLeft(2, '0')} ${m[2]} ${m[3]}',
+      ),
+    ]) {
+      try {
+        final date = HttpDate.parse(candidate);
+        if (date.year >= 100) return date;
+        final year = date.year + (date.year >= 70 ? 1900 : 2000);
+        return DateTime.utc(
+          year,
+          date.month,
+          date.day,
+          date.hour,
+          date.minute,
+          date.second,
+        );
+      } on HttpException {
+        // Try the next form.
+      } on FormatException {
+        // Try the next form.
+      }
+    }
+    return null;
+  }
+
   /// Request headers kept when following a redirect from [from] to [to].
   ///
   /// Matches OkHttp, the usual Android HTTP client: all
@@ -183,8 +218,12 @@ class ProviderFetchBridge {
       final headers = data['headers'];
       final requestHeaders = <String, String>{};
       if (headers is Map) {
+        // As fetch in browsers does, connection headers a script sets are
+        // left out rather than failing the request.
         requestHeaders.addAll(
-          headers.map((key, value) => MapEntry('$key', '$value')),
+          NetworkDestinationValidator.withoutHopByHopHeaders(
+            headers.map((key, value) => MapEntry('$key', '$value')),
+          ),
         );
       }
       if (!requestHeaders.keys.any(
@@ -1116,13 +1155,7 @@ class _ProviderCookieJar {
             if (seconds <= 0) remove = true;
           }
         } else if (key == 'expires') {
-          if (expiresAt == null) {
-            try {
-              expiresAt = HttpDate.parse(attributeValue);
-            } on FormatException {
-              // Ignore malformed expiry attributes.
-            }
-          }
+          expiresAt ??= _cookieDate(attributeValue);
         }
       }
       if (domain.isEmpty) continue;
@@ -1145,6 +1178,9 @@ class _ProviderCookieJar {
       }
     }
   }
+
+  static DateTime? _cookieDate(String value) =>
+      ProviderFetchBridge.cookieExpiry(value);
 
   static String _defaultPath(String path) {
     if (!path.startsWith('/') || path == '/') return '/';

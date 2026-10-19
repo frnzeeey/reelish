@@ -718,10 +718,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           final available = discovery.sources;
           if (available.isNotEmpty) {
             dismissSearchDialog();
+            // Providers still searching add their sources to the open sheet;
+            // slower ones were otherwise never offered here.
             source = await StreamSelectorSheet.show(
               presentationContext ?? context,
               available,
               available.first,
+              updates: discovery.updates,
+              finished: discovery.finished,
             );
             if (source == null) {
               discovery.cancel();

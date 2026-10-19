@@ -58,6 +58,116 @@ void main() {
     }
   });
 
+  group('provider requests as browser fetch makes them', () {
+    Future<({String result, http.Request? sent})> run(
+      String script,
+      http.Response Function(http.Request request) respond,
+    ) async {
+      http.Request? sent;
+      final runtime = QuickJsRuntime2()..enableHandlePromises();
+      final client = MockClient((request) async {
+        sent = request;
+        return respond(request);
+      });
+      final validator = NetworkDestinationValidator(
+        lookup: (_) async => [InternetAddress('93.184.216.34')],
+      );
+      final bridge = ProviderFetchBridge(runtime, client, validator);
+      try {
+        final call = await runtime.evaluateAsync(script);
+        final result = await runtime
+            .handlePromise(call)
+            .timeout(const Duration(seconds: 5));
+        return (result: result.stringResult, sent: sent);
+      } finally {
+        bridge.dispose();
+        client.close();
+        final runtimeId = runtime.getEngineInstanceId();
+        runtime.dispose();
+        JavascriptRuntime.channelFunctionsRegistered.remove(runtimeId);
+      }
+    }
+
+    test('connection headers a script sets are left out', () async {
+      // 39 of 125 providers in three common repositories send
+      // `Connection: keep-alive` (three also `TE`); every such request used
+      // to fail before reaching the network.
+      final (:result, :sent) = await run('''
+        fetch('https://provider.example.org/data', {
+          headers: {
+            'User-Agent': 'Provider/1.0',
+            'Accept': 'application/json',
+            'Connection': 'keep-alive',
+            'TE': 'trailers',
+          }
+        }).then(r => r.text()).catch(e => 'failed: ' + e.message)
+      ''', (_) => http.Response('ok', 200));
+      expect(result, 'ok');
+      final names = sent!.headers.keys.map((h) => h.toLowerCase()).toSet();
+      expect(names, containsAll(['user-agent', 'accept']));
+      expect(names, isNot(contains('connection')));
+      expect(names, isNot(contains('te')));
+    });
+
+    test('a Host header still fails the request', () async {
+      final (:result, :sent) = await run('''
+        fetch('https://provider.example.org/data', {
+          headers: { 'Host': 'internal.example' }
+        }).then(r => 'sent').catch(e => 'failed')
+      ''', (_) => http.Response('ok', 200));
+      expect(result, 'failed');
+      expect(sent, isNull);
+    });
+
+    test(
+      'a cookie dated as browsers accept it does not fail the request',
+      () async {
+        // `19-Oct-2026` with dashes: Dart's HttpDate rejects it with an
+        // HttpException, which failed the whole provider request.
+        final (:result, sent: _) = await run(
+          '''
+        fetch('https://provider.example.org/login')
+          .then(r => r.text()).catch(e => 'failed: ' + e.message)
+      ''',
+          (_) => http.Response(
+            'signed in',
+            200,
+            headers: {
+              'set-cookie':
+                  'session=abc; Expires=Mon, 19-Oct-2099 10:00:00 GMT; Path=/',
+            },
+          ),
+        );
+        expect(result, 'signed in');
+      },
+    );
+
+    test('cookie expiry dates are read as browsers read them', () {
+      expect(
+        ProviderFetchBridge.cookieExpiry('Mon, 19-Oct-2026 10:00:00 GMT'),
+        DateTime.utc(2026, 10, 19, 10),
+      );
+      expect(
+        ProviderFetchBridge.cookieExpiry('Mon, 19 Oct 2026 10:00:00 GMT'),
+        DateTime.utc(2026, 10, 19, 10),
+      );
+      // Two-digit years: 70-99 are 19xx, 00-69 are 20xx (RFC 6265).
+      expect(
+        ProviderFetchBridge.cookieExpiry(
+          'Monday, 19-Oct-26 10:00:00 GMT',
+        )!.year,
+        2026,
+      );
+      expect(
+        ProviderFetchBridge.cookieExpiry(
+          'Sunday, 06-Nov-94 08:49:37 GMT',
+        )!.year,
+        1994,
+      );
+      expect(ProviderFetchBridge.cookieExpiry('not a date'), isNull);
+    });
+  });
+
   test('fetch bridge rejects a public-to-private redirect', () async {
     var requestCount = 0;
     final runtime = QuickJsRuntime2()..enableHandlePromises();

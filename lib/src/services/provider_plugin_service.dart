@@ -14,6 +14,7 @@ import 'storage_service.dart';
 import 'stream_discovery.dart';
 import 'stream_normalizer.dart';
 import 'stream_validator.dart';
+import 'torrent_source_preparer.dart';
 import 'provider_execution_scheduler.dart';
 import 'provider_runner.dart';
 import 'provider_script_cache.dart';
@@ -559,6 +560,8 @@ class ProviderPluginService extends ChangeNotifier {
     var nextProviderIndex = 0;
     var stopStartingProviders = false;
     var pausedForReview = 0;
+    // Torrents left out because this lookup may not use them.
+    var skippedTorrents = 0;
     Future<void> runProviderWorker() async {
       while (!stopStartingProviders &&
           !(isCancelled?.call() ?? false) &&
@@ -655,7 +658,10 @@ class ProviderPluginService extends ChangeNotifier {
                 continue;
               }
               if (source.isPlayable) {
-                if (!allowTorrents && source.isTorrent) continue;
+                if (!allowTorrents && source.isTorrent) {
+                  skippedTorrents++;
+                  continue;
+                }
                 results.add(source);
                 onSource?.call(source);
               }
@@ -713,6 +719,19 @@ class ProviderPluginService extends ChangeNotifier {
     if (unique.isEmpty) {
       if (searchTimedOut) {
         // Keep the timeout message as the useful result for this lookup.
+      } else if (skippedTorrents > 0) {
+        // Otherwise this would read as if the providers found nothing.
+        // Pointing to Android helps only off Android: an Android device
+        // without support is an older 32-bit one.
+        final elsewhere = defaultTargetPlatform == TargetPlatform.android
+            ? ''
+            : ' (Android phones and TVs can)';
+        message = TorrentSupport.available
+            ? 'Only torrent sources were found. Turn on P2P streaming in '
+                  'Playback settings to play them.'
+            : 'Only torrent sources were found, and this device cannot '
+                  'stream torrents$elsewhere. Enable a provider with direct '
+                  'streams to watch this here.';
       } else if (pausedForReview > 0 && lookupErrors.isEmpty) {
         message = pausedForReview == 1
             ? 'A provider was added or changed its code and is paused until you review it in Plugins.'

@@ -284,6 +284,30 @@ class NetworkDestinationValidator {
     return true;
   }
 
+  /// Connection-level headers, which only the HTTP client itself may set.
+  static const hopByHopHeaders = {
+    'connection',
+    'keep-alive',
+    'proxy-connection',
+    'transfer-encoding',
+    'upgrade',
+    'te',
+    'trailer',
+  };
+
+  /// [headers] without [hopByHopHeaders]. Fetch in browsers silently leaves
+  /// them out, so provider scripts written for it send them freely (most
+  /// often `Connection: keep-alive` on every request); dropping them keeps
+  /// those requests working. Everything else still goes through
+  /// [validateHeaders].
+  static Map<String, String> withoutHopByHopHeaders(
+    Map<String, String> headers,
+  ) => {
+    for (final entry in headers.entries)
+      if (!hopByHopHeaders.contains(entry.key.toLowerCase()))
+        entry.key: entry.value,
+  };
+
   /// Rejects routing and hop-by-hop headers that could defeat HTTP policy.
   /// Stream headers use the same checks before they enter native playback.
   static void validateHeaders(Map<String, String> headers) {
@@ -294,16 +318,8 @@ class NetworkDestinationValidator {
     for (final entry in headers.entries) {
       if (!RegExp(r"^[!#$%&'*+.^_`|~0-9a-zA-Z-]+$").hasMatch(entry.key) ||
           entry.key.toLowerCase() == 'host' ||
-          const {
-            'proxy-authorization',
-            'connection',
-            'keep-alive',
-            'proxy-connection',
-            'transfer-encoding',
-            'upgrade',
-            'te',
-            'trailer',
-          }.contains(entry.key.toLowerCase()) ||
+          entry.key.toLowerCase() == 'proxy-authorization' ||
+          hopByHopHeaders.contains(entry.key.toLowerCase()) ||
           entry.value.contains(RegExp(r'[\x00-\x08\x0a-\x1f\x7f]'))) {
         throw const FormatException('Invalid or restricted HTTP header.');
       }

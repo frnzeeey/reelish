@@ -61,6 +61,68 @@ void main() {
     },
   );
 
+  test(
+    'connection headers on a stream are left out; routing headers still fail',
+    () async {
+      final preparer = SourcePreparer(
+        destinations: NetworkDestinationValidator(
+          lookup: (_) async => [InternetAddress('93.184.216.34')],
+        ),
+      );
+      // As Castle and VidLink return them: with the Connection header their
+      // scripts send on every request.
+      final prepared = await preparer.prepare(
+        StreamSource.fromJson({
+          'url': 'https://media.example.org/master.m3u8',
+          'headers': {
+            'User-Agent': 'Provider/1.0',
+            'Referer': 'https://site.example.org/',
+            'Connection': 'keep-alive',
+            'Keep-Alive': 'timeout=5',
+          },
+        }),
+      );
+      expect(prepared.headers.keys, ['User-Agent', 'Referer']);
+
+      for (final routing in const {
+        'Host': 'internal.example',
+        'Proxy-Authorization': 'Basic x',
+      }.entries) {
+        await expectLater(
+          preparer.prepare(
+            StreamSource.fromJson({
+              'url': 'https://media.example.org/video.mp4',
+              'headers': {routing.key: routing.value},
+            }),
+          ),
+          throwsFormatException,
+          reason: routing.key,
+        );
+      }
+    },
+  );
+
+  test('only connection headers count as hop-by-hop', () {
+    expect(
+      NetworkDestinationValidator.withoutHopByHopHeaders({
+        'Connection': 'keep-alive',
+        'TE': 'trailers',
+        'Transfer-Encoding': 'chunked',
+        'Upgrade': 'h2c',
+        'Accept': '*/*',
+        'Host': 'kept-for-validation.example',
+      }),
+      {'Accept': '*/*', 'Host': 'kept-for-validation.example'},
+    );
+    // Validation itself is unchanged: such a header still fails it.
+    expect(
+      () => NetworkDestinationValidator.validateHeaders({
+        'Connection': 'keep-alive',
+      }),
+      throwsFormatException,
+    );
+  });
+
   test('candidate coordinator bounds automatic source retries', () {
     final coordinator = PlaybackCoordinator(maxAutomaticAttempts: 2);
     final first = StreamSource(

@@ -78,6 +78,14 @@ abstract final class ProviderRunner {
   /// stream search, though the stuck isolate keeps running.
   static const hardTimeout = Duration(seconds: 45);
 
+  /// How long a provider's `getStreams` may take. Scrapers that follow
+  /// several hosting pages are slow but work: MoviesDrive needed 16-24 s
+  /// for one title. Dead providers end at this limit, holding a runtime
+  /// slot meanwhile; at 30 s that cost no other provider its turn in a
+  /// replay of measured runs. It stays below [ProviderRunRequest
+  /// .interruptAfter] and [hardTimeout].
+  static const getStreamsTimeout = Duration(seconds: 30);
+
   /// Returns the raw stream objects from the provider's `getStreams`.
   /// Throws [TimeoutException] or [ProviderRunException] on failure.
   static Future<List<Map<String, dynamic>>> run(
@@ -111,7 +119,7 @@ abstract final class ProviderRunner {
       // The local flutter_js bridge resolves Android's exported QuickJS
       // memory-limit symbol so each provider keeps a bounded JS heap.
       final activeRuntime = QuickJsRuntime2(
-        timeout: 20000,
+        timeout: getStreamsTimeout.inMilliseconds,
         memoryLimit: request.memoryLimit,
         hostPromiseRejectionHandler: (reason) {
           if (!kDebugMode) return;
@@ -206,7 +214,7 @@ abstract final class ProviderRunner {
       ''');
       final value = await activeRuntime
           .handlePromise(call)
-          .timeout(const Duration(seconds: 20));
+          .timeout(getStreamsTimeout);
       final decoded = jsonDecode(value.stringResult);
       // An empty result is normal for a title a provider does not index.
       final List<dynamic> entries = decoded is List

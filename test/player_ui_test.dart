@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:onfeed/src/models/stream_source.dart';
@@ -247,6 +249,55 @@ void main() {
     await tester.pumpAndSettle();
     expect(sides, [true]);
     expect(taps, 0);
+  });
+
+  testWidgets('the source sheet takes sources found while it is open', (
+    tester,
+  ) async {
+    // Providers finish at different times: PlayIMDB and Torrentio in about a
+    // second, others after several. The sheet opens with what has arrived.
+    const fast = StreamSource(
+      name: 'Fast',
+      url: 'https://a.example/1.m3u8',
+      providerName: 'PlayIMDB',
+    );
+    const slow = StreamSource(
+      name: 'Slow',
+      url: 'https://b.example/2.mp4',
+      providerName: 'MoviesDrive',
+    );
+    final updates = StreamController<StreamSource>();
+    final finished = Completer<void>();
+    await tester.pumpWidget(
+      _app(
+        StreamSelectorSheet(
+          streams: const [fast],
+          selected: fast,
+          updates: updates.stream,
+          finished: finished.future,
+        ),
+      ),
+    );
+    expect(find.textContaining('PlayIMDB'), findsOneWidget);
+    expect(find.textContaining('MoviesDrive'), findsNothing);
+    expect(find.text('Still searching providers…'), findsOneWidget);
+
+    updates
+      ..add(slow)
+      ..add(fast); // A repeat is not listed twice.
+    await tester.pump();
+    expect(find.textContaining('MoviesDrive'), findsOneWidget);
+    expect(find.textContaining('PlayIMDB'), findsOneWidget);
+    // Added after the first, so a focused row never moves.
+    expect(
+      tester.getTopLeft(find.textContaining('MoviesDrive')).dy,
+      greaterThan(tester.getTopLeft(find.textContaining('PlayIMDB')).dy),
+    );
+
+    finished.complete();
+    await updates.close();
+    await tester.pump();
+    expect(find.text('Still searching providers…'), findsNothing);
   });
 
   test('source quality comes from the quality field or the name', () {
