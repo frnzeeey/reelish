@@ -49,12 +49,23 @@ For an **installed** copy, **Update now**:
    SHA-256 again, starts it with fixed arguments and closes Reelish
    normally.
 
-The installer waits for Reelish to exit before changing any file, moves the
-old app folder aside, installs into a clean folder and opens the new
-Reelish. If installing fails or is cancelled, the old folder is put back and
-the old Reelish reopens; if Reelish never closes, Setup gives up after a
-minute without changes. A verified download that wasn't installed is kept
-in `%TEMP%\Reelish\updates` and reused.
+Reelish starts Setup in Setup's own folder and passes its process ID.
+Setup waits on that process until it has exited (not just closed its
+window or released `ReelishAppMutex`, which happen a moment earlier), then
+for no other Reelish to be running. It moves the old version's files into
+`<app folder>.previous`, retrying for up to 30 seconds while a file is
+still held (a closing Reelish holds its files for tens of milliseconds
+after it exits; a virus scan can hold one longer), installs into the clean
+folder and opens the new Reelish. If installing fails or is cancelled, the
+old files are put back and the old Reelish reopens; if Reelish never
+closes, Setup gives up after a minute without changes. A verified download
+that wasn't installed is kept in `%TEMP%\Reelish\updates` and reused.
+
+The files move, not the folder: Windows refuses to move a folder that is
+any process's current directory. Reelish started from its Start menu
+shortcut runs in its app folder, and before 1.15.1 Setup inherited that
+folder from it; moving the whole folder then failed with "Reelish's files
+are in use" on every update.
 
 For a **portable** copy, the update ZIP is verified the same way, saved to
 Downloads and shown in File Explorer; close Reelish, extract it and replace

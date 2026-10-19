@@ -180,9 +180,10 @@ std::wstring AppDirectory() {
 
 // Starts |installer| (an Inno Setup installer built from reelish.iss) for
 // this app's folder. /SILENT shows only its progress window; it waits for
-// Reelish to exit (kReelishAppMutex) before replacing files, and /RELAUNCH=1
-// makes it open Reelish again afterwards, or reopen this version when the
-// installation fails or is cancelled.
+// this process to exit (/REELISHPID) and for no Reelish to hold
+// kReelishAppMutex before replacing files, and /RELAUNCH=1 makes it open
+// Reelish again afterwards, or reopen this version when the installation
+// fails or is cancelled.
 bool LaunchInstaller(const std::wstring& installer, const std::wstring& log) {
   if (!IsPlainFilePath(installer) || log.find(L'"') != std::wstring::npos ||
       _wcsicmp(installer.substr(installer.size() - 4).c_str(), L".exe") != 0) {
@@ -193,9 +194,18 @@ bool LaunchInstaller(const std::wstring& installer, const std::wstring& log) {
       app_directory.find(L'"') != std::wstring::npos) {
     return false;
   }
+  // Setup runs in its own folder. Otherwise it would inherit this process's
+  // current directory, which is the app folder when Reelish was started from
+  // its Start menu shortcut, and Windows does not let a folder that is any
+  // process's current directory be moved or deleted.
+  // IsPlainFilePath guarantees "X:\..."; a drive root keeps its backslash.
+  const size_t separator = installer.find_last_of(L'\\');
+  const std::wstring installer_directory =
+      installer.substr(0, separator == 2 ? 3 : separator);
   std::wstring parameters = L"/SP- /SILENT /NORESTART /CLOSEAPPLICATIONS "
                             L"/RELAUNCH=1 /DIR=\"" +
-                            app_directory + L"\"";
+                            app_directory + L"\" /REELISHPID=" +
+                            std::to_wstring(::GetCurrentProcessId());
   if (!log.empty()) {
     parameters += L" /LOG=\"" + log + L"\"";
   }
@@ -212,8 +222,8 @@ bool LaunchInstaller(const std::wstring& installer, const std::wstring& log) {
     std::vector<wchar_t> buffer(command_line.begin(), command_line.end());
     buffer.push_back(L'\0');
     if (::CreateProcessW(installer.c_str(), buffer.data(), nullptr, nullptr,
-                         FALSE, flags, nullptr, nullptr, &startup,
-                         &process)) {
+                         FALSE, flags, nullptr, installer_directory.c_str(),
+                         &startup, &process)) {
       ::CloseHandle(process.hThread);
       ::CloseHandle(process.hProcess);
       return true;
@@ -228,6 +238,7 @@ bool LaunchInstaller(const std::wstring& installer, const std::wstring& log) {
       execute.lpVerb = L"open";
       execute.lpFile = installer.c_str();
       execute.lpParameters = parameters.c_str();
+      execute.lpDirectory = installer_directory.c_str();
       execute.nShow = SW_SHOWNORMAL;
       return ::ShellExecuteExW(&execute) != FALSE;
     }

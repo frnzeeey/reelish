@@ -13,12 +13,14 @@
 ; The in-app updater (windows/runner/app_update_channel.cpp) starts this
 ; installer with fixed arguments:
 ;
-;   /SP- /SILENT /NORESTART /CLOSEAPPLICATIONS /RELAUNCH=1 /DIR="<app folder>" /LOG="<file>"
+;   /SP- /SILENT /NORESTART /CLOSEAPPLICATIONS /RELAUNCH=1 /DIR="<app folder>" /LOG="<file>" /REELISHPID=<id>
 ;
-; and then closes Reelish. Setup waits for Reelish to exit (the
-; ReelishAppMutex it holds while running) before replacing any file, opens the
-; updated Reelish when done, and reopens the old one if the update fails or
-; is cancelled. See docs/windows.md.
+; from the installer's own folder, and then closes Reelish. Setup waits for
+; that Reelish process to exit, and for no Reelish to hold ReelishAppMutex,
+; before replacing any file; opens the updated Reelish when done; and reopens
+; the old one if the update fails or is cancelled. Versions before 1.15.1
+; pass no /REELISHPID and start Setup in their own current folder, which can
+; be the app folder; PrepareToInstall copes with both. See docs/windows.md.
 
 #ifndef AppVersion
   #error Define AppVersion as MAJOR.MINOR.PATCH, for example ISCC /DAppVersion=1.12.0
@@ -93,6 +95,22 @@ Filename: "{app}\Reelish.exe"; Description: "{cm:LaunchProgram,Reelish}"; Flags:
 Filename: "{app}\Reelish.exe"; Flags: nowait; Check: ShouldRelaunch
 
 [Code]
+const
+  SYNCHRONIZE = $00100000;
+  PROCESS_QUERY_LIMITED_INFORMATION = $1000;
+  WAIT_TIMEOUT = $102;
+
+function OpenProcess(DesiredAccess: DWORD; InheritHandle: BOOL;
+  ProcessId: DWORD): THandle;
+  external 'OpenProcess@kernel32.dll stdcall';
+function WaitForSingleObject(Handle: THandle; Milliseconds: DWORD): DWORD;
+  external 'WaitForSingleObject@kernel32.dll stdcall';
+function CloseHandle(Handle: THandle): BOOL;
+  external 'CloseHandle@kernel32.dll stdcall';
+function QueryFullProcessImageName(Process: THandle; Flags: DWORD;
+  ExeName: String; var Size: DWORD): BOOL;
+  external 'QueryFullProcessImageNameW@kernel32.dll stdcall';
+
 var
   Installed: Boolean;
 
@@ -106,10 +124,65 @@ begin
   Result := CheckForMutexes('{#AppMutexName}');
 end;
 
+{ Reelish 1.15.1 and later pass their process ID (/REELISHPID=) when they
+  start an update. Waiting on that process ends only once it has exited, not
+  merely released its mutex, which it does a moment before it is gone. Older
+  versions pass none; the mutex and the retries in PrepareToInstall cover
+  them. }
+procedure WaitForReelishThatStartedSetup;
+var
+  ProcessId, Size: DWORD;
+  Process: THandle;
+  Path: String;
+begin
+  ProcessId := StrToIntDef(ExpandConstant('{param:reelishpid|0}'), 0);
+  Log('Started by Reelish process: ' + IntToStr(ProcessId) + ' (0: not given).');
+  if ProcessId = 0 then
+    Exit;
+  Process := OpenProcess(SYNCHRONIZE or PROCESS_QUERY_LIMITED_INFORMATION,
+    False, ProcessId);
+  if Process = 0 then
+  begin
+    Log('Reelish (process ' + IntToStr(ProcessId) + ') had already exited.');
+    Exit;
+  end;
+  try
+    if WaitForSingleObject(Process, 0) = 0 then
+    begin
+      Log('Reelish (process ' + IntToStr(ProcessId) + ') has exited.');
+      Exit;
+    end;
+    { A process ID can be reused: wait only for Reelish.exe itself. }
+    Size := 1024;
+    Path := StringOfChar(#0, Size);
+    if not QueryFullProcessImageName(Process, 0, Path, Size) then
+    begin
+      Log('Could not identify process ' + IntToStr(ProcessId) + ' (error ' +
+        IntToStr(DLLGetLastError) + '); not waiting for it.');
+      Exit;
+    end;
+    Path := Copy(Path, 1, Size);
+    if CompareText(ExtractFileName(Path), 'Reelish.exe') <> 0 then
+    begin
+      Log('Process ' + IntToStr(ProcessId) + ' is not Reelish: ' + Path);
+      Exit;
+    end;
+    Log('Waiting for Reelish (process ' + IntToStr(ProcessId) + ') to exit.');
+    if WaitForSingleObject(Process, 60000) = WAIT_TIMEOUT then
+      Log('Reelish has not exited after 60 s.')
+    else
+      Log('Reelish has exited.');
+  finally
+    CloseHandle(Process);
+  end;
+end;
+
 function InitializeSetup: Boolean;
 var
   Waited: Integer;
 begin
+  if ShouldRelaunch then
+    WaitForReelishThatStartedSetup;
   { An in-app update starts Setup, then closes Reelish: give it time to
     exit cleanly before asking. }
   Waited := 0;
@@ -134,12 +207,76 @@ end;
 
 { Setup's own rollback removes the files it added but cannot restore the
   ones it replaced, so a failed update could leave a mix of two versions.
-  Instead the installed app folder is moved aside first, the new version is
+  Instead the installed version is moved aside first, the new version is
   installed into a clean folder (no stale files of older versions), and the
-  old folder is deleted on success or moved back on failure. }
+  old one is deleted on success or moved back on failure.
+
+  What moves is the folder's contents, not the folder: Windows refuses to
+  move a folder that is any process's current directory, and Reelish
+  started from its Start menu shortcut runs in it, so Setup started by that
+  Reelish (1.15.0 and earlier) does too. Its files still move. }
 var
   AppDir, BackupDir: String;
   BackedUp: Boolean;
+
+{ Moves every file and folder in FromDir into ToDir. With Replace, an entry
+  already in ToDir (a file of the new version) is deleted first. Returns
+  whether everything moved; what could not move stays where it was. }
+function MoveContents(const FromDir, ToDir: String; Replace: Boolean): Boolean;
+var
+  Find: TFindRec;
+  Names: TStringList;
+  I: Integer;
+  Target: String;
+begin
+  Result := True;
+  Names := TStringList.Create;
+  try
+    if FindFirst(AddBackslash(FromDir) + '*', Find) then
+    try
+      repeat
+        if (Find.Name <> '.') and (Find.Name <> '..') then
+          Names.Add(Find.Name);
+      until not FindNext(Find);
+    finally
+      FindClose(Find);
+    end;
+    for I := 0 to Names.Count - 1 do
+    begin
+      Target := AddBackslash(ToDir) + Names[I];
+      if Replace and (FileExists(Target) or DirExists(Target)) then
+        DelTree(Target, DirExists(Target), True, True);
+      if not RenameFile(AddBackslash(FromDir) + Names[I], Target) then
+      begin
+        Log('In use, not moved yet: ' + AddBackslash(FromDir) + Names[I]);
+        Result := False;
+      end;
+    end;
+  finally
+    Names.Free;
+  end;
+end;
+
+{ MoveContents, retried every 250 ms for up to Seconds: a closing Reelish
+  holds its files for a moment after it exits, and security software can
+  hold one briefly while it scans it. }
+function MoveContentsRetrying(const FromDir, ToDir: String; Replace: Boolean;
+  Seconds: Integer): Boolean;
+var
+  Attempt: Integer;
+begin
+  for Attempt := 1 to Seconds * 4 do
+  begin
+    Result := MoveContents(FromDir, ToDir, Replace);
+    if Result then
+    begin
+      if Attempt > 1 then
+        Log('Moved after ' + IntToStr(Attempt) + ' attempts.');
+      Exit;
+    end;
+    Sleep(250);
+  end;
+end;
 
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 begin
@@ -151,30 +288,49 @@ begin
   if not FileExists(AddBackslash(AppDir) + 'Reelish.exe') and
      FileExists(AddBackslash(BackupDir) + 'Reelish.exe') then
   begin
-    if DirExists(AppDir) then
-      DelTree(AppDir, True, True, True);
-    if RenameFile(BackupDir, AppDir) then
+    ForceDirectories(AppDir);
+    if MoveContentsRetrying(BackupDir, AppDir, True, 5) then
+    begin
+      RemoveDir(BackupDir);
       Log('Restored the previous version left in ' + BackupDir);
+    end;
   end;
   if not FileExists(AddBackslash(AppDir) + 'Reelish.exe') then
     Exit; { A new installation: nothing to keep. }
   if DirExists(BackupDir) and not DelTree(BackupDir, True, True, True) then
   begin
-    Result := 'An earlier backup of Reelish could not be removed: ' + BackupDir;
+    Result := 'An earlier backup of Reelish could not be removed: ' +
+      BackupDir + #13#10#13#10 + 'Delete that folder, then run the update again.';
     Exit;
   end;
-  if not RenameFile(AppDir, BackupDir) then
+  if not CreateDir(BackupDir) then
   begin
-    Result := 'Reelish''s files are in use, so the update was not installed. ' +
-      'Close any program using them and try again.';
+    Result := 'Setup could not create ' + BackupDir + ' to keep the current ' +
+      'version safe during the update, so nothing was changed.';
     Exit;
   end;
+  { From here on, whatever has moved is moved back if the update fails. }
   BackedUp := True;
+  if not MoveContentsRetrying(AppDir, BackupDir, False, 30) then
+  begin
+    Result := 'Reelish''s files in ' + AppDir + ' are still in use by another ' +
+      'program, so the update was not installed and your current version ' +
+      'was kept.' + #13#10#13#10 + 'Close Reelish and any program using ' +
+      'that folder (such as a file manager or a virus scan), then run the ' +
+      'update again.';
+    Exit;
+  end;
   Log('Previous version moved to ' + BackupDir);
 end;
 
+var
+  { Set once Setup starts writing the new version's files. }
+  Installing: Boolean;
+
 procedure CurStepChanged(CurStep: TSetupStep);
 begin
+  if CurStep = ssInstall then
+    Installing := True;
   if CurStep = ssPostInstall then
     Installed := True;
 end;
@@ -183,21 +339,20 @@ end;
   Retried for up to 30 s, since what failed the update is usually a file
   briefly held by another program (such as a virus scan). }
 function RestorePrevious: Boolean;
-var
-  Attempt: Integer;
 begin
   Result := True;
   if not BackedUp then
     Exit;
-  for Attempt := 1 to 30 do
-  begin
-    if DirExists(AppDir) then
-      DelTree(AppDir, True, True, True);
-    Result := RenameFile(BackupDir, AppDir);
-    if Result then
-      Break;
-    Sleep(1000);
-  end;
+  ForceDirectories(AppDir);
+  { Once the new version was being written, what it installed goes first and
+    each file of the previous version replaces anything left under its name.
+    Before that, everything still in the app folder is the previous version
+    (what could not be moved aside) and stays as it is. }
+  if Installing then
+    DelTree(AddBackslash(AppDir) + '*', False, True, True);
+  Result := MoveContentsRetrying(BackupDir, AppDir, Installing, 30);
+  if Result then
+    RemoveDir(BackupDir);
   if Result then
     Log('Update not installed; previous version restored.')
   else
