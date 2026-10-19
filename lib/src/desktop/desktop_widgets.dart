@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../models/media_item.dart';
@@ -57,6 +58,9 @@ class DesktopPosterCard extends StatefulWidget {
     this.rank,
     this.onHighlightChanged,
     this.onFocusChange,
+    this.onToggleFavorite,
+    this.onRemove,
+    this.removeLabel = 'Remove from watch history',
   });
 
   final MediaItem item;
@@ -75,13 +79,55 @@ class DesktopPosterCard extends StatefulWidget {
 
   final ValueChanged<bool>? onFocusChange;
 
+  /// Adds [item] to My list, or takes it off. Shown as a heart on hover and
+  /// focus; F on the focused card does the same.
+  final Future<void> Function()? onToggleFavorite;
+
+  /// Removes [item] from the list the card is in (watch history, in the
+  /// library). Shown as a cross on hover and focus; Delete does the same.
+  final Future<void> Function()? onRemove;
+  final String removeLabel;
+
   @override
   State<DesktopPosterCard> createState() => _DesktopPosterCardState();
+}
+
+class _ToggleFavoriteIntent extends Intent {
+  const _ToggleFavoriteIntent();
+}
+
+class _RemoveIntent extends Intent {
+  const _RemoveIntent();
 }
 
 class _DesktopPosterCardState extends State<DesktopPosterCard> {
   bool _hovered = false;
   bool _focused = false;
+
+  /// An action is saving; further presses are ignored until it is done.
+  bool _busy = false;
+
+  Future<void> _run(Future<void> Function()? action, String failure) async {
+    if (action == null || _busy) return;
+    setState(() => _busy = true);
+    try {
+      await action();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.maybeOf(
+          context,
+        )?.showSnackBar(SnackBar(content: Text(failure)));
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _toggleFavorite() =>
+      _run(widget.onToggleFavorite, 'Could not update My list. Try again.');
+
+  Future<void> _remove() =>
+      _run(widget.onRemove, 'Could not remove it. Try again.');
 
   void _setHighlight({bool? hovered, bool? focused}) {
     final was = _hovered || _focused;
@@ -111,10 +157,30 @@ class _DesktopPosterCardState extends State<DesktopPosterCard> {
         onShowHoverHighlight: (value) => _setHighlight(hovered: value),
         onShowFocusHighlight: (value) => _setHighlight(focused: value),
         onFocusChange: widget.onFocusChange,
+        shortcuts: {
+          if (widget.onToggleFavorite != null)
+            const SingleActivator(LogicalKeyboardKey.keyF):
+                const _ToggleFavoriteIntent(),
+          if (widget.onRemove != null)
+            const SingleActivator(LogicalKeyboardKey.delete):
+                const _RemoveIntent(),
+        },
         actions: {
           ActivateIntent: CallbackAction<ActivateIntent>(
             onInvoke: (_) {
               widget.onOpen(item);
+              return null;
+            },
+          ),
+          _ToggleFavoriteIntent: CallbackAction<_ToggleFavoriteIntent>(
+            onInvoke: (_) {
+              unawaited(_toggleFavorite());
+              return null;
+            },
+          ),
+          _RemoveIntent: CallbackAction<_RemoveIntent>(
+            onInvoke: (_) {
+              unawaited(_remove());
               return null;
             },
           ),
@@ -197,6 +263,46 @@ class _DesktopPosterCardState extends State<DesktopPosterCard> {
                                   fill: 1,
                                   size: 14,
                                   color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          if (widget.onToggleFavorite != null ||
+                              widget.onRemove != null)
+                            Positioned(
+                              top: 8,
+                              right: 8,
+                              // Mouse buttons, shown with the hover shade;
+                              // keyboard users press F or Delete instead.
+                              child: IgnorePointer(
+                                ignoring: !lifted,
+                                child: AnimatedOpacity(
+                                  opacity: lifted ? (_busy ? .5 : 1) : 0,
+                                  duration: duration,
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (widget.onToggleFavorite != null)
+                                        _CardAction(
+                                          icon: Symbols.favorite_rounded,
+                                          filled: widget.isFavorite,
+                                          tooltip: widget.isFavorite
+                                              ? 'Remove from My list (F)'
+                                              : 'Add to My list (F)',
+                                          onPressed: () =>
+                                              unawaited(_toggleFavorite()),
+                                        ),
+                                      if (widget.onToggleFavorite != null &&
+                                          widget.onRemove != null)
+                                        const SizedBox(width: 6),
+                                      if (widget.onRemove != null)
+                                        _CardAction(
+                                          icon: Symbols.close_rounded,
+                                          tooltip:
+                                              '${widget.removeLabel} (Delete)',
+                                          onPressed: () => unawaited(_remove()),
+                                        ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
@@ -299,6 +405,48 @@ class _HoverShade extends StatelessWidget {
   );
 }
 
+/// A small round button in a poster's corner, for the mouse. It is not a
+/// Tab stop: the card handles the keyboard (F, Delete).
+class _CardAction extends StatelessWidget {
+  const _CardAction({
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+    this.filled = false,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback? onPressed;
+  final bool filled;
+
+  @override
+  Widget build(BuildContext context) => Tooltip(
+    message: tooltip,
+    child: Material(
+      color: Colors.black.withValues(alpha: .66),
+      shape: CircleBorder(
+        side: BorderSide(color: Colors.white.withValues(alpha: .16)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        canRequestFocus: false,
+        mouseCursor: SystemMouseCursors.click,
+        onTap: onPressed,
+        child: SizedBox.square(
+          dimension: 32,
+          child: Icon(
+            icon,
+            size: 17,
+            fill: filled ? 1 : 0,
+            color: filled ? GlassTheme.coralBright : Colors.white,
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
 class _Badge extends StatelessWidget {
   const _Badge({required this.child});
 
@@ -360,6 +508,8 @@ class DesktopMediaRow extends StatefulWidget {
     required this.onOpen,
     this.progressOf,
     this.isFavorite,
+    this.onToggleFavorite,
+    this.onRemove,
     this.onNearEnd,
     this.loadingMore = false,
   });
@@ -369,6 +519,12 @@ class DesktopMediaRow extends StatefulWidget {
   final ValueChanged<MediaItem> onOpen;
   final double Function(MediaItem item)? progressOf;
   final bool Function(MediaItem item)? isFavorite;
+
+  /// Adds a title to My list or takes it off, from its card.
+  final Future<void> Function(MediaItem item)? onToggleFavorite;
+
+  /// Removes a title from the list this row shows (watch history).
+  final Future<void> Function(MediaItem item)? onRemove;
   final VoidCallback? onNearEnd;
   final bool loadingMore;
 
@@ -485,6 +641,11 @@ class _DesktopMediaRowState extends State<DesktopMediaRow> {
                           onOpen: widget.onOpen,
                           progress: widget.progressOf?.call(item) ?? 0,
                           isFavorite: widget.isFavorite?.call(item) ?? false,
+                          onToggleFavorite: bindItem(
+                            widget.onToggleFavorite,
+                            item,
+                          ),
+                          onRemove: bindItem(widget.onRemove, item),
                         );
                       },
                     ),
@@ -565,6 +726,7 @@ class DesktopPagedRow extends StatelessWidget {
     required this.feed,
     required this.onOpen,
     this.isFavorite,
+    this.onToggleFavorite,
     this.loadWhenShown = true,
   });
 
@@ -572,6 +734,9 @@ class DesktopPagedRow extends StatelessWidget {
   final PagedFeedController feed;
   final ValueChanged<MediaItem> onOpen;
   final bool Function(MediaItem item)? isFavorite;
+
+  /// Adds a title to My list or takes it off, from its card.
+  final Future<void> Function(MediaItem item)? onToggleFavorite;
   final bool loadWhenShown;
 
   @override
@@ -600,6 +765,7 @@ class DesktopPagedRow extends StatelessWidget {
         items: state.items,
         onOpen: onOpen,
         isFavorite: isFavorite,
+        onToggleFavorite: onToggleFavorite,
         loadingMore: state.isLoadingMore,
         onNearEnd: state.hasMore ? () => unawaited(feed.loadMore()) : null,
       );
@@ -664,6 +830,7 @@ class DesktopPosterGrid extends StatelessWidget {
     required this.items,
     required this.onOpen,
     this.isFavorite,
+    this.onToggleFavorite,
     this.progressOf,
     this.footer,
   });
@@ -671,6 +838,9 @@ class DesktopPosterGrid extends StatelessWidget {
   final List<MediaItem> items;
   final ValueChanged<MediaItem> onOpen;
   final bool Function(MediaItem item)? isFavorite;
+
+  /// Adds a title to My list or takes it off, from its card.
+  final Future<void> Function(MediaItem item)? onToggleFavorite;
   final double Function(MediaItem item)? progressOf;
   final Widget? footer;
 
@@ -701,6 +871,7 @@ class DesktopPosterGrid extends StatelessWidget {
               width: width,
               onOpen: onOpen,
               isFavorite: isFavorite?.call(items[index]) ?? false,
+              onToggleFavorite: bindItem(onToggleFavorite, items[index]),
               progress: progressOf?.call(items[index]) ?? 0,
             ),
             childCount: items.length,
@@ -821,3 +992,10 @@ class DesktopMessage extends StatelessWidget {
     ),
   );
 }
+
+/// [action] bound to [item], for a card's no-argument callback; null when
+/// there is no action.
+Future<void> Function()? bindItem(
+  Future<void> Function(MediaItem item)? action,
+  MediaItem item,
+) => action == null ? null : () => action(item);

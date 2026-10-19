@@ -103,6 +103,7 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
         feed: catalog.top10,
         onOpen: widget.onOpen,
         isFavorite: catalog.isFavorite,
+        onToggleFavorite: widget.onToggleFavorite,
         loadWhenShown: catalog.catalogSettled,
       ),
       if (!catalog.hasSources)
@@ -117,6 +118,8 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
           items: catalog.continueWatching,
           onOpen: widget.onOpen,
           progressOf: catalog.resumeFraction,
+          isFavorite: catalog.isFavorite,
+          onToggleFavorite: widget.onToggleFavorite,
         ),
       if (_trending.isNotEmpty)
         DesktopMediaRow(
@@ -125,6 +128,7 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
           items: _trending,
           onOpen: widget.onOpen,
           isFavorite: catalog.isFavorite,
+          onToggleFavorite: widget.onToggleFavorite,
         ),
       DesktopPagedRow(
         key: const ValueKey('row:movies'),
@@ -132,6 +136,7 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
         feed: catalog.movies,
         onOpen: widget.onOpen,
         isFavorite: catalog.isFavorite,
+        onToggleFavorite: widget.onToggleFavorite,
       ),
       DesktopPagedRow(
         key: const ValueKey('row:series'),
@@ -139,6 +144,7 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
         feed: catalog.series,
         onOpen: widget.onOpen,
         isFavorite: catalog.isFavorite,
+        onToggleFavorite: widget.onToggleFavorite,
       ),
       DesktopPagedRow(
         key: const ValueKey('row:releases'),
@@ -146,6 +152,7 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
         feed: catalog.releases,
         onOpen: widget.onOpen,
         isFavorite: catalog.isFavorite,
+        onToggleFavorite: widget.onToggleFavorite,
         loadWhenShown: catalog.catalogSettled,
       ),
       const Padding(
@@ -236,6 +243,7 @@ class DesktopCatalogPage extends StatefulWidget {
     required this.feed,
     required this.onOpen,
     required this.isFavorite,
+    this.onToggleFavorite,
   });
 
   final String title;
@@ -243,6 +251,7 @@ class DesktopCatalogPage extends StatefulWidget {
   final PagedFeedController feed;
   final ValueChanged<MediaItem> onOpen;
   final bool Function(MediaItem item) isFavorite;
+  final Future<void> Function(MediaItem item)? onToggleFavorite;
 
   @override
   State<DesktopCatalogPage> createState() => _DesktopCatalogPageState();
@@ -306,6 +315,7 @@ class _DesktopCatalogPageState extends State<DesktopCatalogPage> {
               items: state.items,
               onOpen: widget.onOpen,
               isFavorite: widget.isFavorite,
+              onToggleFavorite: widget.onToggleFavorite,
             ),
           if (state.isLoadingMore)
             const SliverToBoxAdapter(
@@ -328,11 +338,13 @@ class DesktopSearchPage extends StatefulWidget {
     required this.tmdb,
     required this.onOpen,
     required this.isFavorite,
+    this.onToggleFavorite,
   });
 
   final TmdbService tmdb;
   final ValueChanged<MediaItem> onOpen;
   final bool Function(MediaItem item) isFavorite;
+  final Future<void> Function(MediaItem item)? onToggleFavorite;
 
   @override
   State<DesktopSearchPage> createState() => _DesktopSearchPageState();
@@ -427,6 +439,7 @@ class _DesktopSearchPageState extends State<DesktopSearchPage> {
         items: _results,
         onOpen: widget.onOpen,
         isFavorite: widget.isFavorite,
+        onToggleFavorite: widget.onToggleFavorite,
       );
     }
     return CustomScrollView(
@@ -512,6 +525,8 @@ class DesktopLibraryPage extends StatefulWidget {
     required this.storage,
     required this.onOpen,
     required this.refreshToken,
+    this.onToggleFavorite,
+    this.onHistoryChanged,
   });
 
   final StorageService storage;
@@ -519,6 +534,14 @@ class DesktopLibraryPage extends StatefulWidget {
 
   /// Changes whenever the library may have changed (playback, My list).
   final int refreshToken;
+
+  /// Home's My list toggle, so Home and the library agree; the library
+  /// reloads afterwards. Without it, the library saves the change itself.
+  final Future<bool> Function(MediaItem item)? onToggleFavorite;
+
+  /// Told after a title is removed from the watch history here, so Home's
+  /// Continue watching row follows.
+  final VoidCallback? onHistoryChanged;
 
   @override
   State<DesktopLibraryPage> createState() => _DesktopLibraryPageState();
@@ -560,6 +583,20 @@ class _DesktopLibraryPageState extends State<DesktopLibraryPage> {
 
   double _progress(MediaItem item) => _model.resumeSummary(item).fraction;
 
+  Future<void> _toggleFavorite(MediaItem item) async {
+    final toggle = widget.onToggleFavorite;
+    if (toggle == null) return _model.toggleFavorite(item);
+    await toggle(item);
+    await _model.load();
+  }
+
+  /// Removes [item]'s watch history (and so its resume point), as the phone
+  /// library's Remove does. My list is not touched.
+  Future<void> _removeFromHistory(MediaItem item) async {
+    await _model.removeFromHistory(item);
+    widget.onHistoryChanged?.call();
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_loading) return const Center(child: CircularProgressIndicator());
@@ -576,6 +613,9 @@ class _DesktopLibraryPageState extends State<DesktopLibraryPage> {
           items: continuing,
           onOpen: widget.onOpen,
           progressOf: _progress,
+          isFavorite: isFavorite,
+          onToggleFavorite: _toggleFavorite,
+          onRemove: _removeFromHistory,
         ),
       if (_favorites.isNotEmpty)
         DesktopMediaRow(
@@ -583,6 +623,7 @@ class _DesktopLibraryPageState extends State<DesktopLibraryPage> {
           items: _favorites,
           onOpen: widget.onOpen,
           isFavorite: isFavorite,
+          onToggleFavorite: _toggleFavorite,
         ),
       if (_history.isNotEmpty)
         DesktopMediaRow(
@@ -590,6 +631,8 @@ class _DesktopLibraryPageState extends State<DesktopLibraryPage> {
           items: _history,
           onOpen: widget.onOpen,
           isFavorite: isFavorite,
+          onToggleFavorite: _toggleFavorite,
+          onRemove: _removeFromHistory,
         ),
     ];
     return CustomScrollView(

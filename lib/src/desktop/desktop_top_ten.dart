@@ -27,6 +27,7 @@ class DesktopTopTenRow extends StatelessWidget {
     required this.feed,
     required this.onOpen,
     this.isFavorite,
+    this.onToggleFavorite,
     this.loadWhenShown = true,
     this.title = 'Top 10 recommendations',
   });
@@ -35,6 +36,9 @@ class DesktopTopTenRow extends StatelessWidget {
   final PagedFeedController feed;
   final ValueChanged<MediaItem> onOpen;
   final bool Function(MediaItem item)? isFavorite;
+
+  /// Adds a title to My list or takes it off, from its card.
+  final Future<void> Function(MediaItem item)? onToggleFavorite;
 
   /// Top 10 is seeded from page 1 of the catalog rows, so Home holds it
   /// back until they have loaded.
@@ -66,6 +70,7 @@ class DesktopTopTenRow extends StatelessWidget {
           items: items,
           onOpen: onOpen,
           isFavorite: isFavorite,
+          onToggleFavorite: onToggleFavorite,
         );
       }
       return switch (state.status) {
@@ -104,12 +109,14 @@ class _TopTenCarousel extends StatefulWidget {
     required this.items,
     required this.onOpen,
     this.isFavorite,
+    this.onToggleFavorite,
   });
 
   final String title;
   final List<MediaItem> items;
   final ValueChanged<MediaItem> onOpen;
   final bool Function(MediaItem item)? isFavorite;
+  final Future<void> Function(MediaItem item)? onToggleFavorite;
 
   @override
   State<_TopTenCarousel> createState() => _TopTenCarouselState();
@@ -253,6 +260,10 @@ class _TopTenCarouselState extends State<_TopTenCarousel> {
                                         ) ??
                                         false,
                                     onFocused: _reveal,
+                                    onToggleFavorite: bindItem(
+                                      widget.onToggleFavorite,
+                                      widget.items[i],
+                                    ),
                                   ),
                                 ),
                               ],
@@ -299,6 +310,7 @@ class _RankedCard extends StatefulWidget {
     required this.onOpen,
     required this.isFavorite,
     required this.onFocused,
+    this.onToggleFavorite,
   });
 
   final int rank;
@@ -307,6 +319,7 @@ class _RankedCard extends StatefulWidget {
   final ValueChanged<MediaItem> onOpen;
   final bool isFavorite;
   final void Function(BuildContext context) onFocused;
+  final Future<void> Function()? onToggleFavorite;
 
   @override
   State<_RankedCard> createState() => _RankedCardState();
@@ -346,6 +359,7 @@ class _RankedCardState extends State<_RankedCard> {
               rank: widget.rank,
               onOpen: widget.onOpen,
               isFavorite: widget.isFavorite,
+              onToggleFavorite: widget.onToggleFavorite,
               onHighlightChanged: (value) {
                 if (mounted) setState(() => _highlighted = value);
               },

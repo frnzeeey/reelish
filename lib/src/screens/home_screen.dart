@@ -2125,6 +2125,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               feed: _movies,
               onOpen: _showDetails,
               isFavorite: catalog.isFavorite,
+              onToggleFavorite: _toggleFavorite,
             ),
             TvDestination.series => DesktopCatalogPage(
               title: 'Series',
@@ -2132,16 +2133,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               feed: _series,
               onOpen: _showDetails,
               isFavorite: catalog.isFavorite,
+              onToggleFavorite: _toggleFavorite,
             ),
             TvDestination.search => DesktopSearchPage(
               tmdb: _tmdb,
               onOpen: _showDetails,
               isFavorite: catalog.isFavorite,
+              onToggleFavorite: _toggleFavorite,
             ),
             TvDestination.library => DesktopLibraryPage(
               storage: _storage,
               onOpen: _showDetails,
               refreshToken: _libraryRefreshToken,
+              onToggleFavorite: _toggleFavorite,
+              onHistoryChanged: () => unawaited(_loadHistory()),
             ),
             TvDestination.plugins => DesktopFramedPage(
               child: PluginsScreen(

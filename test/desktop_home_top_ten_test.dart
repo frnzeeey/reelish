@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -15,6 +16,7 @@ import 'package:onfeed/src/screens/home_screen.dart';
 import 'package:onfeed/src/services/accent_settings_controller.dart';
 import 'package:onfeed/src/services/media_catalog_rules.dart';
 import 'package:onfeed/src/services/network_target_policy.dart';
+import 'package:onfeed/src/services/storage_service.dart';
 import 'package:onfeed/src/services/tmdb_response_cache.dart';
 import 'package:onfeed/src/services/tmdb_service.dart';
 import 'package:onfeed/src/widgets/app_update_flow.dart';
@@ -104,6 +106,8 @@ void main() {
   Future<void> pumpHome(
     WidgetTester tester, {
     Size size = const Size(1600, 1000),
+    // A restart: the saved preferences stay, as on a real relaunch.
+    bool keepData = false,
   }) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
@@ -112,7 +116,7 @@ void main() {
       urls.add(request.url);
       return page(request.url);
     });
-    SharedPreferences.setMockInitialValues({});
+    if (!keepData) SharedPreferences.setMockInitialValues({});
     accentSettings = AccentSettingsController();
     final tmdb = TmdbService(
       apiKey: 'test-key',
@@ -313,6 +317,60 @@ void main() {
       );
       expect(tester.widgetList(cards), hasLength(10));
       expect(urls.where(isRecommendations), hasLength(2));
+
+      await disposeHome(tester);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+
+  testWidgets(
+    'My list from a Home poster saves, shows everywhere, and survives a '
+    'restart',
+    (tester) async {
+      await pumpHome(tester);
+      final first = find
+          .descendant(of: topTen(), matching: find.byType(DesktopPosterCard))
+          .first;
+      final item = tester.widget<DesktopPosterCard>(first).item;
+      bool shownAsFavorite() => tester
+          .widgetList<DesktopPosterCard>(
+            find.byType(DesktopPosterCard, skipOffstage: false),
+          )
+          .where(
+            (card) =>
+                MediaCatalogFilter.key(card.item) ==
+                MediaCatalogFilter.key(item),
+          )
+          .every((card) => card.isFavorite);
+      expect(shownAsFavorite(), isFalse);
+
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await mouse.addPointer(location: Offset.zero);
+      addTearDown(mouse.removePointer);
+      await mouse.moveTo(tester.getCenter(first));
+      await tester.pumpAndSettle();
+      final heart = find.descendant(
+        of: first,
+        matching: find.byTooltip('Add to My list (F)'),
+      );
+      final at = tester.getCenter(heart);
+      await mouse.moveTo(at);
+      await mouse.down(at);
+      await mouse.up();
+      await settle(tester, rounds: 10);
+
+      // Every card of that title, in every row, shows it at once.
+      expect(shownAsFavorite(), isTrue);
+      final saved = await tester.runAsync(() => StorageService().favorites());
+      expect(saved!.map(MediaCatalogFilter.key), [
+        MediaCatalogFilter.key(item),
+      ]);
+
+      // A fresh Home (a restart) reads it back.
+      await tester.pumpWidget(const SizedBox.shrink());
+      await settle(tester, rounds: 3);
+      await pumpHome(tester, keepData: true);
+      expect(shownAsFavorite(), isTrue);
 
       await disposeHome(tester);
     },
