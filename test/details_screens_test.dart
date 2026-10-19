@@ -168,9 +168,7 @@ void main() {
       expect(tmdb.calls, ['details']);
     });
 
-    testWidgets('no My list button where the page offers none', (
-      tester,
-    ) async {
+    testWidgets('no My list button where the page offers none', (tester) async {
       await _pump(tester, screen(_movie));
       expect(find.text('My list'), findsNothing);
       expect(find.text('In My list'), findsNothing);

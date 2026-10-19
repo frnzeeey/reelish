@@ -1120,9 +1120,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  /// Toggles My list and says what happened, as every phone heart does.
+  /// Titles whose My list change is still saving.
+  final _savingFavorites = <String>{};
+
+  /// Toggles My list and says what happened, as every phone heart does. A
+  /// second tap while the first saves is ignored, so a quick double tap
+  /// does not add and then remove the title.
   Future<bool> _toggleFavoriteAndSay(MediaItem item) async {
-    final isFavorite = await _toggleFavorite(item);
+    final key = _favoriteKey(item);
+    if (!_savingFavorites.add(key)) return _favoriteKeys.contains(key);
+    final bool isFavorite;
+    try {
+      isFavorite = await _toggleFavorite(item);
+    } finally {
+      _savingFavorites.remove(key);
+    }
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -1166,12 +1178,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               // As many row-sized cards as fit, at least two, then widened
               // to fill the line exactly.
               final columns =
-                  ((available + spacing) /
-                          (MediaCard.defaultWidth + spacing))
+                  ((available + spacing) / (MediaCard.defaultWidth + spacing))
                       .floor()
                       .clamp(2, 8);
-              final width =
-                  (available - spacing * (columns - 1)) / columns;
+              final width = (available - spacing * (columns - 1)) / columns;
               return SliverGrid(
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: columns,
@@ -1884,150 +1894,174 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     ],
   );
 
-  Widget _featured(MediaItem item, {required int imageCacheHeight}) =>
-      ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            if (item.background.isNotEmpty)
-              Image.network(
-                item.background,
-                fit: BoxFit.cover,
-                cacheHeight: imageCacheHeight,
-                errorBuilder: (_, _, _) =>
-                    ColoredBox(color: GlassTheme.elevatedSurface),
-              )
-            else
-              ColoredBox(color: GlassTheme.elevatedSurface),
-            const DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Color(0x77000000),
-                    Color(0x26000000),
-                    Color(0x00000000),
-                    Color(0xD90B0B0F),
-                    GlassTheme.background,
-                  ],
-                  stops: [0, .2, .46, .82, 1],
+  Widget _featured(
+    MediaItem item, {
+    required int imageCacheHeight,
+  }) => ClipRRect(
+    borderRadius: BorderRadius.circular(24),
+    child: Stack(
+      fit: StackFit.expand,
+      children: [
+        if (item.background.isNotEmpty)
+          Image.network(
+            item.background,
+            fit: BoxFit.cover,
+            cacheHeight: imageCacheHeight,
+            errorBuilder: (_, _, _) =>
+                ColoredBox(color: GlassTheme.elevatedSurface),
+          )
+        else
+          ColoredBox(color: GlassTheme.elevatedSurface),
+        const DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0x77000000),
+                Color(0x26000000),
+                Color(0x00000000),
+                Color(0xD90B0B0F),
+                GlassTheme.background,
+              ],
+              stops: [0, .2, .46, .82, 1],
+            ),
+          ),
+        ),
+        Positioned(
+          left: 21,
+          right: 21,
+          bottom: 22,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: GlassTheme.primary.withValues(alpha: .15),
+                  borderRadius: BorderRadius.circular(30),
+                  border: Border.all(
+                    color: GlassTheme.primary.withValues(alpha: .35),
+                  ),
+                ),
+                child: Text(
+                  'REELISH SPOTLIGHT',
+                  style: TextStyle(
+                    color: GlassTheme.primary,
+                    fontSize: 9,
+                    letterSpacing: 1.5,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
-            ),
-            Positioned(
-              left: 21,
-              right: 21,
-              bottom: 22,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: GlassTheme.primary.withValues(alpha: .15),
-                      borderRadius: BorderRadius.circular(30),
-                      border: Border.all(
-                        color: GlassTheme.primary.withValues(alpha: .35),
+              const SizedBox(height: 11),
+              Text(
+                item.name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 35,
+                  height: 1.02,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -1.1,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                [
+                  item.year,
+                  item.type == 'series' ? 'Series' : 'Movie',
+                  if (item.rating.isNotEmpty) '${item.rating}/10',
+                ].where((value) => value.isNotEmpty).join('  |  '),
+                style: const TextStyle(
+                  color: Color(0xC7FFFFFF),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              if (item.description.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  item.description,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xC7FFFFFF),
+                    height: 1.35,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+              const SizedBox(height: 15),
+              // On a narrow phone, or with "In My list" or large text, the
+              // two buttons shrink to fit instead of overflowing.
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Row(
+                  children: [
+                    FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: GlassTheme.primary,
+                        foregroundColor: GlassTheme.background,
+                        shape: const StadiumBorder(),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 22,
+                          vertical: 15,
+                        ),
+                      ),
+                      onPressed: () => _showDetails(item),
+                      icon: const Icon(Symbols.info_rounded),
+                      label: const Text(
+                        'Details',
+                        style: TextStyle(fontWeight: FontWeight.w800),
                       ),
                     ),
-                    child: Text(
-                      'REELISH SPOTLIGHT',
-                      style: TextStyle(
-                        color: GlassTheme.primary,
-                        fontSize: 9,
-                        letterSpacing: 1.5,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 11),
-                  Text(
-                    item.name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 35,
-                      height: 1.02,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -1.1,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    [
-                      item.year,
-                      item.type == 'series' ? 'Series' : 'Movie',
-                      if (item.rating.isNotEmpty) '${item.rating}/10',
-                    ].where((value) => value.isNotEmpty).join('  |  '),
-                    style: const TextStyle(
-                      color: Color(0xC7FFFFFF),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  if (item.description.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      item.description,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Color(0xC7FFFFFF),
-                        height: 1.35,
-                        fontSize: 13,
-                      ),
+                    const SizedBox(width: 10),
+                    // As on the details page, it says when the title is
+                    // already saved.
+                    Builder(
+                      builder: (context) {
+                        final saved = _favoriteKeys.contains(
+                          _favoriteKey(item),
+                        );
+                        return OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: saved
+                                ? GlassTheme.primary
+                                : Colors.white,
+                            shape: const StadiumBorder(),
+                            side: BorderSide(
+                              color: saved
+                                  ? GlassTheme.primary.withValues(alpha: .55)
+                                  : Colors.white.withValues(alpha: .35),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 19,
+                              vertical: 15,
+                            ),
+                          ),
+                          onPressed: () => _toggleFavoriteAndSay(item),
+                          icon: Icon(
+                            saved ? Symbols.check_rounded : Symbols.add_rounded,
+                            size: 19,
+                          ),
+                          label: Text(saved ? 'In My list' : 'My list'),
+                        );
+                      },
                     ),
                   ],
-                  const SizedBox(height: 15),
-                  Row(
-                    children: [
-                      FilledButton.icon(
-                        style: FilledButton.styleFrom(
-                          backgroundColor: GlassTheme.primary,
-                          foregroundColor: GlassTheme.background,
-                          shape: const StadiumBorder(),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 22,
-                            vertical: 15,
-                          ),
-                        ),
-                        onPressed: () => _showDetails(item),
-                        icon: const Icon(Symbols.info_rounded),
-                        label: const Text(
-                          'Details',
-                          style: TextStyle(fontWeight: FontWeight.w800),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          shape: const StadiumBorder(),
-                          side: BorderSide(
-                            color: Colors.white.withValues(alpha: .35),
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 19,
-                            vertical: 15,
-                          ),
-                        ),
-                        onPressed: () => _toggleFavoriteAndSay(item),
-                        icon: const Icon(Symbols.add_rounded, size: 19),
-                        label: const Text('My list'),
-                      ),
-                    ],
-                  ),
-                ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      );
+      ],
+    ),
+  );
 
   /// Why the TV catalog is empty, once both rows have failed; null while
   /// either has titles or is still loading.

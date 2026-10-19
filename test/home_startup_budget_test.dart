@@ -248,6 +248,39 @@ void main() {
     await disposeHome(tester);
   });
 
+  testWidgets('the Spotlight says when its title is on My list', (
+    tester,
+  ) async {
+    await pumpHome(tester);
+    await settle(tester, rounds: 40);
+    final spotlightTitle = tester
+        .widgetList<Text>(find.byType(Text))
+        .map((t) => t.data)
+        .firstWhere((d) => d != null && d.startsWith('Movie '))!;
+
+    await tester.tap(find.text('My list'));
+    await settle(tester, rounds: 10);
+    expect(find.text('In My list'), findsOneWidget);
+    expect(find.text('$spotlightTitle saved to your list'), findsOneWidget);
+    // The wider label still fits on a narrow phone (an overflow fails).
+    tester.view.physicalSize = const Size(360, 915);
+    await settle(tester, rounds: 5);
+    expect(find.text('In My list'), findsOneWidget);
+    tester.view.physicalSize = const Size(430, 915);
+    await settle(tester, rounds: 5);
+    // Dismiss that message; the next one would wait behind it.
+    tester
+        .state<ScaffoldMessengerState>(find.byType(ScaffoldMessenger))
+        .removeCurrentSnackBar();
+    await settle(tester, rounds: 5);
+
+    await tester.tap(find.text('In My list'));
+    await settle(tester, rounds: 10);
+    expect(find.text('My list'), findsOneWidget);
+    expect(find.text('$spotlightTitle removed from your list'), findsOneWidget);
+    await disposeHome(tester);
+  });
+
   testWidgets('search results fill the screen in columns', (tester) async {
     await pumpHome(tester);
     await settle(tester, rounds: 40);
