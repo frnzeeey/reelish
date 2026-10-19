@@ -20,15 +20,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:onfeed/main.dart' as app;
 import 'package:onfeed/src/widgets/liquid_glass.dart';
+import 'package:onfeed/src/widgets/media_card.dart';
 import 'package:onfeed/src/widgets/soft_glass_dock.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app_smoke_test.dart' show pumpUntil;
 
 /// Waits [seconds] of real time while the app runs.
-Future<void> idle(WidgetTester tester, double seconds) => Future<void>.delayed(
-  Duration(milliseconds: (seconds * 1000).round()),
-);
+Future<void> idle(WidgetTester tester, double seconds) =>
+    Future<void>.delayed(Duration(milliseconds: (seconds * 1000).round()));
 
 /// `--dart-define=PERF_GLASS=low` measures with every backdrop blur off.
 const _glass = String.fromEnvironment('PERF_GLASS');
@@ -132,11 +132,10 @@ void main() {
 
     results.add(
       await recorder.measure(tester, 'open details and back', () async {
+        // The middle of a card is its poster; its heart, in the corner,
+        // would change My list instead of opening the title.
         await tester.tap(
-          find
-              .descendant(of: row, matching: find.byType(GestureDetector))
-              .first,
-          warnIfMissed: false,
+          find.descendant(of: row, matching: find.byType(MediaCard)).first,
         );
         await idle(tester, 2.5);
         final details = _scrollable(AxisDirection.down).hitTestable().first;
