@@ -62,6 +62,31 @@ void main() {
   });
 
   group('DeviceCapabilities', () {
+    testWidgets('loading at startup on Windows does not notify mid-build', (
+      tester,
+    ) async {
+      // As at launch: the app listens to the device above a screen whose
+      // initState starts loading it.
+      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+      DeviceCapabilities.debugOverride = const DeviceCapabilities();
+      Future<DeviceCapabilities>? loaded;
+      await tester.pumpWidget(
+        AnimatedBuilder(
+          animation: DeviceCapabilities.listenable,
+          builder: (context, _) => Directionality(
+            textDirection: TextDirection.ltr,
+            child: _OnInit(() => loaded ??= DeviceCapabilities.load()),
+          ),
+        ),
+      );
+      final device = await loaded!;
+      await tester.pump();
+      debugDefaultTargetPlatformOverride = null;
+      expect(tester.takeException(), isNull);
+      expect(device.hasTouchscreen, isFalse);
+      expect(DeviceCapabilities.current.hasTouchscreen, isFalse);
+    });
+
     test('layout mode: phone mobile, TV television, Windows desktop', () {
       addTearDown(() => debugDefaultTargetPlatformOverride = null);
       debugDefaultTargetPlatformOverride = TargetPlatform.android;
@@ -615,4 +640,25 @@ void main() {
     }
     expect(readToEnd, isTrue);
   });
+}
+
+/// Runs [onInit] from initState, as SplashGate runs startup work.
+class _OnInit extends StatefulWidget {
+  const _OnInit(this.onInit);
+
+  final void Function() onInit;
+
+  @override
+  State<_OnInit> createState() => _OnInitState();
+}
+
+class _OnInitState extends State<_OnInit> {
+  @override
+  void initState() {
+    super.initState();
+    widget.onInit();
+  }
+
+  @override
+  Widget build(BuildContext context) => const SizedBox();
 }

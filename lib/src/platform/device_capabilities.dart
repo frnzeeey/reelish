@@ -96,6 +96,11 @@ class DeviceCapabilities {
         // Keep the mobile defaults.
       }
     } else if (isDesktopPlatform) {
+      // Startup calls this from a widget's initState, during a build. With
+      // no platform query to wait for, the change below would notify the
+      // app's listeners mid-build ("setState() called during build"); let
+      // that build finish first, as Android's query does.
+      await Future<void>.value();
       // A desktop has a mouse and keyboard, no touchscreen, and no
       // picture-in-picture; it keeps full glass quality.
       detected = const DeviceCapabilities(
