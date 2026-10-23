@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:onfeed/src/models/stream_source.dart';
 import 'package:onfeed/src/widgets/player/gesture_touch_layer.dart';
@@ -514,6 +515,121 @@ void main() {
     expect(find.bySemanticsLabel('Unlock controls'), findsOneWidget);
     await tester.tap(find.text('Tap to unlock'));
     expect(unlocks, 1);
+  });
+
+  group('desktop lock: keyboard and controller', () {
+    late List<LogicalKeyboardKey> reachedPlayer;
+    late int reveals, unlocks;
+    late ValueNotifier<bool> unlockVisible;
+
+    /// The player's shortcuts beneath the lock, as on Windows: a Focus that
+    /// records every key that gets past the overlay.
+    Future<void> pumpLocked(WidgetTester tester, {bool desktop = true}) async {
+      reachedPlayer = [];
+      reveals = 0;
+      unlocks = 0;
+      unlockVisible = ValueNotifier(false);
+      addTearDown(unlockVisible.dispose);
+      await tester.pumpWidget(
+        _app(
+          Focus(
+            autofocus: true,
+            onKeyEvent: (node, event) {
+              if (event is KeyDownEvent) reachedPlayer.add(event.logicalKey);
+              return KeyEventResult.handled;
+            },
+            child: PlayerLockOverlay(
+              unlockVisible: unlockVisible,
+              onReveal: () {
+                reveals++;
+                unlockVisible.value = true;
+              },
+              onUnlock: () => unlocks++,
+              handleKeys: desktop,
+              hint: desktop
+                  ? 'Click or press Enter to unlock'
+                  : 'Tap to unlock',
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+    }
+
+    testWidgets('playback keys never reach the player', (tester) async {
+      await pumpLocked(tester);
+      for (final key in [
+        LogicalKeyboardKey.space,
+        LogicalKeyboardKey.arrowLeft,
+        LogicalKeyboardKey.arrowRight,
+        LogicalKeyboardKey.arrowUp,
+        LogicalKeyboardKey.keyM,
+        LogicalKeyboardKey.mediaPlayPause,
+        LogicalKeyboardKey.mediaTrackNext,
+        LogicalKeyboardKey.tab,
+      ]) {
+        await tester.sendKeyEvent(key);
+      }
+      expect(reachedPlayer, isEmpty);
+      // They only show the unlock button; Space never unlocks.
+      expect(reveals, greaterThan(0));
+      expect(unlocks, 0);
+    });
+
+    testWidgets('Enter unlocks only once the button shows', (tester) async {
+      await pumpLocked(tester);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      expect((reveals, unlocks), (1, 0));
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      expect(unlocks, 1);
+      expect(reachedPlayer, isEmpty);
+    });
+
+    testWidgets('fullscreen, Back and system keys pass through', (
+      tester,
+    ) async {
+      await pumpLocked(tester);
+      for (final key in [
+        LogicalKeyboardKey.keyF,
+        LogicalKeyboardKey.f11,
+        LogicalKeyboardKey.escape,
+        LogicalKeyboardKey.backspace,
+      ]) {
+        await tester.sendKeyEvent(key);
+      }
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.altLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.f4);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.altLeft);
+      expect(reachedPlayer, [
+        LogicalKeyboardKey.keyF,
+        LogicalKeyboardKey.f11,
+        LogicalKeyboardKey.escape,
+        LogicalKeyboardKey.backspace,
+        LogicalKeyboardKey.altLeft,
+        LogicalKeyboardKey.f4,
+      ]);
+      expect(unlocks, 0);
+    });
+
+    testWidgets('a controller reveals, then unlocks with A', (tester) async {
+      await pumpLocked(tester);
+      final focused = FocusManager.instance.primaryFocus!.context!;
+      // As DesktopGamepad sends them to the focused widget.
+      Actions.invoke(
+        focused,
+        const DirectionalFocusIntent(TraversalDirection.right),
+      );
+      expect((reveals, unlocks), (1, 0));
+      Actions.invoke(focused, const ActivateIntent());
+      expect(unlocks, 1);
+    });
+
+    testWidgets('the phone lock leaves the keyboard alone', (tester) async {
+      await pumpLocked(tester, desktop: false);
+      await tester.sendKeyEvent(LogicalKeyboardKey.space);
+      expect(reachedPlayer, [LogicalKeyboardKey.space]);
+      expect(find.text('Tap to unlock'), findsOneWidget);
+    });
   });
 
   testWidgets('lock button shows only when the player offers it', (

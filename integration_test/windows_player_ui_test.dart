@@ -67,6 +67,18 @@ void main() {
         ),
       );
 
+      /// Whether the playback controls show: they fade out (and stop taking
+      /// input) rather than leave the tree.
+      bool controlsShown() {
+        final lock = find.bySemanticsLabel('Lock controls');
+        if (lock.evaluate().isEmpty) return false;
+        return tester
+            .widgetList<AnimatedOpacity>(
+              find.ancestor(of: lock, matching: find.byType(AnimatedOpacity)),
+            )
+            .every((fade) => fade.opacity > 0);
+      }
+
       VideoPlayerController? controller() {
         final players = find.byType(VideoPlayer);
         return players.evaluate().isEmpty
@@ -115,8 +127,9 @@ void main() {
         'controls with a fullscreen button',
         timeout: const Duration(seconds: 5),
       );
-      // No rotation lock or touch lock on desktop.
+      // No rotation lock on desktop; the screen lock is there.
       expect(find.bySemanticsLabel('Lock to landscape'), findsNothing);
+      expect(find.bySemanticsLabel('Lock controls'), findsOneWidget);
 
       // F enters fullscreen; Escape leaves it before anything else.
       await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
@@ -158,6 +171,87 @@ void main() {
         'M to unmute',
         timeout: const Duration(seconds: 5),
       );
+
+      // The screen lock: nothing from the keyboard, the wheel or the mouse
+      // reaches playback until Enter unlocks (while the button shows).
+      await mouse.moveTo(const Offset(440, 340));
+      await until(
+        () => controlsShown(),
+        'controls with the lock button',
+        timeout: const Duration(seconds: 5),
+      );
+      await tester.tap(find.bySemanticsLabel('Lock controls'));
+      await tester.pump();
+      expect(controller()!.value.isPlaying, isFalse);
+      final lockedAt = controller()!.value.position;
+      final lockedVolume = controller()!.value.volume;
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(seconds: 4)),
+      );
+      await tester.pump();
+      // The unlock button has hidden again: keys and the wheel now.
+      expect(find.bySemanticsLabel('Unlock controls'), findsNothing);
+      for (final key in [
+        LogicalKeyboardKey.space,
+        LogicalKeyboardKey.arrowRight,
+        LogicalKeyboardKey.arrowDown,
+        LogicalKeyboardKey.keyM,
+      ]) {
+        await tester.sendKeyEvent(key);
+        await tester.pump();
+      }
+      await tester.sendEventToBinding(
+        const PointerScrollEvent(
+          position: Offset(400, 300),
+          scrollDelta: Offset(0, -40),
+          kind: PointerDeviceKind.mouse,
+        ),
+      );
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(seconds: 1)),
+      );
+      await tester.pump();
+      expect(controller()!.value.isPlaying, isFalse, reason: 'Space');
+      expect(controller()!.value.position, lockedAt, reason: 'Right arrow');
+      expect(
+        controller()!.value.volume,
+        lockedVolume,
+        reason: 'M, Down, wheel',
+      );
+      // A key showed the unlock button, not the controls.
+      expect(find.bySemanticsLabel('Unlock controls'), findsOneWidget);
+      expect(controlsShown(), isFalse);
+      // Escape (windowed) does not leave a locked player.
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pump();
+      expect(find.byType(PlayerScreen), findsOneWidget);
+      // Fullscreen is window management, not playback: F still enters it
+      // and Escape still leaves it, and the player stays locked.
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+      await until(() => DesktopWindow.fullscreen.value, 'F while locked');
+      expect(controlsShown(), isFalse);
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await until(() => !DesktopWindow.fullscreen.value, 'Escape while locked');
+      expect(find.byType(PlayerScreen), findsOneWidget);
+      expect(controlsShown(), isFalse);
+      expect(controller()!.value.isPlaying, isFalse);
+      // Moving the mouse shows only the unlock button too.
+      await mouse.moveTo(const Offset(460, 360));
+      await tester.pump();
+      expect(find.bySemanticsLabel('Unlock controls'), findsOneWidget);
+      expect(controlsShown(), isFalse);
+
+      // Enter unlocks while the button shows; the shortcuts work again.
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await until(
+        () => controlsShown(),
+        'Enter to unlock',
+        timeout: const Duration(seconds: 5),
+      );
+      await tester.sendKeyEvent(LogicalKeyboardKey.space);
+      await until(() => controller()!.value.isPlaying, 'Space after unlock');
+      await tester.sendKeyEvent(LogicalKeyboardKey.space);
+      await until(() => !controller()!.value.isPlaying, 'pause again');
 
       // Escape (windowed) leaves the player like Back.
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);

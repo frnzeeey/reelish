@@ -163,8 +163,9 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   );
   ModalRoute<Object?>? _route;
 
-  /// TV interface (TVs and desktop): remote/keyboard handling, no rotation,
-  /// touch lock or brightness gestures.
+  /// TV interface (TVs and desktop): remote/keyboard handling, no rotation
+  /// or brightness gestures. (Only a real TV also goes without the screen
+  /// lock: see [_tvHardware].)
   static bool get _tv => DeviceCapabilities.usesTvLayout;
 
   /// A real TV, where Back reveals the controls and they stay up longer.
@@ -1189,6 +1190,12 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     final repeat = event is KeyRepeatEvent;
     final c = _controller;
     final playable = c != null && _ready;
+    // Locked: the player's shortcuts are off whichever widget has focus (the
+    // lock overlay normally takes keys first and reveals the unlock button).
+    // F still toggles fullscreen, which the lock leaves alone.
+    if (_locked.value && playable && key != LogicalKeyboardKey.keyF) {
+      return KeyEventResult.ignored;
+    }
     if (_desktop) {
       // Keyboard on desktop: Space plays or pauses wherever focus is in the
       // player; F toggles fullscreen. Arrows keep the remote behaviour.
@@ -1374,8 +1381,12 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   }
 
   /// Desktop: moving the mouse brings the controls up and keeps them there.
+  /// While locked it shows only the unlock button.
   void _onPointerMove() {
-    if (_locked.value) return;
+    if (_locked.value) {
+      _revealUnlock();
+      return;
+    }
     _show();
   }
 
@@ -1389,15 +1400,19 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     if (mounted) setState(() {});
   }
 
-  /// Desktop: the mouse shows the controls, and the cursor hides with them.
-  Widget _withPointer(Widget child) => ValueListenableBuilder<bool>(
-    valueListenable: _controlsShown,
-    builder: (context, shown, child) => MouseRegion(
-      cursor: shown ? MouseCursor.defer : SystemMouseCursors.none,
+  /// Desktop: the mouse shows the controls, and the cursor hides with them
+  /// (while locked, it shows with the unlock button so that can be clicked).
+  Widget _withPointer(Widget child) => ListenableBuilder(
+    listenable: Listenable.merge([_controlsShown, _unlockVisible]),
+    builder: (context, child) => MouseRegion(
+      cursor: _controlsShown.value || (_locked.value && _unlockVisible.value)
+          ? MouseCursor.defer
+          : SystemMouseCursors.none,
       onHover: (_) => _onPointerMove(),
-      // The mouse wheel sets the volume, 5% per notch.
+      // The mouse wheel sets the volume, 5% per notch; not while locked.
       child: Listener(
         onPointerSignal: (event) {
+          if (_locked.value) return;
           if (event is PointerScrollEvent && event.scrollDelta.dy != 0) {
             _nudgeVolume(event.scrollDelta.dy < 0 ? .05 : -.05);
           }
@@ -1434,6 +1449,9 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     _unlockVisible.value = false;
     _locked.value = false;
     _show();
+    // Desktop: the lock held keyboard focus; the player's shortcuts take it
+    // back.
+    if (_desktop && _playerFocus.context != null) _playerFocus.requestFocus();
   }
 
   void _openSubtitlePosition() {
@@ -2988,7 +3006,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
                     ? () => unawaited(_openEpisodes())
                     : null,
                 onSettings: _settings,
-                // TV: no rotation, no touch lock, and picture in picture
+                // TV: no rotation, no screen lock, and picture in picture
                 // only where the TV supports it.
                 onPip:
                     _tv && !DeviceCapabilities.current.supportsPictureInPicture
@@ -3015,7 +3033,9 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
                 nextEpisodeCountdown: _nextEpisodeCountdown,
                 onSpeedReset: _resetSpeed,
                 pauseScreen: _pauseOverlay,
-                onLock: _tv ? null : _lockControls,
+                // A TV remote has nothing to lock away; a phone's touches
+                // and a desktop's mouse and keyboard do.
+                onLock: _tvHardware ? null : _lockControls,
                 playFocusNode: _playButtonFocus,
               ),
             ),
@@ -3074,6 +3094,12 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
                       unlockVisible: _unlockVisible,
                       onReveal: _revealUnlock,
                       onUnlock: _unlockControls,
+                      // Desktop: the keyboard and a controller are locked
+                      // too, and Enter unlocks once the button shows.
+                      handleKeys: _desktop,
+                      hint: _desktop
+                          ? 'Click or press Enter to unlock'
+                          : 'Tap to unlock',
                     )
                   : const SizedBox.shrink(),
             ),
