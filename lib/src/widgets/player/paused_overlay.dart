@@ -7,7 +7,9 @@ import 'package:material_symbols_icons/symbols.dart';
 import '../../models/episode_context.dart';
 import '../../models/media_details.dart';
 import '../../models/media_item.dart';
+import '../../platform/device_capabilities.dart';
 import '../../theme/glass_theme.dart';
+import 'player_controls.dart';
 
 /// What the pause screen shows for the playing title. Everything comes from
 /// data the player already has; a missing value is left out, never invented.
@@ -283,32 +285,57 @@ class _ReelishPausedOverlayState extends State<ReelishPausedOverlay>
       math.max(padding.top, height - padding.bottom),
     );
     final wide = width > height;
+    // Overscan-safe margins on real TVs only; Windows shares the TV
+    // interface but not its cropped edges.
+    final tv = DeviceCapabilities.isTv;
     // Picture-in-picture and other tiny windows get the artwork and the
     // play button only.
     final compact = safe.height < 260 || safe.width < 300;
+    // Text, column and button grow with the screen's height, so a large or
+    // ultrawide window is not a small block pinned to one edge.
+    final scale = (safe.height / 720).clamp(1.0, 1.5);
     final playSize = compact
         ? 56.0
-        : (wide ? safe.height * .2 : safe.width * .2).clamp(64.0, 92.0);
-    final center = safe.center;
+        : (wide ? safe.height * .2 : safe.width * .2).clamp(64.0, 92.0 * scale);
 
-    // Room left between the playback controls' top and bottom bars, beside
-    // (landscape) or below (portrait) the play button.
-    const topBarSpace = 64.0, bottomBarSpace = 112.0;
+    // The text keeps to the controls' edges: their left edge, and clear of
+    // their top and bottom bars (all within TV-safe margins on a TV).
+    final edge = PlayerControlsLayout.contentEdge(tv: tv);
+    final topBarSpace = PlayerControlsLayout.topBarExtent(tv: tv);
+    final bottomBarSpace = PlayerControlsLayout.bottomBarExtent(tv: tv);
+    var center = safe.center;
     Rect? info;
     if (!compact) {
-      info = wide
-          ? Rect.fromLTRB(
-              safe.left + 28,
-              safe.top + topBarSpace,
-              math.min(center.dx - playSize / 2 - 32, safe.left + 28 + 560),
-              safe.bottom - bottomBarSpace,
-            )
-          : Rect.fromLTRB(
-              safe.left + 24,
-              center.dy + playSize / 2 + 28,
-              safe.right - 24,
-              safe.bottom - bottomBarSpace,
-            );
+      if (wide) {
+        // The text gets a share of the screen rather than whatever the
+        // centered button leaves: on a phone that was barely a third, which
+        // broke titles early and cut the details line short. Where the text
+        // needs the room, the button moves right of center to keep a clear
+        // gap; on larger screens it stays centered.
+        const gap = 40.0;
+        final right = math.min(
+          safe.left + edge + math.max(safe.width * .44, 260.0),
+          safe.left + edge + 560 * scale,
+        );
+        final buttonX = math.min(
+          math.max(center.dx, right + gap + playSize / 2),
+          safe.right - edge - playSize / 2,
+        );
+        center = Offset(buttonX, center.dy);
+        info = Rect.fromLTRB(
+          safe.left + edge,
+          safe.top + topBarSpace,
+          math.min(right, buttonX - playSize / 2 - gap),
+          safe.bottom - bottomBarSpace,
+        );
+      } else {
+        info = Rect.fromLTRB(
+          safe.left + 24,
+          center.dy + playSize / 2 + 28,
+          safe.right - 24,
+          safe.bottom - bottomBarSpace,
+        );
+      }
       if (info.width < 180 || info.height < 72) info = null;
     }
 
@@ -340,7 +367,14 @@ class _ReelishPausedOverlayState extends State<ReelishPausedOverlay>
         IgnorePointer(
           child: FadeTransition(
             opacity: _scrim,
-            child: _Scrim(wide: wide),
+            child: _Scrim(
+              wide: wide,
+              // The accent glow sits behind the play button.
+              glow: Alignment(
+                width == 0 ? 0 : center.dx / width * 2 - 1,
+                height == 0 ? 0 : center.dy / height * 2 - 1,
+              ),
+            ),
           ),
         ),
         if (info != null)
@@ -353,7 +387,14 @@ class _ReelishPausedOverlayState extends State<ReelishPausedOverlay>
                 // text still does not fit after the line budget below.
                 child: SingleChildScrollView(
                   physics: const NeverScrollableScrollPhysics(),
-                  child: _detailsColumn(content, info, wide, width, textScaler),
+                  child: _detailsColumn(
+                    content,
+                    info,
+                    wide,
+                    width,
+                    scale,
+                    textScaler,
+                  ),
                 ),
               ),
             ),
@@ -392,31 +433,45 @@ class _ReelishPausedOverlayState extends State<ReelishPausedOverlay>
     Rect info,
     bool wide,
     double width,
+    double scale,
     TextScaler textScaler,
   ) {
     final titleSize = wide
-        ? (width * .032).clamp(22.0, 40.0)
+        ? (width * .032).clamp(22.0, 40.0 * scale)
         : (width * .068).clamp(22.0, 34.0);
     final large = wide && width >= 1000;
-    final synopsisSize = large ? 15.5 : 14.0;
+    final synopsisSize = (large ? 15.5 : 14.0) * scale;
+    final metaSize = 13.5 * scale;
     final maxSynopsisLines = large ? 4 : 3;
     double lineHeight(double size, double height) =>
         textScaler.scale(size) * height;
+    // Characters that fit on one line of [size] text, roughly.
+    double charsPerLine(double size, double em) =>
+        math.max(1.0, info.width / (textScaler.scale(size) * em));
 
     // A line budget from the room available, so the synopsis shortens on
     // short screens instead of pushing into the controls.
-    final charsPerTitleLine = math.max(
-      1.0,
-      info.width / (textScaler.scale(titleSize) * .56),
-    );
-    final titleLines = content.title.length > charsPerTitleLine ? 2 : 1;
+    final titleLines = content.title.length > charsPerLine(titleSize, .56)
+        ? 2
+        : 1;
+    // The details line may wrap once rather than cut off what comes last
+    // (often the rating). Room is kept for the second line whenever it
+    // might be needed (a generous width per character), so the synopsis
+    // never has to give way to it afterwards.
+    final metadataText = [
+      ...content.metadata,
+      if (content.rating.isNotEmpty) '* ${content.rating}',
+    ].join('  ·  ');
+    final metadataLines = metadataText.isEmpty
+        ? 0
+        : (metadataText.length > charsPerLine(metaSize, .65) ? 2 : 1);
     final used =
-        lineHeight(11, 1.3) +
+        lineHeight(11 * scale, 1.3) +
         10 +
         titleLines * lineHeight(titleSize, 1.12) +
-        (content.metadata.isEmpty && content.rating.isEmpty
+        (metadataLines == 0
             ? 0
-            : lineHeight(13.5, 1.35) + 10) +
+            : metadataLines * lineHeight(metaSize, 1.35) + 10) +
         14;
     final synopsisLines = content.synopsis.isEmpty
         ? 0
@@ -438,6 +493,9 @@ class _ReelishPausedOverlayState extends State<ReelishPausedOverlay>
             child: _PauseHeading(
               content: content,
               titleSize: titleSize,
+              scale: scale,
+              // Two lines may always be used; text that fits uses one.
+              metadataLines: 2,
               wide: wide,
               align: align,
             ),
@@ -479,24 +537,32 @@ class _PauseHeading extends StatelessWidget {
   const _PauseHeading({
     required this.content,
     required this.titleSize,
+    required this.scale,
+    required this.metadataLines,
     required this.wide,
     required this.align,
   });
 
   final PauseCardContent content;
   final double titleSize;
+
+  /// How much larger than on a 720-high screen the smaller text is drawn.
+  final double scale;
+
+  /// Lines the details line may take.
+  final int metadataLines;
   final bool wide;
   final TextAlign align;
 
   @override
   Widget build(BuildContext context) {
     final accent = GlassTheme.primary;
-    const metaStyle = TextStyle(
-      color: Color(0xCCFFFFFF),
-      fontSize: 13.5,
+    final metaStyle = TextStyle(
+      color: const Color(0xCCFFFFFF),
+      fontSize: 13.5 * scale,
       height: 1.35,
       fontWeight: FontWeight.w600,
-      shadows: [Shadow(color: Colors.black54, blurRadius: 10)],
+      shadows: const [Shadow(color: Colors.black54, blurRadius: 10)],
     );
     final hasMetadata =
         content.metadata.isNotEmpty || content.rating.isNotEmpty;
@@ -524,7 +590,7 @@ class _PauseHeading extends StatelessWidget {
               'PAUSED',
               style: TextStyle(
                 color: accent,
-                fontSize: 11,
+                fontSize: 11 * scale,
                 height: 1.3,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 2.2,
@@ -567,7 +633,7 @@ class _PauseHeading extends StatelessWidget {
                         child: Icon(
                           Symbols.star_rounded,
                           fill: 1,
-                          size: 15,
+                          size: 15 * scale,
                           color: accent,
                         ),
                       ),
@@ -579,7 +645,7 @@ class _PauseHeading extends StatelessWidget {
                   ],
                 ],
               ),
-              maxLines: 1,
+              maxLines: metadataLines,
               overflow: TextOverflow.ellipsis,
               textAlign: align,
               style: metaStyle,
@@ -634,9 +700,12 @@ class _Artwork extends StatelessWidget {
 /// overall dim, a directional shade behind the text, a floor under the
 /// controls, and a faint accent glow behind the play button.
 class _Scrim extends StatelessWidget {
-  const _Scrim({required this.wide});
+  const _Scrim({required this.wide, this.glow = Alignment.center});
 
   final bool wide;
+
+  /// Where the accent glow centers: behind the play button.
+  final Alignment glow;
 
   @override
   Widget build(BuildContext context) => Stack(
@@ -682,6 +751,7 @@ class _Scrim extends StatelessWidget {
       DecoratedBox(
         decoration: BoxDecoration(
           gradient: RadialGradient(
+            center: glow,
             radius: .5,
             colors: [
               GlassTheme.primary.withValues(alpha: .14),

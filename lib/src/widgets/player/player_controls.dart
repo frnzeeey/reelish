@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:video_player/video_player.dart';
 
+import '../../platform/device_capabilities.dart';
 import '../../theme/glass_theme.dart';
 import 'player_marquee_text.dart';
 import 'player_progress_bar.dart';
@@ -127,7 +128,9 @@ class PlayerControlsOverlay extends StatelessWidget {
             ),
           ),
           SafeArea(
-            minimum: const EdgeInsets.symmetric(horizontal: 8),
+            minimum: PlayerControlsLayout.minimumInsets(
+              tv: DeviceCapabilities.isTv,
+            ),
             child: Stack(
               fit: StackFit.expand,
               children: [
@@ -191,6 +194,31 @@ class PlayerControlsOverlay extends StatelessWidget {
       );
     },
   );
+}
+
+/// Where the controls' bars sit, shared with the pause screen so its text is
+/// placed against the real controls rather than guessed sizes.
+abstract final class PlayerControlsLayout {
+  /// Room the controls keep from the screen edges, on top of system insets.
+  /// TVs often crop the outer edges of the picture (overscan), so there the
+  /// bars keep within the safe area of about 5% (48 by 27 on a 960 by 540
+  /// TV screen, counting the bars' own offsets: 12 for the top bar, 20 for
+  /// the bottom one).
+  static EdgeInsets minimumInsets({required bool tv}) => tv
+      ? const EdgeInsets.symmetric(horizontal: 36, vertical: 22)
+      : const EdgeInsets.symmetric(horizontal: 8);
+
+  /// The bars' left edge in a wide layout, from the safe area's edge: the
+  /// minimum inset plus the bars' own offset.
+  static double contentEdge({required bool tv}) =>
+      minimumInsets(tv: tv).left + 20;
+
+  /// Height kept clear for the top bar (back button, title), and for the
+  /// bottom bar (timeline and buttons), from the safe area's edges.
+  static double topBarExtent({required bool tv}) =>
+      minimumInsets(tv: tv).top + 64;
+  static double bottomBarExtent({required bool tv}) =>
+      minimumInsets(tv: tv).bottom + 112;
 }
 
 /// Fades [child] out, and makes it untappable and unfocusable, while the

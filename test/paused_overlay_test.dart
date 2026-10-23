@@ -1,8 +1,12 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:onfeed/src/models/episode_context.dart';
 import 'package:onfeed/src/models/media_details.dart';
 import 'package:onfeed/src/models/media_item.dart';
+import 'package:onfeed/src/platform/device_capabilities.dart';
 import 'package:onfeed/src/widgets/player/paused_overlay.dart';
 import 'package:onfeed/src/widgets/player/player_controls.dart';
 import 'package:video_player/video_player.dart';
@@ -39,8 +43,9 @@ Widget _overlay(
   ValueNotifier<bool> visible,
   PauseCardContent content, {
   VoidCallback? onPlay,
+  ThemeData? theme,
 }) => MaterialApp(
-  theme: ThemeData.dark(),
+  theme: theme ?? ThemeData.dark(),
   home: Scaffold(
     backgroundColor: Colors.black,
     body: ReelishPausedOverlay(
@@ -166,10 +171,7 @@ void main() {
       today: DateTime(2026, 10, 5),
     )!;
     expect(context.current.overview, 'Mara finally opens the vault.');
-    expect(
-      context.current.still,
-      'https://image.tmdb.org/t/p/w1280/still.jpg',
-    );
+    expect(context.current.still, 'https://image.tmdb.org/t/p/w1280/still.jpg');
     expect(context.current.runtimeMinutes, 48);
     expect(context.next?.still, isEmpty);
     expect(context.next?.runtimeMinutes, isNull);
@@ -284,6 +286,200 @@ void main() {
         expect(details.bottom, lessThanOrEqualTo(size.height - 112));
       });
     }
+  });
+
+  group('pause screen balance', () {
+    const movie = PauseCardContent(
+      title: 'Avengers: Infinity War',
+      metadata: ['2018', 'Adventure, Action', '2h 29m'],
+      rating: '7.6',
+      synopsis:
+          'With the universe at stake, a team of unlikely heroes must stop '
+          'a warlord from collecting six stones that would let him reshape '
+          'reality, whatever the cost to themselves and everyone they love.',
+    );
+
+    Future<({Rect play, Rect title, Rect details, Size size})> layout(
+      WidgetTester tester,
+      Size logical, {
+      double cutoutLeft = 0,
+      DeviceCapabilities device = const DeviceCapabilities(),
+    }) async {
+      tester.view.physicalSize = logical;
+      tester.view.devicePixelRatio = 1;
+      tester.view.padding = FakeViewPadding(left: cutoutLeft);
+      addTearDown(tester.view.reset);
+      DeviceCapabilities.debugOverride = device;
+      addTearDown(
+        () => DeviceCapabilities.debugOverride = const DeviceCapabilities(),
+      );
+      // In the app's font: the test font draws every letter a full square
+      // wide, which would wrap and cut text that fits in Montserrat.
+      await tester.runAsync(() async {
+        final loader = FontLoader('Montserrat');
+        for (final weight in const ['Regular', 'Medium', 'SemiBold', 'Bold']) {
+          loader.addFont(
+            rootBundle.load('assets/fonts/Montserrat-$weight.ttf'),
+          );
+        }
+        await loader.load();
+      });
+      await tester.pumpWidget(
+        _overlay(
+          ValueNotifier(true),
+          movie,
+          theme: ThemeData(
+            brightness: Brightness.dark,
+            fontFamily: 'Montserrat',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      final title = tester.getRect(find.text(movie.title));
+      final details = title
+          .expandToInclude(
+            tester.getRect(find.textContaining('2018', findRichText: true)),
+          )
+          .expandToInclude(
+            tester.getRect(find.textContaining('With the universe')),
+          );
+      return (
+        play: tester.getRect(find.bySemanticsLabel('Resume playback')),
+        title: title,
+        details: details,
+        size: logical,
+      );
+    }
+
+    testWidgets('a phone with a cutout gives the details real room', (
+      tester,
+    ) async {
+      // 2400 by 1080 at 2.75: 873 by 393, with a 110-wide camera cutout.
+      // The details used to end 32 px before the centered button: about
+      // 230 px, which broke the title and cut off the rating.
+      final r = await layout(tester, const Size(873, 393), cutoutLeft: 110);
+      expect(r.details.width, greaterThan(300));
+      // The whole details line shows, rating included: nothing is cut off.
+      final details = tester.renderObject<RenderParagraph>(
+        find.textContaining('7.6', findRichText: true),
+      );
+      expect(details.didExceedMaxLines, isFalse);
+      // A clear gap between the text and the button, which moved right.
+      expect(r.play.left - r.details.right, greaterThanOrEqualTo(40));
+      expect(r.play.center.dx, greaterThan((110 + 873) / 2));
+      expect(r.play.right, lessThanOrEqualTo(873));
+    });
+
+    testWidgets('large screens keep the button centered and the text grown', (
+      tester,
+    ) async {
+      final desktop = await layout(tester, const Size(1536, 807));
+      expect(desktop.play.center.dx, closeTo(1536 / 2, .5));
+      expect(desktop.details.right, lessThan(desktop.play.left));
+      final ultrawide = await layout(tester, const Size(3440, 1400));
+      expect(ultrawide.play.center.dx, closeTo(3440 / 2, .5));
+      // Text grows with the screen instead of staying desktop-sized.
+      expect(ultrawide.title.height, greaterThan(desktop.title.height));
+      expect(ultrawide.play.width, greaterThan(desktop.play.width));
+    });
+
+    testWidgets('Windows keeps the normal edges, not the TV-safe ones', (
+      tester,
+    ) async {
+      // Windows shares the TV interface but not a TV's cropped edges.
+      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+      final r = await layout(
+        tester,
+        const Size(1280, 720),
+        device: const DeviceCapabilities(
+          hasTouchscreen: false,
+          supportsPictureInPicture: false,
+        ),
+      );
+      expect(DeviceCapabilities.usesTvLayout, isTrue);
+      expect(r.details.left, PlayerControlsLayout.contentEdge(tv: false));
+      debugDefaultTargetPlatformOverride = null;
+    });
+
+    testWidgets('on TV the text stays inside the overscan-safe area', (
+      tester,
+    ) async {
+      // A 1920 by 1080 TV at 2x is 960 by 540; TVs may crop about 5%.
+      final r = await layout(
+        tester,
+        const Size(960, 540),
+        device: const DeviceCapabilities(
+          isTelevision: true,
+          hasTouchscreen: false,
+        ),
+      );
+      expect(r.details.left, greaterThanOrEqualTo(960 * .05));
+      expect(r.details.top, greaterThanOrEqualTo(540 * .05));
+      expect(r.details.bottom, lessThanOrEqualTo(540 * .95));
+    });
+  });
+
+  testWidgets('on TV the controls stay inside the overscan-safe area', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(960, 540);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    DeviceCapabilities.debugOverride = const DeviceCapabilities(
+      isTelevision: true,
+      hasTouchscreen: false,
+    );
+    addTearDown(
+      () => DeviceCapabilities.debugOverride = const DeviceCapabilities(),
+    );
+    final controller = VideoPlayerController.networkUrl(
+      Uri.parse('https://cdn.example/video.m3u8'),
+    );
+    addTearDown(controller.dispose);
+    controller.value = controller.value.copyWith(
+      duration: const Duration(minutes: 100),
+      isInitialized: true,
+      size: const Size(1920, 1080),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(),
+        home: Scaffold(
+          body: PlayerControlsOverlay(
+            controller: controller,
+            title: 'The Show',
+            subtitle: 'S2 · E3',
+            sourceLabel: '1080p',
+            subtitleEnabled: false,
+            showAudio: true,
+            showSources: true,
+            landscapeLocked: true,
+            onBack: () {},
+            onTogglePlay: () {},
+            onSeekBy: (_) {},
+            onSeekTo: (_) {},
+            onScrubChanged: (_) {},
+            onSubtitles: () {},
+            onAudio: () {},
+            onSources: () {},
+            onSettings: () {},
+            onPip: null,
+            onRotate: null,
+          ),
+        ),
+      ),
+    );
+    final back = tester.getRect(find.bySemanticsLabel('Back'));
+    final settings = tester.getRect(
+      find.bySemanticsLabel('Playback settings').first,
+    );
+    expect(back.left, greaterThanOrEqualTo(960 * .05 - 1));
+    expect(back.top, greaterThanOrEqualTo(540 * .05 - 1));
+    expect(settings.right, lessThanOrEqualTo(960 * .95 + 1));
+    final audio = tester.getRect(find.text('Audio').first);
+    expect(audio.bottom, lessThanOrEqualTo(540 * .95 + 1));
   });
 
   testWidgets('controls give the center to the pause screen', (tester) async {
