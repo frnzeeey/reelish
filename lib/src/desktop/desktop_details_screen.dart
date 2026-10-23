@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
+import '../models/episode_progress.dart';
 import '../models/media_details.dart';
 import '../models/media_item.dart';
 import '../models/tv_season.dart';
@@ -12,11 +14,13 @@ import '../viewmodels/details_view_model.dart';
 import '../widgets/poster_image.dart';
 import 'desktop_widgets.dart';
 
-/// A movie or series on Windows: a wide backdrop with the poster, details
-/// and actions, then cast, seasons and episodes, and related titles. Plays
-/// through the same flow as the other details screens ([onPlay] and
-/// [onPlayEpisode]), so provider search, source selection and the player are
-/// unchanged.
+/// A movie or series on Windows, full-bleed over the whole window: the
+/// backdrop with the title, details and actions, then cast and related
+/// titles. On a wide window a series lists its seasons and episodes in a
+/// frosted panel over the backdrop's right side; on a narrower one they
+/// follow the header as a grid. Plays through the same flow as the other
+/// details screens ([onPlay] and [onPlayEpisode]), so provider search,
+/// source selection and the player are unchanged.
 class DesktopDetailsScreen extends StatefulWidget {
   const DesktopDetailsScreen({
     super.key,
@@ -26,6 +30,7 @@ class DesktopDetailsScreen extends StatefulWidget {
     required this.onPlayEpisode,
     required this.isFavorite,
     required this.onToggleFavorite,
+    this.seriesProgress,
   });
 
   final MediaItem item;
@@ -43,6 +48,14 @@ class DesktopDetailsScreen extends StatefulWidget {
   /// Completes with whether the title is on My list afterwards.
   final Future<bool> Function(MediaItem item) onToggleFavorite;
 
+  /// Where the viewer is in a series, read from the watch history, so
+  /// episodes show as watched or in progress. Read only; without it the
+  /// episodes show no progress.
+  final Future<SeriesProgress> Function(MediaItem item)? seriesProgress;
+
+  /// From this content width a series shows its episodes in the panel.
+  static const panelBreakpoint = 1180.0;
+
   @override
   State<DesktopDetailsScreen> createState() => _DesktopDetailsScreenState();
 }
@@ -55,6 +68,8 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
     keepsEpisodesOnError: true,
   );
   late bool _favorite = widget.isFavorite(widget.item);
+  SeriesProgress _progress = SeriesProgress.empty;
+  Animation<double>? _covered;
 
   // The page renders from the shared DetailsViewModel; these keep its
   // wording and the names the layout below reads.
@@ -79,10 +94,24 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
     super.initState();
     _model.addListener(_onModelChanged);
     _model.start();
+    unawaited(_loadProgress());
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // The player (or a related title) covers this page; once it is gone,
+    // the episodes show what was just watched.
+    final covered = ModalRoute.of(context)?.secondaryAnimation;
+    if (covered != _covered) {
+      _covered?.removeStatusListener(_onCoveredChanged);
+      _covered = covered?..addStatusListener(_onCoveredChanged);
+    }
   }
 
   @override
   void dispose() {
+    _covered?.removeStatusListener(_onCoveredChanged);
     _model.removeListener(_onModelChanged);
     _model.dispose();
     super.dispose();
@@ -90,6 +119,21 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
 
   void _onModelChanged() {
     if (mounted) setState(() {});
+  }
+
+  void _onCoveredChanged(AnimationStatus status) {
+    if (status == AnimationStatus.dismissed) unawaited(_loadProgress());
+  }
+
+  Future<void> _loadProgress() async {
+    final read = widget.seriesProgress;
+    if (read == null || widget.item.type != 'series') return;
+    try {
+      final progress = await read(widget.item);
+      if (mounted) setState(() => _progress = progress);
+    } catch (_) {
+      // Progress is a hint; the episodes work without it.
+    }
   }
 
   Future<void> _loadSeasons() => _model.loadSeasons();
@@ -123,6 +167,7 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
           onPlayEpisode: widget.onPlayEpisode,
           isFavorite: widget.isFavorite,
           onToggleFavorite: widget.onToggleFavorite,
+          seriesProgress: widget.seriesProgress,
         ),
       ),
     );
@@ -133,37 +178,55 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
     final details = _details;
     return Scaffold(
       backgroundColor: GlassTheme.background,
-      body: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(child: _header(context, details)),
-          if (details != null && details.cast.isNotEmpty)
-            SliverToBoxAdapter(child: _cast(details.cast)),
-          if (_isSeries) ..._episodeSlivers(),
-          if (_related.isNotEmpty)
-            SliverToBoxAdapter(
-              child: DesktopMediaRow(
-                title: 'More like this',
-                items: _related,
-                onOpen: _openRelated,
-                isFavorite: widget.isFavorite,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final panel =
+              _isSeries &&
+              constraints.maxWidth >= DesktopDetailsScreen.panelBreakpoint;
+          return CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(
+                child: _header(context, details, constraints.maxWidth, panel),
               ),
-            ),
-          const SliverToBoxAdapter(child: SizedBox(height: 48)),
-        ],
+              if (details != null && details.cast.isNotEmpty)
+                SliverToBoxAdapter(child: _cast(details.cast)),
+              if (_isSeries && !panel) ..._episodeSlivers(),
+              if (_related.isNotEmpty)
+                SliverToBoxAdapter(
+                  child: DesktopMediaRow(
+                    title: 'More like this',
+                    items: _related,
+                    onOpen: _openRelated,
+                    isFavorite: widget.isFavorite,
+                  ),
+                ),
+              const SliverToBoxAdapter(child: SizedBox(height: 48)),
+            ],
+          );
+        },
       ),
     );
   }
 
-  Widget _header(BuildContext context, MediaDetails? details) {
+  Widget _header(
+    BuildContext context,
+    MediaDetails? details,
+    double width,
+    bool panel,
+  ) {
     final viewport = MediaQuery.sizeOf(context);
-    final height = (viewport.height * .66).clamp(440.0, 760.0);
+    // With the episode panel the header takes most of the window, so the
+    // panel lists several episodes without scrolling.
+    final height = panel
+        ? (viewport.height * .86).clamp(560.0, 980.0)
+        : (viewport.height * .68).clamp(460.0, 780.0);
+    final panelWidth = (width * .3).clamp(380.0, 470.0);
     final rating = details?.rating.isNotEmpty == true
         ? details!.rating
         : _item.rating;
     final runtime = details?.runtimeMinutes;
     final meta = [
       if (_item.year.isNotEmpty) _item.year,
-      if (rating.isNotEmpty) '★ $rating',
       if (runtime != null && runtime > 0)
         runtime >= 60
             ? '${runtime ~/ 60} h ${runtime % 60} min'
@@ -176,6 +239,8 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
     final backdrop = _item.background.isNotEmpty
         ? _item.background
         : _item.poster;
+    const pad = DesktopMetrics.pagePadding;
+    final showPoster = width >= 1100 && (!panel || width >= 1560);
     return SizedBox(
       height: height,
       child: Stack(
@@ -186,10 +251,10 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
             Image.network(
               backdrop,
               fit: BoxFit.cover,
-              alignment: Alignment.topCenter,
-              cacheWidth:
-                  (viewport.width * MediaQuery.devicePixelRatioOf(context))
-                      .round(),
+              alignment: const Alignment(0, -.4),
+              cacheWidth: (width * MediaQuery.devicePixelRatioOf(context))
+                  .round(),
+              frameBuilder: posterFadeIn(context),
               errorBuilder: (_, _, _) => const SizedBox.shrink(),
             ),
           const DecoratedBox(
@@ -198,12 +263,24 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
                 colors: [
                   Color(0xF50B0B0F),
                   Color(0xB00B0B0F),
-                  Color(0x200B0B0F),
+                  Color(0x330B0B0F),
                 ],
                 stops: [0, .45, 1],
               ),
             ),
           ),
+          if (panel)
+            // Shade under the panel, so it reads against bright artwork.
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.centerRight,
+                  end: Alignment.centerLeft,
+                  colors: [Color(0x990B0B0F), Color(0x000B0B0F)],
+                  stops: [0, .45],
+                ),
+              ),
+            ),
           const DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -212,12 +289,13 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
                 // Solid before the edge, so the image's last pixel row
                 // never shows as a line.
                 colors: [
-                  Color(0x660B0B0F),
+                  Color(0x800B0B0F),
+                  Color(0x000B0B0F),
                   Color(0x000B0B0F),
                   GlassTheme.background,
                   GlassTheme.background,
                 ],
-                stops: [0, .45, .95, 1],
+                stops: [0, .22, .55, .95, 1],
               ),
             ),
           ),
@@ -230,18 +308,27 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
               style: IconButton.styleFrom(
                 backgroundColor: Colors.black.withValues(alpha: .45),
                 foregroundColor: Colors.white,
+                side: BorderSide(color: Colors.white.withValues(alpha: .14)),
               ),
               icon: const Icon(Symbols.arrow_back_rounded),
             ),
           ),
+          if (panel)
+            Positioned(
+              top: 24,
+              right: pad,
+              bottom: 28,
+              width: panelWidth,
+              child: _EpisodePanel(child: _episodeBrowser()),
+            ),
           Positioned(
-            left: DesktopMetrics.pagePadding,
-            right: DesktopMetrics.pagePadding,
-            bottom: 28,
+            left: pad,
+            right: panel ? pad + panelWidth + 40 : pad,
+            bottom: 36,
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                if (viewport.width >= 1100) ...[
+                if (showPoster) ...[
                   _Poster(item: _item),
                   const SizedBox(width: 36),
                 ],
@@ -251,43 +338,84 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
                   child: Align(
                     alignment: Alignment.bottomLeft,
                     child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 780),
+                      constraints: const BoxConstraints(maxWidth: 760),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            _isSeries ? 'SERIES' : 'MOVIE',
-                            style: TextStyle(
-                              color: GlassTheme.coralBright,
-                              fontSize: 12,
-                              letterSpacing: 1.8,
-                              fontWeight: FontWeight.w800,
-                            ),
+                          Row(
+                            children: [
+                              Container(
+                                width: 18,
+                                height: 2,
+                                margin: const EdgeInsets.only(right: 10),
+                                color: GlassTheme.primary,
+                              ),
+                              Text(
+                                _isSeries ? 'SERIES' : 'MOVIE',
+                                style: TextStyle(
+                                  color: GlassTheme.coralBright,
+                                  fontSize: 12,
+                                  letterSpacing: 2,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 10),
                           Text(
                             _item.name,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
-                              fontSize: 48,
-                              height: 1.05,
+                              fontSize: 52,
+                              height: 1.02,
                               fontWeight: FontWeight.w800,
-                              letterSpacing: -1.2,
+                              letterSpacing: -1.4,
+                              shadows: [
+                                Shadow(
+                                  color: Color(0x66000000),
+                                  blurRadius: 24,
+                                ),
+                              ],
                             ),
                           ),
-                          const SizedBox(height: 12),
-                          Text(
-                            meta.join('  ·  '),
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white70,
-                            ),
+                          const SizedBox(height: 14),
+                          Row(
+                            children: [
+                              if (rating.isNotEmpty && rating != '0.0') ...[
+                                Icon(
+                                  Symbols.star_rounded,
+                                  fill: 1,
+                                  size: 17,
+                                  color: GlassTheme.primary,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  rating,
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                const SizedBox(width: 14),
+                              ],
+                              Flexible(
+                                child: Text(
+                                  meta.join('  ·  '),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white70,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                           if (details?.genres.isNotEmpty == true) ...[
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 14),
                             Wrap(
                               spacing: 8,
                               runSpacing: 8,
@@ -324,11 +452,11 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
                                 fontSize: 15,
-                                height: 1.55,
-                                color: Colors.white,
+                                height: 1.6,
+                                color: Color(0xE6FFFFFF),
                               ),
                             ),
-                          const SizedBox(height: 22),
+                          const SizedBox(height: 24),
                           Wrap(
                             spacing: 12,
                             runSpacing: 10,
@@ -367,10 +495,10 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: Colors.white,
                                   backgroundColor: Colors.white.withValues(
-                                    alpha: .08,
+                                    alpha: .1,
                                   ),
                                   side: BorderSide(
-                                    color: Colors.white.withValues(alpha: .3),
+                                    color: Colors.white.withValues(alpha: .28),
                                   ),
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 22,
@@ -468,107 +596,313 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
     ],
   );
 
-  List<Widget> _episodeSlivers() => [
-    SliverToBoxAdapter(
-      child: DesktopSectionTitle(
-        'Episodes',
-        trailing: _seasons.length > 1
-            ? Wrap(
-                spacing: 8,
-                children: [
-                  for (final season in _seasons)
-                    _SeasonChip(
-                      label: season.name ?? 'Season ${season.number}',
-                      selected: season.number == _selectedSeason,
-                      onTap: () => unawaited(_loadEpisodes(season.number)),
-                    ),
-                ],
-              )
-            : null,
-      ),
-    ),
-    if (_loadingEpisodes)
-      const SliverToBoxAdapter(
-        child: Padding(
-          padding: EdgeInsets.all(32),
-          child: Center(child: CircularProgressIndicator()),
+  Widget? _seasonPicker() => _seasons.length > 1
+      ? _SeasonPicker(
+          seasons: _seasons,
+          selected: _selectedSeason,
+          onSelected: (season) => unawaited(_loadEpisodes(season)),
+        )
+      : null;
+
+  /// What replaces the episodes while they load, fail or are missing; null
+  /// once there are episodes to show.
+  Widget? _episodeNotice() {
+    if (_loadingEpisodes) {
+      return const Padding(
+        padding: EdgeInsets.all(32),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (_episodeError case final error?) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Wrap(
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 12,
+          children: [
+            Text(error, style: const TextStyle(color: GlassTheme.muted)),
+            TextButton.icon(
+              onPressed: () {
+                final season = _selectedSeason;
+                unawaited(
+                  season == null ? _loadSeasons() : _loadEpisodes(season),
+                );
+              },
+              icon: const Icon(Symbols.refresh_rounded, size: 18),
+              label: const Text('Retry'),
+            ),
+          ],
         ),
-      )
-    else if (_episodeError != null)
-      SliverToBoxAdapter(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: DesktopMetrics.pagePadding,
-            vertical: 16,
-          ),
+      );
+    }
+    if (_episodes.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 16),
+        child: Text(
+          'No episodes are listed for this season yet.',
+          style: TextStyle(color: GlassTheme.muted),
+        ),
+      );
+    }
+    return null;
+  }
+
+  Widget _episodeTile(int index, {required bool compact}) {
+    final episode = _episodes[index];
+    final number = episode.number ?? index + 1;
+    final season = _selectedSeason ?? 1;
+    final last = _progress.last;
+    return _EpisodeTile(
+      episode: episode,
+      number: number,
+      aired: _aired(episode),
+      compact: compact,
+      progress: _progress.of(season, number),
+      lastWatched:
+          last != null && last.season == season && last.episode == number,
+      onPlay: () => widget.onPlayEpisode(context, _item, season, number),
+    );
+  }
+
+  /// The panel's contents: a heading with the season picker, then the
+  /// episodes, which scroll inside the panel.
+  Widget _episodeBrowser() {
+    final notice = _episodeNotice();
+    final picker = _seasonPicker();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 4),
           child: Row(
             children: [
-              Text(
-                _episodeError!,
-                style: const TextStyle(color: GlassTheme.muted),
+              const Text(
+                'Episodes',
+                style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800),
               ),
-              const SizedBox(width: 12),
-              TextButton.icon(
-                onPressed: () {
-                  final season = _selectedSeason;
-                  unawaited(
-                    season == null ? _loadSeasons() : _loadEpisodes(season),
-                  );
-                },
-                icon: const Icon(Symbols.refresh_rounded, size: 18),
-                label: const Text('Retry'),
-              ),
+              const Spacer(),
+              if (_episodes.isNotEmpty && !_loadingEpisodes)
+                Text(
+                  '${_episodes.length} episode${_episodes.length == 1 ? '' : 's'}',
+                  style: const TextStyle(fontSize: 12, color: GlassTheme.muted),
+                ),
             ],
           ),
         ),
-      )
-    else if (_episodes.isEmpty)
-      const SliverToBoxAdapter(
-        child: Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: DesktopMetrics.pagePadding,
-            vertical: 16,
+        if (picker != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8, bottom: 4),
+            child: picker,
           ),
-          child: Text(
-            'No episodes are listed for this season yet.',
-            style: TextStyle(color: GlassTheme.muted),
+        Divider(height: 17, color: Colors.white.withValues(alpha: .08)),
+        Expanded(
+          child: notice != null
+              ? Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Align(alignment: Alignment.topLeft, child: notice),
+                )
+              : _EpisodeList(
+                  count: _episodes.length,
+                  // The last-watched episode, so the list opens there.
+                  focusIndex: _lastWatchedIndex(),
+                  itemBuilder: (index) => _episodeTile(index, compact: true),
+                ),
+        ),
+      ],
+    );
+  }
+
+  int? _lastWatchedIndex() {
+    final last = _progress.last;
+    if (last == null || last.season != _selectedSeason) return null;
+    for (var i = 0; i < _episodes.length; i++) {
+      if ((_episodes[i].number ?? i + 1) == last.episode) return i;
+    }
+    return null;
+  }
+
+  List<Widget> _episodeSlivers() {
+    final notice = _episodeNotice();
+    return [
+      const SliverToBoxAdapter(child: DesktopSectionTitle('Episodes')),
+      if (_seasonPicker() case final picker?)
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: picker,
           ),
         ),
-      )
-    else
-      SliverLayoutBuilder(
-        builder: (context, constraints) {
-          final available =
-              constraints.crossAxisExtent - DesktopMetrics.pagePadding * 2;
-          final columns = (available / 420).floor().clamp(1, 4);
-          return SliverPadding(
+      if (notice != null)
+        SliverToBoxAdapter(
+          child: Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: DesktopMetrics.pagePadding,
             ),
-            sliver: SliverGrid(
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: columns,
-                crossAxisSpacing: 18,
-                mainAxisSpacing: 18,
-                mainAxisExtent: 128,
+            child: notice,
+          ),
+        )
+      else
+        SliverLayoutBuilder(
+          builder: (context, constraints) {
+            final available =
+                constraints.crossAxisExtent - DesktopMetrics.pagePadding * 2;
+            final columns = (available / 420).floor().clamp(1, 4);
+            return SliverPadding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: DesktopMetrics.pagePadding,
               ),
-              delegate: SliverChildBuilderDelegate((context, index) {
-                final episode = _episodes[index];
-                final number = episode.number ?? index + 1;
-                final season = _selectedSeason ?? 1;
-                return _EpisodeTile(
-                  episode: episode,
-                  number: number,
-                  aired: _aired(episode),
-                  onPlay: () =>
-                      widget.onPlayEpisode(context, _item, season, number),
-                );
-              }, childCount: _episodes.length),
-            ),
-          );
-        },
+              sliver: SliverGrid(
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: columns,
+                  crossAxisSpacing: 18,
+                  mainAxisSpacing: 18,
+                  mainAxisExtent: 128,
+                ),
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) => _episodeTile(index, compact: false),
+                  childCount: _episodes.length,
+                ),
+              ),
+            );
+          },
+        ),
+    ];
+  }
+}
+
+/// The frosted panel the episodes sit in over the backdrop. One blur, of a
+/// fixed size, so it stays cheap.
+class _EpisodePanel extends StatelessWidget {
+  const _EpisodePanel({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final radius = BorderRadius.circular(DesktopSurfaces.radius + 4);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: radius,
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x66000000),
+            blurRadius: 40,
+            offset: Offset(0, 18),
+          ),
+        ],
       ),
-  ];
+      child: ClipRRect(
+        borderRadius: radius,
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: DesktopSurfaces.glass,
+              borderRadius: radius,
+              border: Border.all(color: DesktopSurfaces.hairline),
+            ),
+            child: FocusTraversalGroup(child: child),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The panel's episodes, scrolled once to [focusIndex] when it is set.
+class _EpisodeList extends StatefulWidget {
+  const _EpisodeList({
+    required this.count,
+    required this.itemBuilder,
+    this.focusIndex,
+  });
+
+  final int count;
+  final Widget Function(int index) itemBuilder;
+  final int? focusIndex;
+
+  @override
+  State<_EpisodeList> createState() => _EpisodeListState();
+}
+
+class _EpisodeListState extends State<_EpisodeList> {
+  /// A row's usual height, for the first scroll; rows size to their text.
+  static const _rowExtent = 100.0;
+  final _scroll = ScrollController();
+  bool _scrolledToFocus = false;
+
+  @override
+  void didUpdateWidget(covariant _EpisodeList oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.count != widget.count) _scrolledToFocus = false;
+    _jumpToFocus();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _jumpToFocus();
+  }
+
+  void _jumpToFocus() {
+    final index = widget.focusIndex;
+    if (_scrolledToFocus || index == null || index == 0) return;
+    _scrolledToFocus = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scroll.hasClients) return;
+      final position = _scroll.position;
+      _scroll.jumpTo(
+        (index * _rowExtent - _rowExtent).clamp(0, position.maxScrollExtent),
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => ListView.builder(
+    controller: _scroll,
+    padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+    itemCount: widget.count,
+    itemBuilder: (context, index) => Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: widget.itemBuilder(index),
+    ),
+  );
+}
+
+class _SeasonPicker extends StatelessWidget {
+  const _SeasonPicker({
+    required this.seasons,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final List<TvSeason> seasons;
+  final int? selected;
+  final ValueChanged<int> onSelected;
+
+  @override
+  Widget build(BuildContext context) => SingleChildScrollView(
+    scrollDirection: Axis.horizontal,
+    padding: const EdgeInsets.symmetric(horizontal: 20),
+    child: Row(
+      children: [
+        for (final season in seasons) ...[
+          if (season != seasons.first) const SizedBox(width: 8),
+          _SeasonChip(
+            label: season.name ?? 'Season ${season.number}',
+            selected: season.number == selected,
+            onTap: () => onSelected(season.number),
+          ),
+        ],
+      ],
+    ),
+  );
 }
 
 class _Poster extends StatelessWidget {
@@ -651,6 +985,7 @@ class _SeasonChip extends StatelessWidget {
     onSelected: (_) => onTap(),
     showCheckmark: false,
     selectedColor: GlassTheme.primary.withValues(alpha: .22),
+    backgroundColor: Colors.white.withValues(alpha: .04),
     labelStyle: TextStyle(
       fontWeight: FontWeight.w700,
       color: selected ? GlassTheme.coralBright : Colors.white70,
@@ -669,12 +1004,22 @@ class _EpisodeTile extends StatefulWidget {
     required this.number,
     required this.aired,
     required this.onPlay,
+    this.compact = false,
+    this.progress,
+    this.lastWatched = false,
   });
 
   final TvEpisode episode;
   final int number;
   final bool aired;
   final VoidCallback onPlay;
+
+  /// The panel's row: a smaller still, one line of overview.
+  final bool compact;
+  final EpisodeProgress? progress;
+
+  /// The episode watched most recently in this series.
+  final bool lastWatched;
 
   @override
   State<_EpisodeTile> createState() => _EpisodeTileState();
@@ -694,6 +1039,21 @@ class _EpisodeTileState extends State<_EpisodeTile> {
     final airDate = episode.airDate;
     final enabled = widget.aired;
     final lifted = enabled && (_hovered || _focused);
+    final compact = widget.compact;
+    final progress = widget.progress;
+    final watched = progress?.isWatched ?? false;
+    final inProgress = progress?.isInProgress ?? false;
+    final stillWidth = compact ? 136.0 : 168.0;
+    final stillHeight = compact ? 76.0 : 106.0;
+    final status = !enabled
+        ? 'Airs $airDate'
+        : [
+            if (inProgress && progress!.timeLeft.isNotEmpty)
+              progress.timeLeft
+            else if (runtime != null && runtime > 0)
+              '$runtime min',
+            if (airDate.isNotEmpty) airDate,
+          ].join(' · ');
     return FocusableActionDetector(
       enabled: enabled,
       mouseCursor: enabled ? SystemMouseCursors.click : MouseCursor.defer,
@@ -712,24 +1072,34 @@ class _EpisodeTileState extends State<_EpisodeTile> {
         child: Semantics(
           button: enabled,
           enabled: enabled,
-          label: 'Episode ${widget.number}, $title',
+          label: [
+            'Episode ${widget.number}, $title',
+            if (watched) 'watched',
+            if (inProgress) 'in progress',
+          ].join(', '),
           child: AnimatedContainer(
             duration: desktopMotion(context, 160),
             decoration: BoxDecoration(
               color: lifted
                   ? Colors.white.withValues(alpha: .08)
+                  : widget.lastWatched
+                  ? GlassTheme.primary.withValues(alpha: .08)
+                  : compact
+                  ? Colors.transparent
                   : GlassTheme.surface,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
                 color: _focused
                     ? GlassTheme.coralBright
+                    : widget.lastWatched
+                    ? GlassTheme.primary.withValues(alpha: .45)
                     : lifted
                     ? Colors.white.withValues(alpha: .25)
-                    : Colors.white.withValues(alpha: .06),
+                    : Colors.white.withValues(alpha: compact ? 0 : .06),
                 width: _focused ? 2.5 : 1,
               ),
             ),
-            padding: const EdgeInsets.all(10),
+            padding: EdgeInsets.all(compact ? 8 : 10),
             child: Opacity(
               opacity: enabled ? 1 : .5,
               child: Row(
@@ -737,8 +1107,8 @@ class _EpisodeTileState extends State<_EpisodeTile> {
                   ClipRRect(
                     borderRadius: BorderRadius.circular(10),
                     child: SizedBox(
-                      width: 168,
-                      height: 106,
+                      width: stillWidth,
+                      height: stillHeight,
                       child: Stack(
                         fit: StackFit.expand,
                         children: [
@@ -747,20 +1117,44 @@ class _EpisodeTileState extends State<_EpisodeTile> {
                             Image.network(
                               'https://image.tmdb.org/t/p/w300$still',
                               fit: BoxFit.cover,
-                              cacheWidth:
-                                  (168 * MediaQuery.devicePixelRatioOf(context))
-                                      .round(),
+                              cacheWidth: posterDecodeWidth(
+                                stillWidth *
+                                    MediaQuery.devicePixelRatioOf(context),
+                              ),
                               frameBuilder: posterFadeIn(context),
                               errorBuilder: (_, _, _) =>
                                   const SizedBox.shrink(),
                             ),
+                          if (watched && !lifted)
+                            const ColoredBox(color: Color(0x66000000)),
                           if (lifted)
                             Center(
                               child: Icon(
                                 Symbols.play_circle_rounded,
                                 fill: 1,
-                                size: 40,
+                                size: compact ? 34 : 40,
                                 color: Colors.white.withValues(alpha: .92),
+                              ),
+                            )
+                          else if (watched)
+                            Center(
+                              child: Icon(
+                                Symbols.check_circle_rounded,
+                                fill: 1,
+                                size: 26,
+                                color: Colors.white.withValues(alpha: .9),
+                              ),
+                            ),
+                          if (inProgress)
+                            Positioned(
+                              left: 0,
+                              right: 0,
+                              bottom: 0,
+                              child: LinearProgressIndicator(
+                                value: progress!.fraction,
+                                minHeight: 3,
+                                color: GlassTheme.primary,
+                                backgroundColor: Colors.black54,
                               ),
                             ),
                         ],
@@ -773,34 +1167,45 @@ class _EpisodeTileState extends State<_EpisodeTile> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        if (widget.lastWatched)
+                          Text(
+                            'LAST WATCHED',
+                            style: TextStyle(
+                              color: GlassTheme.coralBright,
+                              fontSize: 9.5,
+                              letterSpacing: 1.3,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
                         Text(
                           '${widget.number}. $title',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.w800,
-                            fontSize: 14,
+                            fontSize: compact ? 13.5 : 14,
+                            color: watched && !lifted
+                                ? Colors.white70
+                                : Colors.white,
                           ),
                         ),
                         const SizedBox(height: 3),
                         Text(
-                          enabled
-                              ? [
-                                  if (runtime != null && runtime > 0)
-                                    '$runtime min',
-                                  if (airDate.isNotEmpty) airDate,
-                                ].join(' · ')
-                              : 'Airs $airDate',
-                          style: const TextStyle(
+                          status,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
                             fontSize: 12,
-                            color: GlassTheme.muted,
+                            color: inProgress
+                                ? GlassTheme.coralBright
+                                : GlassTheme.muted,
                           ),
                         ),
                         if (overview.isNotEmpty) ...[
                           const SizedBox(height: 5),
                           Text(
                             overview,
-                            maxLines: 2,
+                            maxLines: compact ? 1 : 2,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               fontSize: 12.5,

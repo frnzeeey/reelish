@@ -114,13 +114,28 @@ class _Page extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => Offstage(
-    offstage: !active,
-    child: TickerMode(
-      enabled: active,
-      child: ExcludeFocus(excluding: !active, child: child),
-    ),
-  );
+  Widget build(BuildContext context) {
+    final duration = desktopMotion(context, 220);
+    return Offstage(
+      offstage: !active,
+      // Outside the TickerMode, so a page that was hidden fades back in
+      // from nothing rather than from where its muted fade stopped.
+      child: AnimatedOpacity(
+        opacity: active ? 1 : 0,
+        duration: duration,
+        curve: DesktopSurfaces.curve,
+        child: AnimatedSlide(
+          offset: active ? Offset.zero : const Offset(0, .015),
+          duration: duration,
+          curve: DesktopSurfaces.curve,
+          child: TickerMode(
+            enabled: active,
+            child: ExcludeFocus(excluding: !active, child: child),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _Sidebar extends StatelessWidget {
@@ -146,75 +161,120 @@ class _Sidebar extends StatelessWidget {
           ? DesktopShell.expandedWidth
           : DesktopShell.collapsedWidth,
       decoration: BoxDecoration(
-        color: const Color(0xFF0F0F15),
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color.alphaBlend(
+              GlassTheme.primary.withValues(alpha: .05),
+              DesktopSurfaces.sidebar,
+            ),
+            DesktopSurfaces.sidebar,
+          ],
+          stops: const [0, .45],
+        ),
         border: Border(
           right: BorderSide(color: Colors.white.withValues(alpha: .06)),
         ),
       ),
       child: FocusTraversalGroup(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(22, 26, 12, 30),
-              child: Row(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(11),
-                    child: Image.asset(
-                      'assets/icons/reelish_icon.png',
-                      width: 40,
-                      height: 40,
-                      cacheWidth: (40 * MediaQuery.devicePixelRatioOf(context))
-                          .round(),
+        child: _FillOrScroll(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(22, 26, 12, 30),
+                child: Row(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(11),
+                      child: Image.asset(
+                        'assets/icons/reelish_icon.png',
+                        width: 40,
+                        height: 40,
+                        cacheWidth:
+                            (40 * MediaQuery.devicePixelRatioOf(context))
+                                .round(),
+                      ),
                     ),
-                  ),
-                  Flexible(
-                    child: AnimatedOpacity(
-                      duration: duration,
-                      opacity: expanded ? 1 : 0,
-                      child: const Padding(
-                        padding: EdgeInsets.only(left: 12),
-                        child: Text.rich(
-                          TextSpan(
-                            children: [
-                              TextSpan(text: 'reel'),
-                              TextSpan(
-                                text: 'ish',
-                                style: TextStyle(color: Color(0xFFFF7889)),
-                              ),
-                            ],
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.clip,
-                          softWrap: false,
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -.6,
+                    Flexible(
+                      child: AnimatedOpacity(
+                        duration: duration,
+                        opacity: expanded ? 1 : 0,
+                        child: const Padding(
+                          padding: EdgeInsets.only(left: 12),
+                          child: Text.rich(
+                            TextSpan(
+                              children: [
+                                TextSpan(text: 'reel'),
+                                TextSpan(
+                                  text: 'ish',
+                                  style: TextStyle(color: Color(0xFFFF7889)),
+                                ),
+                              ],
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.clip,
+                            softWrap: false,
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -.6,
+                            ),
                           ),
                         ),
                       ),
                     ),
+                  ],
+                ),
+              ),
+              // Browsing first; Plugins and Settings sit at the foot, in the
+              // same order for Tab and the arrow keys.
+              for (final destination in TvDestination.values) ...[
+                if (destination == TvDestination.plugins) ...[
+                  const Spacer(),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(26, 0, 26, 10),
+                    child: Divider(
+                      height: 1,
+                      color: Colors.white.withValues(alpha: .07),
+                    ),
                   ),
                 ],
-              ),
-            ),
-            for (final destination in TvDestination.values)
-              _SidebarItem(
-                destination: destination,
-                selected: destination == selected,
-                expanded: expanded,
-                onTap: () => onSelected(destination),
-              ),
-            const Spacer(),
-            _SidebarToggle(expanded: expanded, onTap: onToggle),
-            const SizedBox(height: 18),
-          ],
+                _SidebarItem(
+                  destination: destination,
+                  selected: destination == selected,
+                  expanded: expanded,
+                  onTap: () => onSelected(destination),
+                ),
+              ],
+              const SizedBox(height: 6),
+              _SidebarToggle(expanded: expanded, onTap: onToggle),
+              const SizedBox(height: 18),
+            ],
+          ),
         ),
       ),
     );
   }
+}
+
+/// Fills the sidebar's height, so its foot sits at the bottom, and scrolls
+/// instead of overflowing when the window is shorter than its items.
+class _FillOrScroll extends StatelessWidget {
+  const _FillOrScroll({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) => SingleChildScrollView(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minHeight: constraints.maxHeight),
+        child: IntrinsicHeight(child: child),
+      ),
+    ),
+  );
 }
 
 class _SidebarItem extends StatefulWidget {
@@ -273,12 +333,22 @@ class _SidebarItemState extends State<_SidebarItem> {
               curve: Curves.easeOutCubic,
               height: 46,
               decoration: BoxDecoration(
+                // The selected page fades out to the right, so the pill
+                // reads as light on the item rather than a filled box.
+                gradient: selected
+                    ? LinearGradient(
+                        colors: [
+                          accent.withValues(alpha: _hovered ? .26 : .2),
+                          accent.withValues(alpha: _hovered ? .1 : .05),
+                        ],
+                      )
+                    : null,
                 color: selected
-                    ? accent.withValues(alpha: _hovered ? .22 : .16)
+                    ? null
                     : _hovered
-                    ? Colors.white.withValues(alpha: .07)
+                    ? Colors.white.withValues(alpha: .06)
                     : Colors.transparent,
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: _focused ? GlassTheme.coralBright : Colors.transparent,
                   width: 2,

@@ -40,6 +40,21 @@ abstract final class DesktopMetrics {
 /// instead of reloading every poster.
 int posterDecodeWidth(double pixels) => ((pixels / 64).ceil() * 64).toInt();
 
+/// The Windows interface's surfaces, shared by the shell, hero, details and
+/// pages so they read as one system. Phone and TV keep their own.
+abstract final class DesktopSurfaces {
+  /// The sidebar, a step darker than the page so the artwork leads.
+  static const sidebar = Color(0xFF0D0D12);
+
+  /// Frosted panels laid over artwork (episode panel, previews).
+  static const glass = Color(0xB3121218);
+  static const hairline = Color(0x1FFFFFFF);
+  static const radius = 14.0;
+
+  /// Entrances and selection changes; hover uses [desktopMotion]'s default.
+  static const curve = Curves.easeOutCubic;
+}
+
 Duration desktopMotion(BuildContext context, [int milliseconds = 180]) =>
     MediaQuery.disableAnimationsOf(context)
     ? Duration.zero
@@ -477,18 +492,32 @@ class DesktopSectionTitle extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.fromLTRB(
       DesktopMetrics.pagePadding,
-      28,
+      30,
       DesktopMetrics.pagePadding,
-      12,
+      10,
     ),
     child: Row(
       children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 21,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -.3,
+        // A short accent rule ties each row to the hero's label.
+        Container(
+          width: 4,
+          height: 18,
+          margin: const EdgeInsets.only(right: 12),
+          decoration: BoxDecoration(
+            color: GlassTheme.primary,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        Flexible(
+          child: Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 21,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -.3,
+            ),
           ),
         ),
         const Spacer(),
@@ -896,40 +925,58 @@ class DesktopPageHeader extends StatelessWidget {
   final Widget? trailing;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(
-      DesktopMetrics.pagePadding,
-      32,
-      DesktopMetrics.pagePadding,
-      12,
+  Widget build(BuildContext context) => DecoratedBox(
+    // A faint accent light in the top corner, so pages without artwork
+    // still share the hero's atmosphere.
+    decoration: BoxDecoration(
+      gradient: RadialGradient(
+        center: const Alignment(-1, -1.6),
+        radius: 1.6,
+        colors: [
+          GlassTheme.primary.withValues(alpha: .1),
+          GlassTheme.primary.withValues(alpha: 0),
+        ],
+      ),
     ),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 34,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -.8,
-                ),
-              ),
-              if (subtitle case final subtitle?) ...[
-                const SizedBox(height: 4),
+    child: Padding(
+      padding: const EdgeInsets.fromLTRB(
+        DesktopMetrics.pagePadding,
+        40,
+        DesktopMetrics.pagePadding,
+        14,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 Text(
-                  subtitle,
-                  style: const TextStyle(color: GlassTheme.muted, fontSize: 14),
+                  title,
+                  style: const TextStyle(
+                    fontSize: 36,
+                    height: 1.1,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -1,
+                  ),
                 ),
+                if (subtitle case final subtitle?) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      color: GlassTheme.muted,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
-        ),
-        ?trailing,
-      ],
+          ?trailing,
+        ],
+      ),
     ),
   );
 }

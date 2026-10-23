@@ -198,6 +198,20 @@ class _RootTitle extends StatelessWidget {
   );
 }
 
+/// Marks settings pages shown in another page's pane (the Windows settings
+/// page) rather than as their own route. Their header has no Back button
+/// there: the pane's list is the way back, and Back would leave the app's
+/// page behind the pane. Unused on phone and TV, where nothing changes.
+class SettingsEmbedding extends InheritedWidget {
+  const SettingsEmbedding({super.key, required super.child});
+
+  static bool of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<SettingsEmbedding>() != null;
+
+  @override
+  bool updateShouldNotify(SettingsEmbedding oldWidget) => false;
+}
+
 /// Pinned header with a back button, used by every settings sub-screen.
 class SettingsHeader extends StatelessWidget {
   const SettingsHeader({
@@ -217,15 +231,22 @@ class SettingsHeader extends StatelessWidget {
   Widget build(BuildContext context) => SafeArea(
     bottom: false,
     child: Padding(
-      padding: const EdgeInsets.fromLTRB(8, 6, 16, 10),
+      padding: EdgeInsets.fromLTRB(
+        SettingsEmbedding.of(context) ? 20 : 8,
+        6,
+        16,
+        10,
+      ),
       child: Row(
         children: [
-          IconButton(
-            tooltip: 'Back',
-            onPressed: onBack,
-            icon: const Icon(Symbols.arrow_back_rounded),
-          ),
-          const SizedBox(width: 6),
+          if (!SettingsEmbedding.of(context)) ...[
+            IconButton(
+              tooltip: 'Back',
+              onPressed: onBack,
+              icon: const Icon(Symbols.arrow_back_rounded),
+            ),
+            const SizedBox(width: 6),
+          ],
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

@@ -575,6 +575,33 @@ class TmdbService {
     return MediaDetails.fromTmdb(data);
   }
 
+  /// The title's logo artwork as an image URL, English or text-free, or ''
+  /// when TMDB has none. A PNG only (some logos are SVG, which images here
+  /// cannot draw). Cached for a day and sent behind other requests: it is
+  /// decoration, used by the Windows Spotlight.
+  Future<String> logo(MediaItem item) async {
+    final id = int.tryParse(item.id);
+    if (id == null) return '';
+    final data = await _get(
+      '/${item.type == 'series' ? 'tv' : 'movie'}/$id/images',
+      params: const {'include_image_language': 'en,null'},
+      ttl: TmdbCacheTtl.metadata,
+      priority: _TmdbRequestPriority.deferred,
+    );
+    final logos = [
+      for (final logo in data['logos'] is List ? data['logos'] as List : [])
+        if (logo is Map &&
+            '${logo['file_path'] ?? ''}'.toLowerCase().endsWith('.png'))
+          logo,
+    ];
+    final best =
+        logos.where((logo) => logo['iso_639_1'] == 'en').firstOrNull ??
+        logos.firstOrNull;
+    return best == null
+        ? ''
+        : 'https://image.tmdb.org/t/p/w500${best['file_path']}';
+  }
+
   /// Searches movies and series of any age; discovery freshness rules do not
   /// apply, so older titles stay findable.
   Future<List<MediaItem>> search(

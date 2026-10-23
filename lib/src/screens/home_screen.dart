@@ -14,6 +14,8 @@ import '../models/stream_source.dart';
 import '../navigation/app_transitions.dart';
 import '../desktop/desktop_details_screen.dart';
 import '../desktop/desktop_pages.dart';
+import '../desktop/desktop_plugins_page.dart';
+import '../desktop/desktop_settings_page.dart';
 import '../desktop/desktop_shell.dart';
 import '../platform/device_capabilities.dart';
 import '../services/media_catalog_rules.dart';
@@ -426,6 +428,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   isFavorite: (target) =>
                       _favoriteKeys.contains(_favoriteKey(target)),
                   onToggleFavorite: _toggleFavorite,
+                  seriesProgress: _storage.seriesProgress,
                 )
               : DeviceCapabilities.isTv
               ? TvMediaDetailsScreen(
@@ -2238,20 +2241,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               onToggleFavorite: _toggleFavorite,
               onHistoryChanged: () => unawaited(_loadHistory()),
             ),
-            TvDestination.plugins => DesktopFramedPage(
-              child: PluginsScreen(
-                pluginService: _providerPlugins,
-                pluginLibrary: _pluginLibrary,
-              ),
+            TvDestination.plugins => DesktopPluginsPage(
+              pluginService: _providerPlugins,
+              pluginLibrary: _pluginLibrary,
             ),
-            TvDestination.settings => DesktopFramedPage(
-              child: SettingsScreen(
-                accentSettings: widget.accentSettings,
-                onAppearanceSettings: () =>
-                    unawaited(_openAppearanceSettings()),
-                onPlaybackSettings: () =>
-                    unawaited(_openPlaybackSettings(availablePlugins)),
-              ),
+            TvDestination.settings => DesktopSettingsPage(
+              accentSettings: widget.accentSettings,
+              playbackSettings: _playbackSettings,
+              plugins: availablePlugins,
             ),
           },
         ),

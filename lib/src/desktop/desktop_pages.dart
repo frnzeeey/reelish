@@ -92,6 +92,7 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
           onDetails: widget.onOpen,
           isFavorite: catalog.isFavorite,
           onToggleFavorite: widget.onToggleFavorite,
+          logoOf: catalog.tmdb.logo,
         )
       else
         const SizedBox(key: ValueKey('hero-space'), height: 32),
@@ -490,10 +491,17 @@ class _DesktopSearchPageState extends State<DesktopSearchPage> {
                     ),
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 20,
-                      vertical: 18,
+                      vertical: 20,
+                    ),
+                    fillColor: Colors.white.withValues(alpha: .05),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(
+                        color: DesktopSurfaces.hairline,
+                      ),
                     ),
                     focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(15),
+                      borderRadius: BorderRadius.circular(16),
                       borderSide: BorderSide(
                         color: GlassTheme.primary,
                         width: 1.6,
@@ -637,10 +645,17 @@ class _DesktopLibraryPageState extends State<DesktopLibraryPage> {
     ];
     return CustomScrollView(
       slivers: [
-        const SliverToBoxAdapter(
+        SliverToBoxAdapter(
           child: DesktopPageHeader(
             title: 'My library',
-            subtitle: 'Everything you are watching and saving.',
+            subtitle: rows.isEmpty
+                ? 'Everything you are watching and saving.'
+                : [
+                    if (continuing.isNotEmpty)
+                      '${continuing.length} in progress',
+                    '${_favorites.length} on My list',
+                    '${_history.length} in history',
+                  ].join('  ·  '),
           ),
         ),
         if (rows.isEmpty)
@@ -659,26 +674,4 @@ class _DesktopLibraryPageState extends State<DesktopLibraryPage> {
       ],
     );
   }
-}
-
-/// Hosts an existing screen (Plugins, Settings) at a comfortable reading
-/// width in the desktop shell.
-class DesktopFramedPage extends StatelessWidget {
-  const DesktopFramedPage({
-    super.key,
-    required this.child,
-    this.maxWidth = 960,
-  });
-
-  final Widget child;
-  final double maxWidth;
-
-  @override
-  Widget build(BuildContext context) => Align(
-    alignment: Alignment.topCenter,
-    child: ConstrainedBox(
-      constraints: BoxConstraints(maxWidth: maxWidth),
-      child: child,
-    ),
-  );
 }
