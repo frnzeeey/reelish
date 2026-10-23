@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -106,6 +107,36 @@ void main() {
     expect(seeked, const Duration(minutes: 50));
     expect(scrubbing, [true, false]);
     expect(find.text('50:00'), findsNothing);
+  });
+
+  testWidgets('a mouse over the bar shows where a click would seek', (
+    tester,
+  ) async {
+    final controller = _controller();
+    addTearDown(controller.dispose);
+    final seeks = <Duration>[];
+    await tester.pumpWidget(
+      _app(
+        Center(
+          child: SizedBox(
+            width: 400,
+            child: PlayerProgressBar(controller: controller, onSeek: seeks.add),
+          ),
+        ),
+      ),
+    );
+    final bar = tester.getRect(find.byType(PlayerProgressBar));
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    addTearDown(mouse.removePointer);
+    await mouse.addPointer(location: bar.centerLeft - const Offset(20, 0));
+    await mouse.moveTo(bar.centerLeft + const Offset(100, 0));
+    await tester.pump();
+    // A quarter of a 100 minute video; hovering does not seek.
+    expect(find.text('25:00'), findsOneWidget);
+    expect(seeks, isEmpty);
+    await mouse.moveTo(bar.centerLeft - const Offset(20, 0));
+    await tester.pump();
+    expect(find.text('25:00'), findsNothing);
   });
 
   testWidgets('overlay controls call through and hide unused actions', (

@@ -738,6 +738,9 @@ class PlayerIconButton extends StatelessWidget {
         child: InkWell(
           onTap: onPressed,
           focusColor: _focusFill,
+          // Visible over any video, for a mouse (Windows); touch and the
+          // TV remote never hover.
+          hoverColor: Colors.white.withValues(alpha: .14),
           child: SizedBox.square(
             dimension: size,
             child: Stack(

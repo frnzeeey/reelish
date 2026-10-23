@@ -99,6 +99,11 @@ class _PlayerProgressBarState extends State<PlayerProgressBar> {
   /// Scrub position as a fraction of the duration while dragging.
   double? _drag;
 
+  /// Where a mouse pointer rests over the bar, as a fraction: the bar
+  /// thickens and shows the time a click there would seek to. Only a mouse
+  /// hovers, so touch and the TV remote never see it.
+  double? _hover;
+
   Duration get _duration => widget.controller.value.duration;
 
   double _fractionAt(double dx, double width) =>
@@ -217,14 +222,28 @@ class _PlayerProgressBarState extends State<PlayerProgressBar> {
       if (_duration <= Duration.zero) return;
       widget.onSeek(_at(_fractionAt(details.localPosition.dx, width)));
     },
-    child: SizedBox(
+    child: MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onHover: (event) =>
+          setState(() => _hover = _fractionAt(event.localPosition.dx, width)),
+      onExit: (_) => setState(() => _hover = null),
+      child: _bar(width, drag),
+    ),
+  );
+
+  Widget _bar(double width, double? drag) {
+    // The time shown above the bar: the scrub, else where a click would go.
+    final preview = drag ?? (_duration > Duration.zero ? _hover : null);
+    return SizedBox(
       height: 36,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           Positioned.fill(
             child: TweenAnimationBuilder<double>(
-              tween: Tween(end: drag == null && !_focused ? 0 : 1),
+              tween: Tween(
+                end: drag == null && !_focused && _hover == null ? 0 : 1,
+              ),
               duration: const Duration(milliseconds: 160),
               curve: Curves.easeOutCubic,
               builder: (context, emphasis, _) => CustomPaint(
@@ -237,9 +256,9 @@ class _PlayerProgressBarState extends State<PlayerProgressBar> {
               ),
             ),
           ),
-          if (drag != null)
+          if (preview != null)
             Positioned(
-              left: (drag * width - 36).clamp(0.0, math.max(0, width - 72)),
+              left: (preview * width - 36).clamp(0.0, math.max(0, width - 72)),
               bottom: 30,
               width: 72,
               child: IgnorePointer(
@@ -256,7 +275,7 @@ class _PlayerProgressBarState extends State<PlayerProgressBar> {
                         vertical: 4,
                       ),
                       child: Text(
-                        formatPlaybackTime(_at(drag)),
+                        formatPlaybackTime(_at(preview)),
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
@@ -270,8 +289,8 @@ class _PlayerProgressBarState extends State<PlayerProgressBar> {
             ),
         ],
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _ProgressPainter extends CustomPainter {

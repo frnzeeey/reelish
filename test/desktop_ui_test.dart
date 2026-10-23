@@ -52,10 +52,10 @@ void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
   group('DesktopMetrics', () {
-    test('posters stay between 150 and 230 px at every window size', () {
+    test('posters stay between 140 and 220 px at every window size', () {
       for (final width in [640.0, 900.0, 1240.0, 1700.0, 2400.0, 3700.0]) {
         final poster = DesktopMetrics.posterWidth(width);
-        expect(poster, inInclusiveRange(150, 230), reason: '$width');
+        expect(poster, inInclusiveRange(140, 220), reason: '$width');
         final columns = DesktopMetrics.columns(width);
         final used = columns * poster + (columns - 1) * DesktopMetrics.gap;
         expect(used, lessThanOrEqualTo(width + .5), reason: '$width');

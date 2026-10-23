@@ -4,10 +4,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:onfeed/src/desktop/desktop_details_screen.dart';
 import 'package:onfeed/src/desktop/desktop_hero.dart';
+import 'package:onfeed/src/desktop/desktop_pages.dart';
 import 'package:onfeed/src/desktop/desktop_shell.dart';
+import 'package:onfeed/src/desktop/desktop_widgets.dart';
 import 'package:onfeed/src/models/episode_progress.dart';
 import 'package:onfeed/src/models/media_details.dart';
 import 'package:onfeed/src/models/media_item.dart';
+import 'package:onfeed/src/services/paged_feed_controller.dart';
 import 'package:onfeed/src/services/tmdb_service.dart';
 import 'package:onfeed/src/theme/glass_theme.dart';
 
@@ -396,5 +399,97 @@ void main() {
         });
       }
     }
+  });
+
+  group('Grids and rows', () {
+    List<MediaItem> page(int number) => [
+      for (var i = 0; i < 20; i++)
+        MediaItem(id: '$number-$i', type: 'movie', name: 'Film $number-$i'),
+    ];
+
+    PagedFeedController feed(List<int> asked) => PagedFeedController(
+      label: 'Test',
+      fetch: (number, {previous, required forceRefresh, onRevalidated}) async {
+        asked.add(number);
+        return CatalogPage(items: page(number), page: number, totalPages: 5);
+      },
+    );
+
+    Future<void> pumpCatalog(
+      WidgetTester tester,
+      PagedFeedController feed,
+      Size size,
+    ) async {
+      await _setSize(tester, size);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: GlassTheme.dark,
+          home: Scaffold(
+            body: DesktopCatalogPage(
+              title: 'Movies',
+              subtitle: 'New and noteworthy films.',
+              feed: feed,
+              onOpen: (_) {},
+              isFavorite: (_) => false,
+            ),
+          ),
+        ),
+      );
+      for (var i = 0; i < 6; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+    }
+
+    testWidgets('a first page that does not fill the window loads the next', (
+      tester,
+    ) async {
+      final asked = <int>[];
+      final movies = feed(asked);
+      addTearDown(movies.dispose);
+      // Wide and tall: twenty posters, two rows, nothing to scroll.
+      await pumpCatalog(tester, movies, const Size(2600, 1600));
+      expect(asked, [1, 2]);
+      expect(find.text('Film 2-0', skipOffstage: false), findsOneWidget);
+    });
+
+    testWidgets('a page that fills the window waits for the scroll', (
+      tester,
+    ) async {
+      final asked = <int>[];
+      final movies = feed(asked);
+      addTearDown(movies.dispose);
+      await pumpCatalog(tester, movies, const Size(1280, 720));
+      expect(asked, [1]);
+    });
+
+    test('a laptop window shows five posters a row, a 1080p one eight', () {
+      // Content width beside the expanded sidebar, less the page margins.
+      double content(double window) =>
+          window - DesktopShell.expandedWidth - DesktopMetrics.pagePadding * 2;
+      expect(DesktopMetrics.columns(content(1280)), 5);
+      expect(DesktopMetrics.columns(content(1920)), 8);
+    });
+
+    testWidgets('Continue watching cards say what is left', (tester) async {
+      await _setSize(tester, const Size(1600, 900));
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: GlassTheme.dark,
+          home: Scaffold(
+            body: DesktopMediaRow(
+              title: 'Continue watching',
+              items: const [
+                MediaItem(id: '1', type: 'movie', name: 'Film', year: '2024'),
+              ],
+              onOpen: (_) {},
+              progressOf: (_) => .4,
+              captionOf: (_) => '34 min left',
+            ),
+          ),
+        ),
+      );
+      expect(find.text('34 min left'), findsOneWidget);
+      expect(find.text('2024 · Movie'), findsNothing);
+    });
   });
 }

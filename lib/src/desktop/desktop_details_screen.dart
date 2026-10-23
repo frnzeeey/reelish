@@ -244,6 +244,9 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
     return SizedBox(
       height: height,
       child: Stack(
+        // Unclipped, so the poster's and panel's shadows fade out below
+        // the header rather than stop at its edge.
+        clipBehavior: Clip.none,
         fit: StackFit.expand,
         children: [
           const ColoredBox(color: GlassTheme.surface),
@@ -548,7 +551,7 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
           itemBuilder: (context, index) {
             final member = cast[index];
             return SizedBox(
-              width: 96,
+              width: 108,
               child: Column(
                 children: [
                   CircleAvatar(
@@ -787,7 +790,7 @@ class _EpisodePanel extends StatelessWidget {
           BoxShadow(
             color: Color(0x66000000),
             blurRadius: 40,
-            offset: Offset(0, 18),
+            offset: Offset(0, 10),
           ),
         ],
       ),
@@ -864,15 +867,29 @@ class _EpisodeListState extends State<_EpisodeList> {
   }
 
   @override
-  Widget build(BuildContext context) => ListView.builder(
-    controller: _scroll,
-    padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-    itemCount: widget.count,
-    itemBuilder: (context, index) => Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: widget.itemBuilder(index),
+  Widget build(BuildContext context) => ShaderMask(
+    // The last rows fade out at the panel's foot, so a list that goes on
+    // reads as one that scrolls; the end padding lets the last row clear
+    // the fade.
+    blendMode: BlendMode.dstIn,
+    shaderCallback: (bounds) => LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: const [Colors.white, Colors.white, Colors.transparent],
+      stops: [0, 1 - (_fade / bounds.height).clamp(0, 1), 1],
+    ).createShader(bounds),
+    child: ListView.builder(
+      controller: _scroll,
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, _fade),
+      itemCount: widget.count,
+      itemBuilder: (context, index) => Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: widget.itemBuilder(index),
+      ),
     ),
   );
+
+  static const _fade = 36.0;
 }
 
 class _SeasonPicker extends StatelessWidget {
@@ -918,9 +935,9 @@ class _Poster extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withValues(alpha: .6),
-          blurRadius: 30,
-          offset: const Offset(0, 14),
+          color: Colors.black.withValues(alpha: .45),
+          blurRadius: 36,
+          offset: const Offset(0, 8),
         ),
       ],
     ),

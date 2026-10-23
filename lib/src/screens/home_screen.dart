@@ -2211,6 +2211,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               onRetry: () => unawaited(_reloadActiveFeed()),
               onAddSource: () =>
                   ProviderInstallerModal.show(context, _providerPlugins),
+              resumeLabel: (item) => _resumeSummary(item).label,
             ),
             TvDestination.movies => DesktopCatalogPage(
               title: 'Movies',

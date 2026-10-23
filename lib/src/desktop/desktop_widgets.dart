@@ -19,10 +19,11 @@ abstract final class DesktopMetrics {
   /// Text under a poster: title and one line of metadata.
   static const captionHeight = 54.0;
 
-  /// Poster width that fills [available] with whole cards, 150–230 px.
+  /// Poster width that fills [available] with whole cards, 140–220 px:
+  /// about 185 px, so a laptop shows five and a 1080p monitor eight.
   static double posterWidth(double available) {
-    final count = (available / 205).floor().clamp(4, 12);
-    return ((available - gap * (count - 1)) / count).clamp(150.0, 230.0);
+    final count = (available / 185).floor().clamp(5, 12);
+    return ((available - gap * (count - 1)) / count).clamp(140.0, 220.0);
   }
 
   /// Columns of [posterWidth]-sized cards that fit [available].
@@ -55,6 +56,22 @@ abstract final class DesktopSurfaces {
   static const curve = Curves.easeOutCubic;
 }
 
+/// Calls [loadMore] after this frame if [controller]'s content does not
+/// fill its view. A tall or wide window can show a whole first page with
+/// nothing to scroll, so the scroll that asks for the next page could never
+/// happen. Content that scrolls at all is left to that scroll, so a page
+/// that fills the window costs no extra request.
+void loadMoreIfShort(ScrollController controller, VoidCallback loadMore) {
+  SchedulerBinding.instance.addPostFrameCallback((_) {
+    if (!controller.hasClients) return;
+    final position = controller.position;
+    if (position.hasContentDimensions &&
+        position.maxScrollExtent <= position.minScrollExtent) {
+      loadMore();
+    }
+  });
+}
+
 Duration desktopMotion(BuildContext context, [int milliseconds = 180]) =>
     MediaQuery.disableAnimationsOf(context)
     ? Duration.zero
@@ -76,6 +93,7 @@ class DesktopPosterCard extends StatefulWidget {
     this.onToggleFavorite,
     this.onRemove,
     this.removeLabel = 'Remove from watch history',
+    this.caption = '',
   });
 
   final MediaItem item;
@@ -102,6 +120,10 @@ class DesktopPosterCard extends StatefulWidget {
   /// library). Shown as a cross on hover and focus; Delete does the same.
   final Future<void> Function()? onRemove;
   final String removeLabel;
+
+  /// Shown under the title instead of the year and type, in the accent:
+  /// where the viewer is ("34 min left"), in Continue watching.
+  final String caption;
 
   @override
   State<DesktopPosterCard> createState() => _DesktopPosterCardState();
@@ -207,7 +229,7 @@ class _DesktopPosterCardState extends State<DesktopPosterCard> {
             label: [
               if (widget.rank case final rank?) 'Number $rank',
               item.name,
-              meta,
+              if (widget.caption.isNotEmpty) widget.caption else meta,
             ].join(', '),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -351,10 +373,15 @@ class _DesktopPosterCardState extends State<DesktopPosterCard> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  meta,
+                  widget.caption.isNotEmpty ? widget.caption : meta,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 12, color: GlassTheme.muted),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: widget.caption.isNotEmpty
+                        ? GlassTheme.coralBright
+                        : GlassTheme.muted,
+                  ),
                 ),
               ],
             ),
@@ -536,6 +563,7 @@ class DesktopMediaRow extends StatefulWidget {
     required this.items,
     required this.onOpen,
     this.progressOf,
+    this.captionOf,
     this.isFavorite,
     this.onToggleFavorite,
     this.onRemove,
@@ -547,6 +575,9 @@ class DesktopMediaRow extends StatefulWidget {
   final List<MediaItem> items;
   final ValueChanged<MediaItem> onOpen;
   final double Function(MediaItem item)? progressOf;
+
+  /// A card's line under its title (see [DesktopPosterCard.caption]).
+  final String Function(MediaItem item)? captionOf;
   final bool Function(MediaItem item)? isFavorite;
 
   /// Adds a title to My list or takes it off, from its card.
@@ -669,6 +700,7 @@ class _DesktopMediaRowState extends State<DesktopMediaRow> {
                           width: posterWidth,
                           onOpen: widget.onOpen,
                           progress: widget.progressOf?.call(item) ?? 0,
+                          caption: widget.captionOf?.call(item) ?? '',
                           isFavorite: widget.isFavorite?.call(item) ?? false,
                           onToggleFavorite: bindItem(
                             widget.onToggleFavorite,
@@ -726,18 +758,46 @@ class DesktopRowArrow extends StatelessWidget {
     alignment: alignment,
     child: Padding(
       padding: const EdgeInsets.only(bottom: DesktopMetrics.captionHeight),
-      child: SizedBox(
-        width: DesktopMetrics.pagePadding + 8,
-        height: height,
-        child: Tooltip(
-          message: label,
-          child: Material(
-            color: Colors.black.withValues(alpha: .55),
-            child: InkWell(
-              // Mouse only: keyboard users move through the cards.
-              canRequestFocus: false,
-              onTap: onPressed,
-              child: Icon(icon, size: 34),
+      // The page's edge fades over the cards, with a round button on it,
+      // rather than a solid bar across the posters.
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: alignment == Alignment.centerLeft
+                ? Alignment.centerLeft
+                : Alignment.centerRight,
+            end: alignment == Alignment.centerLeft
+                ? Alignment.centerRight
+                : Alignment.centerLeft,
+            colors: [
+              GlassTheme.background.withValues(alpha: .92),
+              GlassTheme.background.withValues(alpha: 0),
+            ],
+          ),
+        ),
+        child: SizedBox(
+          width: DesktopMetrics.pagePadding + 32,
+          height: height,
+          child: Center(
+            child: Tooltip(
+              message: label,
+              child: Material(
+                color: DesktopSurfaces.glass,
+                shape: const CircleBorder(
+                  side: BorderSide(color: DesktopSurfaces.hairline),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  // Mouse only: keyboard users move through the cards.
+                  canRequestFocus: false,
+                  hoverColor: GlassTheme.primary.withValues(alpha: .22),
+                  onTap: onPressed,
+                  child: SizedBox.square(
+                    dimension: 46,
+                    child: Icon(icon, size: 30),
+                  ),
+                ),
+              ),
             ),
           ),
         ),
