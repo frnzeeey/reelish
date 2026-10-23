@@ -18,11 +18,20 @@ class LibraryScreen extends StatefulWidget {
     required this.storage,
     required this.onPlay,
     this.refreshToken = 0,
+    this.onHistoryChanged,
+    this.onFavoritesChanged,
   });
 
   final StorageService storage;
   final ValueChanged<MediaItem> onPlay;
   final int refreshToken;
+
+  /// After a title's watch history was removed and saved, so Home's
+  /// Continue watching follows at once (the Windows library does the same).
+  final VoidCallback? onHistoryChanged;
+
+  /// After My list changed and was saved, so Home's hearts follow.
+  final VoidCallback? onFavoritesChanged;
 
   @override
   State<LibraryScreen> createState() => _LibraryScreenState();
@@ -66,8 +75,35 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
   Future<void> _load() => _model.load();
   ResumeSummary _resumeSummary(MediaItem item) => _model.resumeSummary(item);
-  Future<void> _removeHistory(MediaItem item) => _model.removeFromHistory(item);
-  Future<void> _toggleFavorite(MediaItem item) => _model.toggleFavorite(item);
+  // Home is told only once the change is saved. A failed one says so (as on
+  // Windows) and the library shows what is saved, which is unchanged.
+  Future<void> _removeHistory(MediaItem item) async {
+    try {
+      await _model.removeFromHistory(item);
+    } catch (_) {
+      _failed('Could not remove it. Try again.');
+      return;
+    }
+    widget.onHistoryChanged?.call();
+  }
+
+  Future<void> _toggleFavorite(MediaItem item) async {
+    try {
+      await _model.toggleFavorite(item);
+    } catch (_) {
+      _failed('Could not update My list. Try again.');
+      return;
+    }
+    widget.onFavoritesChanged?.call();
+  }
+
+  void _failed(String message) {
+    unawaited(_load().catchError((Object _) {}));
+    if (!mounted) return;
+    ScaffoldMessenger.maybeOf(
+      context,
+    )?.showSnackBar(SnackBar(content: Text(message)));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -474,6 +510,56 @@ class _MediaSection extends StatelessWidget {
                             ? () => onFavorite!(item)
                             : null,
                       ),
+                      if (title == 'Continue watching')
+                        Positioned(
+                          left: 7,
+                          top: 7,
+                          // Ends before the Remove button, so a long label
+                          // (or large text) shortens instead of covering it.
+                          right: onRemove == null ? 7 : 7 + 34 + 6,
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 5,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: .7),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: .15),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Symbols.play_arrow_rounded,
+                                    fill: 1,
+                                    size: 12,
+                                    color: GlassTheme.primary,
+                                  ),
+                                  const SizedBox(width: 3),
+                                  Flexible(
+                                    child: Text(
+                                      resume.label.isEmpty
+                                          ? 'RESUME'
+                                          : resume.label.toUpperCase(),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 8,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      // Last, so it is always on top and can be tapped.
                       if (onRemove != null)
                         Positioned(
                           top: 7,
@@ -491,45 +577,6 @@ class _MediaSection extends StatelessWidget {
                               padding: EdgeInsets.zero,
                               icon: const Icon(Symbols.close_rounded, size: 17),
                               onPressed: () => onRemove!(item),
-                            ),
-                          ),
-                        ),
-                      if (title == 'Continue watching')
-                        Positioned(
-                          left: 7,
-                          top: 7,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 5,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: .7),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: Colors.white.withValues(alpha: .15),
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Symbols.play_arrow_rounded,
-                                  fill: 1,
-                                  size: 12,
-                                  color: GlassTheme.primary,
-                                ),
-                                const SizedBox(width: 3),
-                                Text(
-                                  resume.label.isEmpty
-                                      ? 'RESUME'
-                                      : resume.label.toUpperCase(),
-                                  style: const TextStyle(
-                                    fontSize: 8,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ],
                             ),
                           ),
                         ),

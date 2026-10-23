@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:onfeed/src/models/episode_progress.dart';
 import 'package:onfeed/src/models/media_item.dart';
@@ -58,11 +60,27 @@ class _FakeStorage extends StorageService {
   final history_ = <MediaItem>[];
   final favorites_ = <MediaItem>[];
 
-  @override
-  Future<List<MediaItem>> history() async => [...history_];
+  /// Holds the next read back until completed; it still answers with the
+  /// list as it was when it was asked, as a slow read would.
+  Completer<void>? historyGate, favoritesGate;
 
   @override
-  Future<List<MediaItem>> favorites() async => [...favorites_];
+  Future<List<MediaItem>> history() async {
+    final snapshot = [...history_];
+    final gate = historyGate;
+    historyGate = null;
+    await gate?.future;
+    return snapshot;
+  }
+
+  @override
+  Future<List<MediaItem>> favorites() async {
+    final snapshot = [...favorites_];
+    final gate = favoritesGate;
+    favoritesGate = null;
+    await gate?.future;
+    return snapshot;
+  }
 
   @override
   Future<SeriesProgress> seriesProgress(MediaItem series) async =>
@@ -140,6 +158,47 @@ void main() {
     await model.loadHistory();
     expect(model.continueWatching.map((i) => i.id), ['1']);
     expect(notified, 1);
+    model.dispose();
+  });
+
+  test(
+    'a slow, older history load cannot bring a removed title back',
+    () async {
+      const kept = MediaItem(id: '1', type: 'movie', name: 'Kept', resumeMs: 5);
+      const removed = MediaItem(
+        id: '2',
+        type: 'series',
+        name: 'Removed',
+        resumeMs: 5,
+      );
+      storage.history_.addAll([kept, removed]);
+      // A load starts (say, opening the Library), and reads slowly.
+      final gate = Completer<void>();
+      storage.historyGate = gate;
+      final stale = model.loadHistory();
+      // Meanwhile the title is removed and Home is told.
+      storage.history_.remove(removed);
+      await model.loadHistory();
+      expect(model.continueWatching, [kept]);
+      // The older read finishes last: it must not undo the removal.
+      gate.complete();
+      await stale;
+      expect(model.continueWatching, [kept]);
+      model.dispose();
+    },
+  );
+
+  test('a slow, older My list load cannot undo a change', () async {
+    const item = MediaItem(id: '9', type: 'series', name: 'Show');
+    storage.favorites_.add(item);
+    final gate = Completer<void>();
+    storage.favoritesGate = gate;
+    final stale = model.loadFavorites(); // reads [Show], slowly
+    expect(await model.toggleFavorite(item), isFalse); // now off My list
+    expect(model.isFavorite(item), isFalse);
+    gate.complete();
+    await stale;
+    expect(model.isFavorite(item), isFalse);
     model.dispose();
   });
 

@@ -2310,6 +2310,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           storage: _storage,
           onPlay: _showDetails,
           refreshToken: _libraryRefreshToken,
+          onHistoryChanged: () => unawaited(_loadHistory()),
+          onFavoritesChanged: () => unawaited(_loadFavorites()),
         ),
       ),
       TabPageTransition(

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/episode_progress.dart';
@@ -20,6 +21,12 @@ class StorageService {
   /// saves landing together cannot each write back a list missing the
   /// other's change.
   static Future<void> _updates = Future.value();
+
+  /// Starts a fresh queue of writes. For tests: a write left unfinished by
+  /// an earlier test (real file I/O cannot complete in a widget test's fake
+  /// time) would otherwise hold every later write.
+  @visibleForTesting
+  static void debugResetWrites() => _updates = Future.value();
 
   static Future<T> _serialized<T>(Future<T> Function() update) {
     final result = _updates.then((_) => update());

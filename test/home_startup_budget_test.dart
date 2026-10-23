@@ -6,14 +6,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:onfeed/src/models/app_update.dart';
+import 'package:onfeed/src/models/media_item.dart';
 import 'package:onfeed/src/screens/home_screen.dart';
 import 'package:onfeed/src/screens/media_details_screen.dart';
 import 'package:onfeed/src/services/accent_settings_controller.dart';
 import 'package:onfeed/src/services/media_catalog_rules.dart';
 import 'package:onfeed/src/services/network_target_policy.dart';
+import 'package:onfeed/src/services/storage_service.dart';
 import 'package:onfeed/src/services/tmdb_response_cache.dart';
 import 'package:onfeed/src/services/tmdb_service.dart';
 import 'package:onfeed/src/widgets/media_card.dart';
+import 'package:onfeed/src/widgets/soft_glass_dock.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Home's network budget: what a cold start fetches on a phone-sized
@@ -94,7 +97,11 @@ void main() {
   late AccentSettingsController accentSettings;
 
   /// Opens Home on a phone-sized screen with every list 50 pages long.
-  Future<void> pumpHome(WidgetTester tester) async {
+  Future<void> pumpHome(
+    WidgetTester tester, {
+    // Saved before Home opens: watch history, My list.
+    Future<void> Function()? seed,
+  }) async {
     tester.view.physicalSize = const Size(430, 915);
     tester.view.devicePixelRatio = 1;
     urls = [];
@@ -103,6 +110,10 @@ void main() {
       return page(request.url);
     });
     SharedPreferences.setMockInitialValues({});
+    // Each test starts with storage's write queue free (see
+    // StorageService.debugResetWrites).
+    StorageService.debugResetWrites();
+    if (seed != null) await tester.runAsync(seed);
     accentSettings = AccentSettingsController();
     final tmdb = TmdbService(
       apiKey: 'test-key',
@@ -309,6 +320,78 @@ void main() {
     await tester.tap(cards.at(0));
     await settle(tester, rounds: 20);
     expect(find.byType(MediaDetailsScreen), findsOneWidget);
+    await disposeHome(tester);
+  });
+
+  testWidgets('removing a title in the Library takes it off Home at once', (
+    tester,
+  ) async {
+    const removed = MediaItem(id: '501', type: 'movie', name: 'Removed Film');
+    const kept = MediaItem(id: '502', type: 'movie', name: 'Kept Film');
+    await pumpHome(
+      tester,
+      seed: () async {
+        final storage = StorageService();
+        await storage.saveProgress(kept, 60000, durationMs: 600000);
+        await storage.saveProgress(removed, 60000, durationMs: 600000);
+        await storage.toggleFavorite(removed);
+      },
+    );
+    await settle(tester, rounds: 40);
+    MediaCard? cardOf(String name) => tester
+        .widgetList<MediaCard>(find.byType(MediaCard, skipOffstage: false))
+        .where((card) => card.item.name == name)
+        .firstOrNull;
+    // Home's Continue watching row ('Pick up where you left off').
+    final pickUp = find.text('Pick up where you left off');
+    expect(pickUp, findsOneWidget);
+    expect(cardOf('Removed Film'), isNotNull);
+    expect(cardOf('Removed Film')!.isFavorite, isTrue);
+
+    final dock = find.byType(SoftGlassDock);
+    await tester.tap(find.descendant(of: dock, matching: find.text('Library')));
+    await settle(tester, rounds: 20);
+    // The first card in the Library's Continue watching is the newest.
+    await tester.tap(find.byTooltip('Remove from watch history').first);
+    await settle(tester, rounds: 20);
+
+    // Home, still behind the Library tab, has followed already.
+    await tester.tap(find.descendant(of: dock, matching: find.text('Home')));
+    await settle(tester, rounds: 20);
+    final homeCards = tester.widgetList<MediaCard>(
+      find.descendant(
+        of: find.byKey(const PageStorageKey<String>('home-feed')),
+        matching: find.byType(MediaCard, skipOffstage: false),
+      ),
+    );
+    final names = homeCards.map((card) => card.item.name).toList();
+    expect(names, contains('Kept Film'));
+    expect(names, isNot(contains('Removed Film')));
+    // Its My list entry stays: removing the watch history is not removing
+    // it from My list.
+    expect(
+      (await tester.runAsync(
+        () => StorageService().favorites(),
+      ))!.map((item) => item.id),
+      contains('501'),
+    );
+
+    // Opening the Library again reloads history; it does not come back.
+    await tester.tap(find.descendant(of: dock, matching: find.text('Library')));
+    await settle(tester, rounds: 20);
+    await tester.tap(find.descendant(of: dock, matching: find.text('Home')));
+    await settle(tester, rounds: 20);
+    expect(
+      tester
+          .widgetList<MediaCard>(
+            find.descendant(
+              of: find.byKey(const PageStorageKey<String>('home-feed')),
+              matching: find.byType(MediaCard, skipOffstage: false),
+            ),
+          )
+          .map((card) => card.item.name),
+      isNot(contains('Removed Film')),
+    );
     await disposeHome(tester);
   });
 }

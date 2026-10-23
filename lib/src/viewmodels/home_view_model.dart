@@ -150,7 +150,14 @@ class HomeViewModel extends ChangeNotifier {
   ResumeSummary resumeSummary(MediaItem item) =>
       ResumeSummary.of(item, series: _seriesProgress[keyOf(item)]);
 
+  /// The newest history and My list reads. Loads overlap (Home and the
+  /// Library both ask, and a history read waits on each series' progress),
+  /// so a read that finishes after a newer one is dropped: a read started
+  /// before a removal must not bring the removed title back.
+  int _historyRead = 0, _favoritesRead = 0;
+
   Future<void> loadHistory() async {
+    final read = ++_historyRead;
     final value = await _storage.history();
     // Series cards follow the episode watched last, so load each series'
     // per-episode progress with the history.
@@ -161,15 +168,16 @@ class HomeViewModel extends ChangeNotifier {
         progress[keyOf(item)] = await _storage.seriesProgress(item);
       } catch (_) {}
     }
-    if (_disposed) return;
+    if (_disposed || read != _historyRead) return;
     _continueWatching = value.where((item) => item.resumeMs > 0).toList();
     _seriesProgress = progress;
     notifyListeners();
   }
 
   Future<void> loadFavorites() async {
+    final read = ++_favoritesRead;
     final value = await _storage.favorites();
-    if (_disposed) return;
+    if (_disposed || read != _favoritesRead) return;
     _favoriteKeys = value.map(keyOf).toSet();
     notifyListeners();
   }
@@ -178,11 +186,16 @@ class HomeViewModel extends ChangeNotifier {
   /// the list afterwards.
   Future<bool> toggleFavorite(MediaItem item) async {
     await _storage.toggleFavorite(item);
+    final read = ++_favoritesRead;
     final favorites = await _storage.favorites();
+    final keys = favorites.map(keyOf).toSet();
     if (_disposed) return false;
-    _favoriteKeys = favorites.map(keyOf).toSet();
-    notifyListeners();
-    return _favoriteKeys.contains(keyOf(item));
+    // A newer read already published; this toggle's answer stands either way.
+    if (read == _favoritesRead) {
+      _favoriteKeys = keys;
+      notifyListeners();
+    }
+    return keys.contains(keyOf(item));
   }
 
   @override
