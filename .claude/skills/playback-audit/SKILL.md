@@ -74,9 +74,12 @@ Pipeline (see `reelish-architecture/architecture.md` § Play):
   `player_ui_test`, `paused_overlay_test`, `player_settings_sheet_test`,
   `torrent_source_preparer_test`, `episode_selection_test`,
   `external_cue_clock_test`.
-- Windows integration (`-d windows`): `windows_playback_test`,
-  `windows_player_ui_test`, `libmpv_playback_test`; long runs:
-  `player_long_session_test`, `windows_soak_test`.
+- Windows integration (`-d windows`, one file per run: a run that crashes
+  can leave the next one hanging): `windows_playback_test`,
+  `windows_player_ui_test`, `libmpv_playback_test` (also runs on Android
+  devices); long run: `windows_soak_test` (records memory).
+- Android device: `player_long_session_test` (memory over repeated opens),
+  `libmpv_playback_test` (skips itself on emulators).
 - Android: emulator/device run of a real source (`flutter run`), plus
   `torrent_streamer_test` when torrents are touched. `flutter drive` and
   some integration runs wipe app data.

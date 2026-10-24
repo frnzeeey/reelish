@@ -1,13 +1,16 @@
 // Opens a stream on libmpv with its FFmpeg protocol allowlist in place,
-// on a device or emulator (needs internet):
+// on an Android device or emulator, or on Windows (needs internet):
 //
 //   flutter test integration_test/libmpv_playback_test.dart -d <device>
+//   flutter test integration_test/libmpv_playback_test.dart -d windows
 //
 // libmpv sets up its Android video output on the frame pipeline, so this is
 // a widget test that keeps frames pumping while the engine opens. Skipped on
-// emulators: there libmpv renders through MediaCodec output instead of
-// OpenGL (see PlayerEngineBootstrap), and that path fails to start playback
-// about half the time, with or without the allowlist. Phones use OpenGL.
+// Android emulators: there libmpv renders through MediaCodec output instead
+// of OpenGL (see PlayerEngineBootstrap), and that path fails to start
+// playback about half the time, with or without the allowlist. Phones use
+// OpenGL. The emulator check is an Android channel, so Windows skips it.
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -24,10 +27,11 @@ void main() {
     'libmpv plays HTTP HLS with the protocol allowlist',
     (tester) async {
       final emulator =
-          await const MethodChannel(
-            'onfeed/player',
-          ).invokeMethod<bool>('isEmulator') ??
-          false;
+          defaultTargetPlatform == TargetPlatform.android &&
+          (await const MethodChannel(
+                'onfeed/player',
+              ).invokeMethod<bool>('isEmulator') ??
+              false);
       if (emulator) {
         markTestSkipped('libmpv playback is unreliable on emulators.');
         return;
