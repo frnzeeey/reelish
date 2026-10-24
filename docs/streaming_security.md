@@ -14,12 +14,13 @@ repository under "Needs attention" until the viewer chooses **Allow update**.
 This doesn't prove who wrote the code, but it stops a repository from
 silently swapping in new code. Removing a repository forgets its approvals.
 
-Provider scripts run in an isolated QuickJS runtime with a 20 second
-synchronous execution limit and a 64 MiB runtime memory cap. The provider
+Provider scripts run in an isolated QuickJS runtime, on a background isolate,
+that is interrupted after 40 seconds and has a 64 MiB runtime memory cap; a
+run that still has not returned is abandoned after 45 seconds. The provider
 scheduler has four workers, but only two QuickJS runtimes can be active
 simultaneously (a configured JS heap ceiling of 128 MiB, plus native/runtime
-overhead). Provider script downloads and asynchronous `getStreams` calls are
-bounded to 20 seconds each, and a discovery is bounded to 60 seconds. Provider
+overhead). Provider script downloads are bounded to 20 seconds, asynchronous
+`getStreams` calls to 30 seconds, and a discovery to 60 seconds. Provider
 HTTP has at most four concurrent
 requests per runtime, a 20 second request timeout, and 2 MiB request/response
 limits. These limits are configuration bounds, not device benchmark results.

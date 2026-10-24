@@ -154,7 +154,7 @@ made fullscreen on whichever monitor it's on.
 
 | Area | Windows | Shared with Android |
 |---|---|---|
-| Interface | `DeviceCapabilities.isDesktop` selects the desktop interface in `lib/src/desktop/` (`DesktopShell`, `DesktopHero`, the desktop pages and `DesktopDetailsScreen`). Windows isn't treated as a TV: `isTv` stays false, so TV-hardware behaviour (low glass quality, Back revealing player controls) is off | Catalog data (`TvCatalog`), Settings and Plugins screens, player chrome |
+| Interface | `DeviceCapabilities.isDesktop` selects the desktop interface in `lib/src/desktop/` (`DesktopShell`, `DesktopHero`, the desktop pages, `DesktopDetailsScreen`, `DesktopSettingsPage` and `DesktopPluginsPage`). Windows isn't treated as a TV: `isTv` stays false, so TV-hardware behaviour (low glass quality, Back revealing player controls) is off | Catalog data (`TvCatalog`), the Settings sub-pages shown in Windows Settings (Appearance, Playback, …), the plugin service and library, player chrome |
 | Mouse and keyboard | Hover, click and keyboard focus in the desktop widgets; `DesktopShortcuts` (`lib/src/platform/desktop_window.dart`); desktop keys in the player | TV focus traversal |
 | Window | `windows/runner/flutter_window.cpp`: `reelish/window` channel (fullscreen), minimum size, saved placement | — |
 | Playback | `PlayerEngineFactory` selects `MpvPlayerEngine` (libmpv via media_kit); `media_kit_libs_windows_video` bundles libmpv | libmpv engine, headers, subtitles |
