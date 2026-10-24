@@ -14,7 +14,7 @@ import 'package:onfeed/src/services/paged_feed_controller.dart';
 import 'package:onfeed/src/services/tmdb_service.dart';
 import 'package:onfeed/src/theme/glass_theme.dart';
 
-/// The Windows layout as users see it: the Spotlight's next-up previews,
+/// The Windows layout as users see it: the Spotlight and its rail,
 /// the details page's episode panel, and both at the window sizes Windows
 /// users run.
 
@@ -147,50 +147,220 @@ const _series = MediaItem(
 const _movie = MediaItem(id: '8', type: 'movie', name: 'A film', year: '2021');
 
 void main() {
-  group('Spotlight previews', () {
-    testWidgets('show the next three titles, the first as Up next', (
+  group('Spotlight rail', () {
+    Finder card(String tooltip) => find.byTooltip(tooltip);
+    Size sizeOf(WidgetTester tester, String tooltip) => tester.getSize(
+      find
+          .descendant(
+            of: card(tooltip),
+            matching: find.byType(AnimatedContainer),
+          )
+          .first,
+    );
+
+    testWidgets('lists every title: the shown one as a wide backdrop card '
+        'with its details, the others as posters of the same height', (
       tester,
     ) async {
       await _pumpHero(tester, _spotlight(5));
-      expect(_previewCards(), findsNWidgets(3));
-      expect(find.text('UP NEXT'), findsOneWidget);
-      for (final i in [1, 2, 3]) {
-        expect(
-          find.byTooltip('Show Title $i with a fairly long name'),
-          findsOne,
-        );
-      }
+      // The shown title opens its details; every other one shows itself.
+      expect(card('More about Title 0 with a fairly long name'), findsOne);
+      expect(_previewCards(), findsNWidgets(4));
+      // Its name and details on the card, beside a play button.
+      final shown = card('More about Title 0 with a fairly long name');
+      expect(
+        find.descendant(
+          of: shown,
+          matching: find.text('Title 0 with a fairly long name'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: shown,
+          matching: find.textContaining(
+            '7.0  |  2024  |  Movie  |  Action, Sci-Fi',
+          ),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: shown, matching: find.byTooltip('Play')),
+        findsOneWidget,
+      );
       expect(find.text('01  /  05'), findsOneWidget);
+      final wide = sizeOf(tester, 'More about Title 0 with a fairly long name');
+      final poster = sizeOf(tester, 'Show Title 1 with a fairly long name');
+      expect(wide.height, poster.height);
+      expect(wide.aspectRatio, moreOrLessEquals(16 / 9, epsilon: .01));
+      expect(poster.aspectRatio, moreOrLessEquals(2 / 3, epsilon: .01));
       // Genres from TMDB ids, beside the year and type.
       expect(find.textContaining('Action  ·  Sci-Fi'), findsOneWidget);
       await tester.pumpWidget(const SizedBox());
     });
 
-    testWidgets('a click shows that title, and the previews move on', (
+    testWidgets('a click shows that title, which widens and leads the rail', (
       tester,
     ) async {
-      await _pumpHero(tester, _spotlight(5));
-      await tester.tap(find.byTooltip('Show Title 2 with a fairly long name'));
+      await _pumpHero(tester, _spotlight(20));
+      await tester.tap(card('Show Title 2 with a fairly long name'));
       await tester.pumpAndSettle();
       expect(_heroTitle('Title 2 with a fairly long name'), findsOneWidget);
-      expect(find.text('03  /  05'), findsOneWidget);
-      // Wraps around the end.
-      for (final i in [3, 4, 0]) {
-        expect(
-          find.byTooltip('Show Title $i with a fairly long name'),
-          findsOne,
-        );
-      }
+      expect(find.text('03  /  20'), findsOneWidget);
+      expect(card('More about Title 2 with a fairly long name'), findsOne);
+      // Scrolled so the shown card starts at the page margin.
+      expect(
+        tester
+            .getTopLeft(card('More about Title 2 with a fairly long name'))
+            .dx,
+        moreOrLessEquals(
+          DesktopShell.expandedWidth + DesktopMetrics.pagePadding,
+          epsilon: 1,
+        ),
+      );
       await tester.pumpWidget(const SizedBox());
     });
 
-    testWidgets('Enter on a focused preview shows its title', (tester) async {
+    testWidgets('a click on the shown card opens its details; its button '
+        'plays', (tester) async {
+      final opened = <String>[], played = <String>[];
+      await _setSize(tester, const Size(1920, 1080));
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: GlassTheme.dark,
+          home: Scaffold(
+            body: ListView(
+              children: [
+                DesktopHero(
+                  items: _spotlight(3),
+                  onPlay: (item) => played.add(item.id),
+                  onDetails: (item) => opened.add(item.id),
+                  isFavorite: (_) => false,
+                  onToggleFavorite: (_) async => true,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.tap(card('More about Title 0 with a fairly long name'));
+      await tester.pump();
+      expect(opened, ['0']);
+      expect(played, isEmpty);
+
+      await tester.tap(
+        find.descendant(
+          of: card('More about Title 0 with a fairly long name'),
+          matching: find.byTooltip('Play'),
+        ),
+      );
+      await tester.pump();
+      expect(played, ['0']);
+      expect(opened, ['0']);
+      await tester.pumpWidget(const SizedBox());
+    });
+
+    testWidgets('the rail loops: it starts at the shown title, and the first '
+        'title follows the last', (tester) async {
+      await _pumpHero(tester, _spotlight(5));
+      double left(String tooltip) => tester.getTopLeft(card(tooltip)).dx;
+      await tester.tap(card('Show Title 4 with a fairly long name'));
+      await tester.pumpAndSettle();
+      expect(_heroTitle('Title 4 with a fairly long name'), findsOneWidget);
+      final shown = left('More about Title 4 with a fairly long name');
+      expect(
+        shown,
+        moreOrLessEquals(
+          DesktopShell.expandedWidth + DesktopMetrics.pagePadding,
+          epsilon: 1,
+        ),
+      );
+      // Title 0, then 1, follow the last title.
+      expect(left('Show Title 0 with a fairly long name'), greaterThan(shown));
+      expect(
+        left('Show Title 1 with a fairly long name'),
+        greaterThan(left('Show Title 0 with a fairly long name')),
+      );
+
+      // The rotation wraps the same way.
+      await tester.pump(const Duration(seconds: 8));
+      await tester.pumpAndSettle();
+      expect(_heroTitle('Title 0 with a fairly long name'), findsOneWidget);
+      expect(card('More about Title 0 with a fairly long name'), findsOne);
+      await tester.pumpWidget(const SizedBox());
+    });
+
+    for (final size in const [Size(1920, 1080), Size(1366, 768)]) {
+      testWidgets('all 12 titles fit at ${size.width.toInt()} px, no '
+          'scrolling', (tester) async {
+        await _pumpHero(tester, _spotlight(12), size: size);
+        final hero = tester.getRect(find.byType(DesktopHero));
+        expect(card('More about Title 0 with a fairly long name'), findsOne);
+        for (var i = 1; i < 12; i++) {
+          final rect = tester.getRect(
+            card('Show Title $i with a fairly long name'),
+          );
+          expect(rect.right, lessThanOrEqualTo(hero.right), reason: '$i');
+        }
+        await tester.pumpWidget(const SizedBox());
+      });
+    }
+
+    testWidgets('the next title glides to the front and widens; it is not '
+        'redrawn there', (tester) async {
+      await _pumpHero(tester, _spotlight(5));
+      await tester.pumpAndSettle();
+      const start = DesktopShell.expandedWidth + DesktopMetrics.pagePadding;
+      final before = tester.getRect(
+        card('Show Title 1 with a fairly long name'),
+      );
+      final wide = sizeOf(tester, 'More about Title 0 with a fairly long name');
+      await tester.tap(card('Show Title 1 with a fairly long name'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      // Midway: between its old place and the front, and widening.
+      final moving = tester.getRect(
+        card('More about Title 1 with a fairly long name'),
+      );
+      expect(moving.left, lessThan(before.left));
+      expect(moving.left, greaterThan(start + 1));
+      expect(moving.width, greaterThan(before.width));
+      expect(moving.width, lessThan(wide.width));
+
+      await tester.pumpAndSettle();
+      final settled = tester.getRect(
+        card('More about Title 1 with a fairly long name'),
+      );
+      expect(settled.left, moreOrLessEquals(start, epsilon: 1));
+      expect(settled.width, moreOrLessEquals(wide.width, epsilon: 1));
+      // Title 0 left: only one card shows it, at the end of the loop.
+      expect(card('Show Title 0 with a fairly long name'), findsOne);
+      await tester.pumpWidget(const SizedBox());
+    });
+
+    testWidgets('a short card keeps the name and button, not a clipped '
+        'details line', (tester) async {
+      // Beside the pinned sidebar at 1280 the cards are at their shortest.
+      await _pumpHero(tester, _spotlight(12), size: const Size(1280, 720));
+      final shown = card('More about Title 0 with a fairly long name');
+      expect(
+        find.descendant(of: shown, matching: find.byTooltip('Play')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: shown, matching: find.textContaining('2024  |')),
+        findsNothing,
+      );
+      await tester.pumpWidget(const SizedBox());
+    });
+
+    testWidgets('Enter on a focused card shows its title', (tester) async {
       await _pumpHero(tester, _spotlight(4));
-      final card = find.byTooltip('Show Title 1 with a fairly long name');
+      final shown = card('Show Title 1 with a fairly long name');
       Focus.of(
         tester.element(
           find
-              .descendant(of: card, matching: find.byType(GestureDetector))
+              .descendant(of: shown, matching: find.byType(GestureDetector))
               .first,
         ),
       ).requestFocus();
@@ -212,7 +382,7 @@ void main() {
 
       await _pumpHero(tester, _spotlight(3), logoOf: logoOf);
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('Show Title 1 with a fairly long name'));
+      await tester.tap(card('Show Title 1 with a fairly long name'));
       await tester.pumpAndSettle();
       expect(asked, ['0', '1', '2']);
       // Images do not load in tests: the logo falls back to the name, which
@@ -225,11 +395,12 @@ void main() {
       await tester.pumpWidget(const SizedBox());
     });
 
-    testWidgets('fewer titles, fewer previews', (tester) async {
+    testWidgets('one title: no rail', (tester) async {
       await _pumpHero(tester, _spotlight(2));
       expect(_previewCards(), findsOneWidget);
       await _pumpHero(tester, _spotlight(1));
       expect(_previewCards(), findsNothing);
+      expect(find.byTooltip('Play'), findsNothing);
       await tester.pumpWidget(const SizedBox());
     });
 
@@ -250,30 +421,30 @@ void main() {
 
     for (final size in _sizes) {
       testWidgets(
-        'at ${size.width.toInt()}×${size.height.toInt()} the previews stay '
-        'clear of the title and actions',
+        'at ${size.width.toInt()}×${size.height.toInt()} the text and actions '
+        'stay above the rail, inside the hero',
         (tester) async {
-          await _pumpHero(tester, _spotlight(5), size: size);
+          await _pumpHero(tester, _spotlight(12), size: size);
+          expect(tester.takeException(), isNull);
           final hero = tester.getRect(find.byType(DesktopHero));
+          final shown = tester.getRect(
+            card('More about Title 0 with a fairly long name'),
+          );
           final guarded = [
             tester.getRect(_heroTitle('Title 0 with a fairly long name')),
             tester.getRect(find.text('More info')),
             tester.getRect(find.byTooltip('Add to My list')),
           ];
-          final cards = _previewCards().evaluate().toList();
-          if (size.width >= 1280) {
-            expect(cards, isNotEmpty, reason: 'room for at least one preview');
+          for (final rect in guarded) {
+            expect(rect.top, greaterThanOrEqualTo(hero.top), reason: '$rect');
+            expect(rect.bottom, lessThan(shown.top), reason: '$rect');
           }
-          for (final card in cards) {
-            final rect = tester.getRect(find.byWidget(card.widget));
-            expect(rect.right, lessThanOrEqualTo(hero.right));
-            expect(rect.bottom, lessThanOrEqualTo(hero.bottom));
-            for (final other in guarded) {
-              expect(rect.overlaps(other), isFalse, reason: '$rect / $other');
-            }
-          }
-          // Wide windows show all three.
-          if (size.width >= 1920) expect(cards, hasLength(3));
+          expect(shown.bottom, lessThanOrEqualTo(hero.bottom));
+          // The rail scrolls; at least the shown card and the next fit.
+          final next = tester.getRect(
+            card('Show Title 1 with a fairly long name'),
+          );
+          expect(next.right, lessThanOrEqualTo(size.width));
           await tester.pumpWidget(const SizedBox());
         },
       );

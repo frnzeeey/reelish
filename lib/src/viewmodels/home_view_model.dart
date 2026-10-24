@@ -93,6 +93,11 @@ class HomeViewModel extends ChangeNotifier {
   /// Started titles from the watch history, most recent first.
   List<MediaItem> get continueWatching => _continueWatching;
 
+  /// The watch history has been read at least once, so an empty
+  /// [continueWatching] means nothing is started, not "not loaded yet".
+  bool get historyLoaded => _historyLoaded;
+  bool _historyLoaded = false;
+
   /// `type:id` of the titles on My list.
   Set<String> get favoriteKeys => _favoriteKeys;
 
@@ -170,6 +175,7 @@ class HomeViewModel extends ChangeNotifier {
     }
     if (_disposed || read != _historyRead) return;
     _continueWatching = value.where((item) => item.resumeMs > 0).toList();
+    _historyLoaded = true;
     _seriesProgress = progress;
     notifyListeners();
   }

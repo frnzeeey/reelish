@@ -26,7 +26,7 @@ touch or keyboard use.
 - Phone: `SoftGlassDock`, `MediaCard`, `LiquidGlass`/`GlassBox`.
 - TV: `TvFocusable`, `TvSafeArea` (overscan), `TvKeyScroll`,
   `TvTextEntryDialog`; focus rules in `docs/android_tv.md`.
-- Windows: `DesktopShell` (sidebar, saved collapse state, Ctrl+F),
+- Windows: `DesktopShell` (hover-open glass sidebar, saved pin state, Ctrl+F),
   `DesktopPosterCard`, `DesktopMediaRow`, `DesktopHero`,
   `DesktopDetailsScreen` (episode panel from 1180 px),
   `DesktopSettingsPage`, `DesktopPluginsPage`.
@@ -58,8 +58,8 @@ touch or keyboard use.
 - TV: everything reachable by D-pad, visible focus, overscan-safe margins
   only when `isTv`; low glass quality.
 - Windows: mouse hover, keyboard focus ring, gamepad, resizable windows
-  from compact (~1024) to 4K at 200 % scaling; sidebar expanded 236 px /
-  collapsed 84 px.
+  from compact (~1024) to 4K at 200 % scaling; sidebar 80 px compact,
+  248 px open (over the page on hover, beside it when pinned).
 
 ## Validation
 - Widget tests use the Ahem test font, much wider than Montserrat: text

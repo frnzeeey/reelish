@@ -9,10 +9,11 @@ import '../theme/glass_theme.dart';
 import '../widgets/poster_image.dart';
 import 'desktop_widgets.dart';
 
-/// The featured titles at the top of desktop Home: a wide backdrop with the
-/// title, synopsis and actions, and the next titles as preview cards in its
-/// lower right corner. Rotates every 8 s while Home is shown, pauses while
-/// the pointer is over it, and a preview shows its title at once.
+/// The featured titles at the top of desktop Home: one full-bleed backdrop
+/// with the title, synopsis and actions on its left, and every Spotlight
+/// title in a rail along its foot, the one shown first and widest. Rotates
+/// every 8 s while Home is shown and pauses while the pointer is over it; a
+/// card in the rail shows its title at once.
 class DesktopHero extends StatefulWidget {
   const DesktopHero({
     super.key,
@@ -36,18 +37,26 @@ class DesktopHero extends StatefulWidget {
   final bool Function(MediaItem item) isFavorite;
   final Future<bool> Function(MediaItem item) onToggleFavorite;
 
-  /// Preview cards at most; fewer when the window is narrow.
-  static const maxPreviews = 3;
-
   @override
   State<DesktopHero> createState() => _DesktopHeroState();
 }
 
 class _DesktopHeroState extends State<DesktopHero> {
   static const _interval = Duration(seconds: 8);
+
+  /// The height the label, title, metadata, synopsis and actions need,
+  /// with a margin above.
+  static const _textRoom = 430.0;
+
+  /// The shortest the rail's cards get; a narrower window scrolls the rail.
+  static const _minCard = 96.0;
   int _index = 0;
+
+  /// Steps moved in all, never wrapping; [_index] is it modulo the count.
+  int _rotation = 0;
   bool _hovered = false;
   Timer? _timer;
+  final _rail = ScrollController();
 
   /// Logo URLs by title, '' for none; asked once per title.
   final Map<String, String> _logos = {};
@@ -65,6 +74,9 @@ class _DesktopHeroState extends State<DesktopHero> {
   void didUpdateWidget(covariant DesktopHero oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (_index >= widget.items.length) _index = 0;
+    if (widget.items.isNotEmpty && _rotation % widget.items.length != _index) {
+      _rotation = _index;
+    }
     _loadLogos();
   }
 
@@ -90,6 +102,7 @@ class _DesktopHeroState extends State<DesktopHero> {
   @override
   void dispose() {
     _timer?.cancel();
+    _rail.dispose();
     super.dispose();
   }
 
@@ -100,40 +113,69 @@ class _DesktopHeroState extends State<DesktopHero> {
       if (MediaQuery.disableAnimationsOf(context)) return;
       // Another page is shown: no rotating, and so no loading, unseen.
       if (!TickerMode.valuesOf(context).enabled) return;
-      setState(() => _index = (_index + 1) % widget.items.length);
+      _select((_index + 1) % widget.items.length);
     });
   }
 
   void _show(int index) {
-    setState(() => _index = index);
+    _select(index);
     _schedule();
+  }
+
+  /// Shows [index]. The rail always starts at the shown title, so it
+  /// scrolls back to its start.
+  void _select(int index) {
+    final n = widget.items.length;
+    setState(() {
+      // Forward only, so the strip always moves the same way.
+      _rotation += (index - _index) % n;
+      _index = index;
+    });
+    if (!_rail.hasClients || _rail.offset == 0) return;
+    final duration = desktopMotion(context, 480);
+    if (duration == Duration.zero) {
+      _rail.jumpTo(0);
+    } else {
+      unawaited(
+        _rail.animateTo(0, duration: duration, curve: DesktopSurfaces.curve),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     if (widget.items.isEmpty) return const SizedBox.shrink();
     final item = widget.items[_index];
+    final rail = widget.items.length > 1;
     return LayoutBuilder(
       builder: (context, constraints) {
         final viewport = MediaQuery.sizeOf(context);
-        final height = (viewport.height * .62).clamp(380.0, 720.0);
         final width = constraints.maxWidth;
         const pad = DesktopMetrics.pagePadding;
+        // Posters and the shown title's backdrop share one height, as one
+        // strip; the shown card is wide, the rest are posters. Sized so the
+        // whole strip fits the width; only below [_minCard] does it scroll.
+        final others = widget.items.length - 1;
+        final fit =
+            (width - pad * 2 - others * _SpotlightRail.gap) /
+            (16 / 9 + others * 2 / 3);
+        final cardHeight = fit.clamp(_minCard, 260.0);
+        final posterWidth = cardHeight * 2 / 3;
+        final railHeight = rail ? _SpotlightRail.heightFor(cardHeight) : 0.0;
+        // Tall enough that the text never meets the rail, short enough
+        // that the next row still begins near the fold.
+        final height = rail
+            ? math.max(
+                (viewport.height * .86).clamp(600.0, 1100.0),
+                // Never so short that the text would rise out of the top.
+                railHeight + 28 + _textRoom,
+              )
+            : (viewport.height * .62).clamp(380.0, 720.0);
+        // The text keeps to the left ~38%; the artwork leads.
         final textWidth = math.min(
-          (width * .46).clamp(400.0, 680.0),
+          (width * .38).clamp(420.0, 640.0),
           width - pad * 2,
         );
-        // Previews fill the room right of the text, never under it.
-        final cardWidth = (width * .12).clamp(168.0, 220.0);
-        final room = width - pad - textWidth - 48 - pad;
-        final previews = widget.items.length < 2
-            ? 0
-            : [
-                DesktopHero.maxPreviews,
-                widget.items.length - 1,
-                ((room + _PreviewCard.gap) / (cardWidth + _PreviewCard.gap))
-                    .floor(),
-              ].reduce(math.min).clamp(0, DesktopHero.maxPreviews);
         return MouseRegion(
           onEnter: (_) => _hovered = true,
           onExit: (_) => _hovered = false,
@@ -143,6 +185,8 @@ class _DesktopHeroState extends State<DesktopHero> {
             child: Stack(
               fit: StackFit.expand,
               children: [
+                // One surface: the artwork runs under the rail and fades
+                // into the page there.
                 AnimatedSwitcher(
                   duration: desktopMotion(context, 700),
                   switchInCurve: DesktopSurfaces.curve,
@@ -150,11 +194,12 @@ class _DesktopHeroState extends State<DesktopHero> {
                     key: ValueKey('${item.type}:${item.id}'),
                     item: item,
                     width: width,
+                    railShare: railHeight / height,
                   ),
                 ),
                 Positioned(
                   left: pad,
-                  bottom: 48,
+                  bottom: rail ? railHeight + 28 : 48,
                   width: textWidth,
                   child: AnimatedSwitcher(
                     duration: desktopMotion(context, 480),
@@ -194,32 +239,22 @@ class _DesktopHeroState extends State<DesktopHero> {
                     ),
                   ),
                 ),
-                if (previews > 0)
+                if (rail)
                   Positioned(
-                    right: pad,
-                    bottom: 48,
-                    child: _Previews(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    height: railHeight,
+                    child: _SpotlightRail(
                       items: widget.items,
                       index: _index,
-                      count: previews,
-                      cardWidth: cardWidth,
+                      rotation: _rotation,
+                      controller: _rail,
+                      posterWidth: posterWidth,
+                      cardHeight: cardHeight,
                       onShow: _show,
-                    ),
-                  )
-                else if (widget.items.length > 1)
-                  // Too narrow for previews: the dots still step through.
-                  Positioned(
-                    right: pad,
-                    bottom: 56,
-                    child: Row(
-                      children: [
-                        for (var i = 0; i < widget.items.length; i++)
-                          _Dot(
-                            active: i == _index,
-                            label: 'Show ${widget.items[i].name}',
-                            onTap: () => _show(i),
-                          ),
-                      ],
+                      onOpenShown: () => widget.onDetails(item),
+                      onPlayShown: () => widget.onPlay(item),
                     ),
                   ),
               ],
@@ -232,62 +267,97 @@ class _DesktopHeroState extends State<DesktopHero> {
 }
 
 class _Backdrop extends StatelessWidget {
-  const _Backdrop({super.key, required this.item, required this.width});
+  const _Backdrop({
+    super.key,
+    required this.item,
+    required this.width,
+    required this.railShare,
+  });
 
   final MediaItem item;
   final double width;
 
+  /// The share of the height the rail takes at the foot, where the artwork
+  /// gives way to the page.
+  final double railShare;
+
   @override
   Widget build(BuildContext context) {
     final image = item.background.isNotEmpty ? item.background : item.poster;
+    final rail = railShare.clamp(0.0, .5);
     return Stack(
       fit: StackFit.expand,
       children: [
-        const ColoredBox(color: GlassTheme.surface),
-        if (image.isNotEmpty)
-          Image.network(
-            image,
-            fit: BoxFit.cover,
-            alignment: const Alignment(0, -.3),
-            cacheWidth: (width * MediaQuery.devicePixelRatioOf(context))
-                .round(),
-            errorBuilder: (_, _, _) => const SizedBox.shrink(),
+        // The artwork stops just short of the hero's foot, where the fade
+        // is already solid: at a fractional height its last, antialiased
+        // row would otherwise show through as a line.
+        Positioned.fill(
+          bottom: 2,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              const ColoredBox(color: GlassTheme.surface),
+              if (image.isNotEmpty)
+                Image.network(
+                  image,
+                  fit: BoxFit.cover,
+                  alignment: const Alignment(0, -.3),
+                  cacheWidth: (width * MediaQuery.devicePixelRatioOf(context))
+                      .round(),
+                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                ),
+            ],
           ),
-        // Text side darkened for contrast; the bottom fades into the page.
+        ),
+        // The text side darkened for contrast, eased off by the middle so
+        // the artwork leads.
         const DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [Color(0xF00B0B0F), Color(0x8C0B0B0F), Color(0x000B0B0F)],
-              stops: [0, .4, .75],
+              colors: [
+                Color(0xF20B0B0F),
+                Color(0xC70B0B0F),
+                Color(0x590B0B0F),
+                Color(0x000B0B0F),
+              ],
+              stops: [0, .22, .44, .66],
             ),
           ),
         ),
-        // A soft light behind the previews' corner, so they sit in the
-        // picture rather than on it.
+        // The far edge darkened a little, so the eye stays on the picture.
         const DecoratedBox(
           decoration: BoxDecoration(
-            gradient: RadialGradient(
-              center: Alignment(1, 1),
-              radius: 1.1,
-              colors: [Color(0x990B0B0F), Color(0x000B0B0F)],
+            gradient: LinearGradient(
+              begin: Alignment.centerRight,
+              end: Alignment.centerLeft,
+              colors: [Color(0x660B0B0F), Color(0x000B0B0F)],
+              stops: [0, .2],
             ),
           ),
         ),
-        const DecoratedBox(
+        // The top softened; the foot fades through the rail into the page,
+        // solid before the edge, so the next row continues the surface.
+        DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              // Solid before the edge, so the image's last pixel row never
-              // shows as a line.
-              colors: [
-                Color(0x400B0B0F),
+              colors: const [
+                Color(0x590B0B0F),
                 Color(0x000B0B0F),
                 Color(0x000B0B0F),
+                Color(0xB30B0B0F),
                 GlassTheme.background,
                 GlassTheme.background,
               ],
-              stops: [0, .18, .58, .95, 1],
+              stops: [
+                0,
+                .16,
+                math.max(.17, 1 - rail - .22),
+                1 - rail * .7,
+                1 - rail * .12,
+                1,
+              ],
             ),
           ),
         ),
@@ -346,6 +416,9 @@ class _HeroText extends StatelessWidget {
   final VoidCallback onDetails;
   final VoidCallback onToggleFavorite;
 
+  /// Every action's height.
+  static const button = 52.0;
+
   @override
   Widget build(BuildContext context) {
     final series = item.type == 'series';
@@ -368,6 +441,42 @@ class _HeroText extends StatelessWidget {
       series ? 'Series' : 'Movie',
       ...genres,
     ].join('  ·  ');
+    // One height and shape for every action, so they read as a set.
+    final shape = const StadiumBorder();
+    WidgetStateProperty<BorderSide?> side(double rest) =>
+        WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.focused)
+              ? BorderSide(color: GlassTheme.coralBright, width: 2)
+              : BorderSide(
+                  color: Colors.white.withValues(
+                    alpha: states.contains(WidgetState.hovered)
+                        ? rest + .2
+                        : rest,
+                  ),
+                ),
+        );
+    final secondary = ButtonStyle(
+      minimumSize: const WidgetStatePropertyAll(Size(0, _HeroText.button)),
+      fixedSize: const WidgetStatePropertyAll(
+        Size.fromHeight(_HeroText.button),
+      ),
+      padding: const WidgetStatePropertyAll(
+        EdgeInsets.symmetric(horizontal: 22),
+      ),
+      shape: WidgetStatePropertyAll(shape),
+      foregroundColor: const WidgetStatePropertyAll(Colors.white),
+      backgroundColor: WidgetStateProperty.resolveWith(
+        (states) => Colors.white.withValues(
+          alpha: states.contains(WidgetState.pressed)
+              ? .2
+              : states.contains(WidgetState.hovered)
+              ? .16
+              : .1,
+        ),
+      ),
+      overlayColor: const WidgetStatePropertyAll(Colors.transparent),
+      side: side(.22),
+    );
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -391,24 +500,62 @@ class _HeroText extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 16),
         if (logo.isEmpty) title else _logo(context, title),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         Row(
           children: [
             if (hasRating) ...[
-              Icon(
-                Symbols.star_rounded,
-                fill: 1,
-                size: 17,
-                color: GlassTheme.primary,
+              // The rating leads, in a quiet glass chip.
+              Container(
+                padding: const EdgeInsets.fromLTRB(8, 4, 10, 4),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: .1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: .14),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Symbols.star_rounded,
+                      fill: 1,
+                      size: 16,
+                      color: GlassTheme.primary,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      item.rating,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(width: 4),
-              Text(
-                item.rating,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
+              const SizedBox(width: 14),
+            ],
+            if (series && item.hasRecentEpisode) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                decoration: BoxDecoration(
+                  color: GlassTheme.primary.withValues(alpha: .16),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: GlassTheme.primary.withValues(alpha: .4),
+                  ),
+                ),
+                child: Text(
+                  'NEW EPISODES',
+                  style: TextStyle(
+                    color: GlassTheme.coralBright,
+                    fontSize: 10.5,
+                    letterSpacing: 1.2,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
               const SizedBox(width: 14),
@@ -429,18 +576,23 @@ class _HeroText extends StatelessWidget {
         ),
         if (item.description.isNotEmpty) ...[
           const SizedBox(height: 14),
-          Text(
-            item.description,
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 15,
-              height: 1.55,
-              color: Color(0xD9FFFFFF),
+          // A comfortable line length, whatever the window's width.
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 560),
+            child: Text(
+              item.description,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 15,
+                height: 1.6,
+                color: Color(0xCCFFFFFF),
+                shadows: [Shadow(color: Color(0x80000000), blurRadius: 12)],
+              ),
             ),
           ),
         ],
-        const SizedBox(height: 24),
+        const SizedBox(height: 26),
         Wrap(
           spacing: 12,
           runSpacing: 10,
@@ -448,51 +600,71 @@ class _HeroText extends StatelessWidget {
           children: [
             FilledButton.icon(
               onPressed: onPlay,
-              style: FilledButton.styleFrom(
-                backgroundColor: GlassTheme.primary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 26,
-                  vertical: 18,
+              style: secondary.copyWith(
+                padding: const WidgetStatePropertyAll(
+                  EdgeInsets.symmetric(horizontal: 28),
                 ),
+                backgroundColor: WidgetStateProperty.resolveWith(
+                  (states) => states.contains(WidgetState.pressed)
+                      ? Color.alphaBlend(
+                          Colors.black.withValues(alpha: .12),
+                          GlassTheme.primary,
+                        )
+                      : states.contains(WidgetState.hovered)
+                      ? Color.alphaBlend(
+                          Colors.white.withValues(alpha: .1),
+                          GlassTheme.primary,
+                        )
+                      : GlassTheme.primary,
+                ),
+                side: WidgetStateProperty.resolveWith(
+                  (states) => states.contains(WidgetState.focused)
+                      ? const BorderSide(color: Colors.white, width: 2)
+                      : BorderSide.none,
+                ),
+                elevation: const WidgetStatePropertyAll(0),
               ),
               icon: Icon(
                 series ? Symbols.view_list_rounded : Symbols.play_arrow_rounded,
                 fill: 1,
+                size: 24,
               ),
               label: Text(
                 series ? 'Episodes' : 'Play',
-                style: const TextStyle(fontWeight: FontWeight.w800),
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ),
             OutlinedButton.icon(
               onPressed: onDetails,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.white,
-                backgroundColor: Colors.white.withValues(alpha: .1),
-                side: BorderSide(color: Colors.white.withValues(alpha: .28)),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 22,
-                  vertical: 18,
-                ),
-              ),
-              icon: const Icon(Symbols.info_rounded),
+              style: secondary,
+              icon: const Icon(Symbols.info_rounded, size: 22),
               label: const Text(
                 'More info',
-                style: TextStyle(fontWeight: FontWeight.w700),
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
               ),
             ),
             IconButton.outlined(
               tooltip: favorite ? 'Remove from My list' : 'Add to My list',
               onPressed: onToggleFavorite,
-              style: IconButton.styleFrom(
-                foregroundColor: Colors.white,
-                backgroundColor: Colors.white.withValues(alpha: .1),
-                side: BorderSide(color: Colors.white.withValues(alpha: .28)),
-                padding: const EdgeInsets.all(14),
+              style: secondary.copyWith(
+                fixedSize: const WidgetStatePropertyAll(
+                  Size.square(_HeroText.button),
+                ),
+                minimumSize: const WidgetStatePropertyAll(
+                  Size.square(_HeroText.button),
+                ),
+                shape: const WidgetStatePropertyAll(CircleBorder()),
+                padding: const WidgetStatePropertyAll(EdgeInsets.zero),
               ),
-              icon: Icon(
-                favorite ? Symbols.check_rounded : Symbols.add_rounded,
+              icon: AnimatedSwitcher(
+                duration: desktopMotion(context, 200),
+                child: Icon(
+                  favorite ? Symbols.check_rounded : Symbols.add_rounded,
+                  key: ValueKey(favorite),
+                ),
               ),
             ),
           ],
@@ -520,111 +692,276 @@ extension on _HeroText {
         cacheWidth: posterDecodeWidth(
           460 * MediaQuery.devicePixelRatioOf(context),
         ),
-        frameBuilder: (context, child, frame, synchronous) =>
-            frame == null && !synchronous
+        // The name until the logo's first frame; then the logo fades in.
+        frameBuilder: (context, child, frame, synchronous) => synchronous
+            ? child
+            : frame == null
             ? ExcludeSemantics(child: title)
-            : child,
+            : TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0, end: 1),
+                duration: desktopMotion(context, 360),
+                curve: DesktopSurfaces.curve,
+                builder: (context, opacity, child) =>
+                    Opacity(opacity: opacity, child: child),
+                child: child,
+              ),
         errorBuilder: (_, _, _) => ExcludeSemantics(child: title),
       ),
     ),
   );
 }
 
-/// The next [count] titles after [index], as cards; the first is labelled
-/// Up next. A counter above shows where the rotation is.
-class _Previews extends StatelessWidget {
-  const _Previews({
+/// Every Spotlight title in order, along the hero's foot, as one strip of
+/// equal height: the shown title first, as a wide backdrop card with its name,
+/// details and a play button, then the titles after it as posters, round to
+/// the first again. A counter shows where the rotation is.
+class _SpotlightRail extends StatelessWidget {
+  const _SpotlightRail({
     required this.items,
     required this.index,
-    required this.count,
-    required this.cardWidth,
+    required this.rotation,
+    required this.controller,
+    required this.posterWidth,
+    required this.cardHeight,
     required this.onShow,
-  });
-
-  final List<MediaItem> items;
-  final int index;
-  final int count;
-  final double cardWidth;
-  final ValueChanged<int> onShow;
-
-  @override
-  Widget build(BuildContext context) => FocusTraversalGroup(
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Text.rich(
-          TextSpan(
-            children: [
-              TextSpan(
-                text: '${index + 1}'.padLeft(2, '0'),
-                style: const TextStyle(color: Colors.white),
-              ),
-              TextSpan(text: '  /  ${'${items.length}'.padLeft(2, '0')}'),
-            ],
-          ),
-          style: const TextStyle(
-            fontSize: 12,
-            letterSpacing: 1.4,
-            fontWeight: FontWeight.w800,
-            color: Colors.white54,
-          ),
-        ),
-        const SizedBox(height: 10),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (var k = 1; k <= count; k++) ...[
-              if (k > 1) const SizedBox(width: _PreviewCard.gap),
-              _PreviewCard(
-                // Keyed by slot: a card cross-fades to its new title.
-                key: ValueKey('preview:$k'),
-                item: items[(index + k) % items.length],
-                upNext: k == 1,
-                width: cardWidth,
-                onTap: () => onShow((index + k) % items.length),
-              ),
-            ],
-          ],
-        ),
-      ],
-    ),
-  );
-}
-
-class _PreviewCard extends StatefulWidget {
-  const _PreviewCard({
-    super.key,
-    required this.item,
-    required this.upNext,
-    required this.width,
-    required this.onTap,
+    required this.onOpenShown,
+    required this.onPlayShown,
   });
 
   static const gap = 12.0;
+  static const _headerHeight = 36.0;
 
-  final MediaItem item;
-  final bool upNext;
-  final double width;
-  final VoidCallback onTap;
+  /// Above and below the cards: room for a hovered card to lift unclipped,
+  /// and the page's breathing space under the rail.
+  static const _lift = 10.0, _foot = 24.0;
+
+  static double heightFor(double cardHeight) =>
+      _headerHeight + _lift + cardHeight + _foot;
+
+  final List<MediaItem> items;
+  final int index;
+
+  /// Steps the Spotlight has moved in all, never wrapping; [index] is it
+  /// modulo the count. It numbers the places in an endless strip.
+  final int rotation;
+  final ScrollController controller;
+  final double posterWidth;
+  final double cardHeight;
+  final ValueChanged<int> onShow;
+  final VoidCallback onOpenShown;
+  final VoidCallback onPlayShown;
+
+  /// How long the strip takes to move on, cards and widths together.
+  static const moveMs = 460;
+
+  double get _wide => cardHeight * 16 / 9;
+
+  /// The card at [slot] (−1 for the one leaving). Each card is keyed by its
+  /// place in the endless strip, which stays the same as it moves forward,
+  /// so it slides to its new spot (and the newly shown one widens) instead
+  /// of being redrawn there. A title that wraps round gets a new place at
+  /// the end and fades in, rather than crossing the whole row.
+  Widget _placed(BuildContext context, {required int slot}) {
+    final n = items.length;
+    final i = (index + slot) % n;
+    final leaving = slot < 0;
+    final duration = desktopMotion(context, moveMs);
+    final left = switch (slot) {
+      < 0 => -(posterWidth + gap),
+      0 => 0.0,
+      _ => _wide + gap + (slot - 1) * (posterWidth + gap),
+    };
+    return AnimatedPositioned(
+      key: ValueKey(rotation + slot),
+      duration: duration,
+      curve: DesktopSurfaces.curve,
+      left: left,
+      bottom: 0,
+      // One structure for every card, leaving or not, so a card keeps its
+      // state (and animates) as it turns into the leaving one.
+      child: IgnorePointer(
+        ignoring: leaving,
+        child: ExcludeFocus(
+          excluding: leaving,
+          child: ExcludeSemantics(
+            excluding: leaving,
+            child: AnimatedOpacity(
+              opacity: leaving ? 0 : 1,
+              duration: duration,
+              curve: DesktopSurfaces.curve,
+              child: _FadeInOnce(
+                child: _SpotlightCard(
+                  item: items[i],
+                  shown: slot == 0,
+                  leaving: leaving,
+                  width: slot == 0 ? _wide : posterWidth,
+                  height: cardHeight,
+                  onTap: slot == 0 ? onOpenShown : () => onShow(i),
+                  onPlay: onPlayShown,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
-  State<_PreviewCard> createState() => _PreviewCardState();
+  Widget build(BuildContext context) {
+    const pad = DesktopMetrics.pagePadding;
+    final wide = _wide;
+    return FocusTraversalGroup(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            height: _headerHeight,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: pad),
+              child: Row(
+                children: [
+                  Container(
+                    width: 3,
+                    height: 14,
+                    margin: const EdgeInsets.only(right: 10),
+                    decoration: BoxDecoration(
+                      color: GlassTheme.primary,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const Text(
+                    'In the Spotlight',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+                  ),
+                  const Spacer(),
+                  // Where the rotation is, at a glance; the counter says it.
+                  ExcludeSemantics(
+                    child: Row(
+                      children: [
+                        for (var i = 0; i < items.length; i++)
+                          AnimatedContainer(
+                            duration: desktopMotion(context, 260),
+                            curve: DesktopSurfaces.curve,
+                            width: i == index ? 22 : 6,
+                            height: 3,
+                            margin: const EdgeInsets.only(right: 4),
+                            decoration: BoxDecoration(
+                              color: i == index
+                                  ? GlassTheme.primary
+                                  : Colors.white.withValues(alpha: .28),
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(
+                          text: '${index + 1}'.padLeft(2, '0'),
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                        TextSpan(
+                          text: '  /  ${'${items.length}'.padLeft(2, '0')}',
+                        ),
+                      ],
+                    ),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      letterSpacing: 1.4,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white54,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          SizedBox(
+            height: _lift + cardHeight,
+            child: SingleChildScrollView(
+              controller: controller,
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: pad),
+              child: SizedBox(
+                width: wide + (items.length - 1) * (posterWidth + gap),
+                height: _lift + cardHeight,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    // The title just shown slides out to the left,
+                    // narrowing and fading, as the next one takes its place.
+                    _placed(context, slot: -1),
+                    for (var slot = 0; slot < items.length; slot++)
+                      _placed(context, slot: slot),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-class _PreviewCardState extends State<_PreviewCard> {
+class _SpotlightCard extends StatefulWidget {
+  const _SpotlightCard({
+    required this.item,
+    required this.shown,
+    this.leaving = false,
+    required this.width,
+    required this.height,
+    required this.onTap,
+    required this.onPlay,
+  });
+
+  final MediaItem item;
+
+  /// The title the hero shows: its backdrop, name, details and a play
+  /// button; a click elsewhere on it opens its details.
+  final bool shown;
+
+  /// The card sliding out after its title was shown: no tooltip.
+  final bool leaving;
+  final double width;
+  final double height;
+  final VoidCallback onTap;
+
+  /// The shown card's play button: Play, or Episodes for a series.
+  final VoidCallback onPlay;
+
+  @override
+  State<_SpotlightCard> createState() => _SpotlightCardState();
+}
+
+class _SpotlightCardState extends State<_SpotlightCard> {
   bool _hovered = false;
   bool _focused = false;
 
   @override
   Widget build(BuildContext context) {
     final item = widget.item;
+    final shown = widget.shown;
     final lifted = _hovered || _focused;
-    final duration = desktopMotion(context);
-    final image = item.background.isNotEmpty ? item.background : item.poster;
-    final radius = BorderRadius.circular(12);
+    final duration = desktopMotion(context, _SpotlightRail.moveMs);
+    final dpr = MediaQuery.devicePixelRatioOf(context);
+    // The shown card is landscape: the backdrop. The rest are posters.
+    final image = shown
+        ? (item.background.isNotEmpty ? item.background : item.poster)
+        : (item.poster.isNotEmpty ? item.poster : item.background);
+    final radius = BorderRadius.circular(14);
+    // Below this the details line would be cut to a word or two.
+    final compact = widget.height < 130;
     return Tooltip(
-      message: 'Show ${item.name}',
+      message: widget.leaving
+          ? ''
+          : shown
+          ? 'More about ${item.name}'
+          : 'Show ${item.name}',
       waitDuration: const Duration(milliseconds: 600),
       child: FocusableActionDetector(
         mouseCursor: SystemMouseCursors.click,
@@ -642,23 +979,25 @@ class _PreviewCardState extends State<_PreviewCard> {
           onTap: widget.onTap,
           child: Semantics(
             button: true,
-            label: '${widget.upNext ? 'Up next' : 'Coming up'}, ${item.name}',
-            excludeSemantics: true,
-            child: AnimatedScale(
-              scale: lifted ? 1.04 : 1,
-              duration: duration,
+            selected: shown,
+            label: shown ? 'Now showing, ${item.name}' : item.name,
+            child: AnimatedSlide(
+              // A small lift on hover: the cards stay second to the hero.
+              offset: Offset(0, lifted ? -.03 : 0),
+              duration: desktopMotion(context, 200),
               curve: DesktopSurfaces.curve,
               child: AnimatedContainer(
                 duration: duration,
+                curve: DesktopSurfaces.curve,
                 width: widget.width,
-                height: widget.width * 9 / 16,
+                height: widget.height,
                 decoration: BoxDecoration(
                   borderRadius: radius,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: lifted ? .6 : .4),
-                      blurRadius: lifted ? 22 : 14,
-                      offset: const Offset(0, 8),
+                      color: Colors.black.withValues(alpha: lifted ? .55 : .35),
+                      blurRadius: lifted ? 20 : 12,
+                      offset: const Offset(0, 6),
                     ),
                   ],
                 ),
@@ -667,73 +1006,83 @@ class _PreviewCardState extends State<_PreviewCard> {
                   border: Border.all(
                     color: _focused
                         ? GlassTheme.coralBright
-                        : widget.upNext
-                        ? GlassTheme.primary.withValues(alpha: .7)
-                        : Colors.white.withValues(alpha: lifted ? .45 : .16),
-                    width: _focused ? 2.5 : 1.2,
+                        : Colors.white.withValues(alpha: lifted ? .35 : .08),
+                    width: _focused ? 2 : 1,
                   ),
                 ),
                 child: ClipRRect(
                   borderRadius: radius,
-                  child: AnimatedSwitcher(
-                    duration: desktopMotion(context, 420),
-                    child: Stack(
-                      key: ValueKey('${item.type}:${item.id}'),
-                      fit: StackFit.expand,
-                      children: [
-                        const PosterPlaceholder(iconSize: 22),
-                        if (image.isNotEmpty)
-                          Image.network(
-                            image,
-                            fit: BoxFit.cover,
-                            cacheWidth: posterDecodeWidth(
-                              widget.width *
-                                  MediaQuery.devicePixelRatioOf(context),
-                            ),
-                            frameBuilder: posterFadeIn(context),
-                            errorBuilder: (_, _, _) => const SizedBox.shrink(),
-                          ),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      const PosterPlaceholder(iconSize: 22),
+                      // Cross-fades as the card turns from poster to
+                      // backdrop and back.
+                      AnimatedSwitcher(
+                        duration: duration,
+                        child: image.isEmpty
+                            ? const SizedBox.shrink()
+                            : Image.network(
+                                image,
+                                key: ValueKey(image),
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                                height: double.infinity,
+                                // Decoded at the size drawn: the backdrop's
+                                // width, or the poster's.
+                                cacheWidth: posterDecodeWidth(
+                                  (shown
+                                          ? widget.height * 16 / 9
+                                          : widget.height * 2 / 3) *
+                                      dpr,
+                                ),
+                                frameBuilder: posterFadeIn(context),
+                                errorBuilder: (_, _, _) =>
+                                    const SizedBox.shrink(),
+                              ),
+                      ),
+                      if (shown)
                         const DecoratedBox(
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
-                              colors: [Color(0x00000000), Color(0xE6000000)],
+                              colors: [Color(0x00000000), Color(0xD9000000)],
                               stops: [.35, 1],
                             ),
                           ),
                         ),
+                      if (shown)
                         Positioned(
-                          left: 10,
-                          right: 10,
-                          bottom: 8,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              if (widget.upNext)
-                                Text(
-                                  'UP NEXT',
-                                  style: TextStyle(
-                                    color: GlassTheme.coralBright,
-                                    fontSize: 9.5,
-                                    letterSpacing: 1.4,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                              Text(
-                                item.name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                ),
+                          left: compact ? 10 : 16,
+                          right: compact ? 8 : 14,
+                          bottom: compact ? 8 : 14,
+                          child: _ShownDetails(
+                            // Fades in again for each new title.
+                            key: ValueKey('${item.type}:${item.id}'),
+                            item: item,
+                            onPlay: widget.onPlay,
+                            compact: compact,
+                          ),
+                        )
+                      // Without a poster, the name stands in for it.
+                      else if (item.poster.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.all(10),
+                          child: Align(
+                            alignment: Alignment.bottomLeft,
+                            child: Text(
+                              item.name,
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
                               ),
-                            ],
+                            ),
                           ),
                         ),
-                      ],
-                    ),
+                    ],
                   ),
                 ),
               ),
@@ -745,34 +1094,125 @@ class _PreviewCardState extends State<_PreviewCard> {
   }
 }
 
-class _Dot extends StatelessWidget {
-  const _Dot({required this.active, required this.label, required this.onTap});
+/// The shown card's foot: its name, a details line (rating, year, type and
+/// genres, whichever are known) and a round play button.
+class _ShownDetails extends StatelessWidget {
+  const _ShownDetails({
+    super.key,
+    required this.item,
+    required this.onPlay,
+    this.compact = false,
+  });
 
-  final bool active;
-  final String label;
-  final VoidCallback onTap;
+  final MediaItem item;
+  final VoidCallback onPlay;
+
+  /// A short card (a small window): the name and button only, smaller.
+  final bool compact;
 
   @override
-  Widget build(BuildContext context) => Tooltip(
-    message: label,
-    child: InkWell(
-      canRequestFocus: false,
-      borderRadius: BorderRadius.circular(8),
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-        child: AnimatedContainer(
-          duration: desktopMotion(context, 220),
-          width: active ? 26 : 8,
-          height: 8,
-          decoration: BoxDecoration(
-            color: active
-                ? GlassTheme.primary
-                : Colors.white.withValues(alpha: .35),
-            borderRadius: BorderRadius.circular(4),
+  Widget build(BuildContext context) {
+    final series = item.type == 'series';
+    final hasRating = item.rating.isNotEmpty && item.rating != '0.0';
+    final genres = [for (final id in item.genreIds) ?_genres[id]].take(2);
+    final details = [
+      if (item.year.isNotEmpty) item.year,
+      series ? 'Series' : 'Movie',
+      if (genres.isNotEmpty) genres.join(', '),
+    ].join('  |  ');
+    return _FadeInOnce(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: compact ? 13.5 : 17,
+                    height: 1.2,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                if (!compact) ...[
+                  const SizedBox(height: 4),
+                  Text.rich(
+                    TextSpan(
+                      children: [
+                        // The app's star, not a "★" the font may not have.
+                        if (hasRating) ...[
+                          WidgetSpan(
+                            alignment: PlaceholderAlignment.middle,
+                            child: Padding(
+                              padding: const EdgeInsets.only(right: 3),
+                              child: Icon(
+                                Symbols.star_rounded,
+                                fill: 1,
+                                size: 13,
+                                color: GlassTheme.primary,
+                              ),
+                            ),
+                          ),
+                          TextSpan(text: '${item.rating}  |  '),
+                        ],
+                        TextSpan(text: details),
+                      ],
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xCCFFFFFF),
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ),
-        ),
+          SizedBox(width: compact ? 8 : 12),
+          IconButton.filled(
+            tooltip: series ? 'Episodes' : 'Play',
+            onPressed: onPlay,
+            style: IconButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: Colors.black,
+              hoverColor: Colors.black.withValues(alpha: .08),
+              fixedSize: Size.square(compact ? 34 : 44),
+              minimumSize: Size.square(compact ? 34 : 44),
+              padding: EdgeInsets.zero,
+            ),
+            icon: Icon(
+              series ? Symbols.view_list_rounded : Symbols.play_arrow_rounded,
+              fill: 1,
+              size: compact ? 21 : 26,
+            ),
+          ),
+        ],
       ),
-    ),
+    );
+  }
+}
+
+/// Fades its child in once, after the card has begun to widen, so the
+/// details never show squeezed.
+class _FadeInOnce extends StatelessWidget {
+  const _FadeInOnce({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => TweenAnimationBuilder<double>(
+    tween: Tween(begin: 0, end: 1),
+    duration: desktopMotion(context, 420),
+    curve: const Interval(.45, 1, curve: Curves.easeOut),
+    builder: (context, opacity, child) =>
+        Opacity(opacity: opacity, child: child),
+    child: child,
   );
 }

@@ -12,6 +12,7 @@ import 'package:onfeed/src/desktop/desktop_pages.dart';
 import 'package:onfeed/src/desktop/desktop_top_ten.dart';
 import 'package:onfeed/src/desktop/desktop_widgets.dart';
 import 'package:onfeed/src/models/app_update.dart';
+import 'package:onfeed/src/models/media_item.dart';
 import 'package:onfeed/src/screens/home_screen.dart';
 import 'package:onfeed/src/services/accent_settings_controller.dart';
 import 'package:onfeed/src/services/media_catalog_rules.dart';
@@ -194,7 +195,7 @@ void main() {
       // Leaving Home and coming back reuses everything already loaded.
       final before = urls.length;
       for (final page in ['Movies', 'My library', 'Home']) {
-        await tester.tap(find.text(page).first);
+        await tester.tap(find.byTooltip(page).first);
         await settle(tester, rounds: 10);
       }
       expect(urls.sublist(before).where(isRecommendations), isEmpty);
@@ -324,10 +325,49 @@ void main() {
   );
 
   testWidgets(
+    'Continue watching is in the sidebar, from the watch history, and not '
+    'a row on Home',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      const started = MediaItem(
+        id: '4242',
+        type: 'movie',
+        name: 'A film half watched',
+      );
+      await tester.runAsync(
+        () => StorageService().saveProgress(
+          started,
+          const Duration(minutes: 30).inMilliseconds,
+          durationMs: const Duration(minutes: 90).inMilliseconds,
+        ),
+      );
+      await pumpHome(tester, size: const Size(1600, 6000), keepData: true);
+
+      expect(
+        find.descendant(
+          of: find.byType(DesktopHomePage),
+          matching: find.text('Continue watching'),
+        ),
+        findsNothing,
+      );
+      expect(find.byKey(const ValueKey('row:continue')), findsNothing);
+      // Compact: the thumbnail, with the title and what is left as its
+      // tooltip.
+      expect(find.byKey(const ValueKey('resume:movie:4242')), findsOneWidget);
+      expect(find.byTooltip('A film half watched\n1h left'), findsOneWidget);
+
+      await disposeHome(tester);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+
+  testWidgets(
     'My list from a Home poster saves, shows everywhere, and survives a '
     'restart',
     (tester) async {
       await pumpHome(tester);
+      // Below the Spotlight and its rail: scrolled into view, as a user would.
+      await revealTopTen(tester);
       final first = find
           .descendant(of: topTen(), matching: find.byType(DesktopPosterCard))
           .first;

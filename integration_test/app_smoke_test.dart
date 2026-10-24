@@ -54,7 +54,14 @@ void main() {
           : pluginsLabel.first,
     );
     await pumpUntil(tester, find.text('Browse Reelish Plugins'));
-    expect(find.byTooltip('Paste a manifest URL'), findsOneWidget);
+    // An icon button on phones and TVs; a labelled button on the Windows
+    // Plugins page.
+    expect(
+      desktop
+          ? find.text('Paste a manifest URL')
+          : find.byTooltip('Paste a manifest URL'),
+      findsOneWidget,
+    );
     expect(find.text('Add provider'), findsNothing);
 
     await tester.tap(find.text('Browse Reelish Plugins'));

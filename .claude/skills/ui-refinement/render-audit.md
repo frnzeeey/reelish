@@ -38,7 +38,7 @@ when done. Never screen-capture the user's desktop instead.
 
 1024×640, 1280×720, 1366×768, 1920×1080, 2560×1440, and 3840×2160 at
 `devicePixelRatio` 2. Content width is the window minus the sidebar
-(236 px expanded).
+(80 px compact; 248 px when pinned open).
 
 ## Reading the results
 

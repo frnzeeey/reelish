@@ -29,13 +29,9 @@ class DesktopHomePage extends StatefulWidget {
     required this.onToggleFavorite,
     required this.onRetry,
     required this.onAddSource,
-    this.resumeLabel,
   });
 
   final TvCatalog catalog;
-
-  /// Where the viewer is in a title ("34 min left"), for Continue watching.
-  final String Function(MediaItem item)? resumeLabel;
   final ValueChanged<MediaItem> onOpen;
   final ValueChanged<MediaItem> onPlay;
   final Future<bool> Function(MediaItem item) onToggleFavorite;
@@ -116,17 +112,7 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
           key: const ValueKey('add-source'),
           onAddSource: widget.onAddSource,
         ),
-      if (catalog.continueWatching.isNotEmpty)
-        DesktopMediaRow(
-          key: const ValueKey('row:continue'),
-          title: 'Continue watching',
-          items: catalog.continueWatching,
-          onOpen: widget.onOpen,
-          progressOf: catalog.resumeFraction,
-          captionOf: widget.resumeLabel,
-          isFavorite: catalog.isFavorite,
-          onToggleFavorite: widget.onToggleFavorite,
-        ),
+      // Continue watching is in the sidebar on Windows, not a row here.
       if (_trending.isNotEmpty)
         DesktopMediaRow(
           key: const ValueKey('row:trending'),

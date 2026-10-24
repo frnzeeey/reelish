@@ -14,6 +14,7 @@ import '../models/stream_source.dart';
 import '../navigation/app_transitions.dart';
 import '../desktop/desktop_details_screen.dart';
 import '../desktop/desktop_pages.dart';
+import '../desktop/desktop_provider_search.dart';
 import '../desktop/desktop_plugins_page.dart';
 import '../desktop/desktop_settings_page.dart';
 import '../desktop/desktop_shell.dart';
@@ -120,6 +121,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final _searchFeed = _HomeFeed();
   List<MediaItem> _spotlightItems = [];
   bool _resolvingStreams = false;
+
+  /// What the Windows search panel names, and how it stops the search.
+  ({String title, int? season, int? episode, VoidCallback cancel})? _resolving;
   bool _searchVisible = false;
   String _category = 'For you';
   int _tab = 0;
@@ -578,6 +582,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       if (searchCancelled.isCompleted) return;
       searchCancelled.complete();
       dismissSearchDialog();
+      // The Windows and TV panel goes at once, not when the search unwinds.
+      if (mounted && presentationContext == null && _resolvingStreams) {
+        setState(() => _resolvingStreams = false);
+      }
     }
 
     /// [future]'s value, or null once the search is cancelled.
@@ -644,7 +652,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ),
       );
     } else if (mounted) {
-      setState(() => _resolvingStreams = true);
+      setState(() {
+        _resolvingStreams = true;
+        _resolving = (
+          title: item.name,
+          season: season,
+          episode: episode,
+          cancel: cancelSearch,
+        );
+      });
     }
     try {
       // Resolve IMDb metadata for subtitles in parallel with stream discovery.
@@ -738,7 +754,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         }
       }
       dismissSearchDialog();
-      if (!mounted) {
+      // Cancelled during a step that does not watch for it (such as the
+      // saved-link read): the player must not open anyway.
+      if (!mounted || searchCancelled.isCompleted) {
         discovery?.cancel();
         return;
       }
@@ -2174,6 +2192,29 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
+  /// Continue watching in the Windows sidebar: a movie plays on from its
+  /// saved position; a series plays on in the episode watched last. A
+  /// series whose last episode is finished, or whose episode is not known,
+  /// opens the episode list there instead, as Play does.
+  Future<void> _resumeFromSidebar(MediaItem item) async {
+    if (item.type != 'series') return _openItem(item);
+    var progress = SeriesProgress.empty;
+    try {
+      progress = await _storage.seriesProgress(item);
+    } catch (_) {}
+    if (!mounted) return;
+    final last = progress.last;
+    if (last == null ||
+        progress.of(last.season, last.episode)?.isWatched == true) {
+      return _openItem(item);
+    }
+    return _openItem(
+      item,
+      selectedSeason: last.season,
+      selectedEpisode: last.episode,
+    );
+  }
+
   /// The Windows interface: the same catalog, storage, plugins and play
   /// flow, in a desktop layout with the TV-style sidebar. See [DesktopShell].
   Widget _buildDesktop(
@@ -2199,6 +2240,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         DesktopShell(
           destination: _tvDestination,
           onDestinationChanged: _onTvDestinationChanged,
+          continueWatching: DesktopResumeShelf(
+            items: _continueWatching,
+            loaded: _homeModel.historyLoaded,
+            summaryOf: _resumeSummary,
+            onResume: (item) => unawaited(_resumeFromSidebar(item)),
+            onDetails: (item) => unawaited(_showDetails(item)),
+          ),
           pageBuilder: (context, destination) => switch (destination) {
             TvDestination.home => DesktopHomePage(
               catalog: catalog,
@@ -2211,7 +2259,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               onRetry: () => unawaited(_reloadActiveFeed()),
               onAddSource: () =>
                   ProviderInstallerModal.show(context, _providerPlugins),
-              resumeLabel: (item) => _resumeSummary(item).label,
             ),
             TvDestination.movies => DesktopCatalogPage(
               title: 'Movies',
@@ -2258,24 +2305,42 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  Widget _resolvingOverlay() => ColoredBox(
-    color: Colors.black.withValues(alpha: 0.72),
-    child: Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          CircularProgressIndicator(color: GlassTheme.primary),
-          const SizedBox(height: 16),
-          Text(
-            'Searching providers…',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'This can take a moment while sources are checked.',
-            style: TextStyle(color: GlassTheme.muted, fontSize: 12),
-          ),
-        ],
+  Widget _resolvingOverlay() {
+    final resolving = _resolving;
+    if (DeviceCapabilities.isDesktop && resolving != null) {
+      return DesktopProviderSearch(
+        title: resolving.title,
+        season: resolving.season,
+        episode: resolving.episode,
+        onCancel: resolving.cancel,
+      );
+    }
+    return _plainResolvingOverlay();
+  }
+
+  // On TV and Windows the shell's Stack has no Material above it, so its
+  // text would get Flutter's missing-Material underline without one.
+  Widget _plainResolvingOverlay() => Material(
+    type: MaterialType.transparency,
+    child: ColoredBox(
+      color: Colors.black.withValues(alpha: 0.72),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(color: GlassTheme.primary),
+            const SizedBox(height: 16),
+            Text(
+              'Searching providers…',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'This can take a moment while sources are checked.',
+              style: TextStyle(color: GlassTheme.muted, fontSize: 12),
+            ),
+          ],
+        ),
       ),
     ),
   );
