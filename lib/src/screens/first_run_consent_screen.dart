@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../platform/device_capabilities.dart';
 import '../theme/glass_theme.dart';
 import 'legal_information_screen.dart';
 
@@ -133,6 +134,9 @@ class _FirstRunConsentScreenState extends State<FirstRunConsentScreen> {
                         children: [
                           _DocumentConsentTile(
                             title: 'Privacy policy',
+                            // A remote needs a starting point: the screen
+                            // opens with the first Read focused on a TV.
+                            autofocus: DeviceCapabilities.isTv,
                             read: _privacyRead,
                             agreed: _privacyAgreed,
                             onRead: () => _readDocument(LegalDocument.privacy),
@@ -191,9 +195,11 @@ class _DocumentConsentTile extends StatelessWidget {
     required this.agreed,
     required this.onRead,
     required this.onChanged,
+    this.autofocus = false,
   });
 
   final String title;
+  final bool autofocus;
   final bool read;
   final bool agreed;
   final VoidCallback onRead;
@@ -226,6 +232,7 @@ class _DocumentConsentTile extends StatelessWidget {
             ),
             subtitle: Text(read ? 'Read to the end' : 'Read the full document'),
             trailing: TextButton(
+              autofocus: autofocus,
               onPressed: onRead,
               child: Text(read ? 'Read again' : 'Read'),
             ),

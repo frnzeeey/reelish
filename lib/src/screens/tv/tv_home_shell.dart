@@ -278,17 +278,19 @@ class _TvNavigationRail extends StatelessWidget {
           ? TvHomeShellState.expandedRailWidth
           : TvHomeShellState.collapsedRailWidth,
       // Expanded, the rail lays a painted shade over the page instead of
-      // pushing it aside, so the page never relayouts.
+      // pushing it aside, so the page never relayouts. The shade is solid
+      // under the labels and fades out by the rail's edge, so it never cuts
+      // a line through the page's title.
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: expanded
               ? const [
                   GlassTheme.background,
                   Color(0xF00B0B0F),
-                  Color(0xC00B0B0F),
+                  Color(0x000B0B0F),
                 ]
               : const [Color(0xFF0E0E13), Color(0xFF0E0E13), Color(0xFF0E0E13)],
-          stops: const [0, .7, 1],
+          stops: const [0, .66, 1],
         ),
       ),
       padding: const EdgeInsets.fromLTRB(16, TvSafeArea.vertical, 16, 16),

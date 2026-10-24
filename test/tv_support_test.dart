@@ -597,6 +597,49 @@ void main() {
     expect(focused?.findAncestorWidgetOfExactType<CheckboxListTile>(), isNull);
   });
 
+  testWidgets('a must-read document keeps Done reading inside the TV safe '
+      'area', (tester) async {
+    DeviceCapabilities.debugOverride = const DeviceCapabilities(
+      isTelevision: true,
+    );
+    await _pumpTv(
+      tester,
+      const LegalInformationScreen(
+        document: LegalDocument.privacy,
+        requireReadToEnd: true,
+      ),
+    );
+    // 960 × 540 logical; many TVs crop the outer edge.
+    final button = tester.getRect(
+      find.ancestor(
+        of: find.text('Done reading'),
+        matching: find.byType(FilledButton),
+      ),
+    );
+    expect(button.left, greaterThanOrEqualTo(TvSafeArea.horizontal));
+    expect(button.right, lessThanOrEqualTo(960 - TvSafeArea.horizontal));
+    expect(button.bottom, lessThanOrEqualTo(540 - TvSafeArea.vertical));
+  });
+
+  testWidgets('first-run consent opens with the first Read focused', (
+    tester,
+  ) async {
+    DeviceCapabilities.debugOverride = const DeviceCapabilities(
+      isTelevision: true,
+    );
+    await _pumpTv(tester, FirstRunConsentScreen(onAccepted: () {}));
+
+    // Before any key: a remote shows where it is from the first frame.
+    final focused = FocusManager.instance.primaryFocus?.context;
+    final button = focused?.findAncestorWidgetOfExactType<TextButton>();
+    expect(button, isNotNull);
+    expect((button!.child! as Text).data, 'Read');
+    expect(
+      tester.getTopLeft(find.byWidget(button)).dy,
+      lessThan(tester.getTopLeft(find.text('Terms of use')).dy),
+    );
+  });
+
   testWidgets('a document that must be read to the end can be read with the '
       'D-pad', (tester) async {
     DeviceCapabilities.debugOverride = const DeviceCapabilities(

@@ -118,10 +118,10 @@ class _TvMediaDetailsScreenState extends State<TvMediaDetailsScreen> {
             Positioned(
               top: 0,
               right: 0,
-              width: size.width * .78,
+              width: tvBackdropWidth(context, .78),
               height: size.height * .9,
-              // The fade starts at the image's own left edge, so no seam
-              // shows where the image begins.
+              // The fade starts at the image's own left edge, which falls on
+              // a whole pixel, so no seam shows where the image begins.
               child: Stack(
                 fit: StackFit.expand,
                 children: [
@@ -331,7 +331,13 @@ class _TvMediaDetailsScreenState extends State<TvMediaDetailsScreen> {
         shape: const StadiumBorder(),
         foregroundColor: filled ? GlassTheme.background : Colors.white,
         backgroundColor: filled ? GlassTheme.primary : null,
-        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+        // A button's textStyle replaces the theme's label style rather than
+        // merging with it, so the family is named here.
+        textStyle: const TextStyle(
+          fontFamily: GlassTheme.fontFamily,
+          fontSize: 16,
+          fontWeight: FontWeight.w800,
+        ),
       );
 
   List<Widget> _episodeSection() => [

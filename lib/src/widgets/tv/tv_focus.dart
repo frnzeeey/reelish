@@ -17,6 +17,17 @@ abstract final class TvSafeArea {
   static const vertical = 27.0;
 }
 
+/// [fraction] of the screen width in whole device pixels, for a backdrop
+/// pinned to the right edge. Its left edge then falls on a pixel boundary,
+/// so the image's first column never shows as a line past the fade painted
+/// over it.
+double tvBackdropWidth(BuildContext context, double fraction) {
+  final pixelRatio = MediaQuery.devicePixelRatioOf(context);
+  return (MediaQuery.sizeOf(context).width * fraction * pixelRatio)
+          .roundToDouble() /
+      pixelRatio;
+}
+
 /// A remote-friendly target: Select (D-pad center, Enter) or a tap activates
 /// it, and focus shows as a slight scale-up, a coral ring and a soft glow.
 ///

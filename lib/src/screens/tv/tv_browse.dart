@@ -67,7 +67,7 @@ class TvBrowseFrame extends StatelessWidget {
         Positioned(
           top: 0,
           right: 0,
-          width: size.width * .74,
+          width: tvBackdropWidth(context, .74),
           height: size.height * .78,
           child: RepaintBoundary(child: _Backdrop(featured: featured)),
         ),
@@ -107,7 +107,7 @@ class _Backdrop extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.sizeOf(context).width * .74;
+    final width = tvBackdropWidth(context, .74);
     final cacheWidth = (width * MediaQuery.devicePixelRatioOf(context)).round();
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
     return ValueListenableBuilder<MediaItem?>(
@@ -121,6 +121,13 @@ class _Backdrop extends StatelessWidget {
               duration: reduceMotion
                   ? Duration.zero
                   : const Duration(milliseconds: 420),
+              // Fills the box: the default layout centres a loosely sized
+              // child, so a 16:9 image would leave bands above and below
+              // instead of covering.
+              layoutBuilder: (current, previous) => Stack(
+                fit: StackFit.expand,
+                children: [...previous, ?current],
+              ),
               child: url.isEmpty
                   ? const SizedBox.expand(key: ValueKey(''))
                   : Image.network(
@@ -429,6 +436,11 @@ class _TvMediaRowState extends State<TvMediaRow> {
                 child: ListView.builder(
                   controller: _scroll,
                   scrollDirection: Axis.horizontal,
+                  // Unclipped: posters run on to the screen's edge instead of
+                  // being cut at the safe-area line, the focus glow is not
+                  // squared off at the row's edges, and posters scrolled
+                  // past slide under the rail.
+                  clipBehavior: Clip.none,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
                     vertical: TvPosterMetrics.focusPadding,

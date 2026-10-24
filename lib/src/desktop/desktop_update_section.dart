@@ -66,7 +66,10 @@ class _WindowsUpdateSectionState extends State<WindowsUpdateSection> {
     Widget button(String label, VoidCallback? onPressed) => FilledButton(
       onPressed: onPressed,
       style: FilledButton.styleFrom(
-        textStyle: const TextStyle(fontWeight: FontWeight.w700),
+        textStyle: const TextStyle(
+          fontFamily: GlassTheme.fontFamily,
+          fontWeight: FontWeight.w700,
+        ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
       child: Text(label),

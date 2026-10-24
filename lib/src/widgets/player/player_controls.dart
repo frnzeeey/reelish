@@ -1257,7 +1257,10 @@ class PlayerErrorPanel extends StatelessWidget {
         shape: const StadiumBorder(),
         foregroundColor: filled ? null : Colors.white,
         side: filled ? null : const BorderSide(color: Color(0x4DFFFFFF)),
-        textStyle: const TextStyle(fontWeight: FontWeight.w700),
+        textStyle: const TextStyle(
+          fontFamily: GlassTheme.fontFamily,
+          fontWeight: FontWeight.w700,
+        ),
       );
 }
 
@@ -1313,7 +1316,10 @@ class NextEpisodeCard extends StatelessWidget {
       style: FilledButton.styleFrom(
         minimumSize: const Size(0, 44),
         shape: const StadiumBorder(),
-        textStyle: const TextStyle(fontWeight: FontWeight.w700),
+        textStyle: const TextStyle(
+          fontFamily: GlassTheme.fontFamily,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
     final dismiss = PlayerIconButton(

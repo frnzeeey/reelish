@@ -461,7 +461,11 @@ class _NavigationButton extends StatelessWidget {
           disabledForegroundColor: Colors.white30,
           backgroundColor: const Color(0x14FFFFFF),
           shape: const StadiumBorder(),
-          textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+          textStyle: const TextStyle(
+            fontFamily: GlassTheme.fontFamily,
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+          ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,

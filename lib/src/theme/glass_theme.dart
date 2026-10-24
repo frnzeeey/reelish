@@ -77,9 +77,13 @@ abstract final class GlassTheme {
   static const glassStrong = Color(0x17FFFFFF);
   static LinearGradient get gradient =>
       LinearGradient(colors: [coralBright, primary]);
+
+  /// The app's font. Set on the theme's text styles; a button `textStyle`
+  /// given in a `styleFrom` replaces those, so it must name it too.
+  static const fontFamily = 'Montserrat';
   static ThemeData get dark => ThemeData(
     brightness: Brightness.dark,
-    fontFamily: 'Montserrat',
+    fontFamily: fontFamily,
     scaffoldBackgroundColor: background,
     colorScheme:
         ColorScheme.fromSeed(

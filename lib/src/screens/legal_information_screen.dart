@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../platform/device_capabilities.dart';
 import '../services/app_metadata.dart';
 import '../widgets/settings/settings_components.dart';
+import '../widgets/tv/tv_focus.dart';
 
 enum LegalDocument { privacy, terms, notices }
 
@@ -144,7 +146,16 @@ class _LegalInformationScreenState extends State<LegalInformationScreen> {
           ? SafeArea(
               top: false,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+                // On a TV the button stays inside the overscan-safe area,
+                // which many TVs crop.
+                padding: DeviceCapabilities.isTv
+                    ? const EdgeInsets.fromLTRB(
+                        TvSafeArea.horizontal,
+                        12,
+                        TvSafeArea.horizontal,
+                        TvSafeArea.vertical,
+                      )
+                    : const EdgeInsets.fromLTRB(20, 12, 20, 16),
                 child: SizedBox(
                   width: double.infinity,
                   child: FilledButton(

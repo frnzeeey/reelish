@@ -171,7 +171,10 @@ class _SubtitleAddonsScreenState extends State<SubtitleAddonsScreen> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        textStyle: const TextStyle(fontWeight: FontWeight.w700),
+                        textStyle: const TextStyle(
+                          fontFamily: GlassTheme.fontFamily,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ),

@@ -200,7 +200,10 @@ class SupportDevelopmentScreen extends StatelessWidget {
           icon: const Icon(Symbols.coffee_rounded),
           label: const Text('Buy me a coffee'),
           style: FilledButton.styleFrom(
-            textStyle: const TextStyle(fontWeight: FontWeight.w700),
+            textStyle: const TextStyle(
+              fontFamily: GlassTheme.fontFamily,
+              fontWeight: FontWeight.w700,
+            ),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
