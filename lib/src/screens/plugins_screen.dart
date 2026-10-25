@@ -359,15 +359,16 @@ class _SectionHeading extends StatelessWidget {
   final String detail;
 
   @override
-  Widget build(BuildContext context) => Row(
-    crossAxisAlignment: CrossAxisAlignment.end,
+  // The detail sits under the title, as in the Library tab, so neither
+  // wraps awkwardly beside the other on narrow phones.
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Expanded(
-        child: Text(
-          title,
-          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
-        ),
+      Text(
+        title,
+        style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
       ),
+      const SizedBox(height: 3),
       Text(
         detail,
         style: const TextStyle(color: GlassTheme.muted, fontSize: 11),

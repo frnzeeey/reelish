@@ -210,6 +210,7 @@ class _DockItem extends StatelessWidget {
                     duration: duration,
                     curve: Curves.easeOutCubic,
                     style: TextStyle(
+                      fontFamily: GlassTheme.fontFamily,
                       fontSize: labelSize,
                       height: 1,
                       color: selected ? GlassTheme.primary : GlassTheme.muted,

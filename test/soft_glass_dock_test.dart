@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:onfeed/src/theme/glass_theme.dart';
 import 'package:onfeed/src/widgets/liquid_glass.dart';
 import 'package:onfeed/src/widgets/soft_glass_dock.dart';
 
@@ -111,5 +112,17 @@ void main() {
     expect(DockMetrics.forSize(const Size(412, 915)), DockMetrics.phone);
     expect(DockMetrics.forSize(const Size(960, 600)).width, 440);
     expect(DockMetrics.forSize(const Size(600, 960)).width, 380);
+  });
+
+  testWidgets('tab labels use the app font, not the platform default', (
+    tester,
+  ) async {
+    await _pumpDock(tester, const Size(412, 915));
+    for (final label in ['Home', 'Plugins', 'Library', 'Settings']) {
+      final text = tester.widget<RichText>(
+        find.descendant(of: find.text(label), matching: find.byType(RichText)),
+      );
+      expect(text.text.style?.fontFamily, GlassTheme.fontFamily, reason: label);
+    }
   });
 }

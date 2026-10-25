@@ -306,7 +306,11 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                   children: [
                     if (item.year.isNotEmpty) _metadata(item.year),
                     if (rating.isNotEmpty)
-                      _metadata('★ $rating / 10', highlight: true),
+                      _metadata(
+                        '$rating / 10',
+                        highlight: true,
+                        icon: Symbols.star_rounded,
+                      ),
                     if (details != null && details.voteCount > 0)
                       _metadata('${_formatCount(details.voteCount)} votes'),
                     if ((details?.runtimeMinutes ?? 0) > 0)
@@ -364,28 +368,41 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
     ),
   );
 
-  Widget _metadata(String text, {bool highlight = false}) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-    decoration: BoxDecoration(
-      color: highlight
-          ? GlassTheme.primary.withValues(alpha: .15)
-          : Colors.white.withValues(alpha: .10),
-      borderRadius: BorderRadius.circular(24),
-      border: Border.all(
+  Widget _metadata(String text, {bool highlight = false, IconData? icon}) {
+    final color = highlight ? GlassTheme.primary : Colors.white70;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
         color: highlight
-            ? GlassTheme.primary.withValues(alpha: .3)
-            : Colors.white.withValues(alpha: .16),
+            ? GlassTheme.primary.withValues(alpha: .15)
+            : Colors.white.withValues(alpha: .10),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: highlight
+              ? GlassTheme.primary.withValues(alpha: .3)
+              : Colors.white.withValues(alpha: .16),
+        ),
       ),
-    ),
-    child: Text(
-      text,
-      style: TextStyle(
-        color: highlight ? GlassTheme.primary : Colors.white70,
-        fontSize: 11,
-        fontWeight: FontWeight.w700,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // An icon, not a "★" character: Montserrat has no star glyph.
+          if (icon != null) ...[
+            Icon(icon, fill: 1, size: 13, color: color),
+            const SizedBox(width: 4),
+          ],
+          Text(
+            text,
+            style: TextStyle(
+              color: color,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
       ),
-    ),
-  );
+    );
+  }
 
   String _formatCount(int count) {
     if (count >= 1000000) return '${(count / 1000000).toStringAsFixed(1)}M';

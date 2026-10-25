@@ -11,12 +11,12 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/main.dart`](#libmaindart) | Shared | 114 | App entry point: initialises the player engines, builds `ReelishApp` (theme, navigator, Windows shortcuts and gamepad) and the startup gate that shows first-run consent or `HomeScreen`. |
 | [`lib/src/app/app_services.dart`](#libsrcappapp_servicesdart) | Shared | 34 | The app's shared services, built in one place and handed to the screens and ViewModels that use them, rather than constructed inside widgets. |
 | [`lib/src/desktop/desktop_details_screen.dart`](#libsrcdesktopdesktop_details_screendart) | Windows | 1245 | A movie or series on Windows, full-bleed over the whole window: the backdrop with the title, details and actions, then cast and related titles. |
-| [`lib/src/desktop/desktop_hero.dart`](#libsrcdesktopdesktop_herodart) | Windows | 1218 | The featured titles at the top of desktop Home: one full-bleed backdrop with the title, synopsis and actions on its left, and every Spotlight title in a rail along its foot, the one shown first and widest. |
+| [`lib/src/desktop/desktop_hero.dart`](#libsrcdesktopdesktop_herodart) | Windows | 1210 | The featured titles at the top of desktop Home: one full-bleed backdrop with the title, synopsis and actions on its left, and every Spotlight title in a rail along its foot, the one shown first and widest. |
 | [`lib/src/desktop/desktop_pages.dart`](#libsrcdesktopdesktop_pagesdart) | Windows | 675 | The Windows Home, Movies/Series catalog, Search and My library pages shown inside `DesktopShell`. |
 | [`lib/src/desktop/desktop_plugins_page.dart`](#libsrcdesktopdesktop_plugins_pagedart) | Windows | 850 | Plugins on Windows: the installed repositories and their providers at a desktop width, with the same actions as the phone and TV screen (add from the library or a manifest URL, refresh, switch providers on and off, remove, allow changed provider code) through the same `ProviderPluginService`, so what is installed and enabled is shared. |
 | [`lib/src/desktop/desktop_provider_search.dart`](#libsrcdesktopdesktop_provider_searchdart) | Windows | 249 | "Searching providers…" over the Windows interface while a play request from Home looks for a stream: a frosted card on the dimmed page, with what is being looked for and a way to stop. |
 | [`lib/src/desktop/desktop_settings_page.dart`](#libsrcdesktopdesktop_settings_pagedart) | Windows | 407 | Settings on Windows: the categories of the phone and TV Settings list on the left, the chosen one beside them, so a change and its effect are on screen together. |
-| [`lib/src/desktop/desktop_shell.dart`](#libsrcdesktopdesktop_shelldart) | Windows | 1247 | The Windows interface's frame: a compact icon rail on the left and the selected page beside it. |
+| [`lib/src/desktop/desktop_shell.dart`](#libsrcdesktopdesktop_shelldart) | Windows | 1244 | The Windows interface's frame: a compact icon rail on the left and the selected page beside it. |
 | [`lib/src/desktop/desktop_top_ten.dart`](#libsrcdesktopdesktop_top_tendart) | Windows | 524 | Top 10 on Windows: the shared Top 10 feed (the same seeds, ranking and cache as Android and TV) drawn as ranked posters with the outlined numerals of the mobile and TV rows. |
 | [`lib/src/desktop/desktop_update_dialogs.dart`](#libsrcdesktopdesktop_update_dialogsdart) | Windows | 369 | Windows update dialogs: the "update available" offer with release notes, and download progress through to the installer handoff. |
 | [`lib/src/desktop/desktop_update_section.dart`](#libsrcdesktopdesktop_update_sectiondart) | Windows | 225 | Settings → About on Windows: version, update status, last check, the update action for the current state, and the automatic-check switch. |
@@ -42,23 +42,23 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/platform/desktop_window.dart`](#libsrcplatformdesktop_windowdart) | Windows | 110 | The desktop window: fullscreen through the Windows runner's `reelish/window` channel. |
 | [`lib/src/platform/device_capabilities.dart`](#libsrcplatformdevice_capabilitiesdart) | Shared | 153 | What kind of device Reelish is running on, read once during startup. |
 | [`lib/src/platform/windows_installation.dart`](#libsrcplatformwindows_installationdart) | Windows | 102 | How the running Windows copy of Reelish was installed. |
-| [`lib/src/screens/app_information_screens.dart`](#libsrcscreensapp_information_screensdart) | Shared | 221 | About and Support screens, and the Reelish name, icon and tagline used where the app identifies itself. |
-| [`lib/src/screens/credits_screen.dart`](#libsrcscreenscredits_screendart) | Shared | 248 | Credits for the data, services and software Reelish relies on. |
+| [`lib/src/screens/app_information_screens.dart`](#libsrcscreensapp_information_screensdart) | Shared | 222 | About and Support screens, and the Reelish name, icon and tagline used where the app identifies itself. |
+| [`lib/src/screens/credits_screen.dart`](#libsrcscreenscredits_screendart) | Shared | 245 | Credits for the data, services and software Reelish relies on. |
 | [`lib/src/screens/first_run_consent_screen.dart`](#libsrcscreensfirst_run_consent_screendart) | Shared | 254 | First-launch screen where the viewer reads and accepts the privacy policy and terms of use; remembers the acceptance. |
-| [`lib/src/screens/home_screen.dart`](#libsrcscreenshome_screendart) | Shared | 2426 | Home and the app's orchestration: phone tabs, and the TV and Windows shells; owns the catalog wiring, the play flow (`_openItem`: providers, source choice, player) and details navigation. |
+| [`lib/src/screens/home_screen.dart`](#libsrcscreenshome_screendart) | Shared | 2420 | Home and the app's orchestration: phone tabs, and the TV and Windows shells; owns the catalog wiring, the play flow (`_openItem`: providers, source choice, player) and details navigation. |
 | [`lib/src/screens/legal_information_screen.dart`](#libsrcscreenslegal_information_screendart) | Shared | 349 | Shows the privacy policy, terms of use and third-party notices. |
 | [`lib/src/screens/library_screen.dart`](#libsrcscreenslibrary_screendart) | Shared | 652 | The phone library tab: continue watching, My list and watch history from local storage. |
-| [`lib/src/screens/media_details_screen.dart`](#libsrcscreensmedia_details_screendart) | Shared | 700 | The phone details page for a movie or series, with seasons, episodes and playback. |
+| [`lib/src/screens/media_details_screen.dart`](#libsrcscreensmedia_details_screendart) | Shared | 717 | The phone details page for a movie or series, with seasons, episodes and playback. |
 | [`lib/src/screens/playback_settings_screen.dart`](#libsrcscreensplayback_settings_screendart) | Shared | 1101 | Settings, Appearance and Playback settings screens for phone and TV; Windows reuses their sub-pages. |
 | [`lib/src/screens/player_screen.dart`](#libsrcscreensplayer_screendart) | Shared | 71 | The route that hosts `CustomVideoPlayer` for one title and source. |
 | [`lib/src/screens/plugin_details_screen.dart`](#libsrcscreensplugin_details_screendart) | Shared | 506 | A plugin-library repository's details page, from which it can be installed. |
 | [`lib/src/screens/plugin_library_screen.dart`](#libsrcscreensplugin_library_screendart) | Shared | 595 | Browse the community provider catalog and hand a manifest to the existing installer. |
-| [`lib/src/screens/plugins_screen.dart`](#libsrcscreensplugins_screendart) | Shared | 898 | The phone and TV Plugins page: installed repositories, enabling providers, script updates and the plugin library. |
-| [`lib/src/screens/splash_screen.dart`](#libsrcscreenssplash_screendart) | Shared | 348 | The launch splash and `SplashGate`, which runs startup work before the first screen. |
+| [`lib/src/screens/plugins_screen.dart`](#libsrcscreensplugins_screendart) | Shared | 899 | The phone and TV Plugins page: installed repositories, enabling providers, script updates and the plugin library. |
+| [`lib/src/screens/splash_screen.dart`](#libsrcscreenssplash_screendart) | Shared | 383 | The launch splash and `SplashGate`, which runs startup work before the first screen. |
 | [`lib/src/screens/subtitle_addons_screen.dart`](#libsrcscreenssubtitle_addons_screendart) | Shared | 235 | Stremio subtitle addons the player searches while you watch. |
-| [`lib/src/screens/tv/tv_browse.dart`](#libsrcscreenstvtv_browsedart) | Android TV | 814 | TV browsing building blocks: the featured-title frame, focusable poster rows and grids, and their messages. |
-| [`lib/src/screens/tv/tv_details_screen.dart`](#libsrcscreenstvtv_details_screendart) | Android TV | 537 | A movie or series on TV: the backdrop fills the screen behind the title, details and actions, with Play focused; a series lists its seasons and episodes below. |
-| [`lib/src/screens/tv/tv_home_shell.dart`](#libsrcscreenstvtv_home_shelldart) | Android TV | 446 | The TV interface's frame: a navigation rail on the left and the selected page beside it. |
+| [`lib/src/screens/tv/tv_browse.dart`](#libsrcscreenstvtv_browsedart) | Android TV | 864 | TV browsing building blocks: the featured-title frame, focusable poster rows and grids, and their messages. |
+| [`lib/src/screens/tv/tv_details_screen.dart`](#libsrcscreenstvtv_details_screendart) | Android TV | 538 | A movie or series on TV: the backdrop fills the screen behind the title, details and actions, with Play focused; a series lists its seasons and episodes below. |
+| [`lib/src/screens/tv/tv_home_shell.dart`](#libsrcscreenstvtv_home_shelldart) | Android TV | 447 | The TV interface's frame: a navigation rail on the left and the selected page beside it. |
 | [`lib/src/screens/tv/tv_pages.dart`](#libsrcscreenstvtv_pagesdart) | Android TV | 611 | The TV Home, Movies/Series catalog, Search and My library pages. |
 | [`lib/src/services/accent_settings_controller.dart`](#libsrcservicesaccent_settings_controllerdart) | Shared | 31 | Loads, applies and saves the accent colour. |
 | [`lib/src/services/app_metadata.dart`](#libsrcservicesapp_metadatadart) | Shared | 19 | Version and build details for the running app. |
@@ -100,6 +100,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/viewmodels/library_view_model.dart`](#libsrcviewmodelslibrary_view_modeldart) | Shared | 73 | The viewer's library for the mobile, TV and Windows library pages: watch history, My list, and where each series in the history was left. |
 | [`lib/src/viewmodels/search_view_model.dart`](#libsrcviewmodelssearch_view_modeldart) | Shared | 157 | TMDB search for the TV and Windows search pages: debounced typing, page 1 then more pages on demand (each title once), and a stale answer for an older query never replaces a newer one. |
 | [`lib/src/widgets/app_update_flow.dart`](#libsrcwidgetsapp_update_flowdart) | Shared | 403 | Coordinates the update UI: prompt → download → install permission → Android installer. |
+| [`lib/src/widgets/brand_logo.dart`](#libsrcwidgetsbrand_logodart) | Shared | 112 | Reelish's brand images: their asset paths, and the wordmark and mark drawn without their canvases' transparent margins. |
 | [`lib/src/widgets/category_chip.dart`](#libsrcwidgetscategory_chipdart) | Shared | 36 | A selectable category chip for the phone Home. |
 | [`lib/src/widgets/glass_box.dart`](#libsrcwidgetsglass_boxdart) | Shared | 28 | Lightweight glass panel for content in scrolling pages and dialogs. |
 | [`lib/src/widgets/liquid_glass.dart`](#libsrcwidgetsliquid_glassdart) | Shared | 568 | A bounded, reusable glass surface. |
@@ -136,7 +137,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/widgets/provider_search_dialog.dart`](#libsrcwidgetsprovider_search_dialogdart) | Shared | 93 | "Searching providers…" while a play request looks for a stream. |
 | [`lib/src/widgets/settings/settings_components.dart`](#libsrcwidgetssettingssettings_componentsdart) | Shared | 674 | Shared settings layout: page scaffold, header, sections, rows and metrics. |
 | [`lib/src/widgets/settings/tmdb_attribution.dart`](#libsrcwidgetssettingstmdb_attributiondart) | Shared | 73 | TMDB attribution wording and assets, per https://developer.themoviedb.org/docs/faq and https://www.themoviedb.org/about/logos-attribution. |
-| [`lib/src/widgets/soft_glass_dock.dart`](#libsrcwidgetssoft_glass_dockdart) | Shared | 249 | The phone and tablet bottom navigation dock. |
+| [`lib/src/widgets/soft_glass_dock.dart`](#libsrcwidgetssoft_glass_dockdart) | Shared | 250 | The phone and tablet bottom navigation dock. |
 | [`lib/src/widgets/tv/tv_focus.dart`](#libsrcwidgetstvtv_focusdart) | Android TV | 536 | TV focus and remote helpers: overscan-safe margins, the focus ring, dialog focus, key scrolling and the on-screen text entry dialog. |
 | [`lib/src/widgets/tv/tv_poster_card.dart`](#libsrcwidgetstvtv_poster_carddart) | Android TV | 184 | A poster on the TV catalog. |
 | [`lib/src/widgets/update_dialog.dart`](#libsrcwidgetsupdate_dialogdart) | Shared | 466 | Update dialogs: the offer with release notes, APK download progress, the install-permission prompt and notices, and the frame, buttons and formatting the Windows update dialogs reuse. |
@@ -191,13 +192,13 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/desktop/desktop_hero.dart
 
-**Source:** [`lib/src/desktop/desktop_hero.dart`](../../lib/src/desktop/desktop_hero.dart) · **Platform:** Windows · **Lines:** 1218
+**Source:** [`lib/src/desktop/desktop_hero.dart`](../../lib/src/desktop/desktop_hero.dart) · **Platform:** Windows · **Lines:** 1210
 
 **Purpose:** The featured titles at the top of desktop Home: one full-bleed backdrop with the title, synopsis and actions on its left, and every Spotlight title in a rail along its foot, the one shown first and widest.
 
 **Declares:** `_Backdrop` (Widget), `DesktopHero` (Widget), `_DesktopHeroState` (Widget state), `(extension on _HeroText)` (Extension), `_FadeInOnce` (Widget), `_HeroText` (Widget), `_ShownDetails` (Widget), `_SpotlightCard` (Widget), `_SpotlightCardState` (Widget state), `_SpotlightRail` (Widget)
 
-**Imports (project):** `src/desktop/desktop_widgets.dart`, `src/models/media_item.dart`, `src/theme/glass_theme.dart`, `src/widgets/poster_image.dart`
+**Imports (project):** `src/desktop/desktop_widgets.dart`, `src/models/media_item.dart`, `src/theme/glass_theme.dart`, `src/widgets/brand_logo.dart`, `src/widgets/poster_image.dart`
 
 **Packages:** `flutter`, `material_symbols_icons`
 
@@ -273,13 +274,13 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/desktop/desktop_shell.dart
 
-**Source:** [`lib/src/desktop/desktop_shell.dart`](../../lib/src/desktop/desktop_shell.dart) · **Platform:** Windows · **Lines:** 1247
+**Source:** [`lib/src/desktop/desktop_shell.dart`](../../lib/src/desktop/desktop_shell.dart) · **Platform:** Windows · **Lines:** 1244
 
 **Purpose:** The Windows interface's frame: a compact icon rail on the left and the selected page beside it.
 
 **Declares:** `_AtOpenWidth` (Widget), `DesktopResumeShelf` (Class), `DesktopShell` (Widget), `_DesktopShellState` (Widget state), `_FadeIn` (Widget), `_FillOrScroll` (Widget), `_Page` (Widget), `_PinToggle` (Widget), `_ProgressLine` (Widget), `_RailContents` (Widget), `_ResumeSection` (Widget), `_ResumeTile` (Widget), `_ResumeTileState` (Widget state), `_Sidebar` (Widget), `_SidebarItem` (Widget), `_SidebarItemState` (Widget state), `_SidebarState` (Widget state)
 
-**Imports (project):** `src/desktop/desktop_widgets.dart`, `src/models/media_item.dart`, `src/models/resume_summary.dart`, `src/navigation/app_destination.dart`, `src/theme/glass_theme.dart`, `src/widgets/poster_image.dart`
+**Imports (project):** `src/desktop/desktop_widgets.dart`, `src/models/media_item.dart`, `src/models/resume_summary.dart`, `src/navigation/app_destination.dart`, `src/theme/glass_theme.dart`, `src/widgets/brand_logo.dart`, `src/widgets/poster_image.dart`
 
 **Packages:** `flutter`, `material_symbols_icons`, `shared_preferences`
 
@@ -669,13 +670,13 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/screens/app_information_screens.dart
 
-**Source:** [`lib/src/screens/app_information_screens.dart`](../../lib/src/screens/app_information_screens.dart) · **Platform:** Shared · **Lines:** 221 · **Branches on:** TargetPlatform.windows
+**Source:** [`lib/src/screens/app_information_screens.dart`](../../lib/src/screens/app_information_screens.dart) · **Platform:** Shared · **Lines:** 222 · **Branches on:** TargetPlatform.windows
 
 **Purpose:** About and Support screens, and the Reelish name, icon and tagline used where the app identifies itself.
 
 **Declares:** `AboutScreen` (Widget), `ReelishIdentity` (Widget), `SupportDevelopmentScreen` (Widget)
 
-**Imports (project):** `src/desktop/desktop_update_section.dart`, `src/navigation/app_transitions.dart`, `src/screens/credits_screen.dart`, `src/services/app_metadata.dart`, `src/theme/glass_theme.dart`, `src/widgets/app_update_flow.dart`, `src/widgets/settings/settings_components.dart`
+**Imports (project):** `src/desktop/desktop_update_section.dart`, `src/navigation/app_transitions.dart`, `src/screens/credits_screen.dart`, `src/services/app_metadata.dart`, `src/theme/glass_theme.dart`, `src/widgets/app_update_flow.dart`, `src/widgets/brand_logo.dart`, `src/widgets/settings/settings_components.dart`
 
 **Packages:** `flutter`, `material_symbols_icons`, `package_info_plus`, `url_launcher`
 
@@ -685,7 +686,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/screens/credits_screen.dart
 
-**Source:** [`lib/src/screens/credits_screen.dart`](../../lib/src/screens/credits_screen.dart) · **Platform:** Shared · **Lines:** 248
+**Source:** [`lib/src/screens/credits_screen.dart`](../../lib/src/screens/credits_screen.dart) · **Platform:** Shared · **Lines:** 245
 
 **Purpose:** Credits for the data, services and software Reelish relies on.
 
@@ -693,7 +694,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Top-level functions:** `registerBundledLicenses`, `showAppLicenses`
 
-**Imports (project):** `src/screens/legal_information_screen.dart`, `src/services/app_metadata.dart`, `src/theme/glass_theme.dart`, `src/widgets/settings/settings_components.dart`, `src/widgets/settings/tmdb_attribution.dart`
+**Imports (project):** `src/screens/legal_information_screen.dart`, `src/services/app_metadata.dart`, `src/theme/glass_theme.dart`, `src/widgets/brand_logo.dart`, `src/widgets/settings/settings_components.dart`, `src/widgets/settings/tmdb_attribution.dart`
 
 **Packages:** `flutter`, `material_symbols_icons`, `package_info_plus`, `url_launcher`
 
@@ -719,13 +720,13 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/screens/home_screen.dart
 
-**Source:** [`lib/src/screens/home_screen.dart`](../../lib/src/screens/home_screen.dart) · **Platform:** Shared · **Lines:** 2426 · **Branches on:** isTv, isDesktop, TorrentSupport
+**Source:** [`lib/src/screens/home_screen.dart`](../../lib/src/screens/home_screen.dart) · **Platform:** Shared · **Lines:** 2420 · **Branches on:** isTv, isDesktop, TorrentSupport
 
 **Purpose:** Home and the app's orchestration: phone tabs, and the TV and Windows shells; owns the catalog wiring, the play flow (`_openItem`: providers, source choice, player) and details navigation.
 
 **Declares:** `_HomeFeed` (Class), `HomeScreen` (Widget), `_HomeScreenState` (Widget state)
 
-**Imports (project):** `src/app/app_services.dart`, `src/desktop/desktop_details_screen.dart`, `src/desktop/desktop_pages.dart`, `src/desktop/desktop_plugins_page.dart`, `src/desktop/desktop_provider_search.dart`, `src/desktop/desktop_settings_page.dart`, `src/desktop/desktop_shell.dart`, `src/models/app_update.dart`, `src/models/episode_context.dart`, `src/models/episode_progress.dart`, `src/models/media_details.dart`, `src/models/media_item.dart`, `src/models/resume_summary.dart`, `src/models/stream_source.dart`, `src/navigation/app_transitions.dart`, `src/platform/device_capabilities.dart`, `src/screens/library_screen.dart`, `src/screens/media_details_screen.dart`, `src/screens/playback_settings_screen.dart`, `src/screens/player_screen.dart`, `src/screens/plugins_screen.dart`, `src/screens/tv/tv_details_screen.dart`, `src/screens/tv/tv_home_shell.dart`, `src/screens/tv/tv_pages.dart`, `src/services/accent_settings_controller.dart`, `src/services/media_catalog_rules.dart`, `src/services/paged_feed_controller.dart`, `src/services/perf_timeline.dart`, `src/services/playback_settings_controller.dart`, `src/services/plugin_library_repository.dart`, `src/services/provider_plugin_service.dart`, `src/services/storage_service.dart`, `src/services/stream_discovery.dart`, `src/services/tmdb_service.dart`, `src/services/torrent_source_preparer.dart`, `src/theme/glass_theme.dart`, `src/viewmodels/home_view_model.dart`, `src/widgets/app_update_flow.dart`, `src/widgets/category_chip.dart`, `src/widgets/glass_box.dart`, `src/widgets/media_card.dart`, `src/widgets/player/custom_video_player.dart`, `src/widgets/player/episode_panel.dart`, `src/widgets/player/stream_selector_sheet.dart`, `src/widgets/provider_installer_modal.dart`, `src/widgets/provider_search_dialog.dart`, `src/widgets/settings/settings_components.dart`, `src/widgets/settings/tmdb_attribution.dart`, `src/widgets/soft_glass_dock.dart`, `src/widgets/tv/tv_focus.dart`
+**Imports (project):** `src/app/app_services.dart`, `src/desktop/desktop_details_screen.dart`, `src/desktop/desktop_pages.dart`, `src/desktop/desktop_plugins_page.dart`, `src/desktop/desktop_provider_search.dart`, `src/desktop/desktop_settings_page.dart`, `src/desktop/desktop_shell.dart`, `src/models/app_update.dart`, `src/models/episode_context.dart`, `src/models/episode_progress.dart`, `src/models/media_details.dart`, `src/models/media_item.dart`, `src/models/resume_summary.dart`, `src/models/stream_source.dart`, `src/navigation/app_transitions.dart`, `src/platform/device_capabilities.dart`, `src/screens/library_screen.dart`, `src/screens/media_details_screen.dart`, `src/screens/playback_settings_screen.dart`, `src/screens/player_screen.dart`, `src/screens/plugins_screen.dart`, `src/screens/tv/tv_details_screen.dart`, `src/screens/tv/tv_home_shell.dart`, `src/screens/tv/tv_pages.dart`, `src/services/accent_settings_controller.dart`, `src/services/media_catalog_rules.dart`, `src/services/paged_feed_controller.dart`, `src/services/perf_timeline.dart`, `src/services/playback_settings_controller.dart`, `src/services/plugin_library_repository.dart`, `src/services/provider_plugin_service.dart`, `src/services/storage_service.dart`, `src/services/stream_discovery.dart`, `src/services/tmdb_service.dart`, `src/services/torrent_source_preparer.dart`, `src/theme/glass_theme.dart`, `src/viewmodels/home_view_model.dart`, `src/widgets/app_update_flow.dart`, `src/widgets/brand_logo.dart`, `src/widgets/category_chip.dart`, `src/widgets/glass_box.dart`, `src/widgets/media_card.dart`, `src/widgets/player/custom_video_player.dart`, `src/widgets/player/episode_panel.dart`, `src/widgets/player/stream_selector_sheet.dart`, `src/widgets/provider_installer_modal.dart`, `src/widgets/provider_search_dialog.dart`, `src/widgets/settings/settings_components.dart`, `src/widgets/settings/tmdb_attribution.dart`, `src/widgets/soft_glass_dock.dart`, `src/widgets/tv/tv_focus.dart`
 
 **Packages:** `flutter`, `material_symbols_icons`
 
@@ -767,7 +768,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/screens/media_details_screen.dart
 
-**Source:** [`lib/src/screens/media_details_screen.dart`](../../lib/src/screens/media_details_screen.dart) · **Platform:** Shared · **Lines:** 700
+**Source:** [`lib/src/screens/media_details_screen.dart`](../../lib/src/screens/media_details_screen.dart) · **Platform:** Shared · **Lines:** 717
 
 **Purpose:** The phone details page for a movie or series, with seasons, episodes and playback.
 
@@ -847,7 +848,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/screens/plugins_screen.dart
 
-**Source:** [`lib/src/screens/plugins_screen.dart`](../../lib/src/screens/plugins_screen.dart) · **Platform:** Shared · **Lines:** 898
+**Source:** [`lib/src/screens/plugins_screen.dart`](../../lib/src/screens/plugins_screen.dart) · **Platform:** Shared · **Lines:** 899
 
 **Purpose:** The phone and TV Plugins page: installed repositories, enabling providers, script updates and the plugin library.
 
@@ -865,19 +866,19 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/screens/splash_screen.dart
 
-**Source:** [`lib/src/screens/splash_screen.dart`](../../lib/src/screens/splash_screen.dart) · **Platform:** Shared · **Lines:** 348 · **Branches on:** TargetPlatform.android
+**Source:** [`lib/src/screens/splash_screen.dart`](../../lib/src/screens/splash_screen.dart) · **Platform:** Shared · **Lines:** 383 · **Branches on:** TargetPlatform.android
 
 **Purpose:** The launch splash and `SplashGate`, which runs startup work before the first screen.
 
 **Declares:** `SplashGate` (Widget), `_SplashGateState` (Widget state), `SplashSpec` (Class), `SplashView` (Widget), `_SplashViewState` (Widget state), `_StartupError` (Widget), `_StartupProgress` (Widget)
 
-**Imports (project):** `src/theme/glass_theme.dart`
+**Imports (project):** `src/theme/glass_theme.dart`, `src/widgets/brand_logo.dart`
 
 **Packages:** `flutter`
 
 **Imported by:** `main.dart`
 
-**Tests importing it:** `test/splash_screen_test.dart`
+**Tests importing it:** `test/brand_assets_test.dart`, `test/splash_screen_test.dart`
 
 ## lib/src/screens/subtitle_addons_screen.dart
 
@@ -897,29 +898,29 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/screens/tv/tv_browse.dart
 
-**Source:** [`lib/src/screens/tv/tv_browse.dart`](../../lib/src/screens/tv/tv_browse.dart) · **Platform:** Android TV · **Lines:** 814
+**Source:** [`lib/src/screens/tv/tv_browse.dart`](../../lib/src/screens/tv/tv_browse.dart) · **Platform:** Android TV · **Lines:** 864
 
 **Purpose:** TV browsing building blocks: the featured-title frame, focusable poster rows and grids, and their messages.
 
-**Declares:** `_Backdrop` (Widget), `_HeroDetails` (Widget), `_TrailingProgress` (Widget), `_TrailingRetry` (Widget), `TvBrowseFrame` (Widget), `TvCardOptions` (Class), `TvFeaturedController` (Notifier / controller), `TvMediaGrid` (Widget), `_TvMediaGridState` (Widget state), `TvMediaRow` (Widget), `_TvMediaRowState` (Widget state), `TvMessage` (Widget), `TvPagedRow` (Widget), `TvRowMessage` (Widget), `TvRowTitle` (Widget)
+**Declares:** `_Backdrop` (Widget), `_HeroDetails` (Widget), `_TrailingProgress` (Widget), `_TrailingRetry` (Widget), `TvBrowseFrame` (Widget), `TvCardOptions` (Class), `TvFeaturedController` (Notifier / controller), `TvMediaGrid` (Widget), `_TvMediaGridState` (Widget state), `TvMediaRow` (Widget), `_TvMediaRowState` (Widget state), `TvMessage` (Widget), `TvMetaLine` (Widget), `TvPagedRow` (Widget), `TvRating` (Class), `TvRowMessage` (Widget), `TvRowTitle` (Widget)
 
 **Imports (project):** `src/models/media_item.dart`, `src/services/paged_feed_controller.dart`, `src/theme/glass_theme.dart`, `src/widgets/tv/tv_focus.dart`, `src/widgets/tv/tv_poster_card.dart`
 
 **Packages:** `flutter`, `material_symbols_icons`
 
-**Imported by:** `src/screens/tv/tv_pages.dart`
+**Imported by:** `src/screens/tv/tv_details_screen.dart`, `src/screens/tv/tv_pages.dart`
 
-**Tests importing it:** `test/tv_layout_test.dart`, `test/tv_support_test.dart`
+**Tests importing it:** `test/tv_layout_test.dart`, `test/tv_meta_line_test.dart`, `test/tv_support_test.dart`
 
 ## lib/src/screens/tv/tv_details_screen.dart
 
-**Source:** [`lib/src/screens/tv/tv_details_screen.dart`](../../lib/src/screens/tv/tv_details_screen.dart) · **Platform:** Android TV · **Lines:** 537
+**Source:** [`lib/src/screens/tv/tv_details_screen.dart`](../../lib/src/screens/tv/tv_details_screen.dart) · **Platform:** Android TV · **Lines:** 538
 
 **Purpose:** A movie or series on TV: the backdrop fills the screen behind the title, details and actions, with Play focused; a series lists its seasons and episodes below.
 
 **Declares:** `_EpisodeCard` (Widget), `TvMediaDetailsScreen` (Widget), `_TvMediaDetailsScreenState` (Widget state)
 
-**Imports (project):** `src/models/media_details.dart`, `src/models/media_item.dart`, `src/models/tv_season.dart`, `src/services/tmdb_service.dart`, `src/theme/glass_theme.dart`, `src/viewmodels/details_view_model.dart`, `src/widgets/tv/tv_focus.dart`
+**Imports (project):** `src/models/media_details.dart`, `src/models/media_item.dart`, `src/models/tv_season.dart`, `src/screens/tv/tv_browse.dart`, `src/services/tmdb_service.dart`, `src/theme/glass_theme.dart`, `src/viewmodels/details_view_model.dart`, `src/widgets/tv/tv_focus.dart`
 
 **Packages:** `flutter`, `material_symbols_icons`
 
@@ -929,13 +930,13 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/screens/tv/tv_home_shell.dart
 
-**Source:** [`lib/src/screens/tv/tv_home_shell.dart`](../../lib/src/screens/tv/tv_home_shell.dart) · **Platform:** Android TV · **Lines:** 446
+**Source:** [`lib/src/screens/tv/tv_home_shell.dart`](../../lib/src/screens/tv/tv_home_shell.dart) · **Platform:** Android TV · **Lines:** 447
 
 **Purpose:** The TV interface's frame: a navigation rail on the left and the selected page beside it.
 
 **Declares:** `_RailItem` (Widget), `_RailItemState` (Widget state), `TvHomeShell` (Widget), `TvHomeShellState` (Widget state), `_TvNavigationRail` (Widget), `_TvPage` (Widget)
 
-**Imports (project):** `src/navigation/app_destination.dart`, `src/theme/glass_theme.dart`, `src/widgets/tv/tv_focus.dart`
+**Imports (project):** `src/navigation/app_destination.dart`, `src/theme/glass_theme.dart`, `src/widgets/brand_logo.dart`, `src/widgets/tv/tv_focus.dart`
 
 **Packages:** `flutter`
 
@@ -1485,7 +1486,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Imported by:** `main.dart`, `src/desktop/desktop_details_screen.dart`, `src/desktop/desktop_hero.dart`, `src/desktop/desktop_pages.dart`, `src/desktop/desktop_plugins_page.dart`, `src/desktop/desktop_provider_search.dart`, `src/desktop/desktop_settings_page.dart`, `src/desktop/desktop_shell.dart`, `src/desktop/desktop_top_ten.dart`, `src/desktop/desktop_update_dialogs.dart`, `src/desktop/desktop_update_section.dart`, `src/desktop/desktop_widgets.dart`, `src/screens/app_information_screens.dart`, `src/screens/credits_screen.dart`, `src/screens/first_run_consent_screen.dart`, `src/screens/home_screen.dart`, `src/screens/library_screen.dart`, `src/screens/media_details_screen.dart`, `src/screens/playback_settings_screen.dart`, `src/screens/plugin_details_screen.dart`, `src/screens/plugin_library_screen.dart`, `src/screens/plugins_screen.dart`, `src/screens/splash_screen.dart`, `src/screens/subtitle_addons_screen.dart`, `src/screens/tv/tv_browse.dart`, `src/screens/tv/tv_details_screen.dart`, `src/screens/tv/tv_home_shell.dart`, `src/screens/tv/tv_pages.dart`, `src/services/accent_settings_controller.dart`, `src/widgets/category_chip.dart`, `src/widgets/liquid_glass.dart`, `src/widgets/media_card.dart`, `src/widgets/player/episode_panel.dart`, `src/widgets/player/paused_overlay.dart`, `src/widgets/player/player_controls.dart`, `src/widgets/player/player_progress_bar.dart`, `src/widgets/player/player_sheet.dart`, `src/widgets/player/subtitle_picker_sheet.dart`, `src/widgets/plugin_library/copy_manifest_button.dart`, `src/widgets/plugin_library/plugin_badges.dart`, `src/widgets/plugin_library/plugin_card.dart`, `src/widgets/plugin_library/plugin_filter_bar.dart`, `src/widgets/plugin_library/plugin_install_button.dart`, `src/widgets/plugin_library/plugin_library_notices.dart`, `src/widgets/plugin_library/plugin_logo.dart`, `src/widgets/plugin_library/plugin_scraper_tile.dart`, `src/widgets/plugin_library/plugin_search_bar.dart`, `src/widgets/plugin_library/plugin_skeleton.dart`, `src/widgets/plugin_library/plugin_stats.dart`, `src/widgets/poster_image.dart`, `src/widgets/provider_installer_modal.dart`, `src/widgets/provider_search_dialog.dart`, `src/widgets/settings/settings_components.dart`, `src/widgets/settings/tmdb_attribution.dart`, `src/widgets/soft_glass_dock.dart`, `src/widgets/tv/tv_focus.dart`, `src/widgets/tv/tv_poster_card.dart`, `src/widgets/update_dialog.dart`
 
-**Tests importing it:** `integration_test/windows_player_ui_test.dart`, `integration_test/windows_soak_test.dart`, `test/desktop_gamepad_test.dart`, `test/desktop_redesign_test.dart`, `test/desktop_remove_favorites_test.dart`, `test/desktop_settings_plugins_test.dart`, `test/desktop_top_ten_test.dart`, `test/desktop_ui_test.dart`, `test/details_screens_test.dart`, `test/plugin_library_test.dart`, `test/search_library_screens_test.dart`, `test/tv_home_test.dart`, `test/tv_layout_test.dart`, `test/tv_support_test.dart`
+**Tests importing it:** `integration_test/windows_player_ui_test.dart`, `integration_test/windows_soak_test.dart`, `test/desktop_gamepad_test.dart`, `test/desktop_redesign_test.dart`, `test/desktop_remove_favorites_test.dart`, `test/desktop_settings_plugins_test.dart`, `test/desktop_top_ten_test.dart`, `test/desktop_ui_test.dart`, `test/details_screens_test.dart`, `test/plugin_library_test.dart`, `test/search_library_screens_test.dart`, `test/soft_glass_dock_test.dart`, `test/tv_home_test.dart`, `test/tv_layout_test.dart`, `test/tv_meta_line_test.dart`, `test/tv_support_test.dart`
 
 ## lib/src/viewmodels/details_view_model.dart
 
@@ -1580,6 +1581,22 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 **Imported by:** `src/desktop/desktop_update_section.dart`, `src/screens/app_information_screens.dart`, `src/screens/home_screen.dart`
 
 **Tests importing it:** `test/desktop_home_top_ten_test.dart`, `test/github_update_check_test.dart`, `test/windows_update_test.dart`
+
+## lib/src/widgets/brand_logo.dart
+
+**Source:** [`lib/src/widgets/brand_logo.dart`](../../lib/src/widgets/brand_logo.dart) · **Platform:** Shared · **Lines:** 112
+
+**Purpose:** Reelish's brand images: their asset paths, and the wordmark and mark drawn without their canvases' transparent margins.
+
+**Declares:** `_BrandArtwork` (Widget), `BrandAssets` (Class), `ReelishMark` (Widget), `ReelishWordmark` (Widget)
+
+**Imports (project):** none
+
+**Packages:** `flutter`
+
+**Imported by:** `src/desktop/desktop_hero.dart`, `src/desktop/desktop_shell.dart`, `src/screens/app_information_screens.dart`, `src/screens/credits_screen.dart`, `src/screens/home_screen.dart`, `src/screens/splash_screen.dart`, `src/screens/tv/tv_home_shell.dart`
+
+**Tests importing it:** `test/brand_assets_test.dart`
 
 ## lib/src/widgets/category_chip.dart
 
@@ -2167,7 +2184,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/widgets/soft_glass_dock.dart
 
-**Source:** [`lib/src/widgets/soft_glass_dock.dart`](../../lib/src/widgets/soft_glass_dock.dart) · **Platform:** Shared · **Lines:** 249
+**Source:** [`lib/src/widgets/soft_glass_dock.dart`](../../lib/src/widgets/soft_glass_dock.dart) · **Platform:** Shared · **Lines:** 250
 
 **Purpose:** The phone and tablet bottom navigation dock.
 

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:onfeed/src/desktop/desktop_details_screen.dart';
 import 'package:onfeed/src/models/media_details.dart';
 import 'package:onfeed/src/models/media_item.dart';
@@ -161,6 +162,27 @@ void main() {
       }
       expect(find.text('A plot.'), findsOneWidget);
       expect(find.textContaining('First'), findsOneWidget);
+    });
+
+    testWidgets('the rating chip shows the theme star icon, not a "★" glyph', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        screen(
+          const MediaItem(
+            id: '8',
+            type: 'movie',
+            name: 'Film',
+            year: '2021',
+            rating: '7.8',
+          ),
+        ),
+      );
+      expect(find.text('7.8 / 10'), findsOneWidget);
+      expect(find.textContaining('★'), findsNothing);
+      final star = tester.widget<Icon>(find.byIcon(Symbols.star_rounded));
+      expect(star.color, GlassTheme.primary);
     });
 
     testWidgets('a movie asks for no seasons', (tester) async {
