@@ -225,6 +225,10 @@ class _SidebarState extends State<_Sidebar> {
   bool _focusInside = false;
   Timer? _hoverTimer;
 
+  /// Set by "Collapse sidebar": the pointer is still on the button, so
+  /// hovering does not hold the rail open again until it has left.
+  bool _hoverSuppressed = false;
+
   bool get _open => widget.pinned || _hoverOpen || _focusInside;
 
   @override
@@ -233,8 +237,22 @@ class _SidebarState extends State<_Sidebar> {
     super.dispose();
   }
 
+  void _togglePinned() {
+    if (widget.pinned) {
+      // Collapsing closes the rail now. Otherwise the hover (or focus) it
+      // was clicked with keeps it open over the page, the click seems to do
+      // nothing, and a second click pins it again.
+      _hoverTimer?.cancel();
+      _hoverOpen = false;
+      _hoverSuppressed = true;
+      if (_focusInside) widget.onReleaseFocus();
+    }
+    widget.onTogglePinned();
+  }
+
   void _setHover(bool inside) {
     _hoverTimer?.cancel();
+    if (inside && _hoverSuppressed) return;
     if (inside == _hoverOpen) return;
     _hoverTimer = Timer(inside ? _Sidebar.openDelay : _Sidebar.closeDelay, () {
       if (mounted) setState(() => _hoverOpen = inside);
@@ -263,6 +281,7 @@ class _SidebarState extends State<_Sidebar> {
       child: MouseRegion(
         onEnter: (_) => _setHover(true),
         onExit: (_) {
+          _hoverSuppressed = false;
           _setHover(false);
           release();
         },
@@ -336,7 +355,7 @@ class _SidebarState extends State<_Sidebar> {
                           pinned: widget.pinned,
                           selected: widget.selected,
                           onSelected: widget.onSelected,
-                          onTogglePinned: widget.onTogglePinned,
+                          onTogglePinned: _togglePinned,
                           shelf: widget.shelf,
                         ),
                       ),

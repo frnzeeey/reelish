@@ -542,7 +542,7 @@ Top-level functions and methods in `lib/`, A–Z by name, then by declaring type
 
 | Function | Declared in | Source | Async | Signature | Summary |
 |---|---|---|---|---|---|
-| `_thumbnail` | `_ResumeTileState` | [`desktop_shell.dart:1123`](../../lib/src/desktop/desktop_shell.dart#L1123) |  | `Widget _thumbnail(BuildContext context, double dpr, bool active, Duration duration)` | The poster, a slim progress bar along its foot, and, on hover or focus, a resume glyph over a light shade with the art eased forward. |
+| `_thumbnail` | `_ResumeTileState` | [`desktop_shell.dart:1142`](../../lib/src/desktop/desktop_shell.dart#L1142) |  | `Widget _thumbnail(BuildContext context, double dpr, bool active, Duration duration)` | The poster, a slim progress bar along its foot, and, on hover or focus, a resume glyph over a light shade with the art eased forward. |
 | `titleOf` | `SubtitleMenu` (static) | [`subtitle_picker_sheet.dart:102`](../../lib/src/widgets/player/subtitle_picker_sheet.dart#L102) |  | `static String titleOf(SubtitleTrack track)` | `English`, `English (SDH)`. |
 | `tmdbDate` | `MediaFreshnessRules` (static) | [`media_catalog_rules.dart:162`](../../lib/src/services/media_catalog_rules.dart#L162) |  | `static String tmdbDate(DateTime value)` | `yyyy-mm-dd`, the date format TMDB filters expect. |
 | `toggleFavorite` | `HomeViewModel` | [`home_view_model.dart:193`](../../lib/src/viewmodels/home_view_model.dart#L193) | yes | `Future<bool> toggleFavorite(MediaItem item) async` | Adds `item` to My list or removes it; completes with whether it is on the list afterwards. |

@@ -202,6 +202,70 @@ void main() {
       expect(preferences.getBool('reelish.desktop.sidebarPinned'), isFalse);
     });
 
+    testWidgets('Collapse sidebar closes the rail at once, though the '
+        'pointer is still on the button', (tester) async {
+      SharedPreferences.setMockInitialValues({
+        'reelish.desktop.sidebarPinned': true,
+      });
+      await _pump(tester, const _ShellHost(), size: const Size(1400, 900));
+      await tester.pumpAndSettle();
+      final button = tester.getCenter(find.byTooltip('Collapse sidebar'));
+      // One mouse throughout, as on a real desktop: it stays on the button.
+      final mouse = await mouseAt(tester, const Offset(900, 300));
+      await mouse.moveTo(button);
+      await tester.pump(const Duration(milliseconds: 400));
+      await mouse.down(button);
+      await mouse.up();
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
+      expect(find.text('Movies'), findsNothing);
+      expect(find.byTooltip('Keep sidebar open'), findsOneWidget);
+      final preferences = await SharedPreferences.getInstance();
+      expect(preferences.getBool('reelish.desktop.sidebarPinned'), isFalse);
+
+      // Resting there does not reopen it...
+      await mouse.moveTo(button + const Offset(4, 0));
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
+      expect(find.text('Movies'), findsNothing);
+      // ...but leaving and coming back does.
+      await mouse.moveTo(const Offset(900, 300));
+      await tester.pump(const Duration(milliseconds: 400));
+      await mouse.moveTo(const Offset(40, 300));
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
+      expect(find.text('Movies'), findsOneWidget);
+    });
+
+    testWidgets('Collapse sidebar from the keyboard closes it too', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({
+        'reelish.desktop.sidebarPinned': true,
+      });
+      await _pump(tester, const _ShellHost(), size: const Size(1400, 900));
+      await tester.pumpAndSettle();
+      for (var i = 0; i < 30; i++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pump();
+        final focused = FocusManager.instance.primaryFocus?.context;
+        if (focused != null &&
+            find
+                .ancestor(
+                  of: find.byElementPredicate((e) => e == focused),
+                  matching: find.byTooltip('Collapse sidebar'),
+                )
+                .evaluate()
+                .isNotEmpty) {
+          break;
+        }
+      }
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+      expect(find.byTooltip('Keep sidebar open'), findsOneWidget);
+      expect(find.text('Movies'), findsNothing);
+    });
+
     testWidgets('the earlier sidebar\'s saved "expanded" does not pin it', (
       tester,
     ) async {

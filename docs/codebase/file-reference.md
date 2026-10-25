@@ -16,7 +16,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/desktop/desktop_plugins_page.dart`](#libsrcdesktopdesktop_plugins_pagedart) | Windows | 850 | Plugins on Windows: the installed repositories and their providers at a desktop width, with the same actions as the phone and TV screen (add from the library or a manifest URL, refresh, switch providers on and off, remove, allow changed provider code) through the same `ProviderPluginService`, so what is installed and enabled is shared. |
 | [`lib/src/desktop/desktop_provider_search.dart`](#libsrcdesktopdesktop_provider_searchdart) | Windows | 249 | "Searching providers…" over the Windows interface while a play request from Home looks for a stream: a frosted card on the dimmed page, with what is being looked for and a way to stop. |
 | [`lib/src/desktop/desktop_settings_page.dart`](#libsrcdesktopdesktop_settings_pagedart) | Windows | 407 | Settings on Windows: the categories of the phone and TV Settings list on the left, the chosen one beside them, so a change and its effect are on screen together. |
-| [`lib/src/desktop/desktop_shell.dart`](#libsrcdesktopdesktop_shelldart) | Windows | 1244 | The Windows interface's frame: a compact icon rail on the left and the selected page beside it. |
+| [`lib/src/desktop/desktop_shell.dart`](#libsrcdesktopdesktop_shelldart) | Windows | 1263 | The Windows interface's frame: a compact icon rail on the left and the selected page beside it. |
 | [`lib/src/desktop/desktop_top_ten.dart`](#libsrcdesktopdesktop_top_tendart) | Windows | 524 | Top 10 on Windows: the shared Top 10 feed (the same seeds, ranking and cache as Android and TV) drawn as ranked posters with the outlined numerals of the mobile and TV rows. |
 | [`lib/src/desktop/desktop_update_dialogs.dart`](#libsrcdesktopdesktop_update_dialogsdart) | Windows | 369 | Windows update dialogs: the "update available" offer with release notes, and download progress through to the installer handoff. |
 | [`lib/src/desktop/desktop_update_section.dart`](#libsrcdesktopdesktop_update_sectiondart) | Windows | 225 | Settings → About on Windows: version, update status, last check, the update action for the current state, and the automatic-check switch. |
@@ -274,7 +274,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/desktop/desktop_shell.dart
 
-**Source:** [`lib/src/desktop/desktop_shell.dart`](../../lib/src/desktop/desktop_shell.dart) · **Platform:** Windows · **Lines:** 1244
+**Source:** [`lib/src/desktop/desktop_shell.dart`](../../lib/src/desktop/desktop_shell.dart) · **Platform:** Windows · **Lines:** 1263
 
 **Purpose:** The Windows interface's frame: a compact icon rail on the left and the selected page beside it.
 
