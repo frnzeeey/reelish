@@ -1,5 +1,8 @@
 # Reelish production sanity check
 
+<!-- docs-check: historical -->
+> **Historical record.** This report describes the codebase when it was written. Files, names and behaviour may have changed since; current documentation starts at [docs/README.md](README.md).
+
 **Date:** 2026-10-06
 **Branch:** `feature/plugin-library` (uncommitted working tree)
 **Builds on:** [production_readiness_audit.md](production_readiness_audit.md) (2026-10-03). Findings from that audit are referenced, not repeated.

@@ -1,5 +1,8 @@
 # Reelish frontend/backend boundary audit
 
+<!-- docs-check: historical -->
+> **Historical record.** This report describes the codebase when it was written. Files, names and behaviour may have changed since; current documentation starts at [docs/README.md](../README.md).
+
 Date: 2026-10-11.
 
 ## Current architecture

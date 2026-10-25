@@ -1,5 +1,8 @@
 # Reelish Windows readiness audit
 
+<!-- docs-check: historical -->
+> **Historical record.** This report describes the codebase when it was written. Files, names and behaviour may have changed since; current documentation starts at [docs/README.md](README.md).
+
 > **Status:** the blockers below (P0-1 playback, P0-2 QuickJS limits, P0-3
 > app identity) and the P1–P3 items except code signing are implemented on
 > `feature/windows-desktop`. See [windows.md](windows.md) for the result.

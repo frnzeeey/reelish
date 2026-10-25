@@ -1,5 +1,8 @@
 # Reelish improvement pass: security, UI, performance, metadata
 
+<!-- docs-check: historical -->
+> **Historical record.** This report describes the codebase when it was written. Files, names and behaviour may have changed since; current documentation starts at [docs/README.md](../README.md).
+
 Date: 2026-10-13. Baseline: `1188c72` (main). This pass followed the brief
 "Comprehensive Security, UI, Performance & Metadata Optimization". It made
 only small changes, each backed by evidence. Most of the app was already in

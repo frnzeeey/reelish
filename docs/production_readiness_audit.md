@@ -1,5 +1,8 @@
 # Reelish production readiness audit
 
+<!-- docs-check: historical -->
+> **Historical record.** This report describes the codebase when it was written. Files, names and behaviour may have changed since; current documentation starts at [docs/README.md](README.md).
+
 **Audit date:** 2026-10-03  
 **Scope:** Dart/Flutter application, existing tests, local QuickJS fork, Android app configuration, and dependency manifest. This is a source review; native Android playback, device memory, release artifact size, and real provider compatibility were not measured on devices.
 

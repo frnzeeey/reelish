@@ -36,9 +36,13 @@ much orchestration (catalog wiring, `_openItem`, `_showDetails`, the three
 | Updates | APK updater (`onfeed/app_update`) | same | `WindowsUpdateController` + installer (`reelish/app_update`) |
 | Glass | `LiquidGlass` balanced/high | capped to low | desktop surfaces |
 
-Method channels: `onfeed/device`, `onfeed/app_update` (Android);
+Method channels: `onfeed/device`, `onfeed/player` (brightness, keep screen
+on, emulator check, picture-in-picture), `onfeed/app_update` (Android);
 `reelish/window`, `reelish/gamepad`, `reelish/app_update` (Windows runner in
 `windows/runner/`). Android native code is only `MainActivity.kt`.
+
+The full documentation, including generated A–Z references to every file,
+class and function, starts at `docs/README.md`.
 
 ## Data flow
 

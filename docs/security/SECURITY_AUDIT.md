@@ -1,5 +1,8 @@
 # Reelish security audit
 
+<!-- docs-check: historical -->
+> **Historical record.** This report describes the codebase when it was written. Files, names and behaviour may have changed since; current documentation starts at [docs/README.md](../README.md).
+
 Date: 2026-10-11. Scope: the whole repository at `073e761` (v1.10.1 plus
 README changes): the Flutter app, Android host code, the vendored
 `flutter_js` and torrent packages, and the release workflow. The website

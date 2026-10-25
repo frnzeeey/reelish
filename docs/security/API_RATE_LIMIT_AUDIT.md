@@ -1,5 +1,8 @@
 # Reelish API and rate-limit audit
 
+<!-- docs-check: historical -->
+> **Historical record.** This report describes the codebase when it was written. Files, names and behaviour may have changed since; current documentation starts at [docs/README.md](../README.md).
+
 Date: 2026-10-11. Scope: every outbound request the app makes, the limits
 applied to it, and whether the limits could slow playback.
 
