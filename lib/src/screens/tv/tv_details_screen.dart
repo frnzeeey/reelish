@@ -10,6 +10,7 @@ import '../../services/tmdb_service.dart';
 import '../../theme/glass_theme.dart';
 import '../../viewmodels/details_view_model.dart';
 import '../../widgets/tv/tv_focus.dart';
+import 'tv_browse.dart' show TvMetaLine, TvRating;
 
 /// A movie or series on TV: the backdrop fills the screen behind the title,
 /// details and actions, with Play focused; a series lists its seasons and
@@ -201,7 +202,7 @@ class _TvMediaDetailsScreenState extends State<TvMediaDetailsScreen> {
         : item.description;
     final meta = [
       if (item.year.isNotEmpty) item.year,
-      if (rating.isNotEmpty) '★ $rating',
+      if (rating.isNotEmpty) TvRating(rating),
       if ((details?.runtimeMinutes ?? 0) > 0) '${details!.runtimeMinutes} min',
       if (details?.status.isNotEmpty == true) details!.status,
     ];
@@ -232,8 +233,8 @@ class _TvMediaDetailsScreenState extends State<TvMediaDetailsScreen> {
           ),
         ),
         const SizedBox(height: 12),
-        Text(
-          meta.join('   ·   '),
+        TvMetaLine(
+          parts: meta,
           style: const TextStyle(
             color: Color(0xDDFFFFFF),
             fontSize: 16,

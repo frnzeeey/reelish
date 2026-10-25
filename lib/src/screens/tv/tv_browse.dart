@@ -192,8 +192,8 @@ class _HeroDetails extends StatelessWidget {
         final meta = [
           if (item.year.isNotEmpty) item.year,
           item.type == 'series' ? 'Series' : 'Movie',
-          if (item.rating.isNotEmpty) '★ ${item.rating}',
-        ].join('   ·   ');
+          if (item.rating.isNotEmpty) TvRating(item.rating),
+        ];
         return AnimatedSwitcher(
           duration: MediaQuery.disableAnimationsOf(context)
               ? Duration.zero
@@ -227,8 +227,8 @@ class _HeroDetails extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  Text(
-                    meta,
+                  TvMetaLine(
+                    parts: meta,
                     style: const TextStyle(
                       color: Color(0xDDFFFFFF),
                       fontSize: 15,
@@ -810,5 +810,55 @@ class TvMessage extends StatelessWidget {
         ],
       ),
     ),
+  );
+}
+
+/// A rating in a [TvMetaLine].
+class TvRating {
+  const TvRating(this.value);
+
+  final String value;
+}
+
+/// A details line such as "2026 · Movie · ★ 8.0", from [parts] (each a
+/// `String` or a [TvRating]). A rating shows the app's star icon in the
+/// accent colour, as on Windows, rather than a "★" character: Montserrat
+/// has none, so the system would draw it in another font.
+class TvMetaLine extends StatelessWidget {
+  const TvMetaLine({super.key, required this.parts, required this.style});
+
+  final List<Object> parts;
+  final TextStyle style;
+
+  @override
+  Widget build(BuildContext context) => Text.rich(
+    TextSpan(
+      children: [
+        for (var i = 0; i < parts.length; i++) ...[
+          if (i > 0) const TextSpan(text: '   ·   '),
+          switch (parts[i]) {
+            TvRating(:final value) => TextSpan(
+              children: [
+                WidgetSpan(
+                  alignment: PlaceholderAlignment.middle,
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 4),
+                    child: Icon(
+                      Symbols.star_rounded,
+                      fill: 1,
+                      size: (style.fontSize ?? 15) * 1.1,
+                      color: GlassTheme.primary,
+                    ),
+                  ),
+                ),
+                TextSpan(text: value),
+              ],
+            ),
+            final part => TextSpan(text: '$part'),
+          },
+        ],
+      ],
+    ),
+    style: style,
   );
 }
