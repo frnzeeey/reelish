@@ -39,5 +39,5 @@ on each other is in the [dependency map](dependency-map.md).
 | [`test/`](../../test) | Unit and widget tests; `flutter_test_config.dart` preloads the QuickJS library | Shared |
 | [`test_driver/`](../../test_driver) | The `flutter drive` driver for integration tests (frame timings) | — |
 | [`third_party/flutter_js/`](../../third_party/flutter_js) | Vendored QuickJS for Flutter with Reelish's patch (memory limit, interrupt, quiet release logs) | Shared |
-| [`tool/`](../../tool) | `generate_plugin_catalog.dart`, `build_quickjs_bridge_windows.ps1`, and [`tool/docs/docs_tool.dart`](../../tool/docs/docs_tool.dart) (these references) | Tooling |
+| [`tool/`](../../tool) | `generate_plugin_catalog.dart`, `build_quickjs_bridge_windows.ps1`, `branding/` (platform brand assets from `assets/icons/`), and [`tool/docs/docs_tool.dart`](../../tool/docs/docs_tool.dart) (these references) | Tooling |
 | [`windows/`](../../windows) | Windows runner (`runner/`), CMake project, Inno Setup script (`installer/reelish.iss`) | Windows |

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../navigation/app_destination.dart';
 import '../../theme/glass_theme.dart';
 import '../../widgets/tv/tv_focus.dart';
+import '../../widgets/brand_logo.dart';
 
 export '../../navigation/app_destination.dart';
 
@@ -302,7 +303,7 @@ class _TvNavigationRail extends StatelessWidget {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(10),
               child: Image.asset(
-                'assets/icons/reelish_icon.png',
+                BrandAssets.appIcon,
                 width: 40,
                 height: 40,
                 cacheWidth: (40 * MediaQuery.devicePixelRatioOf(context))

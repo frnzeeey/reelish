@@ -12,6 +12,7 @@ import '../theme/glass_theme.dart';
 import '../widgets/app_update_flow.dart';
 import '../widgets/settings/settings_components.dart';
 import 'credits_screen.dart';
+import '../widgets/brand_logo.dart';
 
 /// The Reelish name, icon and tagline, used where the app identifies itself.
 class ReelishIdentity extends StatelessWidget {
@@ -25,7 +26,7 @@ class ReelishIdentity extends StatelessWidget {
         ClipRRect(
           borderRadius: BorderRadius.circular(18),
           child: Image.asset(
-            'assets/icons/reelish_icon.png',
+            BrandAssets.appIcon,
             width: 60,
             height: 60,
             filterQuality: FilterQuality.medium,

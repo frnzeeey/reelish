@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../theme/glass_theme.dart';
+import '../widgets/brand_logo.dart';
 
 /// Visual constants shared with the native launch screen in
 /// `android/app/src/main/res`; change them together so the hand-off from
@@ -11,9 +12,11 @@ import '../theme/glass_theme.dart';
 abstract final class SplashSpec {
   static const background = Color(0xFF0B0B0F);
 
-  /// Matches the 128dp logo in `launch_background.xml` and `splash_icon.xml`.
-  static const logoSize = 128.0;
-  static const logoAsset = 'assets/icons/reelish_icon.png';
+  /// Matches the 160dp logo in `launch_background.xml` and `splash_icon.xml`.
+  /// The primary logo sits inside transparent margins, so its artwork is
+  /// about 100dp of this.
+  static const logoSize = 160.0;
+  static const logoAsset = BrandAssets.primaryLogo;
 }
 
 /// The startup screen shown while [SplashGate] restores what the first
@@ -84,9 +87,41 @@ class _SplashViewState extends State<SplashView>
     );
   }
 
+  /// Whether this launch's first frame has been held for the logo already.
+  static bool _heldFirstFrame = false;
+
+  /// Where the native splash shows the logo, Flutter's first frame must
+  /// too: an asset decodes asynchronously, so without this the logo was
+  /// missing for a few frames between the two. The first frame waits for
+  /// the decode (milliseconds; at most [_logoWait]) while the native splash
+  /// stays up.
+  void _holdFirstFrameForLogo() {
+    if (_reveal || _heldFirstFrame) return;
+    _heldFirstFrame = true;
+    final binding = WidgetsBinding.instance;
+    binding.deferFirstFrame();
+    unawaited(
+      Future.any<void>([
+        precacheImage(_logoImage(context), context),
+        Future<void>.delayed(_logoWait),
+      ]).whenComplete(binding.allowFirstFrame),
+    );
+  }
+
+  /// Longest the first frame waits for the logo.
+  static const _logoWait = Duration(milliseconds: 400);
+
+  /// The logo as drawn: decoded once, at display size.
+  ImageProvider _logoImage(BuildContext context) => ResizeImage(
+    const AssetImage(SplashSpec.logoAsset),
+    width: (SplashSpec.logoSize * MediaQuery.devicePixelRatioOf(context))
+        .round(),
+  );
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _holdFirstFrameForLogo();
     if (_controller.isAnimating || _controller.isCompleted) return;
     if (MediaQuery.disableAnimationsOf(context)) {
       _controller.value = 1;

@@ -14,6 +14,7 @@ import '../navigation/app_destination.dart';
 import '../theme/glass_theme.dart';
 import '../widgets/poster_image.dart';
 import 'desktop_widgets.dart';
+import '../widgets/brand_logo.dart';
 
 /// The Windows interface's frame: a compact icon rail on the left and the
 /// selected page beside it.
@@ -386,7 +387,7 @@ class _RailContents extends StatelessWidget {
               ClipRRect(
                 borderRadius: BorderRadius.circular(11),
                 child: Image.asset(
-                  'assets/icons/reelish_icon.png',
+                  BrandAssets.appIcon,
                   width: 40,
                   height: 40,
                   cacheWidth: (40 * MediaQuery.devicePixelRatioOf(context))
@@ -397,25 +398,21 @@ class _RailContents extends StatelessWidget {
                 child: AnimatedOpacity(
                   duration: duration,
                   opacity: open ? 1 : 0,
+                  // Laid out at its full width and clipped, so the narrow
+                  // compact rail cuts it off instead of overflowing.
                   child: const Padding(
-                    padding: EdgeInsets.only(left: 12),
-                    child: Text.rich(
-                      TextSpan(
-                        children: [
-                          TextSpan(text: 'reel'),
-                          TextSpan(
-                            text: 'ish',
-                            style: TextStyle(color: Color(0xFFFF7889)),
-                          ),
-                        ],
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.clip,
-                      softWrap: false,
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -.6,
+                    padding: EdgeInsets.only(left: 14),
+                    child: SizedBox(
+                      height: 18,
+                      child: ClipRect(
+                        child: OverflowBox(
+                          alignment: Alignment.centerLeft,
+                          minWidth: 0,
+                          maxWidth: double.infinity,
+                          minHeight: 0,
+                          maxHeight: double.infinity,
+                          child: ReelishWordmark(height: 16),
+                        ),
                       ),
                     ),
                   ),

@@ -8,6 +8,7 @@ state and data live, and which tests cover it. Tests are in
 | Feature | Primary implementation | Supporting components |
 |---|---|---|
 | [Audio and video tracks](#audio-and-video-tracks) | `CustomVideoPlayer._applyPreferredAudio`, `_applyPreferredVideoTrack` | `AudioTrackSheet`, `PlayerSettingsSheet`, `selectPreferredVideoHeight` |
+| [Branding](#branding) | `BrandAssets`, `ReelishWordmark`, `ReelishMark` | `SplashSpec`, `tool/branding/generate_brand_assets.ps1`, `flutter_launcher_icons` |
 | [Continue watching and resume](#continue-watching-and-resume) | `HomeViewModel.loadHistory`, `CustomVideoPlayer._saveProgress` / `_startPosition` | `StorageService`, `ResumeSummary`, `DesktopResumeShelf` |
 | [Details pages](#details-pages) | `DetailsViewModel` | `MediaDetailsScreen`, `TvMediaDetailsScreen`, `DesktopDetailsScreen` |
 | [Episode navigation](#episode-navigation) | `EpisodeContext`, `CustomVideoPlayer._playEpisode` | `EpisodePanel`, `NextEpisodeCard`, `EpisodeHandOff` |
@@ -41,6 +42,25 @@ source opens, and lets them switch in the player.
 **Logic:** [`video_quality_selector.dart`](../../lib/src/services/video_quality_selector.dart).
 **State:** player session; preferences in `PlaybackSettings`.
 **Tests:** `player_settings_sheet_test`, `playback_settings_test`.
+
+## Branding
+
+The app icon, splash logo and Reelish logos.
+**Sources:** four 846 × 846 PNGs in [`assets/icons/`](../../assets/icons):
+`reelish_icon.png` (the canonical app icon), `Primary_logo.png` (the
+splash logo), `logo_icon.png` (the mark) and `word_logo.png` (the
+wordmark); paths in `BrandAssets`
+([`brand_logo.dart`](../../lib/src/widgets/brand_logo.dart)).
+**In the app:** `ReelishWordmark` and `ReelishMark` draw the logos without
+their transparent margins (phone Home header, Windows sidebar, the
+"REELISH SPOTLIGHT" labels, the "In the Spotlight" rail); the splash draws
+the primary logo ([`splash_screen.dart`](../../lib/src/screens/splash_screen.dart)).
+**Platform icons:** [`tool/branding/generate_brand_assets.ps1`](../../tool/branding/generate_brand_assets.ps1)
+writes the adaptive-icon background and monochrome layer, the Android splash
+drawable, the TV banner and the Windows `app_icon.ico`; then
+`dart run flutter_launcher_icons` (config in `pubspec.yaml`) writes the
+Android launcher icons.
+**Tests:** `brand_assets_test`, `splash_screen_test`.
 
 ## Continue watching and resume
 

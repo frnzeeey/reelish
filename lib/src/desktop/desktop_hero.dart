@@ -8,6 +8,7 @@ import '../models/media_item.dart';
 import '../theme/glass_theme.dart';
 import '../widgets/poster_image.dart';
 import 'desktop_widgets.dart';
+import '../widgets/brand_logo.dart';
 
 /// The featured titles at the top of desktop Home: one full-bleed backdrop
 /// with the title, synopsis and actions on its left, and every Spotlight
@@ -481,16 +482,13 @@ class _HeroText extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // The Reelish wordmark, then the section's name.
         Row(
           children: [
-            Container(
-              width: 18,
-              height: 2,
-              margin: const EdgeInsets.only(right: 10),
-              color: GlassTheme.primary,
-            ),
+            const ReelishWordmark(height: 11),
+            const SizedBox(width: 9),
             Text(
-              'REELISH SPOTLIGHT',
+              'SPOTLIGHT',
               style: TextStyle(
                 color: GlassTheme.coralBright,
                 fontSize: 11,
@@ -821,15 +819,9 @@ class _SpotlightRail extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: pad),
               child: Row(
                 children: [
-                  Container(
-                    width: 3,
-                    height: 14,
-                    margin: const EdgeInsets.only(right: 10),
-                    decoration: BoxDecoration(
-                      color: GlassTheme.primary,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
+                  // The compact Reelish mark heads Reelish's own picks.
+                  const ReelishMark(height: 15),
+                  const SizedBox(width: 9),
                   const Text(
                     'In the Spotlight',
                     style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),

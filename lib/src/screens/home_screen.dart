@@ -54,6 +54,7 @@ import 'library_screen.dart';
 import 'player_screen.dart';
 import 'media_details_screen.dart';
 import 'playback_settings_screen.dart';
+import '../widgets/brand_logo.dart';
 
 /// One independently loaded single-request list (Trending, search). Its
 /// fields change only inside the home screen's setState. The catalog rows
@@ -1290,7 +1291,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     ),
     child: ClipRRect(
       borderRadius: BorderRadius.circular(12),
-      child: Image.asset('assets/icons/reelish_icon.png', fit: BoxFit.cover),
+      child: Image.asset(BrandAssets.appIcon, fit: BoxFit.cover),
     ),
   );
 
@@ -1357,23 +1358,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 key: const ValueKey('brand-header'),
                 children: [
                   _brandMark(),
-                  const SizedBox(width: 10),
-                  const Text.rich(
-                    TextSpan(
-                      style: TextStyle(
-                        fontSize: 25,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -1.2,
-                      ),
-                      children: [
-                        TextSpan(text: 'reel'),
-                        TextSpan(
-                          text: 'ish',
-                          style: TextStyle(color: Color(0xFFFF7889)),
-                        ),
-                      ],
-                    ),
-                  ),
+                  const SizedBox(width: 12),
+                  const ReelishWordmark(height: 17),
                   const Spacer(),
                   IconButton(
                     tooltip: 'Search',
@@ -1972,14 +1958,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     color: GlassTheme.primary.withValues(alpha: .35),
                   ),
                 ),
-                child: Text(
-                  'REELISH SPOTLIGHT',
-                  style: TextStyle(
-                    color: GlassTheme.primary,
-                    fontSize: 9,
-                    letterSpacing: 1.5,
-                    fontWeight: FontWeight.w800,
-                  ),
+                // The Reelish wordmark, then the section's name.
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const ReelishWordmark(height: 8),
+                    const SizedBox(width: 6),
+                    Text(
+                      'SPOTLIGHT',
+                      style: TextStyle(
+                        color: GlassTheme.primary,
+                        fontSize: 9,
+                        letterSpacing: 1.5,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 11),

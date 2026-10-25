@@ -10,6 +10,7 @@ import '../theme/glass_theme.dart';
 import '../widgets/settings/settings_components.dart';
 import '../widgets/settings/tmdb_attribution.dart';
 import 'legal_information_screen.dart';
+import '../widgets/brand_logo.dart';
 
 bool _bundledLicensesRegistered = false;
 
@@ -43,11 +44,7 @@ Future<void> showAppLicenses(BuildContext context) async {
       padding: const EdgeInsets.all(12),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(14),
-        child: Image.asset(
-          'assets/icons/reelish_icon.png',
-          width: 48,
-          height: 48,
-        ),
+        child: Image.asset(BrandAssets.appIcon, width: 48, height: 48),
       ),
     ),
     applicationLegalese: TmdbAttribution.disclaimer,
