@@ -50,6 +50,20 @@ void main() {
       }
     });
 
+    test('an engine that never starts playing is an engine failure, so the '
+        'other engine gets the same source', () {
+      final failure = classify(const EngineStartTimeout());
+      expect(failure.kind, PlaybackFailureKind.engine);
+      expect(failure.canTryAnotherEngine, isTrue);
+      expect(failure.canTryAnotherSource, isTrue);
+      // A slow open is still a timeout: the other engine would wait on the
+      // same server.
+      expect(
+        classify(TimeoutException('initialize')).canTryAnotherEngine,
+        isFalse,
+      );
+    });
+
     test('engine-specific failures allow one retry on the other engine', () {
       for (final message in [
         'Video player had error androidx.media3.exoplayer.ExoPlaybackException: Source error',
@@ -158,6 +172,40 @@ void main() {
   group('engine selection', () {
     setUp(() => debugDefaultTargetPlatformOverride = TargetPlatform.android);
     tearDown(() => debugDefaultTargetPlatformOverride = null);
+
+    test('the other engine takes over only once it shows a picture', () {
+      const media3 = Media3PlayerEngine(), mpv = MpvPlayerEngine();
+      final preference = EnginePreference(media3);
+
+      // libmpv accepts play for a source Media3 failed on, then fails as
+      // the codec opens (a 4K file the device cannot decode): Media3 stays
+      // first for the next source.
+      preference.fallbackStarted(mpv);
+      expect(preference.preferred, same(media3));
+      preference.attemptEnded();
+      preference.presented(mpv); // A late frame from that attempt.
+      expect(preference.preferred, same(media3));
+
+      // libmpv plays the next fallback: it is tried first from now on.
+      preference.fallbackStarted(mpv);
+      preference.presented(mpv);
+      expect(preference.preferred, same(mpv));
+
+      // A picture on the preferred engine itself changes nothing.
+      preference.fallbackStarted(mpv);
+      preference.presented(mpv);
+      expect(preference.preferred, same(mpv));
+
+      // Media3 playing what libmpv could not takes over again, as any
+      // engine that shows a picture does.
+      preference.fallbackStarted(media3);
+      preference.presented(media3);
+      expect(preference.preferred, same(media3));
+
+      // The viewer's own choice applies at once.
+      preference.choose(mpv);
+      expect(preference.preferred, same(mpv));
+    });
 
     test('cleartext and non-HTTP stream URLs go straight to libmpv', () {
       const media3 = Media3PlayerEngine();

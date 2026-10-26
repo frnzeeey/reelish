@@ -46,7 +46,9 @@ To try the TV interface on a phone or a regular emulator:
 The same engines as phones (Media3, libmpv fallback). In the player, Back
 shows the controls first instead of leaving; the remote keys are handled in
 `CustomVideoPlayer._onRemoteKey`, and focus is kept inside the player while
-it is on top. Picture-in-picture and brightness gestures are not offered.
+it is on top. Brightness gestures are not offered; picture in picture is
+offered from the player button only where the TV supports it (leaving the
+app never starts it, as it does on phones).
 Many TV devices (such as Chromecast with Google TV) run 32-bit Android, so
 torrent sources are neither requested nor offered there
 (`TorrentSupport`).

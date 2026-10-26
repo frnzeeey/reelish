@@ -4,7 +4,14 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import android.os.Build
+import android.app.PendingIntent
 import android.app.PictureInPictureParams
+import android.app.RemoteAction
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.IntentFilter
+import android.graphics.drawable.Icon
+import androidx.annotation.RequiresApi
 import android.app.UiModeManager
 import android.content.res.Configuration
 import android.util.Rational
@@ -26,15 +33,119 @@ class MainActivity : FlutterActivity() {
     private val deviceChannelName = "onfeed/device"
     private var originalBrightness: Float? = null
 
+    /** The player channel, also used to tell the player about picture in picture. */
+    private var playerChannel: MethodChannel? = null
+
+    /**
+     * What the player last reported: whether leaving the app should continue the
+     * video in picture in picture, whether it is playing (for the window's
+     * play/pause button) and its shape.
+     */
+    private var pipAutoEnter = false
+    private var pipPlaying = false
+    private var pipRatio = Rational(16, 9)
+
+    /** The picture-in-picture play/pause button; only this app can send it. */
+    private val pipActionName = "io.github.frnzeeey.reelish.PIP_TOGGLE_PLAY"
+    private var pipReceiver: BroadcastReceiver? = null
+
+    private fun supportsPip(): Boolean =
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+            packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    private fun pipParams(): PictureInPictureParams {
+        val intent = Intent(pipActionName).setPackage(packageName)
+        val pending = PendingIntent.getBroadcast(
+            this,
+            0,
+            intent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+        val action = RemoteAction(
+            Icon.createWithResource(
+                this,
+                if (pipPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play,
+            ),
+            if (pipPlaying) "Pause" else "Play",
+            if (pipPlaying) "Pause" else "Play",
+            pending,
+        )
+        val builder = PictureInPictureParams.Builder()
+            .setAspectRatio(pipRatio)
+            .setActions(listOf(action))
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            builder.setAutoEnterEnabled(pipAutoEnter).setSeamlessResizeEnabled(true)
+        }
+        return builder.build()
+    }
+
+    /** Keeps the system's picture-in-picture settings in step with the player. */
+    private fun updatePipParams() {
+        if (!supportsPip() || Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        try {
+            setPictureInPictureParams(pipParams())
+        } catch (_: IllegalStateException) {
+            // Not available in this window state; the next update applies.
+        } catch (_: IllegalArgumentException) {
+        }
+    }
+
+    private fun ratioFor(value: Double?): Rational {
+        val ratio = (value ?: 16.0 / 9.0).let { if (it.isFinite() && it > 0) it else 16.0 / 9.0 }
+            .coerceIn(0.42, 2.39)
+        return Rational((ratio * 1000).toInt().coerceAtLeast(420), 1000)
+    }
+
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        // Android 12+ enters on its own (setAutoEnterEnabled). Earlier
+        // versions are asked when the viewer leaves (Home, Recents).
+        if (pipAutoEnter && supportsPip() && Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            try {
+                enterPictureInPictureMode(pipParams())
+            } catch (_: IllegalStateException) {
+            }
+        }
+    }
+
+    override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        playerChannel?.invokeMethod("pipChanged", isInPictureInPictureMode)
+    }
+
+    override fun onDestroy() {
+        pipReceiver?.let { unregisterReceiver(it) }
+        pipReceiver = null
+        super.onDestroy()
+    }
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        if (supportsPip() && pipReceiver == null) {
+            val receiver = object : BroadcastReceiver() {
+                override fun onReceive(context: Context, intent: Intent) {
+                    if (intent.action == pipActionName) playerChannel?.invokeMethod("pipTogglePlay", null)
+                }
+            }
+            val filter = IntentFilter(pipActionName)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
+            } else {
+                @Suppress("UnspecifiedRegisterReceiverFlag")
+                registerReceiver(receiver, filter)
+            }
+            pipReceiver = receiver
+        }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, deviceChannelName).setMethodCallHandler { call, result ->
             when (call.method) {
                 "capabilities" -> result.success(deviceCapabilities())
                 else -> result.notImplemented()
             }
         }
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channelName).setMethodCallHandler { call, result ->
+        val player = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channelName)
+        playerChannel = player
+        player.setMethodCallHandler { call, result ->
             when (call.method) {
                 "setBrightness" -> {
                     if (originalBrightness == null) originalBrightness = window.attributes.screenBrightness
@@ -63,15 +174,27 @@ class MainActivity : FlutterActivity() {
                 }
                 "isEmulator" -> result.success(isEmulator())
                 "enterPip" -> {
-                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+                    if (!supportsPip() || Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
                         result.success(false)
                     } else {
-                        val ratio = (call.argument<Double>("ratio") ?: 16.0 / 9.0).coerceIn(0.42, 2.39)
-                        val width = (ratio * 1000).toInt().coerceAtLeast(420)
-                        val height = 1000
-                        result.success(enterPictureInPictureMode(PictureInPictureParams.Builder()
-                            .setAspectRatio(Rational(width, height)).build()))
+                        pipRatio = ratioFor(call.argument<Double>("ratio"))
+                        result.success(
+                            try {
+                                enterPictureInPictureMode(pipParams())
+                            } catch (_: IllegalStateException) {
+                                false
+                            }
+                        )
                     }
+                }
+                "setPipState" -> {
+                    // The player's state: playing (or paused) video it can
+                    // continue in picture in picture, or nothing to continue.
+                    pipAutoEnter = call.argument<Boolean>("autoEnter") == true
+                    pipPlaying = call.argument<Boolean>("playing") == true
+                    pipRatio = ratioFor(call.argument<Double>("ratio"))
+                    updatePipParams()
+                    result.success(null)
                 }
                 else -> result.notImplemented()
             }

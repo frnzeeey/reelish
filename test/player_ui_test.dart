@@ -39,6 +39,39 @@ Widget _app(Widget child) => MaterialApp(
 );
 
 void main() {
+  testWidgets('desktop: a click plays or pauses, a double click toggles '
+      'fullscreen and plays nothing, a drag does neither', (tester) async {
+    var clicks = 0, doubleClicks = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: DesktopPointerLayer(
+          onClick: () => clicks++,
+          onDoubleClick: () => doubleClicks++,
+          child: const SizedBox.expand(),
+        ),
+      ),
+    );
+    const center = Offset(400, 300);
+    await tester.tapAt(center, kind: PointerDeviceKind.mouse);
+    await tester.pump(kDoubleTapTimeout + const Duration(milliseconds: 50));
+    expect((clicks, doubleClicks), (1, 0));
+
+    await tester.tapAt(center, kind: PointerDeviceKind.mouse);
+    await tester.pump(const Duration(milliseconds: 80));
+    await tester.tapAt(center, kind: PointerDeviceKind.mouse);
+    await tester.pump(kDoubleTapTimeout + const Duration(milliseconds: 50));
+    expect((clicks, doubleClicks), (1, 1));
+
+    final drag = await tester.startGesture(
+      center,
+      kind: PointerDeviceKind.mouse,
+    );
+    await drag.moveBy(const Offset(0, -200));
+    await drag.up();
+    await tester.pump(kDoubleTapTimeout + const Duration(milliseconds: 50));
+    expect((clicks, doubleClicks), (1, 1));
+  });
+
   testWidgets('progress updates do not rebuild the play button', (
     tester,
   ) async {

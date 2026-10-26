@@ -27,6 +27,19 @@ abstract final class DesktopWindow {
   }
 
   static Future<void> toggleFullscreen() => setFullscreen(!_fullscreen.value);
+
+  /// Keeps the display on (no sleep, no screensaver) while [value] is true,
+  /// as playing video does on Android.
+  static Future<void> keepDisplayOn(bool value) async {
+    if (!DeviceCapabilities.isDesktopPlatform) return;
+    try {
+      await _channel.invokeMethod<void>('keepDisplayOn', value);
+    } on PlatformException {
+      // The display follows the system's power settings.
+    } on MissingPluginException {
+      // The display follows the system's power settings.
+    }
+  }
 }
 
 /// Desktop keys that apply on every screen: F11 toggles fullscreen; Escape

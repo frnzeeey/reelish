@@ -73,3 +73,28 @@ class _GestureTouchLayerState extends State<GestureTouchLayer> {
     );
   }
 }
+
+/// Mouse handling for the video area on desktop, as desktop players do: a
+/// click plays or pauses and a double click toggles fullscreen. Moving the
+/// mouse shows the controls, so clicks need not; there are no drags or long
+/// presses, which are touch gestures.
+class DesktopPointerLayer extends StatelessWidget {
+  const DesktopPointerLayer({
+    super.key,
+    required this.child,
+    required this.onClick,
+    required this.onDoubleClick,
+  });
+
+  final Widget child;
+  final VoidCallback onClick;
+  final VoidCallback onDoubleClick;
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    behavior: HitTestBehavior.translucent,
+    onTap: onClick,
+    onDoubleTap: onDoubleClick,
+    child: child,
+  );
+}

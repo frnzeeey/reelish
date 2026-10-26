@@ -21,6 +21,7 @@ import '../../services/storage_service.dart';
 import '../../services/playback_settings_controller.dart';
 import '../../services/stream_discovery.dart';
 import '../../services/perf_timeline.dart';
+import '../../services/playback_metrics.dart';
 import '../../services/playback_coordinator.dart';
 import '../../services/player_engine.dart';
 import '../../services/playback_source_policy.dart';
@@ -38,6 +39,8 @@ import 'player_controls.dart';
 import 'player_lock_overlay.dart';
 import 'subtitle_position_panel.dart';
 import 'player_settings_sheet.dart';
+import 'player_pip.dart';
+import 'stall_watchdog.dart';
 import 'stream_selector_sheet.dart';
 import 'subtitle_picker_sheet.dart';
 
@@ -117,11 +120,23 @@ class CustomVideoPlayer extends StatefulWidget {
   /// TMDB details (genres, runtime, synopsis) for the pause screen. Optional;
   /// the pause screen shows what the item itself carries until it resolves.
   final Future<MediaDetails?>? details;
+
+  /// Where a title resumes from its history entry: its saved position, or
+  /// the beginning once watched (a rewatch, not the credits), as episodes
+  /// do. A length that was never saved keeps the position.
+  static Duration historyStart(MediaItem item) => Duration(
+    milliseconds: EpisodeProgress(
+      positionMs: item.resumeMs,
+      durationMs: item.durationMs,
+    ).resumeMs,
+  );
+
   @override
   State<CustomVideoPlayer> createState() => _CustomVideoPlayerState();
 }
 
-class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
+class _CustomVideoPlayerState extends State<CustomVideoPlayer>
+    implements PlayerPipListener {
   VideoPlayerController? _controller;
   StreamSource? _source;
   bool _ready = false, _error = false;
@@ -182,6 +197,10 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
 
   /// Whether the subtitle position panel is open.
   bool _adjustingSubtitles = false;
+
+  /// Whether the window is picture in picture (Android): only the video
+  /// and its subtitles show.
+  bool _inPip = false;
 
   /// Whether the viewer is dragging the progress bar.
   final ValueNotifier<bool> _scrubbing = ValueNotifier(false);
@@ -250,6 +269,10 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   static void _setKeepScreenOn(bool value) {
     if (_keepingScreenOn == value) return;
     _keepingScreenOn = value;
+    if (defaultTargetPlatform == TargetPlatform.windows) {
+      unawaited(DesktopWindow.keepDisplayOn(value));
+      return;
+    }
     if (defaultTargetPlatform != TargetPlatform.android) return;
     unawaited(
       const MethodChannel(
@@ -270,11 +293,14 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   final PlaybackCoordinator _playbackCoordinator = PlaybackCoordinator();
 
   /// The engine new sources start on. It changes for the rest of the session
-  /// once the other engine plays a source the preferred one could not.
-  PlayerEngine _preferredEngine = PlayerEngineFactory.forCurrentPlatform();
+  /// once the other engine shows a picture for a source the preferred one
+  /// could not play.
+  final EnginePreference _enginePreference = EnginePreference(
+    PlayerEngineFactory.forCurrentPlatform(),
+  );
 
   /// The engine used by the current attempt.
-  late PlayerEngine _engine = _preferredEngine;
+  late PlayerEngine _engine = _enginePreference.preferred;
   late List<StreamSource> _sources;
   final _subtitleAddons = SubtitleAddonService();
   final _subtitleLoader = SubtitleLoader();
@@ -316,7 +342,22 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   /// Recent automatic reconnects per source, to bound retries after the
   /// stream drops during playback.
   final Map<String, List<DateTime>> _runtimeRetries = {};
+
+  /// Off restores the behaviour before stall recovery: a stream that stops
+  /// delivering without an error leaves the spinner up until the viewer acts.
+  static const _recoverStalls = true;
+
+  /// How long playback may buffer without moving before it counts as a
+  /// failure. Torrents wait for peers, so they get longer.
+  static const _stallLimit = Duration(seconds: 25);
+  static const _torrentStallLimit = Duration(seconds: 60);
+
+  /// Watches the playing source; replaced with each attempt.
+  StallWatchdog? _stallWatchdog;
   final DateTime _playerStartedAt = DateTime.now();
+
+  /// Timings and failures of this session, for debug and profile builds.
+  final PlaybackMetrics _metrics = PlaybackMetrics();
   final NetworkDestinationValidator _networkDestinations =
       NetworkDestinationValidator();
   @override
@@ -329,6 +370,15 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     _locked.addListener(_syncControlsShown);
     widget.playbackSettings.addListener(_onPlaybackSettingsChanged);
     if (_desktop) DesktopWindow.fullscreen.addListener(_onFullscreenChanged);
+    if (DeviceCapabilities.current.supportsPictureInPicture) {
+      PlayerPip.attach(this);
+      // Opened inside picture in picture (the next episode, from its
+      // countdown): compact from the start.
+      if (PlayerPip.inPip) {
+        _inPip = true;
+        _controlsVisible.value = false;
+      }
+    }
     if (_tv) {
       FocusManager.instance.addListener(_keepRemoteFocus);
       _pauseOverlay.addListener(_followPauseScreen);
@@ -380,7 +430,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   PlayerEngine _engineFor(StreamSource source) =>
       source.isTorrent && defaultTargetPlatform == TargetPlatform.android
       ? const MpvPlayerEngine()
-      : PlayerEngineFactory.forSource(source.url, _preferredEngine);
+      : PlayerEngineFactory.forSource(source.url, _enginePreference.preferred);
 
   Future<void> _initialize(
     StreamSource source, {
@@ -525,6 +575,13 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
       // already disposed [c]; it must not be listened to or played.
       if (!mounted || generation != _initializationGeneration) return;
       if (_subtitle == null) unawaited(_applyPreferredSubtitle());
+      _stallWatchdog?.dispose();
+      _stallWatchdog = _recoverStalls
+          ? StallWatchdog(
+              limit: source.isTorrent ? _torrentStallLimit : _stallLimit,
+              onStall: () => _onStall(generation),
+            )
+          : null;
       c.addListener(_tick);
       // Engines start at 1x, so only a non-default speed needs a round trip.
       if (_speed != 1) {
@@ -549,11 +606,11 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
       }
       if (!mounted || generation != _initializationGeneration) return;
       // A play request the engine never answers would leave the viewer on
-      // the loading screen; it fails like any other start-up error.
+      // the loading screen. It fails as an engine problem, so the other
+      // engine gets the same source before another source is tried.
       await c.play().timeout(
         const Duration(seconds: 10),
-        onTimeout: () =>
-            throw TimeoutException('The video engine did not start playing.'),
+        onTimeout: () => throw const EngineStartTimeout(),
       );
       if (mounted && generation == _initializationGeneration) {
         PlaybackLog.log(
@@ -562,13 +619,13 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
               '(${DateTime.now().difference(_playerStartedAt).inMilliseconds}ms '
               'since screen open)',
         );
-        _awaitFirstFrame(c, generation, attemptClock);
+        _awaitFirstFrame(c, generation, attemptClock, attemptEngine);
         _watchForPicture(c, generation, attemptEngine, failedCandidate);
-        if (engineFallback && attemptEngine.id != _preferredEngine.id) {
-          // The other engine played what the preferred one could not; try it
-          // first for the rest of this session.
-          _preferredEngine = attemptEngine;
-        }
+        // The other engine started what the preferred one could not. It is
+        // tried first for the rest of the session once it shows a picture
+        // (_awaitFirstFrame), not on accepting play: some sources fail a
+        // moment later, when the codec opens.
+        if (engineFallback) _enginePreference.fallbackStarted(attemptEngine);
         setState(() => _ready = true);
         // Pause artwork downloads once, after startup has had the network,
         // so the first pause shows it from memory.
@@ -636,15 +693,18 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     controller.addListener(listener);
   }
 
-  /// Logs when the first frame is actually presented: the position starts
-  /// advancing after play. Development builds only.
+  /// Follows the start of playback: notes the first frame (the position
+  /// starts advancing after play) for diagnostics, then, after a second of
+  /// playback with a picture, tells [_enginePreference] that [engine] really
+  /// plays this source.
   void _awaitFirstFrame(
     VideoPlayerController controller,
     int generation,
     Stopwatch attemptClock,
+    PlayerEngine engine,
   ) {
-    if (!kDebugMode) return;
     final start = controller.value.position;
+    var noted = false;
     late VoidCallback listener;
     listener = () {
       final value = controller.value;
@@ -652,8 +712,10 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
         controller.removeListener(listener);
         return;
       }
-      if (value.isPlaying && value.position > start) {
-        controller.removeListener(listener);
+      if (!value.isPlaying) return;
+      if (!noted && value.position > start) {
+        noted = true;
+        _metrics.firstFrame(engine.id.name);
         PlaybackLog.log(
           'Player',
           'first frame after ${attemptClock.elapsedMilliseconds}ms '
@@ -661,6 +723,13 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
               'since screen open)',
         );
         PerfTimeline.end('PLAY_PRESSED', 'FIRST_FRAME', finish: true);
+      }
+      // Media3 can play sound with no picture (see _watchForPicture), so it
+      // needs a video size too; libmpv reports its size differently.
+      final picture = engine.id != PlayerEngineId.media3 || !value.size.isEmpty;
+      if (value.position - start >= const Duration(seconds: 1) && picture) {
+        controller.removeListener(listener);
+        _enginePreference.presented(engine);
       }
     };
     controller.addListener(listener);
@@ -687,7 +756,12 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
       return;
     }
     _handlingFailure = true;
+    // An engine that failed before showing a picture does not take over.
+    _enginePreference.attemptEnded();
+    _stallWatchdog?.dispose();
+    _stallWatchdog = null;
     final wasPlaying = _ready;
+    _reportPip(null);
     final failedEngine = _engine;
     final failedController = _controller;
     _controller = null;
@@ -701,6 +775,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     if (!mounted || generation != _initializationGeneration) return;
 
     final failure = PlaybackFailure.classify(error);
+    _metrics.failure(failure.kind);
     PlaybackLog.log(
       'Failure',
       'kind=${failure.kind.name}'
@@ -793,6 +868,21 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
           ? 'Could not play $attempted sources. ${failure.userMessage}'
           : failure.userMessage;
     });
+  }
+
+  /// Playback stuck buffering for the stall limit: handled like a dropped
+  /// stream (reconnect, then another source), as a timeout.
+  void _onStall(int generation) {
+    if (!mounted || generation != _initializationGeneration) return;
+    PlaybackLog.log('Failure', 'buffering without progress; recovering');
+    _metrics.stall();
+    unawaited(
+      _handleFailure(
+        _source ?? widget.source,
+        TimeoutException('The stream stopped delivering video.'),
+        generation,
+      ),
+    );
   }
 
   String _sourceKey(StreamSource source) =>
@@ -952,6 +1042,9 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   Future<void> _releaseEngine(EpisodeRef target) async {
     if (!mounted) return;
     _initializationGeneration++;
+    _stallWatchdog?.dispose();
+    _stallWatchdog = null;
+    _reportPip(null);
     final opening = _openCancellation;
     if (opening != null && !opening.isCompleted) opening.complete();
     _pauseOverlayTimer?.cancel();
@@ -1776,12 +1869,12 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   }
 
   /// Where this playback starts: a series episode resumes from its own
-  /// saved position (from the beginning once watched), never from another
-  /// episode's; a movie from its history entry.
+  /// saved position, never from another episode's; a movie from its history
+  /// entry. Either starts from the beginning once watched.
   late final Future<Duration> _startPosition = () async {
     final season = widget.season, episode = widget.episode;
     if (widget.item.type != 'series' || season == null || episode == null) {
-      return Duration(milliseconds: widget.item.resumeMs);
+      return CustomVideoPlayer.historyStart(widget.item);
     }
     try {
       final progress = await widget.storage.seriesProgress(widget.item);
@@ -1837,7 +1930,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
   Future<void> _switchEngine(PlayerEngine engine) async {
     final source = _source;
     if (source == null) return;
-    _preferredEngine = engine;
+    _enginePreference.choose(engine);
     _nextStatus = 'Switching player…';
     PlaybackLog.log(
       'Player',
@@ -2578,6 +2671,8 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     }
     // Detach first: nothing below may be notified after it is disposed.
     _controller?.removeListener(_tick);
+    _stallWatchdog?.dispose();
+    PlayerPip.detach(this);
     _discoverySubscription?.cancel();
     // Stop starting further providers for a lookup this screen started.
     _rediscovery?.cancel();
@@ -2592,6 +2687,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     // After a hand-over this episode is already saved; saving it again here
     // would mark it as watched last, after the next episode started.
     if (!_progressHandedOff) _saveProgress();
+    _metrics.report();
     _hide?.cancel();
     _save?.cancel();
     _hint?.cancel();
@@ -2660,6 +2756,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
     if (c == null) return;
     _syncExternalCue();
     _setKeepScreenOn(c.value.isPlaying);
+    _reportPip(c);
     // The pause screen follows a viewer pause, after a short hold so the
     // paused frame registers first and quick pause/play taps do not flash
     // it. Seeking while paused keeps it; playing or reaching the end (where
@@ -2687,6 +2784,16 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
       );
       return;
     }
+    _metrics.buffering(_ready && c.value.isPlaying && c.value.isBuffering);
+    // Playing (not paused, not being scrubbed) yet buffering in place.
+    _stallWatchdog?.update(
+      stalled:
+          _ready &&
+          c.value.isPlaying &&
+          c.value.isBuffering &&
+          !_scrubbing.value,
+      position: c.value.position,
+    );
     if (_ready && c.value.isInitialized && c.value.position > Duration.zero) {
       _lastPosition = c.value.position;
       if (c.value.duration > Duration.zero) _lastDuration = c.value.duration;
@@ -2726,6 +2833,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
 
   bool _canShowPauseScreen(VideoPlayerValue value) =>
       _playback.pauseOverlay &&
+      !_inPip &&
       _ready &&
       !_switchingEpisode &&
       !_error &&
@@ -2854,7 +2962,16 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
                   controlsVisible: _controlsShown.value && playable,
                   position: _subtitlePosition.value,
                 ),
-                child: text!,
+                // The picture-in-picture window is a fraction of the
+                // screen; subtitles shrink with it.
+                child: _inPip
+                    ? MediaQuery(
+                        data: MediaQuery.of(
+                          context,
+                        ).copyWith(textScaler: const TextScaler.linear(.55)),
+                        child: text!,
+                      )
+                    : text!,
               ),
               child: IgnorePointer(
                 // Embedded tracks: libmpv's current text. Others: cues
@@ -2879,252 +2996,301 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer> {
                       ),
               ),
             ),
-          // 3. Gestures. A single tap always toggles the controls; double
-          // taps, swipes and hold-to-speed follow the viewer's settings.
-          if (playable)
-            GestureTouchLayer(
-              // With the position panel open, a tap on the video closes it.
-              onTap: _adjustingSubtitles
-                  ? _closeSubtitlePosition
-                  : _toggleControls,
-              onDoubleTap: _playback.touchGestures ? _doubleTapSeek : null,
-              onSwipe: !_playback.touchGestures
-                  ? null
-                  : (right, amount) {
-                      if (right) {
-                        _volume = (_volume + amount).clamp(0, 1);
-                        c.setVolume(_volume);
-                        _hintFor('Volume ${(_volume * 100).round()}%');
-                      } else {
-                        _brightness = (_brightness + amount).clamp(.15, 1);
-                        if (defaultTargetPlatform == TargetPlatform.android) {
-                          const MethodChannel(
-                            'onfeed/player',
-                          ).invokeMethod<void>('setBrightness', {
-                            'value': _brightness,
-                          });
-                        }
-                        _hintFor('Brightness ${(_brightness * 100).round()}%');
-                      }
-                    },
-              onLongPressStart: _playback.holdToSpeed
-                  ? () => unawaited(_beginHoldSpeed())
-                  : null,
-              onLongPressEnd: _playback.holdToSpeed
-                  ? () => unawaited(_endHoldSpeed())
-                  : null,
-              child: const SizedBox.expand(),
-            ),
-          // 4. Pause screen: artwork and details over the paused video,
-          // under the controls. Only its play button takes touches; other
-          // taps reach the gesture layer as usual.
-          if (playable)
-            ReelishPausedOverlay(
-              visible: _pauseOverlay,
-              scrubbing: _scrubbing,
-              content: _pauseContent(),
-              artworkWidth: _pauseArtworkWidth,
-              onPlay: _resumeFromPauseScreen,
-              playFocusNode: _pausePlayFocus,
-            ),
-          // 5. Temporary feedback.
-          if (playable) PlayerSeekFeedback(flashes: _seekFlash),
-          if (playable)
-            PlayerBufferingIndicator(
-              controller: c,
-              controlsVisible: _controlsShown,
-            ),
-          if (_gestureHint != null)
-            Center(
-              child: IgnorePointer(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: const Color(0xCC101015),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 18,
-                      vertical: 12,
-                    ),
-                    child: Text(
-                      _gestureHint!,
-                      style: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          // 6. Controls: always mounted while playable, faded in and out.
-          // Locking hides them without unmounting.
-          if (playable)
-            ValueListenableBuilder<bool>(
-              valueListenable: _controlsShown,
-              builder: (context, visible, child) => IgnorePointer(
-                ignoring: !visible,
-                // Hidden controls cannot be reached by the remote either.
-                child: ExcludeFocus(
-                  excluding: !visible,
-                  child: AnimatedOpacity(
-                    opacity: visible ? 1 : 0,
-                    duration: playerFade,
-                    curve: Curves.easeOutCubic,
-                    // Hidden controls run no animations (the title marquee,
-                    // button transitions) while the fade-out still completes.
-                    child: TickerMode(enabled: visible, child: child!),
-                  ),
-                ),
-              ),
-              child: PlayerControlsOverlay(
-                controller: c,
-                title: widget.item.name,
-                subtitle:
-                    _episodes?.current.label ??
-                    (widget.episodeLabel.isNotEmpty
-                        ? widget.episodeLabel
-                        : (current?.providerName ?? '')),
-                sourceLabel: sourceLabel,
-                subtitleEnabled: _subtitle != null,
-                showAudio: _audioTracks.length > 1,
-                showSources: alternatives > 1,
-                landscapeLocked: _landscapeLocked,
-                onBack: () {
-                  _saveProgress();
-                  Navigator.pop(context);
-                },
-                onTogglePlay: _togglePlay,
-                onSeekBy: _seekBy,
-                onSeekTo: (target) {
-                  _seekTo(target);
-                  _show();
-                },
-                onScrubChanged: _onScrubChanged,
-                onSubtitles: _pickSubtitles,
-                onAudio: _pickAudio,
-                onSources: _pickStream,
-                onEpisodes: _canSwitchEpisodes
-                    ? () => unawaited(_openEpisodes())
-                    : null,
-                onSettings: _settings,
-                // TV: no rotation, no screen lock, and picture in picture
-                // only where the TV supports it.
-                onPip:
-                    _tv && !DeviceCapabilities.current.supportsPictureInPicture
+          // In picture in picture only the video and its subtitles show (and
+          // a spinner while a source reopens); Android draws the window's
+          // own controls.
+          if (_inPip && !playable)
+            const Center(child: CircularProgressIndicator(strokeWidth: 3)),
+          if (!_inPip) ...[
+            // 3. Gestures. Desktop: a click plays or pauses, a double click
+            // toggles fullscreen. Elsewhere a single tap always toggles the
+            // controls; double taps, swipes and hold-to-speed follow the
+            // viewer's settings.
+            if (playable && _desktop)
+              DesktopPointerLayer(
+                onClick: _adjustingSubtitles
+                    ? _closeSubtitlePosition
+                    : _togglePlay,
+                onDoubleClick: () => unawaited(_toggleFullscreen()),
+                child: const SizedBox.expand(),
+              )
+            else if (playable)
+              GestureTouchLayer(
+                // With the position panel open, a tap on the video closes it.
+                onTap: _adjustingSubtitles
+                    ? _closeSubtitlePosition
+                    : _toggleControls,
+                onDoubleTap: _playback.touchGestures ? _doubleTapSeek : null,
+                onSwipe: !_playback.touchGestures
                     ? null
-                    : () async {
-                        _hide?.cancel();
-                        _controlsVisible.value = false;
-                        try {
-                          await const MethodChannel(
-                            'onfeed/player',
-                          ).invokeMethod<bool>('enterPip', {
-                            'ratio': c.value.aspectRatio,
-                          });
-                        } catch (_) {}
+                    : (right, amount) {
+                        if (right) {
+                          _volume = (_volume + amount).clamp(0, 1);
+                          c.setVolume(_volume);
+                          _hintFor('Volume ${(_volume * 100).round()}%');
+                        } else {
+                          _brightness = (_brightness + amount).clamp(.15, 1);
+                          if (defaultTargetPlatform == TargetPlatform.android) {
+                            const MethodChannel(
+                              'onfeed/player',
+                            ).invokeMethod<void>('setBrightness', {
+                              'value': _brightness,
+                            });
+                          }
+                          _hintFor(
+                            'Brightness ${(_brightness * 100).round()}%',
+                          );
+                        }
                       },
-                onRotate: _tv ? null : _toggleLandscape,
-                onFullscreen: _desktop
-                    ? () => unawaited(_toggleFullscreen())
+                onLongPressStart: _playback.holdToSpeed
+                    ? () => unawaited(_beginHoldSpeed())
                     : null,
-                fullscreen: DesktopWindow.fullscreen.value,
-                onNextEpisode: _nextEpisodePromptVisible && !_switchingEpisode
-                    ? () => unawaited(_startNextEpisode())
+                onLongPressEnd: _playback.holdToSpeed
+                    ? () => unawaited(_endHoldSpeed())
                     : null,
-                nextEpisodeCountdown: _nextEpisodeCountdown,
-                onSpeedReset: _resetSpeed,
-                pauseScreen: _pauseOverlay,
-                // A TV remote has nothing to lock away; a phone's touches
-                // and a desktop's mouse and keyboard do.
-                onLock: _tvHardware ? null : _lockControls,
-                playFocusNode: _playButtonFocus,
+                child: const SizedBox.expand(),
               ),
-            ),
-          // The floating card shows while controls are hidden; with controls
-          // up, the same offer is a pill in the bottom row, so the card never
-          // covers the center controls on short landscape screens.
-          if (_nextEpisodePromptVisible && !_switchingEpisode)
-            ValueListenableBuilder<bool>(
-              valueListenable: _controlsShown,
-              builder: (context, controlsVisible, card) => IgnorePointer(
-                ignoring: controlsVisible && playable,
-                child: ExcludeFocus(
-                  excluding: controlsVisible && playable,
-                  child: AnimatedOpacity(
-                    opacity: controlsVisible && playable ? 0 : 1,
-                    duration: playerFade,
-                    child: card,
-                  ),
-                ),
+            // 4. Pause screen: artwork and details over the paused video,
+            // under the controls. Only its play button takes touches; other
+            // taps reach the gesture layer as usual.
+            if (playable)
+              ReelishPausedOverlay(
+                visible: _pauseOverlay,
+                scrubbing: _scrubbing,
+                content: _pauseContent(),
+                artworkWidth: _pauseArtworkWidth,
+                onPlay: _resumeFromPauseScreen,
+                playFocusNode: _pausePlayFocus,
               ),
-              child: SafeArea(
-                child: Align(
-                  alignment: Alignment.bottomRight,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 460),
-                      child: NextEpisodeCard(
-                        seriesName: widget.item.name,
-                        nextLabel: _episodes?.next?.label,
-                        countdown: _nextEpisodeCountdown,
-                        onPlay: () => unawaited(_startNextEpisode()),
-                        onDismiss: _dismissNextEpisode,
+            // 5. Temporary feedback.
+            if (playable) PlayerSeekFeedback(flashes: _seekFlash),
+            if (playable)
+              PlayerBufferingIndicator(
+                controller: c,
+                controlsVisible: _controlsShown,
+              ),
+            if (_gestureHint != null)
+              Center(
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: const Color(0xCC101015),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 12,
+                      ),
+                      child: Text(
+                        _gestureHint!,
+                        style: const TextStyle(fontWeight: FontWeight.w700),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
-          if (playable && _adjustingSubtitles)
-            SubtitlePositionPanel(
-              position: _subtitlePosition,
-              onChanged: (value) => _subtitlePosition.value = value,
-              onCommit: _commitSubtitlePosition,
-              onDone: _closeSubtitlePosition,
-              sliderFocusNode: _subtitlePositionFocus,
-            ),
-          // Lock: one layer over everything that takes touches, so no
-          // gesture or control beneath it can react. Only while a frame
-          // shows; the loading and error views stay usable.
-          if (playable)
-            ValueListenableBuilder<bool>(
-              valueListenable: _locked,
-              builder: (context, locked, _) => locked
-                  ? PlayerLockOverlay(
-                      unlockVisible: _unlockVisible,
-                      onReveal: _revealUnlock,
-                      onUnlock: _unlockControls,
-                      // Desktop: the keyboard and a controller are locked
-                      // too, and Enter unlocks once the button shows.
-                      handleKeys: _desktop,
-                      hint: _desktop
-                          ? 'Click or press Enter to unlock'
-                          : 'Tap to unlock',
-                    )
-                  : const SizedBox.shrink(),
-            ),
-          // 7. No frame yet: starting, switching, reconnecting, or an error.
-          if (!playable)
-            PlayerStatusView(
-              onBack: () {
-                _saveProgress();
-                Navigator.pop(context);
-              },
-              status: _playback.showLoadingStatus ? _status : null,
-              showSpinner: _playback.showLoadingOverlay,
-              error: _error
-                  ? PlayerErrorPanel(
-                      canTryAnother: alternatives > 1,
-                      message: _errorMessage ?? '',
-                      sourceDetails: sourceDetails,
-                      onRetry: _retryPlayback,
-                      onTryAnother: _pickStream,
-                      primaryFocusNode: _errorActionFocus,
-                    )
-                  : null,
-            ),
+            // 6. Controls: always mounted while playable, faded in and out.
+            // Locking hides them without unmounting.
+            if (playable)
+              ValueListenableBuilder<bool>(
+                valueListenable: _controlsShown,
+                builder: (context, visible, child) => IgnorePointer(
+                  ignoring: !visible,
+                  // Hidden controls cannot be reached by the remote either.
+                  child: ExcludeFocus(
+                    excluding: !visible,
+                    child: AnimatedOpacity(
+                      opacity: visible ? 1 : 0,
+                      duration: playerFade,
+                      curve: Curves.easeOutCubic,
+                      // Hidden controls run no animations (the title marquee,
+                      // button transitions) while the fade-out still completes.
+                      child: TickerMode(enabled: visible, child: child!),
+                    ),
+                  ),
+                ),
+                child: PlayerControlsOverlay(
+                  controller: c,
+                  title: widget.item.name,
+                  subtitle:
+                      _episodes?.current.label ??
+                      (widget.episodeLabel.isNotEmpty
+                          ? widget.episodeLabel
+                          : (current?.providerName ?? '')),
+                  sourceLabel: sourceLabel,
+                  subtitleEnabled: _subtitle != null,
+                  showAudio: _audioTracks.length > 1,
+                  showSources: alternatives > 1,
+                  landscapeLocked: _landscapeLocked,
+                  onBack: () {
+                    _saveProgress();
+                    Navigator.pop(context);
+                  },
+                  onTogglePlay: _togglePlay,
+                  onSeekBy: _seekBy,
+                  onSeekTo: (target) {
+                    _seekTo(target);
+                    _show();
+                  },
+                  onScrubChanged: _onScrubChanged,
+                  onSubtitles: _pickSubtitles,
+                  onAudio: _pickAudio,
+                  onSources: _pickStream,
+                  onEpisodes: _canSwitchEpisodes
+                      ? () => unawaited(_openEpisodes())
+                      : null,
+                  onSettings: _settings,
+                  // TV: no rotation and no screen lock. Picture in picture
+                  // only where the device supports it (never on desktop).
+                  onPip: !DeviceCapabilities.current.supportsPictureInPicture
+                      ? null
+                      : () async {
+                          _hide?.cancel();
+                          _controlsVisible.value = false;
+                          try {
+                            await const MethodChannel(
+                              'onfeed/player',
+                            ).invokeMethod<bool>('enterPip', {
+                              'ratio': c.value.aspectRatio,
+                            });
+                          } catch (_) {}
+                        },
+                  onRotate: _tv ? null : _toggleLandscape,
+                  onFullscreen: _desktop
+                      ? () => unawaited(_toggleFullscreen())
+                      : null,
+                  fullscreen: DesktopWindow.fullscreen.value,
+                  onNextEpisode: _nextEpisodePromptVisible && !_switchingEpisode
+                      ? () => unawaited(_startNextEpisode())
+                      : null,
+                  nextEpisodeCountdown: _nextEpisodeCountdown,
+                  onSpeedReset: _resetSpeed,
+                  pauseScreen: _pauseOverlay,
+                  // A TV remote has nothing to lock away; a phone's touches
+                  // and a desktop's mouse and keyboard do.
+                  onLock: _tvHardware ? null : _lockControls,
+                  playFocusNode: _playButtonFocus,
+                ),
+              ),
+            // The floating card shows while controls are hidden; with controls
+            // up, the same offer is a pill in the bottom row, so the card never
+            // covers the center controls on short landscape screens.
+            if (_nextEpisodePromptVisible && !_switchingEpisode)
+              ValueListenableBuilder<bool>(
+                valueListenable: _controlsShown,
+                builder: (context, controlsVisible, card) => IgnorePointer(
+                  ignoring: controlsVisible && playable,
+                  child: ExcludeFocus(
+                    excluding: controlsVisible && playable,
+                    child: AnimatedOpacity(
+                      opacity: controlsVisible && playable ? 0 : 1,
+                      duration: playerFade,
+                      child: card,
+                    ),
+                  ),
+                ),
+                child: SafeArea(
+                  child: Align(
+                    alignment: Alignment.bottomRight,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 460),
+                        child: NextEpisodeCard(
+                          seriesName: widget.item.name,
+                          nextLabel: _episodes?.next?.label,
+                          countdown: _nextEpisodeCountdown,
+                          onPlay: () => unawaited(_startNextEpisode()),
+                          onDismiss: _dismissNextEpisode,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            if (playable && _adjustingSubtitles)
+              SubtitlePositionPanel(
+                position: _subtitlePosition,
+                onChanged: (value) => _subtitlePosition.value = value,
+                onCommit: _commitSubtitlePosition,
+                onDone: _closeSubtitlePosition,
+                sliderFocusNode: _subtitlePositionFocus,
+              ),
+            // Lock: one layer over everything that takes touches, so no
+            // gesture or control beneath it can react. Only while a frame
+            // shows; the loading and error views stay usable.
+            if (playable)
+              ValueListenableBuilder<bool>(
+                valueListenable: _locked,
+                builder: (context, locked, _) => locked
+                    ? PlayerLockOverlay(
+                        unlockVisible: _unlockVisible,
+                        onReveal: _revealUnlock,
+                        onUnlock: _unlockControls,
+                        // Desktop: the keyboard and a controller are locked
+                        // too, and Enter unlocks once the button shows.
+                        handleKeys: _desktop,
+                        hint: _desktop
+                            ? 'Click or press Enter to unlock'
+                            : 'Tap to unlock',
+                      )
+                    : const SizedBox.shrink(),
+              ),
+            // 7. No frame yet: starting, switching, reconnecting, or an error.
+            if (!playable)
+              PlayerStatusView(
+                onBack: () {
+                  _saveProgress();
+                  Navigator.pop(context);
+                },
+                status: _playback.showLoadingStatus ? _status : null,
+                showSpinner: _playback.showLoadingOverlay,
+                error: _error
+                    ? PlayerErrorPanel(
+                        canTryAnother: alternatives > 1,
+                        message: _errorMessage ?? '',
+                        sourceDetails: sourceDetails,
+                        onRetry: _retryPlayback,
+                        onTryAnother: _pickStream,
+                        primaryFocusNode: _errorActionFocus,
+                      )
+                    : null,
+              ),
+          ],
         ],
       ),
+    );
+  }
+
+  @override
+  void onPipChanged(bool inPip) {
+    if (!mounted || inPip == _inPip) return;
+    setState(() => _inPip = inPip);
+    if (inPip) {
+      _hide?.cancel();
+      _controlsVisible.value = false;
+      _pauseOverlayTimer?.cancel();
+      _pauseOverlayTimer = null;
+      _pauseOverlay.value = false;
+    } else {
+      _show();
+    }
+  }
+
+  @override
+  void onPipTogglePlay() => _togglePlay();
+
+  /// Tells Android whether leaving the app should continue this video in
+  /// picture in picture: phones and tablets only (a TV's Home leaves the
+  /// video), and only while it plays.
+  void _reportPip(VideoPlayerController? c) {
+    final value = c?.value;
+    final playing = value != null && _ready && value.isPlaying;
+    PlayerPip.report(
+      autoEnter: !_tv && playing,
+      playing: playing,
+      ratio: value?.aspectRatio ?? 0,
     );
   }
 }

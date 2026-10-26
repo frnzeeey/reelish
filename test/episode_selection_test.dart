@@ -4,6 +4,7 @@ import 'package:onfeed/src/models/episode_context.dart';
 import 'package:onfeed/src/models/episode_progress.dart';
 import 'package:onfeed/src/models/media_item.dart';
 import 'package:onfeed/src/services/storage_service.dart';
+import 'package:onfeed/src/widgets/player/custom_video_player.dart';
 import 'package:onfeed/src/widgets/player/episode_panel.dart';
 import 'package:onfeed/src/widgets/player/player_controls.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -126,6 +127,36 @@ void main() {
       const unknownLength = EpisodeProgress(positionMs: 5, durationMs: 0);
       expect(unknownLength.fraction, 0);
       expect(unknownLength.resumeMs, 5);
+    });
+
+    test('a movie follows the same rule: a watched one starts over', () {
+      const minute = 60000;
+      MediaItem movie(int position, int length) => MediaItem(
+        id: '1',
+        type: 'movie',
+        name: 'Film',
+        resumeMs: position,
+        durationMs: length,
+      );
+      // Into the end credits, or right at the end: from the beginning.
+      expect(
+        CustomVideoPlayer.historyStart(movie(110 * minute, 120 * minute)),
+        Duration.zero,
+      );
+      expect(
+        CustomVideoPlayer.historyStart(movie(120 * minute, 120 * minute)),
+        Duration.zero,
+      );
+      // Partway: where it was left.
+      expect(
+        CustomVideoPlayer.historyStart(movie(50 * minute, 120 * minute)),
+        const Duration(minutes: 50),
+      );
+      // Saved before lengths were recorded: the position is all there is.
+      expect(
+        CustomVideoPlayer.historyStart(movie(50 * minute, 0)),
+        const Duration(minutes: 50),
+      );
     });
 
     setUp(() => SharedPreferences.setMockInitialValues({}));

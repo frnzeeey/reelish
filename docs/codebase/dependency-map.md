@@ -61,7 +61,7 @@ graph LR
   widgets["widgets"] -->|1| widgets_tv["widgets/tv"]
   widgets_player["widgets/player"] -->|17| models["models"]
   widgets_player["widgets/player"] -->|7| platform["platform"]
-  widgets_player["widgets/player"] -->|14| services["services"]
+  widgets_player["widgets/player"] -->|15| services["services"]
   widgets_player["widgets/player"] -->|6| theme["theme"]
   widgets_player["widgets/player"] -->|2| widgets["widgets"]
   widgets_player["widgets/player"] -->|1| widgets_tv["widgets/tv"]
@@ -91,7 +91,7 @@ graph LR
 | `theme` | nothing outside itself |
 | `viewmodels` | `models` (11), `services` (13) |
 | `widgets` | `desktop` (1), `models` (3), `platform` (1), `services` (4), `theme` (8), `widgets/tv` (1) |
-| `widgets/player` | `models` (17), `platform` (7), `services` (14), `theme` (6), `widgets` (2), `widgets/tv` (1) |
+| `widgets/player` | `models` (17), `platform` (7), `services` (15), `theme` (6), `widgets` (2), `widgets/tv` (1) |
 | `widgets/plugin_library` | `models` (4), `services` (5), `theme` (11), `widgets` (1) |
 | `widgets/settings` | `theme` (2), `widgets/tv` (1) |
 | `widgets/tv` | `models` (1), `platform` (1), `theme` (2), `widgets` (1) |
@@ -135,7 +135,7 @@ Each third-party package imported by `lib/`, A–Z, with the files that import i
 | Package | Imported by |
 |---|---|
 | `crypto` | `src/services/github_update_service.dart`, `src/services/provider_plugin_service.dart` |
-| `flutter` | 102 files, including `main.dart`, `src/desktop/desktop_details_screen.dart`, `src/desktop/desktop_hero.dart`, `src/desktop/desktop_pages.dart`, `src/desktop/desktop_plugins_page.dart`, `src/desktop/desktop_provider_search.dart` |
+| `flutter` | 104 files, including `main.dart`, `src/desktop/desktop_details_screen.dart`, `src/desktop/desktop_hero.dart`, `src/desktop/desktop_pages.dart`, `src/desktop/desktop_plugins_page.dart`, `src/desktop/desktop_provider_search.dart` |
 | `flutter_go_torrent_streamer` | `src/services/torrent_source_preparer.dart`, `src/widgets/player/custom_video_player.dart` |
 | `flutter_js` | `src/services/provider_fetch_bridge.dart`, `src/services/provider_runner.dart` |
 | `http` | `src/services/github_update_service.dart`, `src/services/network_target_policy.dart`, `src/services/plugin_library_service.dart`, `src/services/provider_fetch_bridge.dart`, `src/services/provider_plugin_service.dart`, `src/services/subtitle_addon_service.dart`, `src/services/subtitle_loader.dart`, `src/services/tmdb_service.dart` |

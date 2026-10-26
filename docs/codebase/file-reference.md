@@ -39,7 +39,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/navigation/app_destination.dart`](#libsrcnavigationapp_destinationdart) | Shared | 18 | The places in the app's navigation: the TV rail and the Windows sidebar. |
 | [`lib/src/navigation/app_transitions.dart`](#libsrcnavigationapp_transitionsdart) | Shared | 126 | Page route and tab transitions shared by every interface. |
 | [`lib/src/platform/desktop_gamepad.dart`](#libsrcplatformdesktop_gamepaddart) | Windows | 200 | Controller navigation for the Windows interface. |
-| [`lib/src/platform/desktop_window.dart`](#libsrcplatformdesktop_windowdart) | Windows | 110 | The desktop window: fullscreen through the Windows runner's `reelish/window` channel. |
+| [`lib/src/platform/desktop_window.dart`](#libsrcplatformdesktop_windowdart) | Windows | 123 | The desktop window: fullscreen through the Windows runner's `reelish/window` channel. |
 | [`lib/src/platform/device_capabilities.dart`](#libsrcplatformdevice_capabilitiesdart) | Shared | 153 | What kind of device Reelish is running on, read once during startup. |
 | [`lib/src/platform/windows_installation.dart`](#libsrcplatformwindows_installationdart) | Windows | 102 | How the running Windows copy of Reelish was installed. |
 | [`lib/src/screens/app_information_screens.dart`](#libsrcscreensapp_information_screensdart) | Shared | 222 | About and Support screens, and the Reelish name, icon and tagline used where the app identifies itself. |
@@ -68,7 +68,8 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/services/network_target_policy.dart`](#libsrcservicesnetwork_target_policydart) | Shared | 332 | The network destination policy for provider requests and streams: public addresses only, header checks, and connections pinned to the validated address. |
 | [`lib/src/services/paged_feed_controller.dart`](#libsrcservicespaged_feed_controllerdart) | Shared | 497 | The pages of one home row: what is loaded, whether more exist, and the guards that keep requests for it from piling up. |
 | [`lib/src/services/perf_timeline.dart`](#libsrcservicesperf_timelinedart) | Shared | 37 | Development-only milestones measured from process start, for spotting regressions in startup, browsing and playback. |
-| [`lib/src/services/playback_coordinator.dart`](#libsrcservicesplayback_coordinatordart) | Shared | 342 | Owns candidate identity, ranking and the bounded source-attempt policy independently of widget rendering. |
+| [`lib/src/services/playback_coordinator.dart`](#libsrcservicesplayback_coordinatordart) | Shared | 393 | Owns candidate identity, ranking and the bounded source-attempt policy independently of widget rendering. |
+| [`lib/src/services/playback_metrics.dart`](#libsrcservicesplayback_metricsdart) | Shared | 79 | One player session's timings and failures, for measuring playback on real devices in debug and profile builds. |
 | [`lib/src/services/playback_settings_controller.dart`](#libsrcservicesplayback_settings_controllerdart) | Shared | 43 | Loads, holds and saves the playback settings. |
 | [`lib/src/services/playback_source_policy.dart`](#libsrcservicesplayback_source_policydart) | Shared | 11 | Applies provider and torrent playback preferences to a returned source. |
 | [`lib/src/services/player_engine.dart`](#libsrcservicesplayer_enginedart) | Shared | 274 | Common controller boundary. |
@@ -106,17 +107,19 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/widgets/liquid_glass.dart`](#libsrcwidgetsliquid_glassdart) | Shared | 568 | A bounded, reusable glass surface. |
 | [`lib/src/widgets/media_card.dart`](#libsrcwidgetsmedia_carddart) | Shared | 364 | The phone poster card, with favourite toggle and resume progress. |
 | [`lib/src/widgets/player/audio_track_sheet.dart`](#libsrcwidgetsplayeraudio_track_sheetdart) | Shared | 53 | Picks an audio track. |
-| [`lib/src/widgets/player/custom_video_player.dart`](#libsrcwidgetsplayercustom_video_playerdart) | Shared | 3130 | The player session for every platform: engine and source attempts, controls, subtitles, audio and video tracks, resume and progress saving, and episode switching. |
+| [`lib/src/widgets/player/custom_video_player.dart`](#libsrcwidgetsplayercustom_video_playerdart) | Shared | 3296 | The player session for every platform: engine and source attempts, controls, subtitles, audio and video tracks, resume and progress saving, and episode switching. |
 | [`lib/src/widgets/player/episode_panel.dart`](#libsrcwidgetsplayerepisode_paneldart) | Shared | 840 | Lists a series' episodes by season, with thumbnails, runtimes, synopses and the viewer's progress. |
 | [`lib/src/widgets/player/external_cue_clock.dart`](#libsrcwidgetsplayerexternal_cue_clockdart) | Shared | 199 | The text of the downloaded subtitle cue that should be on screen, kept in step with the player's own clock. |
-| [`lib/src/widgets/player/gesture_touch_layer.dart`](#libsrcwidgetsplayergesture_touch_layerdart) | Shared | 75 | Touch handling for the video area. |
+| [`lib/src/widgets/player/gesture_touch_layer.dart`](#libsrcwidgetsplayergesture_touch_layerdart) | Shared | 100 | Touch handling for the video area. |
 | [`lib/src/widgets/player/paused_overlay.dart`](#libsrcwidgetsplayerpaused_overlaydart) | Shared | 828 | The pause screen: the title's artwork and details with a large play button. |
 | [`lib/src/widgets/player/player_controls.dart`](#libsrcwidgetsplayerplayer_controlsdart) | Shared | 1375 | The controls drawn over the video: bars, buttons, seek feedback, buffering, errors and the next-episode card. |
 | [`lib/src/widgets/player/player_lock_overlay.dart`](#libsrcwidgetsplayerplayer_lock_overlaydart) | Shared | 209 | Covers the whole player while controls are locked. |
 | [`lib/src/widgets/player/player_marquee_text.dart`](#libsrcwidgetsplayerplayer_marquee_textdart) | Shared | 144 | Single-line text that slowly scrolls when it does not fit: a pause, a scroll to the end, another pause, then it starts over. |
+| [`lib/src/widgets/player/player_pip.dart`](#libsrcwidgetsplayerplayer_pipdart) | Shared | 86 | Picture in picture on Android, through the `onfeed/player` channel: the active player reports its state, so leaving the app continues its video in a small window with a play/pause button, and hears when that window opens and closes. |
 | [`lib/src/widgets/player/player_progress_bar.dart`](#libsrcwidgetsplayerplayer_progress_bardart) | Shared | 359 | Reelish's seek bar: thin while idle, emphasized while scrubbing, with a time bubble above the thumb. |
 | [`lib/src/widgets/player/player_settings_sheet.dart`](#libsrcwidgetsplayerplayer_settings_sheetdart) | Shared | 291 | The in-player settings sheet (speed, fit, tracks, subtitle delay) and the choices it returns. |
 | [`lib/src/widgets/player/player_sheet.dart`](#libsrcwidgetsplayerplayer_sheetdart) | Shared | 198 | The shared frame and option rows for the player's selection sheets. |
+| [`lib/src/widgets/player/stall_watchdog.dart`](#libsrcwidgetsplayerstall_watchdogdart) | Shared | 47 | Notices playback that is stuck: playing, buffering, and not moving for `limit`. |
 | [`lib/src/widgets/player/stream_selector_sheet.dart`](#libsrcwidgetsplayerstream_selector_sheetdart) | Shared | 138 | Lists playable sources. |
 | [`lib/src/widgets/player/subtitle_picker_sheet.dart`](#libsrcwidgetsplayersubtitle_picker_sheetdart) | Shared | 265 | The subtitle menu: Off, then subtitles in the video, from the provider, and from OpenSubtitles. |
 | [`lib/src/widgets/player/subtitle_position_panel.dart`](#libsrcwidgetsplayersubtitle_position_paneldart) | Shared | 121 | A compact panel at the top of the player for moving subtitles while they stay in view. |
@@ -622,7 +625,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/platform/desktop_window.dart
 
-**Source:** [`lib/src/platform/desktop_window.dart`](../../lib/src/platform/desktop_window.dart) · **Platform:** Windows · **Lines:** 110 · **Branches on:** isDesktop, isDesktopPlatform
+**Source:** [`lib/src/platform/desktop_window.dart`](../../lib/src/platform/desktop_window.dart) · **Platform:** Windows · **Lines:** 123 · **Branches on:** isDesktop, isDesktopPlatform
 
 **Purpose:** The desktop window: fullscreen through the Windows runner's `reelish/window` channel.
 
@@ -634,7 +637,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Imported by:** `main.dart`, `src/platform/desktop_gamepad.dart`, `src/widgets/player/custom_video_player.dart`
 
-**Tests importing it:** `integration_test/windows_player_ui_test.dart`, `test/desktop_gamepad_test.dart`
+**Tests importing it:** `integration_test/windows_player_ui_test.dart`, `test/desktop_gamepad_test.dart`, `test/desktop_window_test.dart`
 
 ## lib/src/platform/device_capabilities.dart
 
@@ -1086,19 +1089,35 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/services/playback_coordinator.dart
 
-**Source:** [`lib/src/services/playback_coordinator.dart`](../../lib/src/services/playback_coordinator.dart) · **Platform:** Shared · **Lines:** 342
+**Source:** [`lib/src/services/playback_coordinator.dart`](../../lib/src/services/playback_coordinator.dart) · **Platform:** Shared · **Lines:** 393
 
 **Purpose:** Owns candidate identity, ranking and the bounded source-attempt policy independently of widget rendering.
 
-**Declares:** `PlaybackCoordinator` (Service type), `PlaybackFailure` (Service type), `PlaybackFailureKind` (Enum), `PlaybackLog` (Service type), `SourcePreparationException` (Exception)
+**Declares:** `EnginePreference` (Service type), `EngineStartTimeout` (Exception), `PlaybackCoordinator` (Service type), `PlaybackFailure` (Service type), `PlaybackFailureKind` (Enum), `PlaybackLog` (Service type), `SourcePreparationException` (Exception)
 
 **Imports (project):** `src/models/playable_source.dart`, `src/models/stream_source.dart`, `src/models/stream_type.dart`, `src/services/player_engine.dart`, `src/services/source_preparer.dart`
 
 **Packages:** `flutter`, `video_player`
 
-**Imported by:** `src/widgets/player/custom_video_player.dart`, `src/widgets/player/external_cue_clock.dart`
+**Imported by:** `src/services/playback_metrics.dart`, `src/widgets/player/custom_video_player.dart`, `src/widgets/player/external_cue_clock.dart`
 
-**Tests importing it:** `test/playback_pipeline_test.dart`, `test/playback_reliability_test.dart`
+**Tests importing it:** `test/playback_metrics_test.dart`, `test/playback_pipeline_test.dart`, `test/playback_reliability_test.dart`
+
+## lib/src/services/playback_metrics.dart
+
+**Source:** [`lib/src/services/playback_metrics.dart`](../../lib/src/services/playback_metrics.dart) · **Platform:** Shared · **Lines:** 79
+
+**Purpose:** One player session's timings and failures, for measuring playback on real devices in debug and profile builds.
+
+**Declares:** `PlaybackMetrics` (Service type)
+
+**Imports (project):** `src/services/playback_coordinator.dart`
+
+**Packages:** `flutter`
+
+**Imported by:** `src/widgets/player/custom_video_player.dart`
+
+**Tests importing it:** `test/playback_metrics_test.dart`
 
 ## lib/src/services/playback_settings_controller.dart
 
@@ -1682,19 +1701,19 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/widgets/player/custom_video_player.dart
 
-**Source:** [`lib/src/widgets/player/custom_video_player.dart`](../../lib/src/widgets/player/custom_video_player.dart) · **Platform:** Shared · **Lines:** 3130 · **Branches on:** isTv, isDesktop, usesTvLayout, TargetPlatform.android, TorrentSupport
+**Source:** [`lib/src/widgets/player/custom_video_player.dart`](../../lib/src/widgets/player/custom_video_player.dart) · **Platform:** Shared · **Lines:** 3296 · **Branches on:** isTv, isDesktop, usesTvLayout, TargetPlatform.windows, TargetPlatform.android, TorrentSupport
 
 **Purpose:** The player session for every platform: engine and source attempts, controls, subtitles, audio and video tracks, resume and progress saving, and episode switching.
 
 **Declares:** `CustomVideoPlayer` (Widget), `_CustomVideoPlayerState` (Widget state), `EpisodeHandOff` (Class), `EpisodeSwitch` (Typedef)
 
-**Imports (project):** `src/models/episode_context.dart`, `src/models/episode_progress.dart`, `src/models/media_details.dart`, `src/models/media_item.dart`, `src/models/playback_settings.dart`, `src/models/stream_source.dart`, `src/models/subtitle_language.dart`, `src/platform/desktop_window.dart`, `src/platform/device_capabilities.dart`, `src/services/network_target_policy.dart`, `src/services/perf_timeline.dart`, `src/services/playback_coordinator.dart`, `src/services/playback_settings_controller.dart`, `src/services/playback_source_policy.dart`, `src/services/player_engine.dart`, `src/services/storage_service.dart`, `src/services/stream_discovery.dart`, `src/services/subtitle_addon_service.dart`, `src/services/subtitle_loader.dart`, `src/services/torrent_source_preparer.dart`, `src/services/video_quality_selector.dart`, `src/widgets/player/audio_track_sheet.dart`, `src/widgets/player/episode_panel.dart`, `src/widgets/player/external_cue_clock.dart`, `src/widgets/player/gesture_touch_layer.dart`, `src/widgets/player/paused_overlay.dart`, `src/widgets/player/player_controls.dart`, `src/widgets/player/player_lock_overlay.dart`, `src/widgets/player/player_settings_sheet.dart`, `src/widgets/player/stream_selector_sheet.dart`, `src/widgets/player/subtitle_picker_sheet.dart`, `src/widgets/player/subtitle_position_panel.dart`
+**Imports (project):** `src/models/episode_context.dart`, `src/models/episode_progress.dart`, `src/models/media_details.dart`, `src/models/media_item.dart`, `src/models/playback_settings.dart`, `src/models/stream_source.dart`, `src/models/subtitle_language.dart`, `src/platform/desktop_window.dart`, `src/platform/device_capabilities.dart`, `src/services/network_target_policy.dart`, `src/services/perf_timeline.dart`, `src/services/playback_coordinator.dart`, `src/services/playback_metrics.dart`, `src/services/playback_settings_controller.dart`, `src/services/playback_source_policy.dart`, `src/services/player_engine.dart`, `src/services/storage_service.dart`, `src/services/stream_discovery.dart`, `src/services/subtitle_addon_service.dart`, `src/services/subtitle_loader.dart`, `src/services/torrent_source_preparer.dart`, `src/services/video_quality_selector.dart`, `src/widgets/player/audio_track_sheet.dart`, `src/widgets/player/episode_panel.dart`, `src/widgets/player/external_cue_clock.dart`, `src/widgets/player/gesture_touch_layer.dart`, `src/widgets/player/paused_overlay.dart`, `src/widgets/player/player_controls.dart`, `src/widgets/player/player_lock_overlay.dart`, `src/widgets/player/player_pip.dart`, `src/widgets/player/player_settings_sheet.dart`, `src/widgets/player/stall_watchdog.dart`, `src/widgets/player/stream_selector_sheet.dart`, `src/widgets/player/subtitle_picker_sheet.dart`, `src/widgets/player/subtitle_position_panel.dart`
 
 **Packages:** `flutter`, `flutter_go_torrent_streamer`, `video_player`, `video_player_media_kit`
 
 **Imported by:** `src/screens/home_screen.dart`, `src/screens/player_screen.dart`
 
-**Tests importing it:** none directly (it may be covered through the files that import it)
+**Tests importing it:** `test/episode_selection_test.dart`
 
 ## lib/src/widgets/player/episode_panel.dart
 
@@ -1732,11 +1751,11 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/widgets/player/gesture_touch_layer.dart
 
-**Source:** [`lib/src/widgets/player/gesture_touch_layer.dart`](../../lib/src/widgets/player/gesture_touch_layer.dart) · **Platform:** Shared · **Lines:** 75
+**Source:** [`lib/src/widgets/player/gesture_touch_layer.dart`](../../lib/src/widgets/player/gesture_touch_layer.dart) · **Platform:** Shared · **Lines:** 100
 
 **Purpose:** Touch handling for the video area.
 
-**Declares:** `GestureTouchLayer` (Widget), `_GestureTouchLayerState` (Widget state)
+**Declares:** `DesktopPointerLayer` (Widget), `GestureTouchLayer` (Widget), `_GestureTouchLayerState` (Widget state)
 
 **Imports (project):** none
 
@@ -1812,6 +1831,22 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Tests importing it:** `test/player_ui_test.dart`
 
+## lib/src/widgets/player/player_pip.dart
+
+**Source:** [`lib/src/widgets/player/player_pip.dart`](../../lib/src/widgets/player/player_pip.dart) · **Platform:** Shared · **Lines:** 86 · **Branches on:** TargetPlatform.android
+
+**Purpose:** Picture in picture on Android, through the `onfeed/player` channel: the active player reports its state, so leaving the app continues its video in a small window with a play/pause button, and hears when that window opens and closes.
+
+**Declares:** `PlayerPip` (Class), `PlayerPipListener` (Class)
+
+**Imports (project):** none
+
+**Packages:** `flutter`
+
+**Imported by:** `src/widgets/player/custom_video_player.dart`
+
+**Tests importing it:** `test/player_pip_test.dart`
+
 ## lib/src/widgets/player/player_progress_bar.dart
 
 **Source:** [`lib/src/widgets/player/player_progress_bar.dart`](../../lib/src/widgets/player/player_progress_bar.dart) · **Platform:** Shared · **Lines:** 359 · **Branches on:** usesTvLayout
@@ -1861,6 +1896,20 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 **Imported by:** `src/widgets/player/audio_track_sheet.dart`, `src/widgets/player/stream_selector_sheet.dart`, `src/widgets/player/subtitle_picker_sheet.dart`
 
 **Tests importing it:** none directly (it may be covered through the files that import it)
+
+## lib/src/widgets/player/stall_watchdog.dart
+
+**Source:** [`lib/src/widgets/player/stall_watchdog.dart`](../../lib/src/widgets/player/stall_watchdog.dart) · **Platform:** Shared · **Lines:** 47
+
+**Purpose:** Notices playback that is stuck: playing, buffering, and not moving for `limit`.
+
+**Declares:** `StallWatchdog` (Class)
+
+**Imports (project):** none
+
+**Imported by:** `src/widgets/player/custom_video_player.dart`
+
+**Tests importing it:** `test/stall_watchdog_test.dart`
 
 ## lib/src/widgets/player/stream_selector_sheet.dart
 

@@ -60,6 +60,18 @@ bool FlutterWindow::OnCreate() {
           result->Success(flutter::EncodableValue(fullscreen_));
         } else if (call.method_name() == "isFullscreen") {
           result->Success(flutter::EncodableValue(fullscreen_));
+        } else if (call.method_name() == "keepDisplayOn") {
+          // While video plays: no display sleep or screensaver. The request
+          // belongs to this (the platform) thread, where every call of this
+          // channel arrives, and ends with the process.
+          const auto* value = std::get_if<bool>(call.arguments());
+          if (value == nullptr) {
+            result->Error("bad_args", "Expected a bool.");
+            return;
+          }
+          ::SetThreadExecutionState(
+              *value ? (ES_CONTINUOUS | ES_DISPLAY_REQUIRED) : ES_CONTINUOUS);
+          result->Success();
         } else {
           result->NotImplemented();
         }

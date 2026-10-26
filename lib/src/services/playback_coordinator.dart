@@ -40,6 +40,54 @@ class SourcePreparationException implements Exception {
   String toString() => '$cause';
 }
 
+/// The engine accepted a source but never started playing it: its `play`
+/// did not return. An engine problem (libmpv waiting for a video surface
+/// that never appears), not a network one, so the other engine may still
+/// play the same source.
+class EngineStartTimeout implements Exception {
+  const EngineStartTimeout();
+
+  @override
+  String toString() => 'The video engine did not start playing.';
+}
+
+/// Which engine a session tries first, and when that changes.
+///
+/// When the other engine plays a source the preferred one could not, it is
+/// tried first for the rest of the session, but only once it has shown a
+/// picture. An engine that accepts `play` and fails a moment later (a codec
+/// it cannot open) must not take over every later source.
+class EnginePreference {
+  EnginePreference(this._preferred);
+
+  PlayerEngine _preferred;
+  PlayerEngine? _candidate;
+
+  /// The engine new sources start on.
+  PlayerEngine get preferred => _preferred;
+
+  /// [engine] started a source the preferred engine had failed on. It takes
+  /// over once [presented] confirms a picture.
+  void fallbackStarted(PlayerEngine engine) {
+    _candidate = engine.id == _preferred.id ? null : engine;
+  }
+
+  /// [engine]'s current source has shown its first picture.
+  void presented(PlayerEngine engine) {
+    if (_candidate?.id == engine.id) _preferred = engine;
+    _candidate = null;
+  }
+
+  /// The attempt [fallbackStarted] described ended without a picture.
+  void attemptEnded() => _candidate = null;
+
+  /// The viewer chose [engine] for the rest of the session.
+  void choose(PlayerEngine engine) {
+    _preferred = engine;
+    _candidate = null;
+  }
+}
+
 class PlaybackFailure {
   const PlaybackFailure(this.kind, this.original, {this.statusCode});
 
@@ -102,6 +150,9 @@ class PlaybackFailure {
   static PlaybackFailure classify(Object error) {
     if (error is SourcePreparationException) {
       return PlaybackFailure(PlaybackFailureKind.preparation, error);
+    }
+    if (error is EngineStartTimeout) {
+      return PlaybackFailure(PlaybackFailureKind.engine, error);
     }
     if (error is TimeoutException) {
       return PlaybackFailure(PlaybackFailureKind.timeout, error);

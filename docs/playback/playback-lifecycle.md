@@ -70,11 +70,23 @@ stateDiagram-v2
   countdown starts (`_offerNextEpisode`).
 - Keeps the controls visible while paused and schedules hiding while
   playing.
+- **Recovers stalls:** playing but buffering in place for 25 s (60 s for a
+  torrent) is handled like a dropped stream (`StallWatchdog`,
+  `_onStall`): reconnect, then another source. `_recoverStalls` turns it
+  off.
+- **Keeps the display on** while playing (Android window flag; Windows
+  `SetThreadExecutionState` through `DesktopWindow.keepDisplayOn`), and
+  tells Android whether leaving the app should continue the video in
+  picture in picture (`PlayerPip`).
+- **Measures** the session in debug and profile builds (`PlaybackMetrics`):
+  time to first frame, rebuffers, stalls and failures, printed as one
+  `[Playback][Summary]` line when the player closes.
 
 Input paths stay separate: touch gestures and double-tap seek on phones
 (`GestureTouchLayer`), remote keys on TV (`_onRemoteKey`, focus kept inside
 the player), pointer and keyboard on Windows (`_onPointerMove`,
-`_withPointer`).
+`_withPointer`, and `DesktopPointerLayer`: a click plays or pauses, a double
+click toggles fullscreen).
 
 ## Subtitles
 
