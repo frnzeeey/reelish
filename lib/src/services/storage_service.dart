@@ -390,6 +390,18 @@ class StorageService {
     }
   }
 
+  /// Moves links saved by older versions out of backed-up preferences the
+  /// first time they are read, rather than at the next save, which may
+  /// never come.
+  Future<void> _migrateLegacyLastStreams() async {
+    final preferences = await SharedPreferences.getInstance();
+    if (!preferences.containsKey(_legacyLastStreamsKey)) return;
+    await _serialized(() async {
+      if (!preferences.containsKey(_legacyLastStreamsKey)) return;
+      await _writeLastStreams(await _readLastStreams());
+    });
+  }
+
   Future<void> _writeLastStreams(Map<String, dynamic> values) async {
     final file = await _lastStreamsFile();
     await file.parent.create(recursive: true);
@@ -411,6 +423,7 @@ class StorageService {
     String? cacheKey,
   }) async {
     try {
+      await _migrateLegacyLastStreams();
       final value = await _readLastStreams();
       final key = cacheKey ?? _mediaKey(item);
       final entry = value[key];

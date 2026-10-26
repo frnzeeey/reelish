@@ -257,6 +257,25 @@ void main() {
         );
       }
     });
+
+    test('moves links out of backed-up preferences when they are first '
+        'read, without waiting for a save', () async {
+      final preferences = await SharedPreferences.getInstance();
+      await preferences.setString(
+        'onfeed.playback.lastStreams.v1',
+        '{"movie:42":{"savedAt":"${DateTime.now().toUtc().toIso8601String()}","source":$_jsonSource}}',
+      );
+
+      final restored = await newStorage().lastStream(
+        item,
+        maxAge: const Duration(days: 1),
+        allowTorrents: true,
+      );
+
+      expect(restored?.url, source.url);
+      expect(preferences.containsKey('onfeed.playback.lastStreams.v1'), false);
+      expect(File('${files.path}/last_streams.v1.json').existsSync(), true);
+    });
   });
 
   test('playback settings controller persists and reloads changes', () async {
