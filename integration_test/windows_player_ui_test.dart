@@ -265,4 +265,99 @@ void main() {
     },
     timeout: const Timeout(Duration(minutes: 2)),
   );
+
+  testWidgets(
+    'desktop player: mute carries over to another source',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final files = await tester.runAsync(
+        () => Directory.systemTemp.createTemp('reelish-player-volume-'),
+      );
+      final storage = StorageService(filesDirectory: () async => files!);
+      await tester.runAsync(DeviceCapabilities.load);
+      // Two names for one clip: choosing the other opens a new player.
+      const first = StreamSource(name: 'First', providerName: 'A', url: _clip);
+      const second = StreamSource(
+        name: 'Second',
+        providerName: 'B',
+        url: _clip,
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: GlassTheme.tv,
+          home: PlayerScreen(
+            item: const MediaItem(id: '10378', type: 'movie', name: 'Clip'),
+            source: first,
+            sources: const [first, second],
+            storage: storage,
+            playbackSettings: PlaybackSettingsController(storage: storage),
+          ),
+        ),
+      );
+
+      VideoPlayerController? controller() {
+        final players = find.byType(VideoPlayer);
+        return players.evaluate().isEmpty
+            ? null
+            : tester.widget<VideoPlayer>(players.first).controller;
+      }
+
+      // Fully live: the engine draws frames itself, so no pump is needed.
+      Future<void> until(bool Function() condition, String what) async {
+        final deadline = DateTime.now().add(const Duration(seconds: 40));
+        while (!condition()) {
+          if (DateTime.now().isAfter(deadline)) {
+            fail('Timed out waiting: $what');
+          }
+          await tester.runAsync(
+            () => Future<void>.delayed(const Duration(milliseconds: 100)),
+          );
+        }
+      }
+
+      await until(
+        () => controller()?.value.isPlaying ?? false,
+        'playback to start',
+      );
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyM);
+      await until(() => controller()!.value.volume == 0, 'M to mute');
+      final muted = controller();
+
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await mouse.addPointer(location: const Offset(400, 300));
+      await mouse.moveTo(const Offset(420, 320));
+      await until(
+        () => find
+            .bySemanticsLabel(RegExp('Choose source'))
+            .evaluate()
+            .isNotEmpty,
+        'the source button',
+      );
+      await tester.tap(find.bySemanticsLabel(RegExp('Choose source')).first);
+      await until(
+        () => find.textContaining('B · Second').evaluate().isNotEmpty,
+        'the source sheet',
+      );
+      // The sheet slides in; tap once it has settled.
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 800)),
+      );
+      final option = find.textContaining('B · Second').last;
+      await tester.ensureVisible(option);
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 500)),
+      );
+      await tester.tap(option);
+      await until(
+        () =>
+            controller() != null &&
+            !identical(controller(), muted) &&
+            controller()!.value.isPlaying,
+        'the other source to play',
+      );
+      expect(controller()!.value.volume, 0, reason: 'still muted');
+      await mouse.removePointer();
+    },
+    timeout: const Timeout(Duration(minutes: 2)),
+  );
 }

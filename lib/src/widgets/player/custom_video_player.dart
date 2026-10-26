@@ -470,6 +470,12 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
     } catch (_) {
       // Cleanup failure should not prevent trying the newly selected source.
     }
+    if (old != null) {
+      PlaybackLog.log(
+        'Player',
+        'previous player closed after ${attemptClock.elapsedMilliseconds}ms',
+      );
+    }
     if (!mounted || generation != _initializationGeneration) return;
     setState(() {
       _ready = false;
@@ -589,6 +595,16 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
           await c.setPlaybackSpeed(_speed).timeout(const Duration(seconds: 2));
         } catch (_) {
           // Playback at normal speed can proceed if the backend is slow here.
+        }
+      }
+      // Desktop volume and mute belong to the session: a reconnect, another
+      // source or stall recovery must not start the new player at full
+      // volume. Set before play, so it never starts loud.
+      if (_desktop && _volume != 1) {
+        try {
+          await c.setVolume(_volume).timeout(const Duration(seconds: 2));
+        } catch (_) {
+          // The engine keeps full volume if it refuses; playback continues.
         }
       }
       final resume = _lastPosition ?? await _startPosition;
@@ -766,6 +782,10 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
     final failedController = _controller;
     _controller = null;
     failedController?.removeListener(_tick);
+    // Desktop: nothing plays now, and with the controller gone [_tick] no
+    // longer follows playback, so the display would stay awake on the error
+    // screen until the player closed. The next player turns it back on.
+    if (_desktop) _setKeepScreenOn(false);
     _unbindEmbeddedSubtitles();
     try {
       await failedController?.dispose();

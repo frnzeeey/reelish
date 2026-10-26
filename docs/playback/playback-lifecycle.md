@@ -75,7 +75,9 @@ stateDiagram-v2
   `_onStall`): reconnect, then another source. `_recoverStalls` turns it
   off.
 - **Keeps the display on** while playing (Android window flag; Windows
-  `SetThreadExecutionState` through `DesktopWindow.keepDisplayOn`), and
+  `SetThreadExecutionState` through `DesktopWindow.keepDisplayOn`; on
+  Windows a failure releases it, so the error screen lets the display
+  sleep), and
   tells Android whether leaving the app should continue the video in
   picture in picture (`PlayerPip`).
 - **Measures** the session in debug and profile builds (`PlaybackMetrics`):
