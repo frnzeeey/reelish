@@ -390,12 +390,15 @@ class _RailItemState extends State<_RailItem> {
                       ],
                     ),
                   ),
-                  if (section == null)
+                  if (section == null) ...[
+                    // Apart from a title cut to fit, so the two never touch.
+                    const SizedBox(width: 8),
                     const Icon(
                       Symbols.open_in_new_rounded,
                       size: 16,
                       color: GlassTheme.muted,
                     ),
+                  ],
                 ],
               ),
             ),

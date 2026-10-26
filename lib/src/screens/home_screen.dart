@@ -1989,12 +1989,32 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 ),
               ),
               const SizedBox(height: 8),
-              Text(
-                [
-                  item.year,
-                  item.type == 'series' ? 'Series' : 'Movie',
-                  if (item.rating.isNotEmpty) '${item.rating}/10',
-                ].where((value) => value.isNotEmpty).join('  |  '),
+              // The rating as on the cards and the other interfaces: the
+              // theme star, then the score.
+              Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(
+                      text: [
+                        item.year,
+                        item.type == 'series' ? 'Series' : 'Movie',
+                      ].where((value) => value.isNotEmpty).join('  ·  '),
+                    ),
+                    if (item.rating.isNotEmpty) ...[
+                      const TextSpan(text: '  ·  '),
+                      WidgetSpan(
+                        alignment: PlaceholderAlignment.middle,
+                        child: Icon(
+                          Symbols.star_rounded,
+                          fill: 1,
+                          size: 15,
+                          color: GlassTheme.primary,
+                        ),
+                      ),
+                      TextSpan(text: ' ${item.rating}'),
+                    ],
+                  ],
+                ),
                 style: const TextStyle(
                   color: Color(0xC7FFFFFF),
                   fontSize: 14,

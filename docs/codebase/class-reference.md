@@ -51,7 +51,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 
 | Type | Role | Declared in | Relations | Platform | Named in | Summary |
 |---|---|---|---|---|---|---|
-| `CachedManifest` | Service type | [`storage_service.dart:575`](../../lib/src/services/storage_service.dart#L575) |  | Shared | 1 lib file | A provider manifest as last downloaded, with its HTTP validators. |
+| `CachedManifest` | Service type | [`storage_service.dart:588`](../../lib/src/services/storage_service.dart#L588) |  | Shared | 1 lib file | A provider manifest as last downloaded, with its HTTP validators. |
 | `_CardAction` | Widget | [`desktop_widgets.dart:452`](../../lib/src/desktop/desktop_widgets.dart#L452) | extends StatelessWidget | Windows | its own file | A small round button in a poster's corner, for the mouse. |
 | `CastMember` | Model | [`media_details.dart:58`](../../lib/src/models/media_details.dart#L58) |  | Shared | 2 lib files, 1 test file |  |
 | `CatalogPage` | Service type | [`paged_feed_controller.dart:10`](../../lib/src/services/paged_feed_controller.dart#L10) |  | Shared | 2 lib files, 5 test files | One page of a home row, already filtered and ranked by the row's rules. |
@@ -393,7 +393,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `ReelishWordmark` | Widget | [`brand_logo.dart:31`](../../lib/src/widgets/brand_logo.dart#L31) | extends StatelessWidget | Shared | 3 lib files, 1 test file | The Reelish wordmark at `height`, without its canvas's transparent margins. |
 | `_ReleaseNotes` | Widget | [`desktop_update_dialogs.dart:28`](../../lib/src/desktop/desktop_update_dialogs.dart#L28) | extends StatefulWidget | Windows | its own file | The release notes box shared by the desktop update dialogs. |
 | `_ReleaseNotesState` | Widget state | [`desktop_update_dialogs.dart:37`](../../lib/src/desktop/desktop_update_dialogs.dart#L37) | extends State<_ReleaseNotes> | Windows | its own file |  |
-| `RememberedSubtitle` | Service type | [`storage_service.dart:584`](../../lib/src/services/storage_service.dart#L584) |  | Shared | 1 lib file, 1 test file | A remembered subtitle choice for one title. |
+| `RememberedSubtitle` | Service type | [`storage_service.dart:597`](../../lib/src/services/storage_service.dart#L597) |  | Shared | 1 lib file, 1 test file | A remembered subtitle choice for one title. |
 | `_RemoveIntent` | Class | [`desktop_widgets.dart:136`](../../lib/src/desktop/desktop_widgets.dart#L136) | extends Intent | Windows | its own file |  |
 | `_RepositoryCard` | Widget | [`plugins_screen.dart:504`](../../lib/src/screens/plugins_screen.dart#L504) | extends StatefulWidget | Shared | its own file |  |
 | `_RepositoryCard` | Widget | [`desktop_plugins_page.dart:504`](../../lib/src/desktop/desktop_plugins_page.dart#L504) | extends StatefulWidget | Windows | its own file |  |

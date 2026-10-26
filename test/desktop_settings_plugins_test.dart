@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:onfeed/src/desktop/desktop_plugins_page.dart';
 import 'package:onfeed/src/desktop/desktop_settings_page.dart';
 import 'package:onfeed/src/models/provider_plugin.dart';
@@ -144,6 +145,16 @@ void main() {
       await tester.sendKeyEvent(LogicalKeyboardKey.enter);
       await tester.pumpAndSettle();
       expect(find.textContaining('Content disclaimer'), findsWidgets);
+    });
+
+    testWidgets('a title cut to fit stays clear of its external-link icon', (
+      tester,
+    ) async {
+      // The page's width in a 1024 px window, beside the compact rail.
+      await _pump(tester, page(), size: const Size(944, 700));
+      final title = tester.getRect(find.text('Open-source licenses'));
+      final icon = tester.getRect(find.byIcon(Symbols.open_in_new_rounded));
+      expect(icon.left - title.right, greaterThanOrEqualTo(8));
     });
 
     for (final size in const [Size(1044, 720), Size(2324, 1440)]) {
