@@ -1244,8 +1244,13 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
   );
 
   Future<StreamSource> _prepareTorrent(StreamSource source, int generation) {
-    if (!Theme.of(context).platform.toString().contains('android')) {
-      throw UnsupportedError('Torrent streaming is available on Android only.');
+    final platform = Theme.of(context).platform;
+    // Windows plays torrents only when its engine DLL loaded (see
+    // TorrentSupport); Android keeps its own checks.
+    final windowsTorrents =
+        platform == TargetPlatform.windows && TorrentSupport.available;
+    if (!platform.toString().contains('android') && !windowsTorrents) {
+      throw UnsupportedError('Torrent streaming is not available here.');
     }
     return _torrents.prepare(
       source,

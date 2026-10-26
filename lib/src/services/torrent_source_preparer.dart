@@ -17,8 +17,15 @@ import 'storage_service.dart';
 /// Chromecast with Google TV, which run 32-bit Android on 64-bit chips. There,
 /// torrent sources are neither requested nor offered, instead of failing
 /// each time one is played.
+///
+/// Windows x64 has the same engine as a DLL bundled next to Reelish.exe. It
+/// counts only when it is there and loads with its C API, so a build or
+/// install without it keeps torrents off rather than failing at play.
 abstract final class TorrentSupport {
   static bool get available {
+    if (defaultTargetPlatform == TargetPlatform.windows) {
+      return Platform.isWindows && FlutterTorrentStreamer.isSupported;
+    }
     if (defaultTargetPlatform != TargetPlatform.android) return false;
     // Only a real Android process has an ABI that decides this; widget tests
     // on a desktop host keep the Android behavior.

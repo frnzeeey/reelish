@@ -603,7 +603,9 @@ class PlaybackSettingsScreen extends StatelessWidget {
             if (TorrentSupport.available)
               _switchRow(
                 'P2P streaming',
-                'Allow torrent sources from installed providers on Android.',
+                defaultTargetPlatform == TargetPlatform.windows
+                    ? 'Allow torrent sources from installed providers.'
+                    : 'Allow torrent sources from installed providers on Android.',
                 settings.p2pStreaming,
                 (value) => _save(settings.copyWith(p2pStreaming: value)),
               )
@@ -614,13 +616,19 @@ class PlaybackSettingsScreen extends StatelessWidget {
                     ? 'Not available on this device. Torrent playback needs '
                           '64-bit Android, and this device runs 32-bit Android '
                           '(common on TVs and streaming sticks).'
+                    : defaultTargetPlatform == TargetPlatform.windows
+                    // The engine DLL is missing or did not load.
+                    ? 'Torrent playback is not available in this Windows build.'
                     : 'Torrent playback is available in the Android app only.',
                 value: false,
                 enabled: false,
                 onChanged: (_) {},
               ),
-            // Torrent data only ever exists on Android.
-            if (defaultTargetPlatform == TargetPlatform.android) ...[
+            // Torrent data exists on Android, and on Windows once its
+            // engine is installed.
+            if (defaultTargetPlatform == TargetPlatform.android ||
+                (defaultTargetPlatform == TargetPlatform.windows &&
+                    TorrentSupport.available)) ...[
               _actionRow(
                 'Clear torrent cache',
                 'Remove files stored by torrent playback.',

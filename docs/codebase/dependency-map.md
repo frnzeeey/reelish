@@ -102,11 +102,11 @@ The files imported by the most other `lib/` files. A change to one of these reac
 
 | File | Imported by (lib files) | Imported by (tests) |
 |---|---|---|
-| [`lib/src/theme/glass_theme.dart`](../../lib/src/theme/glass_theme.dart) | 58 | 16 |
-| [`lib/src/models/media_item.dart`](../../lib/src/models/media_item.dart) | 29 | 30 |
-| [`lib/src/models/stream_source.dart`](../../lib/src/models/stream_source.dart) | 18 | 13 |
-| [`lib/src/services/storage_service.dart`](../../lib/src/services/storage_service.dart) | 16 | 16 |
-| [`lib/src/platform/device_capabilities.dart`](../../lib/src/platform/device_capabilities.dart) | 14 | 4 |
+| [`lib/src/theme/glass_theme.dart`](../../lib/src/theme/glass_theme.dart) | 58 | 17 |
+| [`lib/src/models/media_item.dart`](../../lib/src/models/media_item.dart) | 29 | 31 |
+| [`lib/src/models/stream_source.dart`](../../lib/src/models/stream_source.dart) | 18 | 14 |
+| [`lib/src/services/storage_service.dart`](../../lib/src/services/storage_service.dart) | 16 | 18 |
+| [`lib/src/platform/device_capabilities.dart`](../../lib/src/platform/device_capabilities.dart) | 14 | 5 |
 | [`lib/src/widgets/tv/tv_focus.dart`](../../lib/src/widgets/tv/tv_focus.dart) | 12 | 4 |
 | [`lib/src/services/tmdb_service.dart`](../../lib/src/services/tmdb_service.dart) | 11 | 14 |
 | [`lib/src/models/media_details.dart`](../../lib/src/models/media_details.dart) | 9 | 5 |
@@ -122,7 +122,7 @@ The files imported by the most other `lib/` files. A change to one of these reac
 | [`lib/src/widgets/brand_logo.dart`](../../lib/src/widgets/brand_logo.dart) | 7 | 1 |
 | [`lib/src/widgets/poster_image.dart`](../../lib/src/widgets/poster_image.dart) | 7 | 1 |
 | [`lib/src/models/app_update.dart`](../../lib/src/models/app_update.dart) | 6 | 7 |
-| [`lib/src/services/playback_settings_controller.dart`](../../lib/src/services/playback_settings_controller.dart) | 6 | 6 |
+| [`lib/src/services/playback_settings_controller.dart`](../../lib/src/services/playback_settings_controller.dart) | 6 | 7 |
 | [`lib/src/models/episode_context.dart`](../../lib/src/models/episode_context.dart) | 5 | 3 |
 | [`lib/src/models/resume_summary.dart`](../../lib/src/models/resume_summary.dart) | 5 | 2 |
 | [`lib/src/models/stream_type.dart`](../../lib/src/models/stream_type.dart) | 5 | 4 |
@@ -135,7 +135,7 @@ Each third-party package imported by `lib/`, A–Z, with the files that import i
 | Package | Imported by |
 |---|---|
 | `crypto` | `src/services/github_update_service.dart`, `src/services/provider_plugin_service.dart` |
-| `flutter` | 104 files, including `main.dart`, `src/desktop/desktop_details_screen.dart`, `src/desktop/desktop_hero.dart`, `src/desktop/desktop_pages.dart`, `src/desktop/desktop_plugins_page.dart`, `src/desktop/desktop_provider_search.dart` |
+| `flutter` | 103 files, including `main.dart`, `src/desktop/desktop_details_screen.dart`, `src/desktop/desktop_hero.dart`, `src/desktop/desktop_pages.dart`, `src/desktop/desktop_plugins_page.dart`, `src/desktop/desktop_provider_search.dart` |
 | `flutter_go_torrent_streamer` | `src/services/torrent_source_preparer.dart`, `src/widgets/player/custom_video_player.dart` |
 | `flutter_js` | `src/services/provider_fetch_bridge.dart`, `src/services/provider_runner.dart` |
 | `http` | `src/services/github_update_service.dart`, `src/services/network_target_policy.dart`, `src/services/plugin_library_service.dart`, `src/services/provider_fetch_bridge.dart`, `src/services/provider_plugin_service.dart`, `src/services/subtitle_addon_service.dart`, `src/services/subtitle_loader.dart`, `src/services/tmdb_service.dart` |

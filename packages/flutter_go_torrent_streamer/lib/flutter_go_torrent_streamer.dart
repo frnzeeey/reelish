@@ -15,8 +15,16 @@ DynamicLibrary _loadLib() {
   if (Platform.isAndroid) {
     return DynamicLibrary.open('libtorrent_streamer.so');
   }
+  if (Platform.isWindows) {
+    return DynamicLibrary.open(_windowsLibraryPath());
+  }
   throw UnsupportedError('Unknown platform: ${Platform.operatingSystem}');
 }
+
+/// Windows (Reelish): the DLL bundled next to the executable, opened by full
+/// path so the DLL search order cannot substitute another file.
+String _windowsLibraryPath() =>
+    '${File(Platform.resolvedExecutable).parent.path}\\torrent_streamer.dll';
 
 // FFI 函数签名
 typedef InitFunc = Void Function(Pointer<Utf8> configDir);
@@ -333,15 +341,55 @@ class FlutterTorrentStreamer {
     if (_lib != null) return;
 
     try {
-      if (Platform.isAndroid) {
-        _lib = DynamicLibrary.open('libtorrent_streamer.so');
-      } else {
-        throw UnsupportedError('Unknown platform: ${Platform.operatingSystem}');
-      }
+      _lib = _loadLib();
     } catch (e) {
       debugPrint('Failed to load dynamic library: $e');
       rethrow;
     }
+  }
+
+  static bool? _supported;
+
+  /// Whether the native engine loads in this process and exports the C API
+  /// this class calls. Android (64-bit) always ships it; on Windows (Reelish)
+  /// the DLL may be missing or fail to load, and torrents then stay off.
+  /// Loads the library once; the answer is cached.
+  static bool get isSupported => _supported ??= _probe();
+
+  static bool _probe() {
+    if (!Platform.isAndroid && !Platform.isWindows) return false;
+    if (Platform.isWindows && !File(_windowsLibraryPath()).existsSync()) {
+      return false;
+    }
+    try {
+      final lib = _lib ??= _loadLib();
+      for (final symbol in const [
+        'Init',
+        'StartStream',
+        'GetFiles',
+        'SelectFile',
+        'StopClient',
+        'FreeString',
+      ]) {
+        if (!lib.providesSymbol(symbol)) return false;
+      }
+      return true;
+    } catch (e) {
+      debugPrint('Torrent engine unavailable: $e');
+      return false;
+    }
+  }
+
+  /// Where the engine keeps its session file and, in
+  /// `flutter_torrent_streamer_global`, the downloaded data. Android: the
+  /// documents directory, as published. Windows (Reelish): a folder of its
+  /// own under the local (not roaming) app data, never the user's Documents.
+  static Future<Directory> engineDirectory() async {
+    if (Platform.isWindows) {
+      final cache = await getApplicationCacheDirectory();
+      return Directory('${cache.path}\\torrent_engine');
+    }
+    return getApplicationDocumentsDirectory();
   }
 
   /// 自动初始化后端引擎
@@ -349,7 +397,8 @@ class FlutterTorrentStreamer {
     _ensureInitialized();
     if (_hasInitializedBackend) return;
 
-    final dir = await getApplicationDocumentsDirectory();
+    final dir = await engineDirectory();
+    if (Platform.isWindows) await dir.create(recursive: true);
     final initFunc =
         _lib!.lookup<NativeFunction<InitFunc>>('Init').asFunction<Init>();
 

@@ -43,6 +43,12 @@ env:
   # SHA-256 of the QuickJS bridge committed in third_party (see
   # third_party/flutter_js/REELISH_PATCH.md). A different DLL fails the build.
   QUICKJS_BRIDGE_SHA256: e08ccf396e071894d18ba6c818cfe7cf2ec4f13ee87c4a1fd421a14e7a35fb69
+  # SHA-256 of the torrent engine DLL committed in
+  # packages/flutter_go_torrent_streamer/windows/shared (built by
+  # go/build_windows.ps1, reproducible with Go 1.27.3 and llvm-mingw
+  # 20261020 UCRT). Without a committed DLL, Windows builds ship without
+  # torrent playback; a different DLL fails the build.
+  TORRENT_STREAMER_SHA256: 372207fe7eca4a60a7f1c7b2c55843498ab7228dfd3d718e80aa55d45769e9de
 
 jobs:
   build:
@@ -99,6 +105,27 @@ jobs:
             if (-not ($exports -match "\s$symbol$")) { throw "quickjs_c_bridge.dll does not export $symbol." }
           }
           Write-Host "quickjs_c_bridge.dll verified: $hash"
+
+      - name: Verify the torrent engine
+        shell: pwsh
+        run: |
+          $dll = 'packages/flutter_go_torrent_streamer/windows/shared/torrent_streamer.dll'
+          if (-not (Test-Path $dll)) {
+            Write-Host 'No torrent engine DLL committed: this build has no torrent playback.'
+            exit 0
+          }
+          $hash = (Get-FileHash $dll -Algorithm SHA256).Hash.ToLower()
+          if ($hash -ne $env:TORRENT_STREAMER_SHA256) {
+            throw "torrent_streamer.dll is $hash, expected '$env:TORRENT_STREAMER_SHA256'."
+          }
+          $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
+          $dumpbin = Get-ChildItem "$vs\VC\Tools\MSVC" -Recurse -Filter dumpbin.exe |
+            Where-Object FullName -like '*Hostx64\x64*' | Select-Object -First 1
+          $exports = & $dumpbin.FullName /nologo /exports $dll
+          foreach ($symbol in 'Init', 'StartStream', 'GetFiles', 'SelectFile', 'StopClient', 'FreeString') {
+            if (-not ($exports -match "\s$symbol$")) { throw "torrent_streamer.dll does not export $symbol." }
+          }
+          Write-Host "torrent_streamer.dll verified: $hash"
 
       - name: Write TMDB config
         env:
@@ -172,6 +199,13 @@ jobs:
           }
           $bridge = (Get-FileHash (Join-Path $dir 'quickjs_c_bridge.dll') -Algorithm SHA256).Hash.ToLower()
           if ($bridge -ne $env:QUICKJS_BRIDGE_SHA256) { throw 'The bundled QuickJS bridge is not the verified one.' }
+          if (Test-Path 'packages/flutter_go_torrent_streamer/windows/shared/torrent_streamer.dll') {
+            $engine = Join-Path $dir 'torrent_streamer.dll'
+            if (-not (Test-Path $engine)) { throw 'The torrent engine DLL was not bundled.' }
+            if ((Get-FileHash $engine -Algorithm SHA256).Hash.ToLower() -ne $env:TORRENT_STREAMER_SHA256) {
+              throw 'The bundled torrent engine is not the verified one.'
+            }
+          }
           # Obfuscated Dart code must not carry Reelish's class names.
           $app = [System.IO.File]::ReadAllText((Join-Path $dir 'data/app.so'), [System.Text.Encoding]::GetEncoding(28591))
           foreach ($name in 'ProviderFetchBridge', 'TmdbService', 'package:onfeed/src') {

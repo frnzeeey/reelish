@@ -138,13 +138,25 @@ that only speak DirectInput (no XInput mode) are not supported.
 | M | Mute or restore the volume |
 | F, or the button in the controls | Toggle fullscreen |
 
+The volume (and mute) set here lasts for the player session: a reconnect,
+another source or stall recovery opens the new player at the same volume.
+
 The window can be resized down to 960 × 600 logical pixels, maximized, and
 made fullscreen on whichever monitor it's on.
 
 ## What's different from Android
 
-- **P2P / torrent playback** is Android-only. The setting says so on
-  Windows.
+- **P2P / torrent playback** uses the torrent engine DLL
+  (`torrent_streamer.dll`, committed prebuilt and built by
+  `packages/flutter_go_torrent_streamer/go/build_windows.ps1`, see its
+  `REELISH_PATCH.md`; the release workflow checks its SHA-256). A build
+  without it, or where it fails to load, keeps torrents off and the setting
+  says so. Torrents stream through
+  the same libmpv player from a loopback-only HTTP server; the engine's
+  data lives in `%LOCALAPPDATA%\frnzeeey\Reelish\torrent_engine` (5 GB cap
+  at launch, *Clear torrent cache* in Playback settings). The first
+  torrent may bring up a Windows Firewall prompt: peers can still be
+  reached if it is declined, only incoming connections are blocked.
 - **Picture-in-picture, rotation lock, touch lock and brightness gestures**
   are phone and TV features and don't appear on Windows.
 - **Search** has a regular text box. Some fields in Settings and Plugins
@@ -195,18 +207,21 @@ flutter test test/quickjs_windows_limits_test.dart
 flutter test integration_test/provider_runtime_test.dart -d windows
 flutter test integration_test/windows_playback_test.dart -d windows
 flutter test integration_test/windows_player_ui_test.dart -d windows
+flutter test integration_test/windows_torrent_test.dart -d windows
+flutter test test/windows_torrent_support_test.dart
 ```
 
-The two `windows_*` integration tests play public test media: Mux's HLS
-stream, Akamai's DASH reference stream and Big Buck Bunny clips. They need a
-network connection.
+The `windows_*` integration tests play public test media: Mux's HLS
+stream, Akamai's DASH reference stream and Big Buck Bunny clips (the torrent
+test the WebTorrent Big Buck Bunny torrent, which also needs a live swarm).
+They need a network connection.
 
 ## Releases
 
 `.github/workflows/release-windows.yml` runs on the same `vX.Y.Z` tags as
 the Android release, on a Windows runner. It:
 
-1. checks the QuickJS bridge's hash and exports;
+1. checks the QuickJS bridge's and the torrent engine's hashes and exports;
 2. runs the Windows tests;
 3. builds an obfuscated release with the same build tag and commit as the
    APK;

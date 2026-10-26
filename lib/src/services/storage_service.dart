@@ -1,6 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:flutter/foundation.dart' show visibleForTesting;
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform, visibleForTesting;
+import 'package:flutter_go_torrent_streamer/flutter_go_torrent_streamer.dart'
+    show FlutterTorrentStreamer;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/episode_progress.dart';
@@ -495,11 +498,18 @@ class StorageService {
   }
 
   /// Where the torrent engine stores downloaded pieces: a fixed folder next
-  /// to the session file it is initialised with (the documents directory).
+  /// to the session file it is initialised with (the documents directory;
+  /// on Windows its own folder in local app data).
   static Future<Directory> _torrentEngineDataDirectory() async {
+    if (_windows) {
+      final engine = await FlutterTorrentStreamer.engineDirectory();
+      return Directory('${engine.path}\\flutter_torrent_streamer_global');
+    }
     final documents = await getApplicationDocumentsDirectory();
     return Directory('${documents.path}/flutter_torrent_streamer_global');
   }
+
+  static bool get _windows => defaultTargetPlatform == TargetPlatform.windows;
 
   static const _torrentClearPendingKey = 'onfeed.torrent.clearPending';
 
@@ -528,9 +538,19 @@ class StorageService {
     if (_torrentEngineStarted) return;
     try {
       final preferences = await SharedPreferences.getInstance();
-      final documents = await getApplicationDocumentsDirectory();
-      final unused = Directory('${documents.path}/torrent_cache');
-      if (await unused.exists()) await unused.delete(recursive: true);
+      if (_windows) {
+        // The engine restores the sessions in this file when it starts and
+        // resumes their torrents in the background. Reelish starts every
+        // session itself, so one left by a closed app is removed. (The
+        // Android-only folder below would be the user's own Documents here.)
+        final engine = await FlutterTorrentStreamer.engineDirectory();
+        final sessions = File('${engine.path}\\sessions.json');
+        if (await sessions.exists()) await sessions.delete();
+      } else {
+        final documents = await getApplicationDocumentsDirectory();
+        final unused = Directory('${documents.path}/torrent_cache');
+        if (await unused.exists()) await unused.delete(recursive: true);
+      }
       final data = await _torrentEngineDataDirectory();
       if (!await data.exists()) return;
       final pending = preferences.getBool(_torrentClearPendingKey) ?? false;
@@ -549,6 +569,7 @@ class StorageService {
   /// when only a few pieces exist, so summing lengths would wildly
   /// overestimate. `du` reports allocated blocks; Android ships it (toybox).
   static Future<int?> _diskUsageBytes(Directory directory) async {
+    if (_windows && Platform.isWindows) return _fileLengthsBytes(directory);
     if (!Platform.isAndroid && !Platform.isLinux && !Platform.isMacOS) {
       return null;
     }
@@ -562,6 +583,25 @@ class StorageService {
         '${result.stdout}'.trim().split(RegExp(r'\s+')).first,
       );
       return kilobytes == null ? null : kilobytes * 1024;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Windows has no `du`. The engine writes pieces at their offsets in
+  /// ordinary (not sparse) NTFS files, which allocates the file up to the
+  /// furthest piece, so file lengths are what the data occupies, or a little
+  /// more: never less, so the cap cannot be missed.
+  static Future<int?> _fileLengthsBytes(Directory directory) async {
+    try {
+      var total = 0;
+      await for (final entity
+          in directory
+              .list(recursive: true, followLinks: false)
+              .timeout(const Duration(seconds: 10))) {
+        if (entity is File) total += await entity.length();
+      }
+      return total;
     } catch (_) {
       return null;
     }

@@ -31,3 +31,36 @@ Two changes:
    StopClient, FreeString) is unchanged. Check alignment after any rebuild:
    `llvm-readelf -lW libtorrent_streamer.so` must show `0x4000` (or larger)
    for every LOAD segment.
+3. **Windows x64.** The same engine and C API as a DLL, loaded with
+   `dart:ffi` (no method channel: Android's foreground service has no
+   Windows counterpart).
+   - `go/`: the logcat call moved from `main.go` into `log_android.go`
+     (`//go:build android`, the same code); `log_other.go` writes to stderr
+     elsewhere. Android builds compile what they did before; the shipped
+     `.so` files were not rebuilt for this.
+   - `go/build_windows.ps1` builds `windows/shared/torrent_streamer.dll`
+     with Go and llvm-mingw (UCRT), checks the exports, and refuses a DLL
+     that imports anything Windows does not ship (MinGW runtime DLLs).
+   - `windows/CMakeLists.txt` (an FFI plugin, `ffiPlugin: true` in
+     `pubspec.yaml`) bundles the DLL next to `Reelish.exe` when it exists.
+   - `lib/flutter_go_torrent_streamer.dart`: Windows opens the DLL by full
+     path beside the executable; `isSupported` reports whether the engine
+     loads with its exports; `engineDirectory()` is the folder `Init` gets:
+     on Windows `%LOCALAPPDATA%\<company>\<app>\torrent_engine`, never the
+     user's Documents (Android keeps the documents directory).
+
+   The committed DLL was built with Go 1.27.3 and llvm-mingw 20261020
+   (UCRT); the build is reproducible (`-trimpath`, empty build ID, no link
+   timestamp), so the same toolchain gives SHA-256
+   `372207fe7eca4a60a7f1c7b2c55843498ab7228dfd3d718e80aa55d45769e9de`.
+   It imports only `kernel32`, `ws2_32` and the Universal CRT
+   (`api-ms-win-crt-*`, part of Windows 10/11); C and C++ runtimes are
+   linked in (`-static`).
+
+   Build and install (prints the SHA-256 to put in
+   `.github/workflows/release-windows.yml` `TORRENT_STREAMER_SHA256`):
+
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File packages\flutter_go_torrent_streamer\go\build_windows.ps1 `
+     -Go <go>\bin\go.exe -LlvmMingw <llvm-mingw-ucrt-x86_64> -Install
+   ```

@@ -51,7 +51,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 
 | Type | Role | Declared in | Relations | Platform | Named in | Summary |
 |---|---|---|---|---|---|---|
-| `CachedManifest` | Service type | [`storage_service.dart:588`](../../lib/src/services/storage_service.dart#L588) |  | Shared | 1 lib file | A provider manifest as last downloaded, with its HTTP validators. |
+| `CachedManifest` | Service type | [`storage_service.dart:628`](../../lib/src/services/storage_service.dart#L628) |  | Shared | 1 lib file | A provider manifest as last downloaded, with its HTTP validators. |
 | `_CardAction` | Widget | [`desktop_widgets.dart:452`](../../lib/src/desktop/desktop_widgets.dart#L452) | extends StatelessWidget | Windows | its own file | A small round button in a poster's corner, for the mouse. |
 | `CastMember` | Model | [`media_details.dart:58`](../../lib/src/models/media_details.dart#L58) |  | Shared | 2 lib files, 1 test file |  |
 | `CatalogPage` | Service type | [`paged_feed_controller.dart:10`](../../lib/src/services/paged_feed_controller.dart#L10) |  | Shared | 2 lib files, 5 test files | One page of a home row, already filtered and ranked by the row's rules. |
@@ -114,7 +114,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `_DesktopUpdateProgressDialogState` | Widget state | [`desktop_update_dialogs.dart:171`](../../lib/src/desktop/desktop_update_dialogs.dart#L171) | extends State<DesktopUpdateProgressDialog> | Windows | its own file |  |
 | `DesktopWindow` | Platform adapter | [`desktop_window.dart:9`](../../lib/src/platform/desktop_window.dart#L9) |  | Windows | 1 lib file, 2 test files | The desktop window: fullscreen through the Windows runner's `reelish/window` channel. |
 | `DetailsViewModel` | View model | [`details_view_model.dart:27`](../../lib/src/viewmodels/details_view_model.dart#L27) | extends ChangeNotifier | Shared | 3 lib files, 1 test file | The state behind a title's details page, shared by the mobile, TV and Windows details screens: TMDB details, the seasons and the selected season's episodes, and (on Windows) related titles. |
-| `DeviceCapabilities` | Platform adapter | [`device_capabilities.dart:20`](../../lib/src/platform/device_capabilities.dart#L20) |  | Shared | 14 lib files, 4 test files | What kind of device Reelish is running on, read once during startup. |
+| `DeviceCapabilities` | Platform adapter | [`device_capabilities.dart:20`](../../lib/src/platform/device_capabilities.dart#L20) |  | Shared | 14 lib files, 5 test files | What kind of device Reelish is running on, read once during startup. |
 | `_Divider` | Widget | [`plugin_stats.dart:83`](../../lib/src/widgets/plugin_library/plugin_stats.dart#L83) | extends StatelessWidget | Shared | its own file |  |
 | `_DockItem` | Widget | [`soft_glass_dock.dart:131`](../../lib/src/widgets/soft_glass_dock.dart#L131) | extends StatelessWidget | Shared | its own file |  |
 | `DockMetrics` | Class | [`soft_glass_dock.dart:77`](../../lib/src/widgets/soft_glass_dock.dart#L77) |  | Shared | 1 lib file, 1 test file | Dock proportions for the device class. |
@@ -175,7 +175,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `GitHubUpdateService` | Service type | [`github_update_service.dart:36`](../../lib/src/services/github_update_service.dart#L36) |  | Shared | 3 lib files, 2 test files | Checks GitHub Releases for a newer Reelish build, downloads its APK and hands it to Android's package installer. |
 | `GlassBox` | Widget | [`glass_box.dart:9`](../../lib/src/widgets/glass_box.dart#L9) | extends StatelessWidget | Shared | 4 lib files | Lightweight glass panel for content in scrolling pages and dialogs. |
 | `_GlassShadowPainter` | Painter | [`liquid_glass.dart:170`](../../lib/src/widgets/liquid_glass.dart#L170) | extends CustomPainter | Shared | its own file | Paints shadows only outside the glass. |
-| `GlassTheme` | Theme | [`glass_theme.dart:3`](../../lib/src/theme/glass_theme.dart#L3) |  | Shared | 58 lib files, 16 test files |  |
+| `GlassTheme` | Theme | [`glass_theme.dart:3`](../../lib/src/theme/glass_theme.dart#L3) |  | Shared | 58 lib files, 17 test files |  |
 | `_GroupLabel` | Widget | [`desktop_settings_page.dart:240`](../../lib/src/desktop/desktop_settings_page.dart#L240) | extends StatelessWidget | Windows | its own file |  |
 
 ## H
@@ -239,7 +239,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `_MediaDetailsScreenState` | Widget state | [`media_details_screen.dart:38`](../../lib/src/screens/media_details_screen.dart#L38) | extends State<MediaDetailsScreen> | Shared | its own file |  |
 | `MediaDiscoveryRanking` | Service type | [`media_discovery_ranking.dart:7`](../../lib/src/services/media_discovery_ranking.dart#L7) |  | Shared | 2 lib files, 3 test files | Shared quality and recency rules for discovery collections. |
 | `MediaFreshnessRules` | Service type | [`media_catalog_rules.dart:99`](../../lib/src/services/media_catalog_rules.dart#L99) |  | Shared | 2 lib files, 6 test files | Date rules for discovery rows. |
-| `MediaItem` | Model | [`media_item.dart:1`](../../lib/src/models/media_item.dart#L1) |  | Shared | 29 lib files, 30 test files |  |
+| `MediaItem` | Model | [`media_item.dart:1`](../../lib/src/models/media_item.dart#L1) |  | Shared | 29 lib files, 31 test files |  |
 | `_MediaSection` | Widget | [`library_screen.dart:399`](../../lib/src/screens/library_screen.dart#L399) | extends StatelessWidget | Shared | its own file |  |
 | `_MetricPill` | Widget | [`plugins_screen.dart:320`](../../lib/src/screens/plugins_screen.dart#L320) | extends StatelessWidget | Shared | its own file |  |
 | `_Monogram` | Widget | [`plugin_logo.dart:68`](../../lib/src/widgets/plugin_library/plugin_logo.dart#L68) | extends StatelessWidget | Shared | its own file |  |
@@ -281,7 +281,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `PlaybackLog` | Service type | [`playback_coordinator.dart:377`](../../lib/src/services/playback_coordinator.dart#L377) |  | Shared | 2 lib files | Development-only playback diagnostics. |
 | `PlaybackMetrics` | Service type | [`playback_metrics.dart:12`](../../lib/src/services/playback_metrics.dart#L12) |  | Shared | 1 lib file, 1 test file | One player session's timings and failures, for measuring playback on real devices in debug and profile builds. |
 | `PlaybackSettings` | Model | [`playback_settings.dart:5`](../../lib/src/models/playback_settings.dart#L5) |  | Shared | 5 lib files, 1 test file |  |
-| `PlaybackSettingsController` | Notifier / controller | [`playback_settings_controller.dart:8`](../../lib/src/services/playback_settings_controller.dart#L8) | extends ChangeNotifier | Shared | 6 lib files, 6 test files |  |
+| `PlaybackSettingsController` | Notifier / controller | [`playback_settings_controller.dart:8`](../../lib/src/services/playback_settings_controller.dart#L8) | extends ChangeNotifier | Shared | 6 lib files, 7 test files |  |
 | `PlaybackSettingsScreen` | Widget | [`playback_settings_screen.dart:283`](../../lib/src/screens/playback_settings_screen.dart#L283) | extends StatelessWidget | Shared | 2 lib files, 3 test files |  |
 | `_PlayButton` | Widget | [`player_controls.dart:410`](../../lib/src/widgets/player/player_controls.dart#L410) | extends StatelessWidget | Shared | its own file |  |
 | `PlayerBufferingIndicator` | Widget | [`player_controls.dart:1001`](../../lib/src/widgets/player/player_controls.dart#L1001) | extends StatefulWidget | Shared | 1 lib file, 1 test file | A small ring shown while playback stalls. |
@@ -303,7 +303,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `PlayerPipListener` | Class | [`player_pip.dart:5`](../../lib/src/widgets/player/player_pip.dart#L5) |  | Shared | 1 lib file, 1 test file | What the player in picture in picture is told by Android. |
 | `PlayerProgressBar` | Widget | [`player_progress_bar.dart:79`](../../lib/src/widgets/player/player_progress_bar.dart#L79) | extends StatefulWidget | Shared | 1 lib file, 2 test files | Reelish's seek bar: thin while idle, emphasized while scrubbing, with a time bubble above the thumb. |
 | `_PlayerProgressBarState` | Widget state | [`player_progress_bar.dart:98`](../../lib/src/widgets/player/player_progress_bar.dart#L98) | extends State<PlayerProgressBar> | Shared | its own file |  |
-| `PlayerScreen` | Widget | [`player_screen.dart:11`](../../lib/src/screens/player_screen.dart#L11) | extends StatelessWidget | Shared | 1 lib file, 3 test files |  |
+| `PlayerScreen` | Widget | [`player_screen.dart:11`](../../lib/src/screens/player_screen.dart#L11) | extends StatelessWidget | Shared | 1 lib file, 4 test files |  |
 | `PlayerSeekFeedback` | Widget | [`player_controls.dart:892`](../../lib/src/widgets/player/player_controls.dart#L892) | extends StatefulWidget | Shared | 1 lib file, 1 test file | Double-tap seek feedback: a soft translucent region on the tapped side with the accumulated seconds. |
 | `_PlayerSeekFeedbackState` | Widget state | [`player_controls.dart:901`](../../lib/src/widgets/player/player_controls.dart#L901) | extends State<PlayerSeekFeedback> | Shared | its own file |  |
 | `PlayerSettings` | Class | [`player_settings_sheet.dart:7`](../../lib/src/widgets/player/player_settings_sheet.dart#L7) |  | Shared | 1 lib file, 1 test file |  |
@@ -399,7 +399,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `ReelishWordmark` | Widget | [`brand_logo.dart:31`](../../lib/src/widgets/brand_logo.dart#L31) | extends StatelessWidget | Shared | 3 lib files, 1 test file | The Reelish wordmark at `height`, without its canvas's transparent margins. |
 | `_ReleaseNotes` | Widget | [`desktop_update_dialogs.dart:28`](../../lib/src/desktop/desktop_update_dialogs.dart#L28) | extends StatefulWidget | Windows | its own file | The release notes box shared by the desktop update dialogs. |
 | `_ReleaseNotesState` | Widget state | [`desktop_update_dialogs.dart:37`](../../lib/src/desktop/desktop_update_dialogs.dart#L37) | extends State<_ReleaseNotes> | Windows | its own file |  |
-| `RememberedSubtitle` | Service type | [`storage_service.dart:597`](../../lib/src/services/storage_service.dart#L597) |  | Shared | 1 lib file, 1 test file | A remembered subtitle choice for one title. |
+| `RememberedSubtitle` | Service type | [`storage_service.dart:637`](../../lib/src/services/storage_service.dart#L637) |  | Shared | 1 lib file, 1 test file | A remembered subtitle choice for one title. |
 | `_RemoveIntent` | Class | [`desktop_widgets.dart:136`](../../lib/src/desktop/desktop_widgets.dart#L136) | extends Intent | Windows | its own file |  |
 | `_RepositoryCard` | Widget | [`desktop_plugins_page.dart:504`](../../lib/src/desktop/desktop_plugins_page.dart#L504) | extends StatefulWidget | Windows | its own file |  |
 | `_RepositoryCard` | Widget | [`plugins_screen.dart:504`](../../lib/src/screens/plugins_screen.dart#L504) | extends StatefulWidget | Shared | its own file |  |
@@ -469,12 +469,12 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `_Stat` | Widget | [`desktop_plugins_page.dart:241`](../../lib/src/desktop/desktop_plugins_page.dart#L241) | extends StatelessWidget | Windows | its own file |  |
 | `_Stat` | Widget | [`plugin_stats.dart:38`](../../lib/src/widgets/plugin_library/plugin_stats.dart#L38) | extends StatelessWidget | Shared | its own file |  |
 | `_StatusBarScrim` | Widget | [`media_details_screen.dart:692`](../../lib/src/screens/media_details_screen.dart#L692) | extends StatelessWidget | Shared | its own file | Shades the status bar once content scrolls beneath it, so the clock and icons never sit on top of text. |
-| `StorageService` | Service type | [`storage_service.dart:11`](../../lib/src/services/storage_service.dart#L11) |  | Shared | 16 lib files, 16 test files |  |
+| `StorageService` | Service type | [`storage_service.dart:14`](../../lib/src/services/storage_service.dart#L14) |  | Shared | 16 lib files, 18 test files |  |
 | `StreamDiscovery` | Service type | [`stream_discovery.dart:7`](../../lib/src/services/stream_discovery.dart#L7) |  | Shared | 4 lib files, 1 test file | Owns one progressive provider lookup and its results for one playback request. |
 | `StreamNormalizer` | Service type | [`stream_normalizer.dart:15`](../../lib/src/services/stream_normalizer.dart#L15) |  | Shared | 1 lib file, 1 test file | Converts provider-specific JSON shapes into Reelish's canonical source. |
 | `StreamSelectorSheet` | Widget | [`stream_selector_sheet.dart:15`](../../lib/src/widgets/player/stream_selector_sheet.dart#L15) | extends StatefulWidget | Shared | 2 lib files, 1 test file | Lists playable sources. |
 | `_StreamSelectorSheetState` | Widget state | [`stream_selector_sheet.dart:73`](../../lib/src/widgets/player/stream_selector_sheet.dart#L73) | extends State<StreamSelectorSheet> | Shared | its own file |  |
-| `StreamSource` | Model | [`stream_source.dart:47`](../../lib/src/models/stream_source.dart#L47) |  | Shared | 14 lib files, 12 test files |  |
+| `StreamSource` | Model | [`stream_source.dart:47`](../../lib/src/models/stream_source.dart#L47) |  | Shared | 14 lib files, 13 test files |  |
 | `StreamType` | Enum | [`stream_type.dart:1`](../../lib/src/models/stream_type.dart#L1) |  | Shared | 5 lib files, 4 test files |  |
 | `StreamTypeDetection` | Extension | [`stream_type.dart:3`](../../lib/src/models/stream_type.dart#L3) | on StreamType | Shared | 1 lib file |  |
 | `StreamValidator` | Service type | [`stream_validator.dart:5`](../../lib/src/services/stream_validator.dart#L5) |  | Shared | 2 lib files | Cheap source checks before native player open. |
@@ -525,8 +525,8 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `_TopTenCarousel` | Widget | [`desktop_top_ten.dart:106`](../../lib/src/desktop/desktop_top_ten.dart#L106) | extends StatefulWidget | Windows | its own file |  |
 | `_TopTenCarouselState` | Widget state | [`desktop_top_ten.dart:125`](../../lib/src/desktop/desktop_top_ten.dart#L125) | extends State<_TopTenCarousel> | Windows | its own file |  |
 | `_TopTenSkeleton` | Widget | [`desktop_top_ten.dart:427`](../../lib/src/desktop/desktop_top_ten.dart#L427) | extends StatelessWidget | Windows | its own file | The first load: dim ranked placeholders in the row's real layout, so the page does not jump when the titles arrive. |
-| `TorrentSourcePreparer` | Service type | [`torrent_source_preparer.dart:34`](../../lib/src/services/torrent_source_preparer.dart#L34) |  | Shared | 1 lib file, 1 test file | Turns a torrent source into a playable loopback stream: validates its info hash and trackers, starts a streaming session, waits for the torrent's metadata and selects the video file to play. |
-| `TorrentSupport` | Service type | [`torrent_source_preparer.dart:20`](../../lib/src/services/torrent_source_preparer.dart#L20) |  | Shared | 4 lib files | Whether torrent playback can work in this app process. |
+| `TorrentSourcePreparer` | Service type | [`torrent_source_preparer.dart:41`](../../lib/src/services/torrent_source_preparer.dart#L41) |  | Shared | 1 lib file, 1 test file | Turns a torrent source into a playable loopback stream: validates its info hash and trackers, starts a streaming session, waits for the torrent's metadata and selects the video file to play. |
+| `TorrentSupport` | Service type | [`torrent_source_preparer.dart:24`](../../lib/src/services/torrent_source_preparer.dart#L24) |  | Shared | 4 lib files, 2 test files | Whether torrent playback can work in this app process. |
 | `_TrailingProgress` | Widget | [`tv_browse.dart:603`](../../lib/src/screens/tv/tv_browse.dart#L603) | extends StatelessWidget | Android TV | its own file |  |
 | `_TrailingRetry` | Widget | [`tv_browse.dart:621`](../../lib/src/screens/tv/tv_browse.dart#L621) | extends StatelessWidget | Android TV | its own file |  |
 | `TvBrowseFrame` | Widget | [`tv_browse.dart:42`](../../lib/src/screens/tv/tv_browse.dart#L42) | extends StatelessWidget | Android TV | 1 lib file, 1 test file | A browse page: the featured title's backdrop fills the upper right, fading into the background; its details sit at the top left; `child` (rows or a grid) fills the rest. |
