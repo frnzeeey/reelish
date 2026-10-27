@@ -20,6 +20,7 @@ import 'package:onfeed/src/screens/player_screen.dart';
 import 'package:onfeed/src/services/playback_settings_controller.dart';
 import 'package:onfeed/src/services/storage_service.dart';
 import 'package:onfeed/src/theme/glass_theme.dart';
+import 'package:onfeed/src/widgets/player/player_volume_control.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:video_player/video_player.dart';
 
@@ -357,6 +358,156 @@ void main() {
       );
       expect(controller()!.value.volume, 0, reason: 'still muted');
       await mouse.removePointer();
+    },
+    timeout: const Timeout(Duration(minutes: 2)),
+  );
+
+  testWidgets(
+    'desktop player: the volume control sets the engine volume without '
+    'disturbing playback, and the next video opens at it',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final files = await tester.runAsync(
+        () => Directory.systemTemp.createTemp('reelish-player-volume-ui-'),
+      );
+      final storage = StorageService(filesDirectory: () async => files!);
+      await tester.runAsync(DeviceCapabilities.load);
+      final settings = PlaybackSettingsController(storage: storage);
+      Widget player(String id) => MaterialApp(
+        theme: GlassTheme.tv,
+        home: PlayerScreen(
+          key: ValueKey(id),
+          item: MediaItem(id: id, type: 'movie', name: 'Clip $id'),
+          source: const StreamSource(name: 'Test clip', url: _clip),
+          sources: const [StreamSource(name: 'Test clip', url: _clip)],
+          storage: storage,
+          playbackSettings: settings,
+        ),
+      );
+
+      VideoPlayerController? controller() {
+        final players = find.byType(VideoPlayer);
+        return players.evaluate().isEmpty
+            ? null
+            : tester.widget<VideoPlayer>(players.first).controller;
+      }
+
+      Future<void> wait(int milliseconds) => tester.runAsync(
+        () => Future<void>.delayed(Duration(milliseconds: milliseconds)),
+      );
+
+      Future<void> until(bool Function() condition, String what) async {
+        final deadline = DateTime.now().add(const Duration(seconds: 40));
+        while (!condition()) {
+          if (DateTime.now().isAfter(deadline)) {
+            fail('Timed out waiting: $what');
+          }
+          await wait(100);
+          await tester.pump();
+        }
+      }
+
+      await tester.pumpWidget(player('10378'));
+      await until(
+        () => controller()?.value.isPlaying ?? false,
+        'playback to start',
+      );
+      final playing = controller();
+      expect(playing!.value.volume, 1);
+
+      // The pointer over the speaker shows the controls and opens the slider.
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await mouse.addPointer(location: const Offset(400, 300));
+      await mouse.moveTo(const Offset(420, 320));
+      await until(
+        () => find.bySemanticsLabel('Mute (M)').evaluate().isNotEmpty,
+        'the volume control',
+      );
+      await mouse.moveTo(tester.getCenter(find.bySemanticsLabel('Mute (M)')));
+      await until(
+        () => find.text('100%').evaluate().isNotEmpty,
+        'the volume slider to open',
+      );
+      await wait(400);
+
+      // Dragging the slider to about half: the engine follows, and playback
+      // goes on in the same player from where it was.
+      final before = playing.value.position;
+      final slider = find.byType(Slider);
+      // From the thumb at the right end (100%), left by a third of the
+      // track; a press in the middle would jump straight to 50%.
+      final width = tester.getSize(slider).width;
+      await tester.dragFrom(
+        tester.getCenter(slider) + Offset(width / 2 - 16, 0),
+        Offset(-width / 3, 0),
+        kind: PointerDeviceKind.mouse,
+      );
+      await until(
+        () => playing.value.volume < .8 && playing.value.volume > .2,
+        'the slider to lower the engine volume',
+      );
+      final level = playing.value.volume;
+      await wait(600);
+      expect(identical(controller(), playing), isTrue, reason: 'same player');
+      expect(playing.value.isPlaying, isTrue);
+      expect(
+        playing.value.position,
+        greaterThanOrEqualTo(before),
+        reason: 'no restart',
+      );
+
+      // The speaker mutes, and unmuting returns to the slider's level.
+      // A click with the mouse, after a nudge that brings the controls back
+      // (they hide a few seconds after the pointer stops).
+      Future<void> clickSpeaker() async {
+        await mouse.moveTo(const Offset(430, 330));
+        await mouse.moveTo(const Offset(420, 320));
+        // The speaker icon itself: with the slider open, the label's widget
+        // spans the whole control.
+        final speaker = find.byIcon(
+          PlayerVolumeControl.iconFor(playing.value.volume),
+        );
+        await until(
+          () => speaker.evaluate().isNotEmpty,
+          'the controls to come back',
+        );
+        await wait(400);
+        await tester.pump();
+        final at = tester.getCenter(speaker);
+        await mouse.moveTo(at);
+        await wait(200);
+        await tester.pump();
+        await mouse.down(at);
+        await mouse.up();
+      }
+
+      await clickSpeaker();
+      await until(() => playing.value.volume == 0, 'the speaker to mute');
+      await clickSpeaker();
+      await until(
+        () => (playing.value.volume - level).abs() < .001,
+        'unmute to restore the level',
+      );
+
+      // Saved once it settles, and the next video opens at it.
+      await until(
+        () => (settings.value.desktopVolume - level).abs() < .001,
+        'the level to be saved',
+      );
+      await mouse.removePointer();
+      await tester.pumpWidget(player('10379'));
+      await until(
+        () =>
+            controller() != null &&
+            !identical(controller(), playing) &&
+            controller()!.value.isPlaying,
+        'the next video to play',
+      );
+      expect(
+        controller()!.value.volume,
+        closeTo(level, .001),
+        reason: 'the remembered level',
+      );
     },
     timeout: const Timeout(Duration(minutes: 2)),
   );

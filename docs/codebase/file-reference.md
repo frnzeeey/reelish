@@ -27,7 +27,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/models/media_details.dart`](#libsrcmodelsmedia_detailsdart) | Shared | 79 | TMDB details for one title (overview, genres, runtime, cast) as shown on details pages and the pause screen. |
 | [`lib/src/models/media_item.dart`](#libsrcmodelsmedia_itemdart) | Shared | 182 | A movie or series as Reelish passes it around: TMDB ids and artwork, catalog metadata, and the resume position and length saved with watch history; JSON for storage. |
 | [`lib/src/models/playable_source.dart`](#libsrcmodelsplayable_sourcedart) | Shared | 18 | Fully prepared input for an engine. |
-| [`lib/src/models/playback_settings.dart`](#libsrcmodelsplayback_settingsdart) | Shared | 286 | The viewer's playback preferences (sources, providers, P2P, subtitles, gestures and more) with defaults and JSON for storage. |
+| [`lib/src/models/playback_settings.dart`](#libsrcmodelsplayback_settingsdart) | Shared | 303 | The viewer's playback preferences (sources, providers, P2P, subtitles, gestures and more) with defaults and JSON for storage. |
 | [`lib/src/models/plugin_catalog.dart`](#libsrcmodelsplugin_catalogdart) | Shared | 242 | The community plugin catalog shown in the Plugin Library. |
 | [`lib/src/models/provider_plugin.dart`](#libsrcmodelsprovider_plugindart) | Shared | 63 | A provider plugin and the repository (manifest) it was installed from. |
 | [`lib/src/models/resume_summary.dart`](#libsrcmodelsresume_summarydart) | Shared | 61 | What a Continue Watching card shows for a watch-history entry: real progress, never an estimate. |
@@ -108,18 +108,19 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/widgets/liquid_glass.dart`](#libsrcwidgetsliquid_glassdart) | Shared | 568 | A bounded, reusable glass surface. |
 | [`lib/src/widgets/media_card.dart`](#libsrcwidgetsmedia_carddart) | Shared | 370 | The phone poster card, with favourite toggle and resume progress. |
 | [`lib/src/widgets/player/audio_track_sheet.dart`](#libsrcwidgetsplayeraudio_track_sheetdart) | Shared | 53 | Picks an audio track. |
-| [`lib/src/widgets/player/custom_video_player.dart`](#libsrcwidgetsplayercustom_video_playerdart) | Shared | 3321 | The player session for every platform: engine and source attempts, controls, subtitles, audio and video tracks, resume and progress saving, and episode switching. |
+| [`lib/src/widgets/player/custom_video_player.dart`](#libsrcwidgetsplayercustom_video_playerdart) | Shared | 3396 | The player session for every platform: engine and source attempts, controls, subtitles, audio and video tracks, resume and progress saving, and episode switching. |
 | [`lib/src/widgets/player/episode_panel.dart`](#libsrcwidgetsplayerepisode_paneldart) | Shared | 840 | Lists a series' episodes by season, with thumbnails, runtimes, synopses and the viewer's progress. |
 | [`lib/src/widgets/player/external_cue_clock.dart`](#libsrcwidgetsplayerexternal_cue_clockdart) | Shared | 199 | The text of the downloaded subtitle cue that should be on screen, kept in step with the player's own clock. |
 | [`lib/src/widgets/player/gesture_touch_layer.dart`](#libsrcwidgetsplayergesture_touch_layerdart) | Shared | 100 | Touch handling for the video area. |
 | [`lib/src/widgets/player/paused_overlay.dart`](#libsrcwidgetsplayerpaused_overlaydart) | Shared | 828 | The pause screen: the title's artwork and details with a large play button. |
-| [`lib/src/widgets/player/player_controls.dart`](#libsrcwidgetsplayerplayer_controlsdart) | Shared | 1375 | The controls drawn over the video: bars, buttons, seek feedback, buffering, errors and the next-episode card. |
+| [`lib/src/widgets/player/player_controls.dart`](#libsrcwidgetsplayerplayer_controlsdart) | Shared | 1407 | The controls drawn over the video: bars, buttons, seek feedback, buffering, errors and the next-episode card. |
 | [`lib/src/widgets/player/player_lock_overlay.dart`](#libsrcwidgetsplayerplayer_lock_overlaydart) | Shared | 209 | Covers the whole player while controls are locked. |
 | [`lib/src/widgets/player/player_marquee_text.dart`](#libsrcwidgetsplayerplayer_marquee_textdart) | Shared | 144 | Single-line text that slowly scrolls when it does not fit: a pause, a scroll to the end, another pause, then it starts over. |
 | [`lib/src/widgets/player/player_pip.dart`](#libsrcwidgetsplayerplayer_pipdart) | Shared | 86 | Picture in picture on Android, through the `onfeed/player` channel: the active player reports its state, so leaving the app continues its video in a small window with a play/pause button, and hears when that window opens and closes. |
 | [`lib/src/widgets/player/player_progress_bar.dart`](#libsrcwidgetsplayerplayer_progress_bardart) | Shared | 359 | Reelish's seek bar: thin while idle, emphasized while scrubbing, with a time bubble above the thumb. |
 | [`lib/src/widgets/player/player_settings_sheet.dart`](#libsrcwidgetsplayerplayer_settings_sheetdart) | Shared | 291 | The in-player settings sheet (speed, fit, tracks, subtitle delay) and the choices it returns. |
 | [`lib/src/widgets/player/player_sheet.dart`](#libsrcwidgetsplayerplayer_sheetdart) | Shared | 198 | The shared frame and option rows for the player's selection sheets. |
+| [`lib/src/widgets/player/player_volume_control.dart`](#libsrcwidgetsplayerplayer_volume_controldart) | Shared | 164 | The Windows player's volume: a speaker button that mutes and unmutes, and a slider with the level that slides out while the pointer is over the control or keyboard focus is inside it. |
 | [`lib/src/widgets/player/stall_watchdog.dart`](#libsrcwidgetsplayerstall_watchdogdart) | Shared | 47 | Notices playback that is stuck: playing, buffering, and not moving for `limit`. |
 | [`lib/src/widgets/player/stream_selector_sheet.dart`](#libsrcwidgetsplayerstream_selector_sheetdart) | Shared | 138 | Lists playable sources. |
 | [`lib/src/widgets/player/subtitle_picker_sheet.dart`](#libsrcwidgetsplayersubtitle_picker_sheetdart) | Shared | 265 | The subtitle menu: Off, then subtitles in the video, from the provider, and from OpenSubtitles. |
@@ -446,7 +447,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/models/playback_settings.dart
 
-**Source:** [`lib/src/models/playback_settings.dart`](../../lib/src/models/playback_settings.dart) · **Platform:** Shared · **Lines:** 286
+**Source:** [`lib/src/models/playback_settings.dart`](../../lib/src/models/playback_settings.dart) · **Platform:** Shared · **Lines:** 303
 
 **Purpose:** The viewer's playback preferences (sources, providers, P2P, subtitles, gestures and more) with defaults and JSON for storage.
 
@@ -1504,7 +1505,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Packages:** `flutter`
 
-**Imported by:** `src/desktop/desktop_plugins_page.dart`, `src/desktop/desktop_settings_page.dart`, `src/desktop/desktop_widgets.dart`, `src/screens/playback_settings_screen.dart`, `src/screens/plugin_details_screen.dart`, `src/screens/plugin_library_screen.dart`, `src/screens/plugins_screen.dart`, `src/screens/subtitle_addons_screen.dart`, `src/screens/tv/tv_details_screen.dart`, `src/widgets/media_card.dart`, `src/widgets/plugin_library/copy_manifest_button.dart`, `src/widgets/plugin_library/plugin_badges.dart`, `src/widgets/plugin_library/plugin_card.dart`, `src/widgets/plugin_library/plugin_filter_bar.dart`, `src/widgets/plugin_library/plugin_install_button.dart`, `src/widgets/plugin_library/plugin_library_notices.dart`, `src/widgets/plugin_library/plugin_logo.dart`, `src/widgets/plugin_library/plugin_scraper_tile.dart`, `src/widgets/plugin_library/plugin_search_bar.dart`, `src/widgets/plugin_library/plugin_skeleton.dart`, `src/widgets/plugin_library/plugin_stats.dart`, `src/widgets/settings/settings_components.dart`, `src/widgets/settings/tmdb_attribution.dart`
+**Imported by:** `src/desktop/desktop_plugins_page.dart`, `src/desktop/desktop_settings_page.dart`, `src/desktop/desktop_widgets.dart`, `src/screens/playback_settings_screen.dart`, `src/screens/plugin_details_screen.dart`, `src/screens/plugin_library_screen.dart`, `src/screens/plugins_screen.dart`, `src/screens/subtitle_addons_screen.dart`, `src/screens/tv/tv_details_screen.dart`, `src/widgets/media_card.dart`, `src/widgets/player/player_volume_control.dart`, `src/widgets/plugin_library/copy_manifest_button.dart`, `src/widgets/plugin_library/plugin_badges.dart`, `src/widgets/plugin_library/plugin_card.dart`, `src/widgets/plugin_library/plugin_filter_bar.dart`, `src/widgets/plugin_library/plugin_install_button.dart`, `src/widgets/plugin_library/plugin_library_notices.dart`, `src/widgets/plugin_library/plugin_logo.dart`, `src/widgets/plugin_library/plugin_scraper_tile.dart`, `src/widgets/plugin_library/plugin_search_bar.dart`, `src/widgets/plugin_library/plugin_skeleton.dart`, `src/widgets/plugin_library/plugin_stats.dart`, `src/widgets/settings/settings_components.dart`, `src/widgets/settings/tmdb_attribution.dart`
 
 **Tests importing it:** none directly (it may be covered through the files that import it)
 
@@ -1520,7 +1521,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Packages:** `flutter`
 
-**Imported by:** `main.dart`, `src/desktop/desktop_details_screen.dart`, `src/desktop/desktop_hero.dart`, `src/desktop/desktop_pages.dart`, `src/desktop/desktop_plugins_page.dart`, `src/desktop/desktop_provider_search.dart`, `src/desktop/desktop_settings_page.dart`, `src/desktop/desktop_shell.dart`, `src/desktop/desktop_top_ten.dart`, `src/desktop/desktop_update_dialogs.dart`, `src/desktop/desktop_update_section.dart`, `src/desktop/desktop_widgets.dart`, `src/screens/app_information_screens.dart`, `src/screens/credits_screen.dart`, `src/screens/first_run_consent_screen.dart`, `src/screens/home_screen.dart`, `src/screens/library_screen.dart`, `src/screens/media_details_screen.dart`, `src/screens/playback_settings_screen.dart`, `src/screens/plugin_details_screen.dart`, `src/screens/plugin_library_screen.dart`, `src/screens/plugins_screen.dart`, `src/screens/splash_screen.dart`, `src/screens/subtitle_addons_screen.dart`, `src/screens/tv/tv_browse.dart`, `src/screens/tv/tv_details_screen.dart`, `src/screens/tv/tv_home_shell.dart`, `src/screens/tv/tv_pages.dart`, `src/services/accent_settings_controller.dart`, `src/widgets/category_chip.dart`, `src/widgets/liquid_glass.dart`, `src/widgets/media_card.dart`, `src/widgets/player/episode_panel.dart`, `src/widgets/player/paused_overlay.dart`, `src/widgets/player/player_controls.dart`, `src/widgets/player/player_progress_bar.dart`, `src/widgets/player/player_sheet.dart`, `src/widgets/player/subtitle_picker_sheet.dart`, `src/widgets/plugin_library/copy_manifest_button.dart`, `src/widgets/plugin_library/plugin_badges.dart`, `src/widgets/plugin_library/plugin_card.dart`, `src/widgets/plugin_library/plugin_filter_bar.dart`, `src/widgets/plugin_library/plugin_install_button.dart`, `src/widgets/plugin_library/plugin_library_notices.dart`, `src/widgets/plugin_library/plugin_logo.dart`, `src/widgets/plugin_library/plugin_scraper_tile.dart`, `src/widgets/plugin_library/plugin_search_bar.dart`, `src/widgets/plugin_library/plugin_skeleton.dart`, `src/widgets/plugin_library/plugin_stats.dart`, `src/widgets/poster_image.dart`, `src/widgets/provider_installer_modal.dart`, `src/widgets/provider_search_dialog.dart`, `src/widgets/settings/settings_components.dart`, `src/widgets/settings/tmdb_attribution.dart`, `src/widgets/soft_glass_dock.dart`, `src/widgets/tv/tv_focus.dart`, `src/widgets/tv/tv_poster_card.dart`, `src/widgets/update_dialog.dart`
+**Imported by:** `main.dart`, `src/desktop/desktop_details_screen.dart`, `src/desktop/desktop_hero.dart`, `src/desktop/desktop_pages.dart`, `src/desktop/desktop_plugins_page.dart`, `src/desktop/desktop_provider_search.dart`, `src/desktop/desktop_settings_page.dart`, `src/desktop/desktop_shell.dart`, `src/desktop/desktop_top_ten.dart`, `src/desktop/desktop_update_dialogs.dart`, `src/desktop/desktop_update_section.dart`, `src/desktop/desktop_widgets.dart`, `src/screens/app_information_screens.dart`, `src/screens/credits_screen.dart`, `src/screens/first_run_consent_screen.dart`, `src/screens/home_screen.dart`, `src/screens/library_screen.dart`, `src/screens/media_details_screen.dart`, `src/screens/playback_settings_screen.dart`, `src/screens/plugin_details_screen.dart`, `src/screens/plugin_library_screen.dart`, `src/screens/plugins_screen.dart`, `src/screens/splash_screen.dart`, `src/screens/subtitle_addons_screen.dart`, `src/screens/tv/tv_browse.dart`, `src/screens/tv/tv_details_screen.dart`, `src/screens/tv/tv_home_shell.dart`, `src/screens/tv/tv_pages.dart`, `src/services/accent_settings_controller.dart`, `src/widgets/category_chip.dart`, `src/widgets/liquid_glass.dart`, `src/widgets/media_card.dart`, `src/widgets/player/episode_panel.dart`, `src/widgets/player/paused_overlay.dart`, `src/widgets/player/player_controls.dart`, `src/widgets/player/player_progress_bar.dart`, `src/widgets/player/player_sheet.dart`, `src/widgets/player/player_volume_control.dart`, `src/widgets/player/subtitle_picker_sheet.dart`, `src/widgets/plugin_library/copy_manifest_button.dart`, `src/widgets/plugin_library/plugin_badges.dart`, `src/widgets/plugin_library/plugin_card.dart`, `src/widgets/plugin_library/plugin_filter_bar.dart`, `src/widgets/plugin_library/plugin_install_button.dart`, `src/widgets/plugin_library/plugin_library_notices.dart`, `src/widgets/plugin_library/plugin_logo.dart`, `src/widgets/plugin_library/plugin_scraper_tile.dart`, `src/widgets/plugin_library/plugin_search_bar.dart`, `src/widgets/plugin_library/plugin_skeleton.dart`, `src/widgets/plugin_library/plugin_stats.dart`, `src/widgets/poster_image.dart`, `src/widgets/provider_installer_modal.dart`, `src/widgets/provider_search_dialog.dart`, `src/widgets/settings/settings_components.dart`, `src/widgets/settings/tmdb_attribution.dart`, `src/widgets/soft_glass_dock.dart`, `src/widgets/tv/tv_focus.dart`, `src/widgets/tv/tv_poster_card.dart`, `src/widgets/update_dialog.dart`
 
 **Tests importing it:** `integration_test/windows_player_ui_test.dart`, `integration_test/windows_soak_test.dart`, `integration_test/windows_torrent_test.dart`, `test/desktop_gamepad_test.dart`, `test/desktop_redesign_test.dart`, `test/desktop_remove_favorites_test.dart`, `test/desktop_settings_plugins_test.dart`, `test/desktop_top_ten_test.dart`, `test/desktop_ui_test.dart`, `test/details_screens_test.dart`, `test/plugin_library_test.dart`, `test/search_library_screens_test.dart`, `test/soft_glass_dock_test.dart`, `test/tv_home_test.dart`, `test/tv_layout_test.dart`, `test/tv_meta_line_test.dart`, `test/tv_support_test.dart`
 
@@ -1718,7 +1719,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/widgets/player/custom_video_player.dart
 
-**Source:** [`lib/src/widgets/player/custom_video_player.dart`](../../lib/src/widgets/player/custom_video_player.dart) · **Platform:** Shared · **Lines:** 3321 · **Branches on:** isTv, isDesktop, usesTvLayout, TargetPlatform.windows, TargetPlatform.android, TorrentSupport
+**Source:** [`lib/src/widgets/player/custom_video_player.dart`](../../lib/src/widgets/player/custom_video_player.dart) · **Platform:** Shared · **Lines:** 3396 · **Branches on:** isTv, isDesktop, usesTvLayout, TargetPlatform.windows, TargetPlatform.android, TorrentSupport
 
 **Purpose:** The player session for every platform: engine and source attempts, controls, subtitles, audio and video tracks, resume and progress saving, and episode switching.
 
@@ -1802,17 +1803,17 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/widgets/player/player_controls.dart
 
-**Source:** [`lib/src/widgets/player/player_controls.dart`](../../lib/src/widgets/player/player_controls.dart) · **Platform:** Shared · **Lines:** 1375 · **Branches on:** isTv
+**Source:** [`lib/src/widgets/player/player_controls.dart`](../../lib/src/widgets/player/player_controls.dart) · **Platform:** Shared · **Lines:** 1407 · **Branches on:** isTv
 
 **Purpose:** The controls drawn over the video: bars, buttons, seek feedback, buffering, errors and the next-episode card.
 
 **Declares:** `_BottomBar` (Widget), `_CenterControls` (Widget), `_EdgeGradient` (Widget), `_HiddenDuringPauseScreen` (Widget), `NextEpisodeCard` (Widget), `_PillButton` (Widget), `_PlayButton` (Widget), `PlayerBufferingIndicator` (Widget), `_PlayerBufferingIndicatorState` (Widget state), `PlayerControlsLayout` (Class), `PlayerControlsOverlay` (Widget), `PlayerErrorPanel` (Widget), `PlayerIconButton` (Widget), `PlayerSeekFeedback` (Widget), `_PlayerSeekFeedbackState` (Widget state), `PlayerStatusView` (Widget), `_SeekButton` (Widget), `SeekFlash` (Class), `_TimeLabel` (Widget), `_TimeLabelState` (Widget state), `_TopBar` (Widget)
 
-**Imports (project):** `src/platform/device_capabilities.dart`, `src/theme/glass_theme.dart`, `src/widgets/player/player_marquee_text.dart`, `src/widgets/player/player_progress_bar.dart`
+**Imports (project):** `src/platform/device_capabilities.dart`, `src/theme/glass_theme.dart`, `src/widgets/player/player_marquee_text.dart`, `src/widgets/player/player_progress_bar.dart`, `src/widgets/player/player_volume_control.dart`
 
 **Packages:** `flutter`, `material_symbols_icons`, `video_player`
 
-**Imported by:** `src/widgets/player/custom_video_player.dart`, `src/widgets/player/paused_overlay.dart`, `src/widgets/player/player_lock_overlay.dart`
+**Imported by:** `src/widgets/player/custom_video_player.dart`, `src/widgets/player/paused_overlay.dart`, `src/widgets/player/player_lock_overlay.dart`, `src/widgets/player/player_volume_control.dart`
 
 **Tests importing it:** `integration_test/player_long_session_test.dart`, `test/episode_selection_test.dart`, `test/paused_overlay_test.dart`, `test/player_ui_test.dart`, `test/tv_support_test.dart`
 
@@ -1913,6 +1914,22 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 **Imported by:** `src/widgets/player/audio_track_sheet.dart`, `src/widgets/player/stream_selector_sheet.dart`, `src/widgets/player/subtitle_picker_sheet.dart`
 
 **Tests importing it:** none directly (it may be covered through the files that import it)
+
+## lib/src/widgets/player/player_volume_control.dart
+
+**Source:** [`lib/src/widgets/player/player_volume_control.dart`](../../lib/src/widgets/player/player_volume_control.dart) · **Platform:** Shared · **Lines:** 164
+
+**Purpose:** The Windows player's volume: a speaker button that mutes and unmutes, and a slider with the level that slides out while the pointer is over the control or keyboard focus is inside it.
+
+**Declares:** `PlayerVolumeControl` (Widget), `_PlayerVolumeControlState` (Widget state)
+
+**Imports (project):** `src/theme/design_tokens.dart`, `src/theme/glass_theme.dart`, `src/widgets/player/player_controls.dart`
+
+**Packages:** `flutter`, `material_symbols_icons`
+
+**Imported by:** `src/widgets/player/player_controls.dart`
+
+**Tests importing it:** `integration_test/windows_player_ui_test.dart`, `test/player_ui_test.dart`
 
 ## lib/src/widgets/player/stall_watchdog.dart
 

@@ -1,4 +1,8 @@
-# Reelish — engineering rules for AI agents
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Reelish — engineering rules for AI agents
 
 Reelish (package `onfeed`) is a Flutter app for discovering movies and series
 (TMDB metadata) and playing them through user-installed third-party provider
@@ -54,6 +58,31 @@ the interface once per launch:
    cleanup (including repo-wide `dart format`) without approval. Match the
    surrounding style and comment density.
 8. **Commit, push, tag or release only when asked.**
+
+## Commands
+
+Setup needs the gitignored `lib/tmdb_config.local.dart`
+(`const tmdbApiKey = '...';`); if it is missing, ask rather than create it.
+
+```sh
+flutter pub get
+flutter run -d windows                              # Windows interface
+flutter run --dart-define=REELISH_FORCE_TV=true     # TV interface on any device
+flutter test test/<name>_test.dart                  # one test file
+flutter test test/<name>_test.dart --plain-name "<test name>"   # one test
+flutter test integration_test/<name>_test.dart -d <device>      # one file per run
+flutter drive --profile -d <device> --driver=test_driver/integration_test.dart \
+  --target=integration_test/ui_perf_test.dart       # frame timings
+dart run tool/generate_plugin_catalog.dart          # regenerate assets/data/plugins.json
+```
+
+`test/flutter_test_config.dart` preloads
+`third_party/flutter_js/windows/shared/quickjs_c_bridge.dll` so provider
+tests can start QuickJS under `flutter test` on Windows. Native code lives
+in vendored packages: `packages/video_player_media_kit` (libmpv bridge),
+`packages/flutter_go_torrent_streamer` (Go torrent engine) and
+`third_party/flutter_js` (QuickJS). Releases are built only by CI from a
+version tag (`.github/workflows/`, `docs/releasing.md`).
 
 ## Validation expectations
 

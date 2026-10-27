@@ -4,12 +4,14 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:onfeed/src/models/stream_source.dart';
 import 'package:onfeed/src/widgets/player/gesture_touch_layer.dart';
 import 'package:onfeed/src/widgets/player/player_controls.dart';
 import 'package:onfeed/src/widgets/player/player_lock_overlay.dart';
 import 'package:onfeed/src/widgets/player/player_marquee_text.dart';
 import 'package:onfeed/src/widgets/player/player_progress_bar.dart';
+import 'package:onfeed/src/widgets/player/player_volume_control.dart';
 import 'package:onfeed/src/widgets/player/stream_selector_sheet.dart';
 import 'package:video_player/video_player.dart';
 
@@ -736,5 +738,152 @@ void main() {
     await tester.pumpWidget(overlay(onLock: () => locks++));
     await tester.tap(find.bySemanticsLabel('Lock controls'));
     expect(locks, 1);
+  });
+
+  group('desktop volume control', () {
+    late ValueNotifier<double> volume;
+    late List<(double, bool)> changes;
+    late int mutes;
+
+    setUp(() {
+      volume = ValueNotifier(.6);
+      changes = [];
+      mutes = 0;
+    });
+    tearDown(() => volume.dispose());
+
+    Widget overlay(
+      VideoPlayerController controller, {
+      bool withVolume = true,
+    }) => _app(
+      PlayerControlsOverlay(
+        controller: controller,
+        title: 'Title',
+        subtitle: '',
+        sourceLabel: '',
+        subtitleEnabled: false,
+        showAudio: false,
+        showSources: false,
+        landscapeLocked: false,
+        onBack: () {},
+        onTogglePlay: () {},
+        onSeekBy: (_) {},
+        onSeekTo: (_) {},
+        onScrubChanged: (_) {},
+        onSubtitles: () {},
+        onAudio: () {},
+        onSources: () {},
+        onSettings: () {},
+        onPip: null,
+        onRotate: null,
+        onFullscreen: () {},
+        volume: withVolume ? volume : null,
+        onVolumeChanged: withVolume
+            ? (value, {required commit}) {
+                changes.add((value, commit));
+                volume.value = value;
+              }
+            : null,
+        onToggleMute: withVolume
+            ? () {
+                mutes++;
+                volume.value = volume.value > 0 ? 0 : .6;
+              }
+            : null,
+      ),
+    );
+
+    Future<VideoPlayerController> pump(
+      WidgetTester tester, {
+      bool withVolume = true,
+    }) async {
+      tester.view.physicalSize = const Size(1600, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final controller = _controller();
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(overlay(controller, withVolume: withVolume));
+      return controller;
+    }
+
+    testWidgets('only shows where the player passes a volume (Windows)', (
+      tester,
+    ) async {
+      await pump(tester, withVolume: false);
+      expect(find.byType(PlayerVolumeControl), findsNothing);
+      expect(find.bySemanticsLabel('Mute (M)'), findsNothing);
+    });
+
+    testWidgets('the speaker mutes and unmutes, and its icon follows', (
+      tester,
+    ) async {
+      await pump(tester);
+      expect(find.byIcon(PlayerVolumeControl.iconFor(.6)), findsOneWidget);
+      await tester.tap(find.bySemanticsLabel('Mute (M)'));
+      await tester.pump();
+      expect(mutes, 1);
+      expect(find.bySemanticsLabel('Unmute (M)'), findsOneWidget);
+      expect(find.byIcon(PlayerVolumeControl.iconFor(0)), findsOneWidget);
+      await tester.tap(find.bySemanticsLabel('Unmute (M)'));
+      await tester.pump();
+      expect(find.bySemanticsLabel('Mute (M)'), findsOneWidget);
+    });
+
+    testWidgets('hovering opens the slider; dragging reports steps, and the '
+        'release commits', (tester) async {
+      await pump(tester);
+      final control = find.byType(PlayerVolumeControl);
+      final closed = tester.getSize(control).width;
+      final speakerAt = tester.getCenter(
+        find.byIcon(PlayerVolumeControl.iconFor(.6)),
+      );
+
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      addTearDown(mouse.removePointer);
+      await mouse.addPointer(
+        location: tester.getCenter(find.bySemanticsLabel('Mute (M)')),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.getSize(control).width, greaterThan(closed + 100));
+      // The slider opens to the left: the speaker stays under the pointer.
+      expect(
+        tester.getCenter(find.byIcon(PlayerVolumeControl.iconFor(.6))),
+        speakerAt,
+      );
+      expect(find.text('60%'), findsOneWidget);
+
+      final slider = find.byType(Slider);
+      await tester.drag(slider, const Offset(-200, 0));
+      await tester.pumpAndSettle();
+      expect(changes.where((change) => !change.$2), isNotEmpty);
+      expect(changes.last.$2, isTrue, reason: 'the release is committed');
+      expect(changes.last.$1, 0);
+      expect(find.text('0%'), findsOneWidget);
+      expect(find.bySemanticsLabel('Unmute (M)'), findsOneWidget);
+    });
+
+    testWidgets('keyboard focus opens the slider too', (tester) async {
+      await pump(tester);
+      final control = find.byType(PlayerVolumeControl);
+      final closed = tester.getSize(control).width;
+      // Tab reaches the volume control (its speaker, then the slider).
+      for (var i = 0; i < 30; i++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pumpAndSettle();
+        final focused = FocusManager.instance.primaryFocus?.context;
+        if (focused?.findAncestorWidgetOfExactType<PlayerVolumeControl>() !=
+            null) {
+          break;
+        }
+      }
+      expect(tester.getSize(control).width, greaterThan(closed + 100));
+    });
+
+    test('icons by level', () {
+      expect(PlayerVolumeControl.iconFor(0), Symbols.volume_off_rounded);
+      expect(PlayerVolumeControl.iconFor(.2), Symbols.volume_mute_rounded);
+      expect(PlayerVolumeControl.iconFor(.5), Symbols.volume_down_rounded);
+      expect(PlayerVolumeControl.iconFor(1), Symbols.volume_up_rounded);
+    });
   });
 }

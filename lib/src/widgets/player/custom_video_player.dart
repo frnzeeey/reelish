@@ -222,7 +222,14 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
   /// label and still offers the next episode.
   EpisodeContext? _episodes;
   bool _episodesResolved = false;
-  double _volume = 1, _brightness = 1;
+  double _brightness = 1;
+
+  /// The player's own volume, 0–1 (0 is muted): the engine's level, not the
+  /// system volume. A notifier, so the Windows volume control redraws alone
+  /// while the slider moves.
+  final _volumeLevel = ValueNotifier<double>(1);
+  double get _volume => _volumeLevel.value;
+  set _volume(double value) => _volumeLevel.value = value;
   BoxFit _fit = BoxFit.contain;
   double _ratio = 0;
   late double _speed;
@@ -366,6 +373,12 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
     _playback = widget.playbackSettings.value;
     _speed = _playback.defaultPlaybackSpeed;
     _subtitlePosition = ValueNotifier(_playback.subtitlePosition);
+    // Windows remembers its player volume between videos; the first player
+    // is opened at it (see the carry-over in _open).
+    if (_desktop && _playback.desktopVolume > 0) {
+      _volume = _playback.desktopVolume;
+      _volumeBeforeMute = _volume;
+    }
     _controlsVisible.addListener(_syncControlsShown);
     _locked.addListener(_syncControlsShown);
     widget.playbackSettings.addListener(_onPlaybackSettingsChanged);
@@ -597,10 +610,11 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
           // Playback at normal speed can proceed if the backend is slow here.
         }
       }
-      // Desktop volume and mute belong to the session: a reconnect, another
-      // source or stall recovery must not start the new player at full
-      // volume. Set before play, so it never starts loud.
-      if (_desktop && _volume != 1) {
+      // Volume and mute belong to the session: a reconnect, another source
+      // or stall recovery must not start the new player at full volume (on
+      // a phone, after the swipe lowered it; the slider would then jump).
+      // Set before play, so it never starts loud. TV never changes it.
+      if (_volume != 1) {
         try {
           await c.setVolume(_volume).timeout(const Duration(seconds: 2));
         } catch (_) {
@@ -2110,9 +2124,13 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
     _playback = widget.playbackSettings.value;
     if (!mounted) return;
     _subtitlePosition.value = _playback.subtitlePosition;
-    // Moving subtitles only redraws their layer, not the whole player.
+    // Moving subtitles only redraws their layer, and a saved volume is
+    // already playing: neither rebuilds the player.
     if (jsonEncode(
-          previous.copyWith(subtitlePosition: _playback.subtitlePosition),
+          previous.copyWith(
+            subtitlePosition: _playback.subtitlePosition,
+            desktopVolume: _playback.desktopVolume,
+          ),
         ) ==
         jsonEncode(_playback)) {
       return;
@@ -2653,28 +2671,71 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
     }
   }
 
-  /// Desktop volume (wheel, Up/Down, M), shown with the same hint as the
-  /// phone's swipe gesture.
+  /// The last audible level, which unmuting returns to.
   double _volumeBeforeMute = 1;
 
-  void _nudgeVolume(double delta) {
+  /// A drag's pending engine update, and the pending save of the level.
+  Timer? _volumeApply, _volumeSave;
+
+  /// Sets the player volume. While a slider drags ([commit] false) the
+  /// engine hears at most every 40 ms; a release, key, wheel notch or swipe
+  /// applies at once, so the final value always lands. Windows saves the
+  /// level for the next video once it settles.
+  void _setVolume(double value, {bool commit = true}) {
+    if (_controller == null || !_ready) return;
+    final next = value.clamp(0.0, 1.0).toDouble();
+    if (next > 0) _volumeBeforeMute = next;
+    _volume = next;
+    if (commit) {
+      _volumeApply?.cancel();
+      _volumeApply = null;
+      _applyVolume();
+    } else {
+      _volumeApply ??= Timer(const Duration(milliseconds: 40), () {
+        _volumeApply = null;
+        _applyVolume();
+      });
+    }
+    if (_desktop) {
+      _volumeSave?.cancel();
+      _volumeSave = Timer(const Duration(milliseconds: 600), _saveVolume);
+    }
+  }
+
+  void _applyVolume() {
     final c = _controller;
-    if (c == null || !_ready) return;
-    _volume = (_volume + delta).clamp(0, 1).toDouble();
-    unawaited(c.setVolume(_volume));
+    if (c == null || !mounted) return;
+    unawaited(
+      c.setVolume(_volume).catchError((Object _) {
+        // The engine keeps its previous level; playback continues.
+      }),
+    );
+  }
+
+  /// Saves the level to come back to: never silence, so a video closed
+  /// while muted opens the next one at the volume before the mute.
+  void _saveVolume() {
+    _volumeSave?.cancel();
+    _volumeSave = null;
+    final level = _volume > 0 ? _volume : _volumeBeforeMute;
+    if (level <= 0 || level == _playback.desktopVolume) return;
+    unawaited(
+      widget.playbackSettings.update(_playback.copyWith(desktopVolume: level)),
+    );
+  }
+
+  /// Desktop volume steps (wheel, Up/Down), shown with the same hint as
+  /// the phone's swipe gesture.
+  void _nudgeVolume(double delta) {
+    if (_controller == null || !_ready) return;
+    _setVolume(_volume + delta);
     _hintFor('Volume ${(_volume * 100).round()}%');
   }
 
+  /// Mutes, or returns to the level before the mute (M, or the speaker).
   void _toggleMute() {
-    final c = _controller;
-    if (c == null || !_ready) return;
-    if (_volume > 0) {
-      _volumeBeforeMute = _volume;
-      _volume = 0;
-    } else {
-      _volume = _volumeBeforeMute > 0 ? _volumeBeforeMute : 1;
-    }
-    unawaited(c.setVolume(_volume));
+    if (_controller == null || !_ready) return;
+    _setVolume(_volume > 0 ? 0 : _volumeBeforeMute);
     _hintFor(_volume == 0 ? 'Muted' : 'Volume ${(_volume * 100).round()}%');
   }
 
@@ -2712,6 +2773,10 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
     // After a hand-over this episode is already saved; saving it again here
     // would mark it as watched last, after the next episode started.
     if (!_progressHandedOff) _saveProgress();
+    // A volume change still settling is saved now, after this screen
+    // stopped listening to the settings it writes.
+    _volumeApply?.cancel();
+    if (_volumeSave != null) _saveVolume();
     _metrics.report();
     _hide?.cancel();
     _save?.cancel();
@@ -2725,6 +2790,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
     _unlockVisible.dispose();
     _controlsShown.dispose();
     _subtitlePosition.dispose();
+    _volumeLevel.dispose();
     _scrubbing.dispose();
     _pauseOverlay.dispose();
     _seekFlash.dispose();
@@ -3050,8 +3116,9 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
                     ? null
                     : (right, amount) {
                         if (right) {
-                          _volume = (_volume + amount).clamp(0, 1);
-                          c.setVolume(_volume);
+                          // The player's level, under the system volume
+                          // the hardware keys set.
+                          _setVolume(_volume + amount);
                           _hintFor('Volume ${(_volume * 100).round()}%');
                         } else {
                           _brightness = (_brightness + amount).clamp(.15, 1);
@@ -3195,6 +3262,14 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
                   // A TV remote has nothing to lock away; a phone's touches
                   // and a desktop's mouse and keyboard do.
                   onLock: _tvHardware ? null : _lockControls,
+                  // Windows only: phones keep the hardware keys and the
+                  // swipe; TVs keep the remote and the TV's own volume.
+                  volume: _desktop ? _volumeLevel : null,
+                  onVolumeChanged: _desktop
+                      ? (value, {required commit}) =>
+                            _setVolume(value, commit: commit)
+                      : null,
+                  onToggleMute: _desktop ? _toggleMute : null,
                   playFocusNode: _playButtonFocus,
                 ),
               ),

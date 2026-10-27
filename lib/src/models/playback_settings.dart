@@ -34,6 +34,7 @@ class PlaybackSettings {
     this.subtitleBackgroundColor = 0x00000000,
     this.subtitleOutline = true,
     this.subtitleOutlineColor = 0xFF000000,
+    this.desktopVolume = 1,
   });
 
   final bool touchGestures;
@@ -78,6 +79,11 @@ class PlaybackSettings {
   final bool subtitleOutline;
   final int subtitleOutlineColor;
 
+  /// The Windows player's own volume (0-1), remembered between videos.
+  /// It is the player's level, not the system volume. Phone and TV leave
+  /// volume to the device.
+  final double desktopVolume;
+
   PlaybackSettings copyWith({
     bool? touchGestures,
     bool? holdToSpeed,
@@ -110,6 +116,7 @@ class PlaybackSettings {
     int? subtitleBackgroundColor,
     bool? subtitleOutline,
     int? subtitleOutlineColor,
+    double? desktopVolume,
   }) => PlaybackSettings(
     touchGestures: touchGestures ?? this.touchGestures,
     holdToSpeed: holdToSpeed ?? this.holdToSpeed,
@@ -151,6 +158,7 @@ class PlaybackSettings {
         subtitleBackgroundColor ?? this.subtitleBackgroundColor,
     subtitleOutline: subtitleOutline ?? this.subtitleOutline,
     subtitleOutlineColor: subtitleOutlineColor ?? this.subtitleOutlineColor,
+    desktopVolume: desktopVolume ?? this.desktopVolume,
   );
 
   Map<String, dynamic> toJson() => {
@@ -184,6 +192,7 @@ class PlaybackSettings {
     'subtitleBackgroundColor': subtitleBackgroundColor,
     'subtitleOutline': subtitleOutline,
     'subtitleOutlineColor': subtitleOutlineColor,
+    'desktopVolume': desktopVolume,
   };
 
   factory PlaybackSettings.fromJson(
@@ -237,7 +246,15 @@ class PlaybackSettings {
     subtitleBackgroundColor: _int(json['subtitleBackgroundColor'], 0x00000000),
     subtitleOutline: json['subtitleOutline'] != false,
     subtitleOutlineColor: _int(json['subtitleOutlineColor'], 0xFF000000),
+    desktopVolume: _volume(json['desktopVolume']),
   );
+
+  /// Reads [desktopVolume]: full volume when missing (saves from before it
+  /// existed) or unreadable.
+  static double _volume(Object? value) {
+    final volume = _double(value, 1);
+    return volume.isFinite ? volume.clamp(0, 1).toDouble() : 1;
+  }
 
   /// Reads [subtitlePosition]. Saves from before it existed hold a pixel
   /// offset (`subtitleVerticalOffset`, 0-80, default 20) instead; that is

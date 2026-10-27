@@ -9,6 +9,7 @@ import '../../platform/device_capabilities.dart';
 import '../../theme/glass_theme.dart';
 import 'player_marquee_text.dart';
 import 'player_progress_bar.dart';
+import 'player_volume_control.dart';
 
 /// Shared timing for player motion; controls should feel responsive rather
 /// than decorative.
@@ -56,6 +57,9 @@ class PlayerControlsOverlay extends StatelessWidget {
     this.pauseScreen,
     this.onLock,
     this.playFocusNode,
+    this.volume,
+    this.onVolumeChanged,
+    this.onToggleMute,
   });
 
   final VideoPlayerController controller;
@@ -109,6 +113,13 @@ class PlayerControlsOverlay extends StatelessWidget {
   /// Focus of the center play button, where a remote lands when the
   /// controls appear.
   final FocusNode? playFocusNode;
+
+  /// The player volume (0 is muted) for the bottom bar's volume control;
+  /// null hides it. Windows only: phone volume stays with the hardware keys
+  /// and the swipe gesture, TV volume with the remote and the TV itself.
+  final ValueListenable<double>? volume;
+  final void Function(double value, {required bool commit})? onVolumeChanged;
+  final VoidCallback? onToggleMute;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
@@ -185,6 +196,9 @@ class PlayerControlsOverlay extends StatelessWidget {
                     onNextEpisode: onNextEpisode,
                     nextEpisodeCountdown: nextEpisodeCountdown,
                     onSpeedReset: onSpeedReset,
+                    volume: volume,
+                    onVolumeChanged: onVolumeChanged,
+                    onToggleMute: onToggleMute,
                   ),
                 ),
               ],
@@ -500,6 +514,9 @@ class _BottomBar extends StatelessWidget {
     this.onNextEpisode,
     this.nextEpisodeCountdown,
     this.onSpeedReset,
+    this.volume,
+    this.onVolumeChanged,
+    this.onToggleMute,
   });
 
   final VideoPlayerController controller;
@@ -526,6 +543,11 @@ class _BottomBar extends StatelessWidget {
 
   /// Returns playback to 1x from the speed pill; null opens settings.
   final VoidCallback? onSpeedReset;
+
+  /// See [PlayerControlsOverlay.volume]; all three or nothing is shown.
+  final ValueListenable<double>? volume;
+  final void Function(double value, {required bool commit})? onVolumeChanged;
+  final VoidCallback? onToggleMute;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -633,6 +655,16 @@ class _BottomBar extends StatelessWidget {
                   : Symbols.stay_current_landscape_rounded,
               label: landscapeLocked ? 'Allow rotation' : 'Lock to landscape',
               onPressed: rotate,
+            ),
+          if ((volume, onVolumeChanged, onToggleMute) case (
+            final volume?,
+            final onChanged?,
+            final onMute?,
+          ))
+            PlayerVolumeControl(
+              volume: volume,
+              onChanged: onChanged,
+              onToggleMute: onMute,
             ),
           if (onFullscreen case final toggle?)
             PlayerIconButton(

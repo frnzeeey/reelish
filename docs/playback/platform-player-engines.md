@@ -74,7 +74,7 @@ sources:
 |---|---|---|---|
 | Engine | Media3 → libmpv | Media3 → libmpv | libmpv |
 | Embedded subtitles | libmpv only | libmpv only | yes |
-| Input | Touch gestures, double-tap seek, lock | Remote keys, Back shows controls | Mouse (click plays or pauses, double click toggles fullscreen, wheel sets volume), keyboard (Space, arrows, M, F, F11), controller |
+| Input | Touch gestures, double-tap seek, lock | Remote keys, Back shows controls | Mouse (click plays or pauses, double click toggles fullscreen, wheel sets volume, a speaker button with a slider), keyboard (Space, arrows, M, F, F11), controller |
 | Picture in picture | Automatic on leaving the app while playing, or the button (`player_pip.dart`) | The button, where the TV supports it | No |
 | Brightness, rotation | Yes | No | No |
 | Keeps the display on while playing | Yes | Yes | Yes (`DesktopWindow.keepDisplayOn`) |

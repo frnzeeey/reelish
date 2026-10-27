@@ -62,7 +62,7 @@ graph LR
   widgets_player["widgets/player"] -->|17| models["models"]
   widgets_player["widgets/player"] -->|7| platform["platform"]
   widgets_player["widgets/player"] -->|15| services["services"]
-  widgets_player["widgets/player"] -->|6| theme["theme"]
+  widgets_player["widgets/player"] -->|8| theme["theme"]
   widgets_player["widgets/player"] -->|2| widgets["widgets"]
   widgets_player["widgets/player"] -->|1| widgets_tv["widgets/tv"]
   widgets_plugin_library["widgets/plugin_library"] -->|4| models["models"]
@@ -92,7 +92,7 @@ graph LR
 | `theme` | nothing outside itself |
 | `viewmodels` | `models` (11), `services` (13) |
 | `widgets` | `desktop` (1), `models` (3), `platform` (1), `services` (4), `theme` (9), `widgets/tv` (1) |
-| `widgets/player` | `models` (17), `platform` (7), `services` (15), `theme` (6), `widgets` (2), `widgets/tv` (1) |
+| `widgets/player` | `models` (17), `platform` (7), `services` (15), `theme` (8), `widgets` (2), `widgets/tv` (1) |
 | `widgets/plugin_library` | `models` (4), `platform` (1), `services` (5), `theme` (22), `widgets` (1) |
 | `widgets/settings` | `theme` (4), `widgets/tv` (1) |
 | `widgets/tv` | `models` (1), `platform` (1), `theme` (2), `widgets` (1) |
@@ -103,9 +103,9 @@ The files imported by the most other `lib/` files. A change to one of these reac
 
 | File | Imported by (lib files) | Imported by (tests) |
 |---|---|---|
-| [`lib/src/theme/glass_theme.dart`](../../lib/src/theme/glass_theme.dart) | 58 | 17 |
+| [`lib/src/theme/glass_theme.dart`](../../lib/src/theme/glass_theme.dart) | 59 | 17 |
 | [`lib/src/models/media_item.dart`](../../lib/src/models/media_item.dart) | 29 | 31 |
-| [`lib/src/theme/design_tokens.dart`](../../lib/src/theme/design_tokens.dart) | 23 | 0 |
+| [`lib/src/theme/design_tokens.dart`](../../lib/src/theme/design_tokens.dart) | 24 | 0 |
 | [`lib/src/models/stream_source.dart`](../../lib/src/models/stream_source.dart) | 18 | 14 |
 | [`lib/src/platform/device_capabilities.dart`](../../lib/src/platform/device_capabilities.dart) | 17 | 6 |
 | [`lib/src/services/storage_service.dart`](../../lib/src/services/storage_service.dart) | 16 | 18 |
@@ -136,11 +136,11 @@ Each third-party package imported by `lib/`, A–Z, with the files that import i
 | Package | Imported by |
 |---|---|
 | `crypto` | `src/services/github_update_service.dart`, `src/services/provider_plugin_service.dart` |
-| `flutter` | 104 files, including `main.dart`, `src/desktop/desktop_details_screen.dart`, `src/desktop/desktop_hero.dart`, `src/desktop/desktop_pages.dart`, `src/desktop/desktop_plugins_page.dart`, `src/desktop/desktop_provider_search.dart` |
+| `flutter` | 105 files, including `main.dart`, `src/desktop/desktop_details_screen.dart`, `src/desktop/desktop_hero.dart`, `src/desktop/desktop_pages.dart`, `src/desktop/desktop_plugins_page.dart`, `src/desktop/desktop_provider_search.dart` |
 | `flutter_go_torrent_streamer` | `src/services/torrent_source_preparer.dart`, `src/widgets/player/custom_video_player.dart` |
 | `flutter_js` | `src/services/provider_fetch_bridge.dart`, `src/services/provider_runner.dart` |
 | `http` | `src/services/github_update_service.dart`, `src/services/network_target_policy.dart`, `src/services/plugin_library_service.dart`, `src/services/provider_fetch_bridge.dart`, `src/services/provider_plugin_service.dart`, `src/services/subtitle_addon_service.dart`, `src/services/subtitle_loader.dart`, `src/services/tmdb_service.dart`, `src/widgets/plugin_library/plugin_formatting.dart` |
-| `material_symbols_icons` | 54 files, including `src/desktop/desktop_details_screen.dart`, `src/desktop/desktop_hero.dart`, `src/desktop/desktop_pages.dart`, `src/desktop/desktop_plugins_page.dart`, `src/desktop/desktop_provider_search.dart`, `src/desktop/desktop_settings_page.dart` |
+| `material_symbols_icons` | 55 files, including `src/desktop/desktop_details_screen.dart`, `src/desktop/desktop_hero.dart`, `src/desktop/desktop_pages.dart`, `src/desktop/desktop_plugins_page.dart`, `src/desktop/desktop_provider_search.dart`, `src/desktop/desktop_settings_page.dart` |
 | `package_info_plus` | `src/screens/app_information_screens.dart`, `src/screens/credits_screen.dart`, `src/services/app_metadata.dart`, `src/services/github_update_service.dart` |
 | `path_provider` | `src/services/github_update_service.dart`, `src/services/plugin_library_service.dart`, `src/services/storage_service.dart`, `src/services/tmdb_response_cache.dart` |
 | `shared_preferences` | `src/desktop/desktop_shell.dart`, `src/screens/first_run_consent_screen.dart`, `src/services/storage_service.dart` |

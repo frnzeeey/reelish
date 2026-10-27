@@ -98,6 +98,22 @@ void main() {
       );
     });
 
+    test('desktop volume round trips; older or bad saves play at full', () {
+      expect(const PlaybackSettings().desktopVolume, 1);
+      final restored = PlaybackSettings.fromJson(
+        const PlaybackSettings(desktopVolume: .35).toJson(),
+      );
+      expect(restored.desktopVolume, .35);
+      // Saved before the setting existed.
+      expect(PlaybackSettings.fromJson({}).desktopVolume, 1);
+      expect(
+        PlaybackSettings.fromJson({'desktopVolume': 'NaN'}).desktopVolume,
+        1,
+      );
+      expect(PlaybackSettings.fromJson({'desktopVolume': 3}).desktopVolume, 1);
+      expect(PlaybackSettings.fromJson({'desktopVolume': -1}).desktopVolume, 0);
+    });
+
     test('subtitle bottom keeps the original default and stays on screen', () {
       double bottom(
         double position, {

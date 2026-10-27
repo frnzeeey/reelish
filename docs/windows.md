@@ -135,11 +135,20 @@ that only speak DirectInput (no XInput mode) are not supported.
 | Left / Right | Seek 10 s (repeated presses add up) |
 | Up / Down | Volume ±5% (when no control is focused) |
 | Mouse wheel | Volume ±5% |
-| M | Mute or restore the volume |
+| M, or the speaker in the controls | Mute or restore the volume |
+| Hover or Tab to the speaker | Open the volume slider, with the level in percent |
 | F, or the button in the controls | Toggle fullscreen |
 
-The volume (and mute) set here lasts for the player session: a reconnect,
-another source or stall recovery opens the new player at the same volume.
+The volume is the player's own level (libmpv), not the Windows system
+volume. It lasts for the player session: a reconnect, another source or
+stall recovery opens the new player at the same volume, mute included. The
+level is also saved (`PlaybackSettings.desktopVolume`) and the next video
+opens at it; a video closed while muted saves the level before the mute,
+so the next one never starts silent.
+
+Phones keep the hardware keys (system volume) and the swipe gesture (the
+player's level, carried over the same way within a session but not
+saved). TV has no player volume: the remote, the TV and HDMI-CEC own it.
 
 The window can be resized down to 960 × 600 logical pixels, maximized, and
 made fullscreen on whichever monitor it's on.
