@@ -168,7 +168,14 @@ class _TvFocusableState extends State<TvFocusable> {
                   width: _focused ? 3 : 2,
                 ),
               ),
-              child: ClipRRect(borderRadius: radius, child: widget.child),
+              // A given label speaks for the item; the child's own text
+              // would be read again after it.
+              child: ClipRRect(
+                borderRadius: radius,
+                child: widget.semanticLabel == null
+                    ? widget.child
+                    : ExcludeSemantics(child: widget.child),
+              ),
             ),
           ),
         ),

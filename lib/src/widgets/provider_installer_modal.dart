@@ -23,8 +23,7 @@ class ProviderInstallerModal extends StatefulWidget {
   );
 
   @override
-  State<ProviderInstallerModal> createState() =>
-      _ProviderInstallerModalState();
+  State<ProviderInstallerModal> createState() => _ProviderInstallerModalState();
 }
 
 class _ProviderInstallerModalState extends State<ProviderInstallerModal> {
@@ -157,14 +156,11 @@ class _ProviderInstallerModalState extends State<ProviderInstallerModal> {
                 ),
               if (_error != null) ...[
                 const SizedBox(height: 10),
-                Text(_error!, style: const TextStyle(color: Colors.redAccent)),
+                Text(_error!, style: const TextStyle(color: GlassTheme.danger)),
               ],
               if (_success != null) ...[
                 const SizedBox(height: 10),
-                Text(
-                  _success!,
-                  style: TextStyle(color: GlassTheme.primary),
-                ),
+                Text(_success!, style: TextStyle(color: GlassTheme.primary)),
               ],
               const SizedBox(height: 14),
               SizedBox(

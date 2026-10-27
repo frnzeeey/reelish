@@ -474,7 +474,7 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
                                     : _play,
                                 style: FilledButton.styleFrom(
                                   backgroundColor: GlassTheme.primary,
-                                  foregroundColor: Colors.white,
+                                  foregroundColor: GlassTheme.background,
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 28,
                                     vertical: 18,
@@ -1189,7 +1189,7 @@ class _EpisodeTileState extends State<_EpisodeTile> {
                             'LAST WATCHED',
                             style: TextStyle(
                               color: GlassTheme.coralBright,
-                              fontSize: 9.5,
+                              fontSize: 10,
                               letterSpacing: 1.3,
                               fontWeight: FontWeight.w800,
                             ),

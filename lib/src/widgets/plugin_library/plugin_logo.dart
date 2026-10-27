@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
+import '../../theme/design_tokens.dart';
 import '../../theme/glass_theme.dart';
 
 /// A provider's icon, or a monogram tile when the catalog has none or the
@@ -42,7 +43,7 @@ class PluginLogo extends StatelessWidget {
               synchronous || frame != null
               ? AnimatedOpacity(
                   opacity: frame == null ? 0 : 1,
-                  duration: const Duration(milliseconds: 160),
+                  duration: AppMotion.resolve(context, AppMotion.hover),
                   child: child,
                 )
               : fallback,

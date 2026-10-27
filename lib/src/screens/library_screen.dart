@@ -384,7 +384,7 @@ class _FilterChip extends StatelessWidget {
                 '$count',
                 style: TextStyle(
                   color: selected ? GlassTheme.background : GlassTheme.muted,
-                  fontSize: 9,
+                  fontSize: 10,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -549,7 +549,7 @@ class _MediaSection extends StatelessWidget {
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(
-                                        fontSize: 8,
+                                        fontSize: 10,
                                         fontWeight: FontWeight.w700,
                                       ),
                                     ),

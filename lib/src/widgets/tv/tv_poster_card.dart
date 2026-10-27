@@ -132,7 +132,7 @@ class _TitleFallback extends StatelessWidget {
           maxLines: 3,
           overflow: TextOverflow.ellipsis,
           textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
         ),
       ],
     ),

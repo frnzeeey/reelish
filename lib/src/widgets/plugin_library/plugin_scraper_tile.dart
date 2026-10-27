@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/plugin_catalog.dart';
 import '../../services/plugin_library_query.dart';
+import '../../theme/design_tokens.dart';
 import '../../theme/glass_theme.dart';
 import 'plugin_logo.dart';
 
@@ -38,7 +39,7 @@ class PluginScraperTile extends StatelessWidget {
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: GlassTheme.surface,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
           border: Border.all(color: GlassTheme.border),
         ),
         child: Row(
@@ -60,7 +61,7 @@ class PluginScraperTile extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 13,
+                      fontSize: AppTextSize.bodySmall,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -72,7 +73,7 @@ class PluginScraperTile extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: GlassTheme.muted,
-                        fontSize: 11,
+                        fontSize: AppTextSize.caption,
                         height: 1.35,
                       ),
                     ),
@@ -91,13 +92,13 @@ class PluginScraperTile extends StatelessWidget {
                             ),
                             decoration: BoxDecoration(
                               color: Colors.white.withValues(alpha: .05),
-                              borderRadius: BorderRadius.circular(7),
+                              borderRadius: BorderRadius.circular(AppRadius.sm),
                             ),
                             child: Text(
                               tag,
                               style: const TextStyle(
                                 color: Colors.white70,
-                                fontSize: 10,
+                                fontSize: AppTextSize.micro,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),

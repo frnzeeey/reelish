@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
+import '../../theme/design_tokens.dart';
 import '../../theme/glass_theme.dart';
 import '../tv/tv_focus.dart';
 import 'tmdb_attribution.dart';
@@ -84,38 +85,38 @@ class SettingsPage extends StatelessWidget {
 
   Widget _scrollView(ScrollController? controller, double bottom) =>
       CustomScrollView(
-      controller: controller,
-      slivers: [
-        if (_isRoot)
-          SliverToBoxAdapter(
-            child: _RootTitle(title: title, subtitle: subtitle),
+        controller: controller,
+        slivers: [
+          if (_isRoot)
+            SliverToBoxAdapter(
+              child: _RootTitle(title: title, subtitle: subtitle),
+            ),
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(
+              SettingsMetrics.horizontal,
+              _isRoot ? 0 : 6,
+              SettingsMetrics.horizontal,
+              0,
+            ),
+            sliver: SliverList.list(children: children),
           ),
-        SliverPadding(
-          padding: EdgeInsets.fromLTRB(
-            SettingsMetrics.horizontal,
-            _isRoot ? 0 : 6,
-            SettingsMetrics.horizontal,
-            0,
-          ),
-          sliver: SliverList.list(children: children),
-        ),
-        SliverFillRemaining(
-          hasScrollBody: false,
-          child: Align(
-            alignment: Alignment.bottomCenter,
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(
-                SettingsMetrics.horizontal,
-                0,
-                SettingsMetrics.horizontal,
-                bottom,
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  SettingsMetrics.horizontal,
+                  0,
+                  SettingsMetrics.horizontal,
+                  bottom,
+                ),
+                child: footer ?? const SizedBox.shrink(),
               ),
-              child: footer ?? const SizedBox.shrink(),
             ),
           ),
-        ),
-      ],
-    );
+        ],
+      );
 }
 
 /// [SettingsPage] in its own scaffold, for pages pushed as routes.
@@ -271,7 +272,7 @@ class SettingsHeader extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: GlassTheme.muted,
-                      fontSize: 12,
+                      fontSize: AppTextSize.label,
                       height: 1.35,
                     ),
                   ),
@@ -345,7 +346,7 @@ class SettingsSection extends StatelessWidget {
               description!,
               style: const TextStyle(
                 color: GlassTheme.muted,
-                fontSize: 12,
+                fontSize: AppTextSize.label,
                 height: 1.4,
               ),
             ),
@@ -389,7 +390,7 @@ class SettingsSectionHeader extends StatelessWidget {
         label,
         style: const TextStyle(
           color: GlassTheme.muted,
-          fontSize: 11,
+          fontSize: AppTextSize.caption,
           fontWeight: FontWeight.w800,
           letterSpacing: 1.2,
         ),
@@ -446,7 +447,7 @@ class SettingsTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final chevron = showChevron ?? (onTap != null && trailing == null);
     final tile = AnimatedOpacity(
-      duration: const Duration(milliseconds: 150),
+      duration: AppMotion.resolve(context, AppMotion.hover),
       opacity: enabled ? 1 : .45,
       child: InkWell(
         onTap: enabled ? onTap : null,
@@ -468,7 +469,7 @@ class SettingsTile extends StatelessWidget {
                       Text(
                         title,
                         style: const TextStyle(
-                          fontSize: 14.5,
+                          fontSize: AppTextSize.titleSmall,
                           fontWeight: FontWeight.w600,
                           letterSpacing: -.1,
                         ),
@@ -479,7 +480,7 @@ class SettingsTile extends StatelessWidget {
                           description!,
                           style: const TextStyle(
                             color: GlassTheme.muted,
-                            fontSize: 12,
+                            fontSize: AppTextSize.label,
                             height: 1.4,
                           ),
                         ),
@@ -492,7 +493,7 @@ class SettingsTile extends StatelessWidget {
                             color: onTap != null
                                 ? GlassTheme.coralBright
                                 : Colors.white70,
-                            fontSize: 12,
+                            fontSize: AppTextSize.label,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -538,7 +539,7 @@ class SettingsParagraph extends StatelessWidget {
           Text(
             title!,
             style: const TextStyle(
-              fontSize: 14.5,
+              fontSize: AppTextSize.titleSmall,
               fontWeight: FontWeight.w700,
               letterSpacing: -.1,
             ),
@@ -549,7 +550,7 @@ class SettingsParagraph extends StatelessWidget {
           text,
           style: TextStyle(
             color: Colors.white.withValues(alpha: .78),
-            fontSize: 13,
+            fontSize: AppTextSize.bodySmall,
             height: 1.6,
           ),
         ),
@@ -626,7 +627,7 @@ class SettingsSliderTile extends StatelessWidget {
               child: Text(
                 title,
                 style: const TextStyle(
-                  fontSize: 14.5,
+                  fontSize: AppTextSize.titleSmall,
                   fontWeight: FontWeight.w600,
                   letterSpacing: -.1,
                 ),
@@ -636,13 +637,13 @@ class SettingsSliderTile extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
                 color: GlassTheme.primary.withValues(alpha: .12),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(AppRadius.sm),
               ),
               child: Text(
                 valueLabel,
                 style: TextStyle(
                   color: GlassTheme.coralBright,
-                  fontSize: 12,
+                  fontSize: AppTextSize.label,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -654,7 +655,7 @@ class SettingsSliderTile extends StatelessWidget {
           description,
           style: const TextStyle(
             color: GlassTheme.muted,
-            fontSize: 12,
+            fontSize: AppTextSize.label,
             height: 1.4,
           ),
         ),

@@ -3,23 +3,27 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import '../../models/plugin_catalog.dart';
 import '../../services/plugin_library_query.dart';
+import '../../theme/design_tokens.dart';
 import '../../theme/glass_theme.dart';
-import 'copy_manifest_button.dart';
 import 'plugin_badges.dart';
+import 'plugin_formatting.dart';
 import 'plugin_logo.dart';
 
-/// A provider in the library grid. Layout is fixed-height so the grid can
+/// A provider in the library grid: who made it, what it covers, how fresh
+/// it is, and one contextual action ([action], the install button). The
+/// card itself opens the details. Layout is fixed-height so the grid can
 /// lay out hundreds of entries lazily.
 class PluginCard extends StatefulWidget {
   const PluginCard({
     super.key,
     required this.plugin,
     required this.onOpen,
+    this.action,
     this.search = '',
     this.installed = false,
   });
 
-  static const height = 254.0;
+  static const height = 244.0;
 
   /// [height] grown with the text size, so large accessibility text fits.
   static double heightFor(BuildContext context) =>
@@ -28,6 +32,9 @@ class PluginCard extends StatefulWidget {
 
   final ReelishPlugin plugin;
   final VoidCallback onOpen;
+
+  /// The card's one action, bottom right; usually [PluginInstallButton].
+  final Widget? action;
   final String search;
   final bool installed;
 
@@ -37,6 +44,8 @@ class PluginCard extends StatefulWidget {
 
 class _PluginCardState extends State<PluginCard> {
   bool _pressed = false;
+  bool _hovered = false;
+  bool _focused = false;
 
   @override
   Widget build(BuildContext context) {
@@ -46,6 +55,20 @@ class _PluginCardState extends State<PluginCard> {
     final sourcesLabel = plugin.available
         ? '${plugin.scraperCount} ${plugin.scraperCount == 1 ? 'source' : 'sources'}'
         : 'Sources unavailable';
+    final freshness = [
+      if (plugin.manifestVersion case final version?) 'v$version',
+      if (plugin.lastUpdated case final updated?)
+        'Updated ${relativePluginDate(updated)}',
+    ].join(' · ');
+    // Focus (remote, keyboard) is the strongest state, then hover, then
+    // installed, so the cursor is never lost behind a status colour.
+    final border = _focused
+        ? BorderSide(color: GlassTheme.coralBright, width: 2.5)
+        : _hovered
+        ? BorderSide(color: Colors.white.withValues(alpha: .22))
+        : widget.installed
+        ? BorderSide(color: GlassTheme.primary.withValues(alpha: .35))
+        : const BorderSide(color: GlassTheme.border);
     return Semantics(
       container: true,
       label:
@@ -53,46 +76,68 @@ class _PluginCardState extends State<PluginCard> {
           '${plugin.languages.join(', ')}, $sourcesLabel'
           '${widget.installed ? ', installed' : ''}',
       child: AnimatedScale(
-        scale: _pressed ? .985 : 1,
-        duration: const Duration(milliseconds: 120),
+        scale: _pressed
+            ? .985
+            : _focused
+            ? 1.02
+            : 1,
+        duration: AppMotion.resolve(context, AppMotion.press),
+        curve: AppMotion.enter,
         child: Material(
-          color: GlassTheme.surface,
+          color: _hovered || _focused
+              ? GlassTheme.elevatedSurface
+              : GlassTheme.surface,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(22),
-            side: BorderSide(
-              color: widget.installed
-                  ? GlassTheme.primary.withValues(alpha: .3)
-                  : GlassTheme.border,
-            ),
+            borderRadius: BorderRadius.circular(AppRadius.xl),
+            side: border,
           ),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
             onTap: widget.onOpen,
             onHighlightChanged: (value) => setState(() => _pressed = value),
+            onHover: (value) => setState(() => _hovered = value),
+            onFocusChange: (value) => setState(() => _focused = value),
+            // The border shows focus; no extra tint over the content.
+            focusColor: Colors.transparent,
+            hoverColor: Colors.transparent,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpace.md,
+                AppSpace.md,
+                AppSpace.md,
+                AppSpace.sm,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      PluginLogo(name: plugin.name, url: plugin.iconUrl),
-                      const SizedBox(width: 12),
+                      PluginLogo(
+                        name: plugin.name,
+                        url: plugin.iconUrl,
+                        size: 44,
+                        radius: AppRadius.md,
+                      ),
+                      const SizedBox(width: AppSpace.sm),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              plugin.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: -.2,
+                            Tooltip(
+                              message: plugin.name,
+                              waitDuration: const Duration(milliseconds: 600),
+                              child: Text(
+                                plugin.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: AppTextSize.bodyLarge,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -.2,
+                                ),
                               ),
                             ),
-                            const SizedBox(height: 3),
+                            const SizedBox(height: 2),
                             Text(
                               plugin.author == null
                                   ? 'Author unavailable'
@@ -101,7 +146,7 @@ class _PluginCardState extends State<PluginCard> {
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
                                 color: GlassTheme.muted,
-                                fontSize: 12,
+                                fontSize: AppTextSize.label,
                               ),
                             ),
                           ],
@@ -113,7 +158,7 @@ class _PluginCardState extends State<PluginCard> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: AppSpace.sm),
                   Row(
                     children: [
                       Flexible(
@@ -124,7 +169,7 @@ class _PluginCardState extends State<PluginCard> {
                               : plugin.languages.join(' · '),
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: AppSpace.xs),
                       PluginMetaPill(
                         icon: plugin.available
                             ? Symbols.stacks_rounded
@@ -134,17 +179,18 @@ class _PluginCardState extends State<PluginCard> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
                   Expanded(
                     child: ClipRect(
                       child: preview.isEmpty
                           ? const Text(
-                              'The manifest could not be reached when the catalog was updated.',
+                              'The manifest could not be reached when the '
+                              'catalog was updated.',
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 color: GlassTheme.muted,
-                                fontSize: 11,
+                                fontSize: AppTextSize.caption,
                                 height: 1.35,
                               ),
                             )
@@ -163,33 +209,25 @@ class _PluginCardState extends State<PluginCard> {
                             ),
                     ),
                   ),
+                  const SizedBox(height: AppSpace.xs),
                   Row(
                     children: [
                       Expanded(
-                        child: FilledButton.tonal(
-                          onPressed: widget.onOpen,
-                          style: FilledButton.styleFrom(
-                            minimumSize: const Size(0, 44),
-                            foregroundColor: GlassTheme.primary,
-                            backgroundColor: GlassTheme.primary.withValues(
-                              alpha: .12,
-                            ),
-                          ),
-                          child: Semantics(
-                            label: 'View details for ${plugin.name}',
-                            excludeSemantics: true,
-                            child: const Text('View details'),
+                        child: Text(
+                          freshness,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: GlassTheme.muted,
+                            fontSize: AppTextSize.caption,
+                            height: 1.3,
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: CopyManifestButton(
-                          manifestUrl: plugin.manifestUrl,
-                          pluginName: plugin.name,
-                          compact: true,
-                        ),
-                      ),
+                      if (widget.action case final action?) ...[
+                        const SizedBox(width: AppSpace.sm),
+                        action,
+                      ],
                     ],
                   ),
                 ],
@@ -214,7 +252,7 @@ class _SourceChip extends StatelessWidget {
     padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
     decoration: BoxDecoration(
       color: subtle ? Colors.transparent : Colors.white.withValues(alpha: .05),
-      borderRadius: BorderRadius.circular(9),
+      borderRadius: BorderRadius.circular(AppRadius.sm),
       border: Border.all(
         color: Colors.white.withValues(alpha: subtle ? .1 : .06),
       ),
@@ -225,7 +263,7 @@ class _SourceChip extends StatelessWidget {
       overflow: TextOverflow.ellipsis,
       style: TextStyle(
         color: subtle ? GlassTheme.muted : Colors.white70,
-        fontSize: 11,
+        fontSize: AppTextSize.caption,
         fontWeight: FontWeight.w600,
       ),
     ),

@@ -57,7 +57,16 @@ abstract final class GlassTheme {
     bright: Color(0xFF8997FF),
     dark: Color(0xFF4859D9),
   );
-  static const accents = [coral, violet, blue, green, amber, orange, teal, indigo];
+  static const accents = [
+    coral,
+    violet,
+    blue,
+    green,
+    amber,
+    orange,
+    teal,
+    indigo,
+  ];
   static AccentPalette _accent = coral;
   static AccentPalette get accent => _accent;
   static void setAccent(AccentPalette value) => _accent = value;
@@ -75,6 +84,12 @@ abstract final class GlassTheme {
   static const border = Color(0x1AFFFFFF);
   static const glassBackground = Color(0x0FFFFFFF);
   static const glassStrong = Color(0x17FFFFFF);
+
+  /// Status colours, fixed whatever the accent: cautions and pending
+  /// approvals, and failures. Pair them with an icon or words, never colour
+  /// alone.
+  static const warning = Color(0xFFFFB547);
+  static const danger = Color(0xFFFF5252);
   static LinearGradient get gradient =>
       LinearGradient(colors: [coralBright, primary]);
 

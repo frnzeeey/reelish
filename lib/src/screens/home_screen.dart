@@ -1968,7 +1968,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       'SPOTLIGHT',
                       style: TextStyle(
                         color: GlassTheme.primary,
-                        fontSize: 9,
+                        fontSize: 10,
                         letterSpacing: 1.5,
                         fontWeight: FontWeight.w800,
                       ),

@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../models/plugin_catalog.dart';
+import '../platform/device_capabilities.dart';
 import '../services/plugin_library_query.dart';
 import '../services/provider_plugin_service.dart';
+import '../theme/design_tokens.dart';
 import '../theme/glass_theme.dart';
 import '../widgets/plugin_library/copy_manifest_button.dart';
 import '../widgets/plugin_library/plugin_badges.dart';
@@ -43,7 +46,7 @@ class PluginDetailsScreen extends StatelessWidget {
       for (final type in PluginContentType.values)
         if (plugin.contentTypes.contains(type.name)) type.label,
     ];
-    return Scaffold(
+    final page = Scaffold(
       backgroundColor: GlassTheme.background,
       body: CustomScrollView(
         slivers: [
@@ -56,12 +59,14 @@ class PluginDetailsScreen extends StatelessWidget {
                   child: Row(
                     children: [
                       IconButton(
-                        tooltip: 'Back to Reelish Plugins',
+                        tooltip: DeviceCapabilities.isDesktop
+                            ? 'Back (Esc)'
+                            : 'Back to Community Library',
                         onPressed: () => Navigator.maybePop(context),
                         icon: const Icon(Symbols.arrow_back_rounded),
                       ),
                       const Text(
-                        'Reelish Plugins',
+                        'Community Library',
                         style: TextStyle(
                           color: GlassTheme.muted,
                           fontWeight: FontWeight.w600,
@@ -86,26 +91,41 @@ class PluginDetailsScreen extends StatelessWidget {
                       types: types,
                     ),
                     const SizedBox(height: 18),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: PluginInstallButton(
-                            plugin: plugin,
-                            pluginService: pluginService,
+                    // Installed or not comes from the service: Install
+                    // until the repository is really there, then Remove
+                    // (the hero's badge already says it is installed).
+                    ListenableBuilder(
+                      listenable: pluginService,
+                      builder: (context, _) => Row(
+                        spacing: 10,
+                        children: [
+                          Expanded(
+                            child:
+                                PluginInstallButton.isInstalled(
+                                  pluginService,
+                                  plugin.manifestUrl,
+                                )
+                                ? PluginRemoveButton(
+                                    plugin: plugin,
+                                    pluginService: pluginService,
+                                  )
+                                : PluginInstallButton(
+                                    plugin: plugin,
+                                    pluginService: pluginService,
+                                  ),
                           ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: SizedBox(
-                            height: 48,
-                            child: CopyManifestButton(
-                              manifestUrl: plugin.manifestUrl,
-                              pluginName: plugin.name,
-                              filled: true,
+                          Expanded(
+                            child: SizedBox(
+                              height: 48,
+                              child: CopyManifestButton(
+                                manifestUrl: plugin.manifestUrl,
+                                pluginName: plugin.name,
+                                filled: true,
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                     if (!plugin.available) ...[
                       const SizedBox(height: 12),
@@ -122,7 +142,7 @@ class PluginDetailsScreen extends StatelessWidget {
                         style: const TextStyle(
                           color: Colors.white70,
                           height: 1.5,
-                          fontSize: 13,
+                          fontSize: AppTextSize.bodySmall,
                         ),
                       ),
                     ],
@@ -202,7 +222,10 @@ class PluginDetailsScreen extends StatelessWidget {
                   padding: EdgeInsets.symmetric(horizontal: 20),
                   child: Text(
                     'The source list is unavailable for this provider.',
-                    style: TextStyle(color: GlassTheme.muted, fontSize: 13),
+                    style: TextStyle(
+                      color: GlassTheme.muted,
+                      fontSize: AppTextSize.bodySmall,
+                    ),
                   ),
                 ),
               ),
@@ -223,6 +246,15 @@ class PluginDetailsScreen extends StatelessWidget {
           ),
         ],
       ),
+    );
+    if (!DeviceCapabilities.isDesktop) return page;
+    // Esc goes back, as on the Windows title details page.
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.escape): () =>
+            Navigator.maybePop(context),
+      },
+      child: Focus(autofocus: true, child: page),
     );
   }
 
@@ -249,7 +281,7 @@ class _Hero extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(20),
     decoration: BoxDecoration(
-      borderRadius: BorderRadius.circular(26),
+      borderRadius: BorderRadius.circular(AppRadius.xxl),
       gradient: LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
@@ -294,9 +326,11 @@ class _Hero extends StatelessWidget {
                     plugin.author == null
                         ? 'Author unavailable'
                         : 'by ${plugin.author}',
+                    // White70, not muted: muted on the accent-tinted hero
+                    // falls under 4.5:1.
                     style: const TextStyle(
-                      color: GlassTheme.muted,
-                      fontSize: 13,
+                      color: Colors.white70,
+                      fontSize: AppTextSize.bodySmall,
                     ),
                   ),
                 ],
@@ -361,7 +395,10 @@ class _Heading extends StatelessWidget {
         children: [
           Text(
             title,
-            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+            style: const TextStyle(
+              fontSize: AppTextSize.title,
+              fontWeight: FontWeight.w800,
+            ),
           ),
           if (detail != null) ...[
             const SizedBox(width: 8),
@@ -388,7 +425,7 @@ class _InfoTable extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     decoration: BoxDecoration(
       color: GlassTheme.surface,
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(AppRadius.xl),
       border: Border.all(color: GlassTheme.border),
     ),
     child: Column(
@@ -406,7 +443,8 @@ class _InfoTable extends StatelessWidget {
                     label,
                     style: const TextStyle(
                       color: GlassTheme.muted,
-                      fontSize: 12,
+                      fontSize: AppTextSize.label,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
@@ -414,7 +452,7 @@ class _InfoTable extends StatelessWidget {
                   child: Text(
                     value,
                     style: const TextStyle(
-                      fontSize: 12,
+                      fontSize: AppTextSize.label,
                       fontWeight: FontWeight.w600,
                       height: 1.35,
                     ),
@@ -441,7 +479,7 @@ class _ManifestBox extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(14, 6, 6, 6),
       decoration: BoxDecoration(
         color: GlassTheme.surface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: GlassTheme.border),
       ),
       child: Row(
@@ -452,12 +490,15 @@ class _ManifestBox extends StatelessWidget {
             child: url == null
                 ? const Text(
                     'No manifest URL is available.',
-                    style: TextStyle(color: GlassTheme.muted, fontSize: 12),
+                    style: TextStyle(
+                      color: GlassTheme.muted,
+                      fontSize: AppTextSize.label,
+                    ),
                   )
                 : SelectableText(
                     url.toString(),
                     style: const TextStyle(
-                      fontSize: 12,
+                      fontSize: AppTextSize.label,
                       height: 1.4,
                       color: Colors.white70,
                     ),
@@ -485,19 +526,19 @@ class _Note extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(12),
     decoration: BoxDecoration(
-      color: const Color(0xFFFFB547).withValues(alpha: .08),
-      borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: const Color(0xFFFFB547).withValues(alpha: .2)),
+      color: GlassTheme.warning.withValues(alpha: .08),
+      borderRadius: BorderRadius.circular(AppRadius.card),
+      border: Border.all(color: GlassTheme.warning.withValues(alpha: .2)),
     ),
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Icon(Symbols.info_rounded, size: 18, color: Color(0xFFFFB547)),
+        const Icon(Symbols.info_rounded, size: 18, color: GlassTheme.warning),
         const SizedBox(width: 10),
         Expanded(
           child: Text(
             message,
-            style: const TextStyle(fontSize: 12, height: 1.4),
+            style: const TextStyle(fontSize: AppTextSize.label, height: 1.4),
           ),
         ),
       ],

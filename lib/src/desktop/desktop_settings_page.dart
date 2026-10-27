@@ -8,6 +8,7 @@ import '../screens/playback_settings_screen.dart';
 import '../screens/subtitle_addons_screen.dart';
 import '../services/accent_settings_controller.dart';
 import '../services/playback_settings_controller.dart';
+import '../theme/design_tokens.dart';
 import '../theme/glass_theme.dart';
 import '../widgets/settings/settings_components.dart';
 import 'desktop_widgets.dart';
@@ -230,7 +231,7 @@ class _RailTitle extends StatelessWidget {
         SizedBox(height: 6),
         Text(
           'Make Reelish work the way you like.',
-          style: TextStyle(color: GlassTheme.muted, fontSize: 14),
+          style: TextStyle(color: GlassTheme.muted, fontSize: AppTextSize.body),
         ),
       ],
     ),
@@ -254,7 +255,7 @@ class _GroupLabel extends StatelessWidget {
       label,
       style: const TextStyle(
         color: GlassTheme.muted,
-        fontSize: 11,
+        fontSize: AppTextSize.caption,
         letterSpacing: 1.5,
         fontWeight: FontWeight.w800,
       ),
@@ -366,7 +367,7 @@ class _RailItemState extends State<_RailItem> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: AppTextSize.body,
                             fontWeight: selected
                                 ? FontWeight.w800
                                 : FontWeight.w700,
@@ -381,7 +382,7 @@ class _RailItemState extends State<_RailItem> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: 11.5,
+                            fontSize: AppTextSize.label,
                             color: widget.value != null
                                 ? GlassTheme.coralBright
                                 : GlassTheme.muted,

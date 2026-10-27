@@ -21,7 +21,13 @@ touch or keyboard use.
 - Tokens: `GlassTheme` (`lib/src/theme/glass_theme.dart`): background
   `0xFF0B0B0F`, surfaces, accent palettes (coral `#FF4D6D` default; the
   user can change it, so read `GlassTheme.primary`, never hard-code coral),
-  Montserrat font. Windows adds `DesktopMetrics`, `DesktopSurfaces`,
+  Montserrat font, and `warning`/`danger` status colours. Spacing, radius,
+  type scale, icon sizes and motion durations/curves are in `AppSpace`,
+  `AppRadius`, `AppTextSize`/`AppType`, `AppIcon` and `AppMotion`
+  (`lib/src/theme/design_tokens.dart`; 10 pt is the smallest text, 14 pt
+  on TV). Pick from them in new or refined UI, and run animation
+  durations through `AppMotion.resolve`. Settings and plugin pages already
+  use them. Windows adds `DesktopMetrics`, `DesktopSurfaces`,
   `desktopMotion()` and `posterDecodeWidth()` in `desktop_widgets.dart`.
 - Phone: `SoftGlassDock`, `MediaCard`, `LiquidGlass`/`GlassBox`.
 - TV: `TvFocusable`, `TvSafeArea` (overscan), `TvKeyScroll`,

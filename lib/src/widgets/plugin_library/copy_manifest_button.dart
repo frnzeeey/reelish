@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
+import '../../theme/design_tokens.dart';
 import '../../theme/glass_theme.dart';
 
 /// Copies a manifest URL and briefly confirms it in place and in a snackbar.
@@ -64,7 +65,7 @@ class _CopyManifestButtonState extends State<CopyManifestButton> {
   Widget build(BuildContext context) {
     final available = widget.manifestUrl != null;
     final icon = AnimatedSwitcher(
-      duration: const Duration(milliseconds: 180),
+      duration: AppMotion.resolve(context, AppMotion.hover),
       transitionBuilder: (child, animation) =>
           ScaleTransition(scale: animation, child: child),
       child: Icon(

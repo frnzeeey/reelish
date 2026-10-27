@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../theme/design_tokens.dart';
 import '../../theme/glass_theme.dart';
 
 /// TMDB attribution wording and assets, per
@@ -65,7 +66,11 @@ class TmdbAttributionFooter extends StatelessWidget {
         const Text(
           TmdbAttribution.disclaimer,
           textAlign: TextAlign.center,
-          style: TextStyle(color: GlassTheme.muted, fontSize: 11, height: 1.45),
+          style: TextStyle(
+            color: GlassTheme.muted,
+            fontSize: AppTextSize.caption,
+            height: 1.45,
+          ),
         ),
       ],
     ),

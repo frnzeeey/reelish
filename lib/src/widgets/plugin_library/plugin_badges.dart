@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../../models/plugin_catalog.dart';
+import '../../theme/design_tokens.dart';
 import '../../theme/glass_theme.dart';
 
 /// Featured / verified / installed markers. Featured and verified only show
@@ -63,7 +64,7 @@ class _Badge extends StatelessWidget {
     padding: const EdgeInsets.fromLTRB(6, 3, 8, 3),
     decoration: BoxDecoration(
       color: color.withValues(alpha: .12),
-      borderRadius: BorderRadius.circular(99),
+      borderRadius: BorderRadius.circular(AppRadius.pill),
       border: Border.all(color: color.withValues(alpha: .25)),
     ),
     child: Row(
@@ -75,7 +76,7 @@ class _Badge extends StatelessWidget {
           label,
           style: TextStyle(
             color: color,
-            fontSize: 10,
+            fontSize: AppTextSize.micro,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -99,14 +100,18 @@ class PluginMetaPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = accent ? GlassTheme.primary : Colors.white70;
+    final color = accent ? GlassTheme.coralBright : Colors.white70;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
       decoration: BoxDecoration(
+        // Opaque, so the text keeps its contrast on a tinted hero too.
         color: accent
-            ? GlassTheme.primary.withValues(alpha: .1)
+            ? Color.alphaBlend(
+                GlassTheme.primary.withValues(alpha: .12),
+                GlassTheme.surface,
+              )
             : Colors.white.withValues(alpha: .05),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -120,7 +125,7 @@ class PluginMetaPill extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: color,
-                fontSize: 11,
+                fontSize: AppTextSize.caption,
                 fontWeight: FontWeight.w700,
               ),
             ),

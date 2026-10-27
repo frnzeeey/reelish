@@ -11,16 +11,16 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/main.dart`](#libmaindart) | Shared | 114 | App entry point: initialises the player engines, builds `ReelishApp` (theme, navigator, Windows shortcuts and gamepad) and the startup gate that shows first-run consent or `HomeScreen`. |
 | [`lib/src/app/app_services.dart`](#libsrcappapp_servicesdart) | Shared | 34 | The app's shared services, built in one place and handed to the screens and ViewModels that use them, rather than constructed inside widgets. |
 | [`lib/src/desktop/desktop_details_screen.dart`](#libsrcdesktopdesktop_details_screendart) | Windows | 1245 | A movie or series on Windows, full-bleed over the whole window: the backdrop with the title, details and actions, then cast and related titles. |
-| [`lib/src/desktop/desktop_hero.dart`](#libsrcdesktopdesktop_herodart) | Windows | 1210 | The featured titles at the top of desktop Home: one full-bleed backdrop with the title, synopsis and actions on its left, and every Spotlight title in a rail along its foot, the one shown first and widest. |
+| [`lib/src/desktop/desktop_hero.dart`](#libsrcdesktopdesktop_herodart) | Windows | 1234 | The featured titles at the top of desktop Home: one full-bleed backdrop with the title, synopsis and actions on its left, and every Spotlight title in a rail along its foot, the one shown first and widest. |
 | [`lib/src/desktop/desktop_pages.dart`](#libsrcdesktopdesktop_pagesdart) | Windows | 675 | The Windows Home, Movies/Series catalog, Search and My library pages shown inside `DesktopShell`. |
-| [`lib/src/desktop/desktop_plugins_page.dart`](#libsrcdesktopdesktop_plugins_pagedart) | Windows | 850 | Plugins on Windows: the installed repositories and their providers at a desktop width, with the same actions as the phone and TV screen (add from the library or a manifest URL, refresh, switch providers on and off, remove, allow changed provider code) through the same `ProviderPluginService`, so what is installed and enabled is shared. |
+| [`lib/src/desktop/desktop_plugins_page.dart`](#libsrcdesktopdesktop_plugins_pagedart) | Windows | 956 | Plugins on Windows: the installed repositories and their providers at a desktop width, with the same actions as the phone and TV screen (add from the library or a manifest URL, refresh, switch providers on and off, remove, allow changed provider code) through the same `ProviderPluginService`, so what is installed and enabled is shared. |
 | [`lib/src/desktop/desktop_provider_search.dart`](#libsrcdesktopdesktop_provider_searchdart) | Windows | 249 | "Searching providers…" over the Windows interface while a play request from Home looks for a stream: a frosted card on the dimmed page, with what is being looked for and a way to stop. |
-| [`lib/src/desktop/desktop_settings_page.dart`](#libsrcdesktopdesktop_settings_pagedart) | Windows | 410 | Settings on Windows: the categories of the phone and TV Settings list on the left, the chosen one beside them, so a change and its effect are on screen together. |
+| [`lib/src/desktop/desktop_settings_page.dart`](#libsrcdesktopdesktop_settings_pagedart) | Windows | 411 | Settings on Windows: the categories of the phone and TV Settings list on the left, the chosen one beside them, so a change and its effect are on screen together. |
 | [`lib/src/desktop/desktop_shell.dart`](#libsrcdesktopdesktop_shelldart) | Windows | 1263 | The Windows interface's frame: a compact icon rail on the left and the selected page beside it. |
 | [`lib/src/desktop/desktop_top_ten.dart`](#libsrcdesktopdesktop_top_tendart) | Windows | 524 | Top 10 on Windows: the shared Top 10 feed (the same seeds, ranking and cache as Android and TV) drawn as ranked posters with the outlined numerals of the mobile and TV rows. |
 | [`lib/src/desktop/desktop_update_dialogs.dart`](#libsrcdesktopdesktop_update_dialogsdart) | Windows | 369 | Windows update dialogs: the "update available" offer with release notes, and download progress through to the installer handoff. |
 | [`lib/src/desktop/desktop_update_section.dart`](#libsrcdesktopdesktop_update_sectiondart) | Windows | 225 | Settings → About on Windows: version, update status, last check, the update action for the current state, and the automatic-check switch. |
-| [`lib/src/desktop/desktop_widgets.dart`](#libsrcdesktopdesktop_widgetsdart) | Windows | 1108 | Building blocks of the Windows interface: layout metrics, surfaces and motion, poster cards, scrolling media rows, grids, headers and messages. |
+| [`lib/src/desktop/desktop_widgets.dart`](#libsrcdesktopdesktop_widgetsdart) | Windows | 1114 | Building blocks of the Windows interface: layout metrics, surfaces and motion, poster cards, scrolling media rows, grids, headers and messages. |
 | [`lib/src/models/app_update.dart`](#libsrcmodelsapp_updatedart) | Shared | 251 | A newer GitHub release that has a downloadable APK. |
 | [`lib/src/models/episode_context.dart`](#libsrcmodelsepisode_contextdart) | Shared | 143 | The playing episode within its series: the single source of truth for episode navigation (the episode panel, Previous/Next, and auto-play). |
 | [`lib/src/models/episode_progress.dart`](#libsrcmodelsepisode_progressdart) | Shared | 69 | Where the viewer stopped in one episode. |
@@ -49,15 +49,15 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/screens/legal_information_screen.dart`](#libsrcscreenslegal_information_screendart) | Shared | 349 | Shows the privacy policy, terms of use and third-party notices. |
 | [`lib/src/screens/library_screen.dart`](#libsrcscreenslibrary_screendart) | Shared | 652 | The phone library tab: continue watching, My list and watch history from local storage. |
 | [`lib/src/screens/media_details_screen.dart`](#libsrcscreensmedia_details_screendart) | Shared | 717 | The phone details page for a movie or series, with seasons, episodes and playback. |
-| [`lib/src/screens/playback_settings_screen.dart`](#libsrcscreensplayback_settings_screendart) | Shared | 1109 | Settings, Appearance and Playback settings screens for phone and TV; Windows reuses their sub-pages. |
+| [`lib/src/screens/playback_settings_screen.dart`](#libsrcscreensplayback_settings_screendart) | Shared | 1112 | Settings, Appearance and Playback settings screens for phone and TV; Windows reuses their sub-pages. |
 | [`lib/src/screens/player_screen.dart`](#libsrcscreensplayer_screendart) | Shared | 71 | The route that hosts `CustomVideoPlayer` for one title and source. |
-| [`lib/src/screens/plugin_details_screen.dart`](#libsrcscreensplugin_details_screendart) | Shared | 506 | A plugin-library repository's details page, from which it can be installed. |
-| [`lib/src/screens/plugin_library_screen.dart`](#libsrcscreensplugin_library_screendart) | Shared | 595 | Browse the community provider catalog and hand a manifest to the existing installer. |
-| [`lib/src/screens/plugins_screen.dart`](#libsrcscreensplugins_screendart) | Shared | 899 | The phone and TV Plugins page: installed repositories, enabling providers, script updates and the plugin library. |
+| [`lib/src/screens/plugin_details_screen.dart`](#libsrcscreensplugin_details_screendart) | Shared | 547 | A plugin-library repository's details page, from which it can be installed. |
+| [`lib/src/screens/plugin_library_screen.dart`](#libsrcscreensplugin_library_screendart) | Shared | 766 | Browse the community provider catalog and hand a manifest to the existing installer: the library as its own page, opened from Plugins on phone and TV. |
+| [`lib/src/screens/plugins_screen.dart`](#libsrcscreensplugins_screendart) | Shared | 929 | The phone and TV Plugins page: installed repositories, enabling providers, script updates and the plugin library. |
 | [`lib/src/screens/splash_screen.dart`](#libsrcscreenssplash_screendart) | Shared | 383 | The launch splash and `SplashGate`, which runs startup work before the first screen. |
-| [`lib/src/screens/subtitle_addons_screen.dart`](#libsrcscreenssubtitle_addons_screendart) | Shared | 235 | Stremio subtitle addons the player searches while you watch. |
+| [`lib/src/screens/subtitle_addons_screen.dart`](#libsrcscreenssubtitle_addons_screendart) | Shared | 236 | Stremio subtitle addons the player searches while you watch. |
 | [`lib/src/screens/tv/tv_browse.dart`](#libsrcscreenstvtv_browsedart) | Android TV | 864 | TV browsing building blocks: the featured-title frame, focusable poster rows and grids, and their messages. |
-| [`lib/src/screens/tv/tv_details_screen.dart`](#libsrcscreenstvtv_details_screendart) | Android TV | 538 | A movie or series on TV: the backdrop fills the screen behind the title, details and actions, with Play focused; a series lists its seasons and episodes below. |
+| [`lib/src/screens/tv/tv_details_screen.dart`](#libsrcscreenstvtv_details_screendart) | Android TV | 540 | A movie or series on TV: the backdrop fills the screen behind the title, details and actions, with Play focused; a series lists its seasons and episodes below. |
 | [`lib/src/screens/tv/tv_home_shell.dart`](#libsrcscreenstvtv_home_shelldart) | Android TV | 447 | The TV interface's frame: a navigation rail on the left and the selected page beside it. |
 | [`lib/src/screens/tv/tv_pages.dart`](#libsrcscreenstvtv_pagesdart) | Android TV | 611 | The TV Home, Movies/Series catalog, Search and My library pages. |
 | [`lib/src/services/accent_settings_controller.dart`](#libsrcservicesaccent_settings_controllerdart) | Shared | 31 | Loads, applies and saves the accent colour. |
@@ -73,7 +73,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/services/playback_settings_controller.dart`](#libsrcservicesplayback_settings_controllerdart) | Shared | 43 | Loads, holds and saves the playback settings. |
 | [`lib/src/services/playback_source_policy.dart`](#libsrcservicesplayback_source_policydart) | Shared | 11 | Applies provider and torrent playback preferences to a returned source. |
 | [`lib/src/services/player_engine.dart`](#libsrcservicesplayer_enginedart) | Shared | 274 | Common controller boundary. |
-| [`lib/src/services/plugin_library_query.dart`](#libsrcservicesplugin_library_querydart) | Shared | 295 | The search, filters and sort chosen in the Plugin Library. |
+| [`lib/src/services/plugin_library_query.dart`](#libsrcservicesplugin_library_querydart) | Shared | 308 | The search, filters and sort chosen in the Plugin Library. |
 | [`lib/src/services/plugin_library_repository.dart`](#libsrcservicesplugin_library_repositorydart) | Shared | 167 | Holds the Plugin Library catalog for the UI. |
 | [`lib/src/services/plugin_library_service.dart`](#libsrcservicesplugin_library_servicedart) | Shared | 161 | Reads the catalog from the network, the on-device cache and the app bundle. |
 | [`lib/src/services/provider_execution_scheduler.dart`](#libsrcservicesprovider_execution_schedulerdart) | Shared | 47 | Bounds parallel provider work separately from native QuickJS heap use. |
@@ -94,7 +94,8 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/services/update_config.dart`](#libsrcservicesupdate_configdart) | Shared | 119 | Settings for the GitHub Releases based Android updater. |
 | [`lib/src/services/video_quality_selector.dart`](#libsrcservicesvideo_quality_selectordart) | Shared | 14 | Chooses the best available video height for a preferred resolution. |
 | [`lib/src/services/windows_update_controller.dart`](#libsrcserviceswindows_update_controllerdart) | Windows | 445 | Checks, downloads, verifies and hands over Windows updates. |
-| [`lib/src/theme/glass_theme.dart`](#libsrcthemeglass_themedart) | Shared | 201 | Colours, accent palettes, typography and the Material themes for phone and TV/Windows. |
+| [`lib/src/theme/design_tokens.dart`](#libsrcthemedesign_tokensdart) | Shared | 184 | Reelish's design tokens: the spacing, radius, type, icon and motion steps every interface draws from. |
+| [`lib/src/theme/glass_theme.dart`](#libsrcthemeglass_themedart) | Shared | 216 | Colours, accent palettes, typography and the Material themes for phone and TV/Windows. |
 | [`lib/src/viewmodels/details_view_model.dart`](#libsrcviewmodelsdetails_view_modeldart) | Shared | 171 | The state behind a title's details page, shared by the mobile, TV and Windows details screens: TMDB details, the seasons and the selected season's episodes, and (on Windows) related titles. |
 | [`lib/src/viewmodels/home_catalog.dart`](#libsrcviewmodelshome_catalogdart) | Shared | 49 | What Home's catalog holds, for the TV pages. |
 | [`lib/src/viewmodels/home_view_model.dart`](#libsrcviewmodelshome_view_modeldart) | Shared | 216 | Home's data, shared by the phone, TV and Windows layouts: the catalog rows, Top 10 and how it is seeded, the Continue watching row, and My list. |
@@ -105,7 +106,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/widgets/category_chip.dart`](#libsrcwidgetscategory_chipdart) | Shared | 36 | A selectable category chip for the phone Home. |
 | [`lib/src/widgets/glass_box.dart`](#libsrcwidgetsglass_boxdart) | Shared | 28 | Lightweight glass panel for content in scrolling pages and dialogs. |
 | [`lib/src/widgets/liquid_glass.dart`](#libsrcwidgetsliquid_glassdart) | Shared | 568 | A bounded, reusable glass surface. |
-| [`lib/src/widgets/media_card.dart`](#libsrcwidgetsmedia_carddart) | Shared | 364 | The phone poster card, with favourite toggle and resume progress. |
+| [`lib/src/widgets/media_card.dart`](#libsrcwidgetsmedia_carddart) | Shared | 370 | The phone poster card, with favourite toggle and resume progress. |
 | [`lib/src/widgets/player/audio_track_sheet.dart`](#libsrcwidgetsplayeraudio_track_sheetdart) | Shared | 53 | Picks an audio track. |
 | [`lib/src/widgets/player/custom_video_player.dart`](#libsrcwidgetsplayercustom_video_playerdart) | Shared | 3321 | The player session for every platform: engine and source attempts, controls, subtitles, audio and video tracks, resume and progress saving, and episode switching. |
 | [`lib/src/widgets/player/episode_panel.dart`](#libsrcwidgetsplayerepisode_paneldart) | Shared | 840 | Lists a series' episodes by season, with thumbnails, runtimes, synopses and the viewer's progress. |
@@ -123,25 +124,25 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/widgets/player/stream_selector_sheet.dart`](#libsrcwidgetsplayerstream_selector_sheetdart) | Shared | 138 | Lists playable sources. |
 | [`lib/src/widgets/player/subtitle_picker_sheet.dart`](#libsrcwidgetsplayersubtitle_picker_sheetdart) | Shared | 265 | The subtitle menu: Off, then subtitles in the video, from the provider, and from OpenSubtitles. |
 | [`lib/src/widgets/player/subtitle_position_panel.dart`](#libsrcwidgetsplayersubtitle_position_paneldart) | Shared | 121 | A compact panel at the top of the player for moving subtitles while they stay in view. |
-| [`lib/src/widgets/plugin_library/copy_manifest_button.dart`](#libsrcwidgetsplugin_librarycopy_manifest_buttondart) | Shared | 108 | Copies a manifest URL and briefly confirms it in place and in a snackbar. |
-| [`lib/src/widgets/plugin_library/plugin_badges.dart`](#libsrcwidgetsplugin_libraryplugin_badgesdart) | Shared | 132 | Status badges and metadata pills for plugin-library cards. |
-| [`lib/src/widgets/plugin_library/plugin_card.dart`](#libsrcwidgetsplugin_libraryplugin_carddart) | Shared | 233 | A provider in the library grid. |
-| [`lib/src/widgets/plugin_library/plugin_filter_bar.dart`](#libsrcwidgetsplugin_libraryplugin_filter_bardart) | Shared | 151 | Language and content-type chips plus the sort menu. |
-| [`lib/src/widgets/plugin_library/plugin_formatting.dart`](#libsrcwidgetsplugin_libraryplugin_formattingdart) | Shared | 33 | Date formatting for the plugin library. |
-| [`lib/src/widgets/plugin_library/plugin_install_button.dart`](#libsrcwidgetsplugin_libraryplugin_install_buttondart) | Shared | 144 | Hands a catalog manifest to the existing provider installer. |
-| [`lib/src/widgets/plugin_library/plugin_library_notices.dart`](#libsrcwidgetsplugin_libraryplugin_library_noticesdart) | Shared | 228 | Plugin-library notices: the safety note, the offline banner, message states and the manual-install prompt. |
-| [`lib/src/widgets/plugin_library/plugin_logo.dart`](#libsrcwidgetsplugin_libraryplugin_logodart) | Shared | 117 | A provider's icon, or a monogram tile when the catalog has none or the image fails. |
-| [`lib/src/widgets/plugin_library/plugin_scraper_tile.dart`](#libsrcwidgetsplugin_libraryplugin_scraper_tiledart) | Shared | 116 | One source in a provider's details, as its manifest describes it. |
-| [`lib/src/widgets/plugin_library/plugin_search_bar.dart`](#libsrcwidgetsplugin_libraryplugin_search_bardart) | Shared | 56 | The plugin library's search field. |
-| [`lib/src/widgets/plugin_library/plugin_skeleton.dart`](#libsrcwidgetsplugin_libraryplugin_skeletondart) | Shared | 146 | Shimmer placeholders shown while the plugin catalog loads. |
-| [`lib/src/widgets/plugin_library/plugin_stats.dart`](#libsrcwidgetsplugin_libraryplugin_statsdart) | Shared | 92 | Provider, source and language totals computed from the catalog. |
+| [`lib/src/widgets/plugin_library/copy_manifest_button.dart`](#libsrcwidgetsplugin_librarycopy_manifest_buttondart) | Shared | 109 | Copies a manifest URL and briefly confirms it in place and in a snackbar. |
+| [`lib/src/widgets/plugin_library/plugin_badges.dart`](#libsrcwidgetsplugin_libraryplugin_badgesdart) | Shared | 137 | Status badges and metadata pills for plugin-library cards. |
+| [`lib/src/widgets/plugin_library/plugin_card.dart`](#libsrcwidgetsplugin_libraryplugin_carddart) | Shared | 271 | A provider in the library grid: who made it, what it covers, how fresh it is, and one contextual action (`action`, the install button). |
+| [`lib/src/widgets/plugin_library/plugin_filter_bar.dart`](#libsrcwidgetsplugin_libraryplugin_filter_bardart) | Shared | 291 | Availability, content-type chips, and the language and sort menus. |
+| [`lib/src/widgets/plugin_library/plugin_formatting.dart`](#libsrcwidgetsplugin_libraryplugin_formattingdart) | Shared | 50 | Date formatting for the plugin library. |
+| [`lib/src/widgets/plugin_library/plugin_install_button.dart`](#libsrcwidgetsplugin_libraryplugin_install_buttondart) | Shared | 280 | Hands a catalog manifest to the existing provider installer. |
+| [`lib/src/widgets/plugin_library/plugin_library_notices.dart`](#libsrcwidgetsplugin_libraryplugin_library_noticesdart) | Shared | 238 | Plugin-library notices: the safety note, the offline banner, message states and the manual-install prompt. |
+| [`lib/src/widgets/plugin_library/plugin_logo.dart`](#libsrcwidgetsplugin_libraryplugin_logodart) | Shared | 118 | A provider's icon, or a monogram tile when the catalog has none or the image fails. |
+| [`lib/src/widgets/plugin_library/plugin_scraper_tile.dart`](#libsrcwidgetsplugin_libraryplugin_scraper_tiledart) | Shared | 117 | One source in a provider's details, as its manifest describes it. |
+| [`lib/src/widgets/plugin_library/plugin_search_bar.dart`](#libsrcwidgetsplugin_libraryplugin_search_bardart) | Shared | 60 | The plugin library's search field. |
+| [`lib/src/widgets/plugin_library/plugin_skeleton.dart`](#libsrcwidgetsplugin_libraryplugin_skeletondart) | Shared | 147 | Shimmer placeholders shown while the plugin catalog loads. |
+| [`lib/src/widgets/plugin_library/plugin_stats.dart`](#libsrcwidgetsplugin_libraryplugin_statsdart) | Shared | 58 | Provider, source and language totals computed from the catalog, and when it was updated, as one quiet line under the library's title. |
 | [`lib/src/widgets/poster_image.dart`](#libsrcwidgetsposter_imagedart) | Shared | 43 | The poster placeholder tile and the fade-in used when a poster image arrives. |
-| [`lib/src/widgets/provider_installer_modal.dart`](#libsrcwidgetsprovider_installer_modaldart) | Shared | 191 | The sheet for installing a provider repository from a manifest URL. |
+| [`lib/src/widgets/provider_installer_modal.dart`](#libsrcwidgetsprovider_installer_modaldart) | Shared | 187 | The sheet for installing a provider repository from a manifest URL. |
 | [`lib/src/widgets/provider_search_dialog.dart`](#libsrcwidgetsprovider_search_dialogdart) | Shared | 93 | "Searching providers…" while a play request looks for a stream. |
-| [`lib/src/widgets/settings/settings_components.dart`](#libsrcwidgetssettingssettings_componentsdart) | Shared | 674 | Shared settings layout: page scaffold, header, sections, rows and metrics. |
-| [`lib/src/widgets/settings/tmdb_attribution.dart`](#libsrcwidgetssettingstmdb_attributiondart) | Shared | 73 | TMDB attribution wording and assets, per https://developer.themoviedb.org/docs/faq and https://www.themoviedb.org/about/logos-attribution. |
+| [`lib/src/widgets/settings/settings_components.dart`](#libsrcwidgetssettingssettings_componentsdart) | Shared | 675 | Shared settings layout: page scaffold, header, sections, rows and metrics. |
+| [`lib/src/widgets/settings/tmdb_attribution.dart`](#libsrcwidgetssettingstmdb_attributiondart) | Shared | 78 | TMDB attribution wording and assets, per https://developer.themoviedb.org/docs/faq and https://www.themoviedb.org/about/logos-attribution. |
 | [`lib/src/widgets/soft_glass_dock.dart`](#libsrcwidgetssoft_glass_dockdart) | Shared | 250 | The phone and tablet bottom navigation dock. |
-| [`lib/src/widgets/tv/tv_focus.dart`](#libsrcwidgetstvtv_focusdart) | Android TV | 536 | TV focus and remote helpers: overscan-safe margins, the focus ring, dialog focus, key scrolling and the on-screen text entry dialog. |
+| [`lib/src/widgets/tv/tv_focus.dart`](#libsrcwidgetstvtv_focusdart) | Android TV | 543 | TV focus and remote helpers: overscan-safe margins, the focus ring, dialog focus, key scrolling and the on-screen text entry dialog. |
 | [`lib/src/widgets/tv/tv_poster_card.dart`](#libsrcwidgetstvtv_poster_carddart) | Android TV | 184 | A poster on the TV catalog. |
 | [`lib/src/widgets/update_dialog.dart`](#libsrcwidgetsupdate_dialogdart) | Shared | 466 | Update dialogs: the offer with release notes, APK download progress, the install-permission prompt and notices, and the frame, buttons and formatting the Windows update dialogs reuse. |
 
@@ -195,7 +196,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/desktop/desktop_hero.dart
 
-**Source:** [`lib/src/desktop/desktop_hero.dart`](../../lib/src/desktop/desktop_hero.dart) · **Platform:** Windows · **Lines:** 1210
+**Source:** [`lib/src/desktop/desktop_hero.dart`](../../lib/src/desktop/desktop_hero.dart) · **Platform:** Windows · **Lines:** 1234
 
 **Purpose:** The featured titles at the top of desktop Home: one full-bleed backdrop with the title, synopsis and actions on its left, and every Spotlight title in a rail along its foot, the one shown first and widest.
 
@@ -227,15 +228,15 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/desktop/desktop_plugins_page.dart
 
-**Source:** [`lib/src/desktop/desktop_plugins_page.dart`](../../lib/src/desktop/desktop_plugins_page.dart) · **Platform:** Windows · **Lines:** 850
+**Source:** [`lib/src/desktop/desktop_plugins_page.dart`](../../lib/src/desktop/desktop_plugins_page.dart) · **Platform:** Windows · **Lines:** 956
 
 **Purpose:** Plugins on Windows: the installed repositories and their providers at a desktop width, with the same actions as the phone and TV screen (add from the library or a manifest URL, refresh, switch providers on and off, remove, allow changed provider code) through the same `ProviderPluginService`, so what is installed and enabled is shared.
 
-**Declares:** `DesktopPluginsPage` (Widget), `_Empty` (Widget), `_Heading` (Widget), `_Issue` (Widget), `_Notice` (Widget), `_ProviderGrid` (Widget), `_ProviderTile` (Widget), `_RepositoryCard` (Widget), `_RepositoryCardState` (Widget state), `_Stat` (Widget), `_Warning` (Widget)
+**Declares:** `DesktopPluginsPage` (Widget), `_DesktopPluginsPageState` (Widget state), `_Empty` (Widget), `_Heading` (Widget), `_Issue` (Widget), `_Notice` (Widget), `_PluginsView` (Enum), `_ProviderGrid` (Widget), `_ProviderTile` (Widget), `_RepositoryCard` (Widget), `_RepositoryCardState` (Widget state), `_Stat` (Widget), `_ViewSwitch` (Widget), `_Warning` (Widget)
 
 **Top-level functions:** `_confirmRemoveFailed`
 
-**Imports (project):** `src/desktop/desktop_widgets.dart`, `src/models/provider_plugin.dart`, `src/screens/plugin_library_screen.dart`, `src/services/plugin_library_repository.dart`, `src/services/provider_plugin_service.dart`, `src/theme/glass_theme.dart`, `src/widgets/provider_installer_modal.dart`
+**Imports (project):** `src/desktop/desktop_widgets.dart`, `src/models/provider_plugin.dart`, `src/screens/plugin_library_screen.dart`, `src/services/plugin_library_repository.dart`, `src/services/provider_plugin_service.dart`, `src/theme/design_tokens.dart`, `src/theme/glass_theme.dart`, `src/widgets/provider_installer_modal.dart`
 
 **Packages:** `flutter`, `material_symbols_icons`
 
@@ -261,13 +262,13 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/desktop/desktop_settings_page.dart
 
-**Source:** [`lib/src/desktop/desktop_settings_page.dart`](../../lib/src/desktop/desktop_settings_page.dart) · **Platform:** Windows · **Lines:** 410
+**Source:** [`lib/src/desktop/desktop_settings_page.dart`](../../lib/src/desktop/desktop_settings_page.dart) · **Platform:** Windows · **Lines:** 411
 
 **Purpose:** Settings on Windows: the categories of the phone and TV Settings list on the left, the chosen one beside them, so a change and its effect are on screen together.
 
 **Declares:** `DesktopSettingsPage` (Widget), `_DesktopSettingsPageState` (Widget state), `DesktopSettingsSection` (Enum), `_GroupLabel` (Widget), `_RailItem` (Widget), `_RailItemState` (Widget state), `_RailTitle` (Widget)
 
-**Imports (project):** `src/desktop/desktop_widgets.dart`, `src/screens/app_information_screens.dart`, `src/screens/credits_screen.dart`, `src/screens/legal_information_screen.dart`, `src/screens/playback_settings_screen.dart`, `src/screens/subtitle_addons_screen.dart`, `src/services/accent_settings_controller.dart`, `src/services/playback_settings_controller.dart`, `src/theme/glass_theme.dart`, `src/widgets/settings/settings_components.dart`
+**Imports (project):** `src/desktop/desktop_widgets.dart`, `src/screens/app_information_screens.dart`, `src/screens/credits_screen.dart`, `src/screens/legal_information_screen.dart`, `src/screens/playback_settings_screen.dart`, `src/screens/subtitle_addons_screen.dart`, `src/services/accent_settings_controller.dart`, `src/services/playback_settings_controller.dart`, `src/theme/design_tokens.dart`, `src/theme/glass_theme.dart`, `src/widgets/settings/settings_components.dart`
 
 **Packages:** `flutter`, `material_symbols_icons`
 
@@ -343,7 +344,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/desktop/desktop_widgets.dart
 
-**Source:** [`lib/src/desktop/desktop_widgets.dart`](../../lib/src/desktop/desktop_widgets.dart) · **Platform:** Windows · **Lines:** 1108
+**Source:** [`lib/src/desktop/desktop_widgets.dart`](../../lib/src/desktop/desktop_widgets.dart) · **Platform:** Windows · **Lines:** 1114
 
 **Purpose:** Building blocks of the Windows interface: layout metrics, surfaces and motion, poster cards, scrolling media rows, grids, headers and messages.
 
@@ -351,7 +352,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Top-level functions:** `desktopMotion`, `Function`, `loadMoreIfShort`, `posterDecodeWidth`
 
-**Imports (project):** `src/models/media_item.dart`, `src/services/paged_feed_controller.dart`, `src/theme/glass_theme.dart`, `src/widgets/poster_image.dart`
+**Imports (project):** `src/models/media_item.dart`, `src/services/paged_feed_controller.dart`, `src/theme/design_tokens.dart`, `src/theme/glass_theme.dart`, `src/widgets/poster_image.dart`
 
 **Packages:** `flutter`, `material_symbols_icons`
 
@@ -651,9 +652,9 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Packages:** `flutter`
 
-**Imported by:** `main.dart`, `src/platform/desktop_gamepad.dart`, `src/platform/desktop_window.dart`, `src/screens/first_run_consent_screen.dart`, `src/screens/home_screen.dart`, `src/screens/legal_information_screen.dart`, `src/widgets/player/custom_video_player.dart`, `src/widgets/player/episode_panel.dart`, `src/widgets/player/paused_overlay.dart`, `src/widgets/player/player_controls.dart`, `src/widgets/player/player_progress_bar.dart`, `src/widgets/player/player_sheet.dart`, `src/widgets/provider_installer_modal.dart`, `src/widgets/tv/tv_focus.dart`
+**Imported by:** `main.dart`, `src/platform/desktop_gamepad.dart`, `src/platform/desktop_window.dart`, `src/screens/first_run_consent_screen.dart`, `src/screens/home_screen.dart`, `src/screens/legal_information_screen.dart`, `src/screens/plugin_details_screen.dart`, `src/screens/plugin_library_screen.dart`, `src/widgets/player/custom_video_player.dart`, `src/widgets/player/episode_panel.dart`, `src/widgets/player/paused_overlay.dart`, `src/widgets/player/player_controls.dart`, `src/widgets/player/player_progress_bar.dart`, `src/widgets/player/player_sheet.dart`, `src/widgets/plugin_library/plugin_filter_bar.dart`, `src/widgets/provider_installer_modal.dart`, `src/widgets/tv/tv_focus.dart`
 
-**Tests importing it:** `integration_test/windows_player_ui_test.dart`, `integration_test/windows_torrent_test.dart`, `test/paused_overlay_test.dart`, `test/tv_home_test.dart`, `test/tv_support_test.dart`
+**Tests importing it:** `integration_test/windows_player_ui_test.dart`, `integration_test/windows_torrent_test.dart`, `test/paused_overlay_test.dart`, `test/plugin_library_test.dart`, `test/tv_home_test.dart`, `test/tv_support_test.dart`
 
 ## lib/src/platform/windows_installation.dart
 
@@ -787,13 +788,13 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/screens/playback_settings_screen.dart
 
-**Source:** [`lib/src/screens/playback_settings_screen.dart`](../../lib/src/screens/playback_settings_screen.dart) · **Platform:** Shared · **Lines:** 1109 · **Branches on:** TargetPlatform.windows, TargetPlatform.android, TorrentSupport
+**Source:** [`lib/src/screens/playback_settings_screen.dart`](../../lib/src/screens/playback_settings_screen.dart) · **Platform:** Shared · **Lines:** 1112 · **Branches on:** TargetPlatform.windows, TargetPlatform.android, TorrentSupport
 
 **Purpose:** Settings, Appearance and Playback settings screens for phone and TV; Windows reuses their sub-pages.
 
 **Declares:** `_AccentChoice` (Widget), `AppearanceSettingsScreen` (Widget), `PlaybackSettingsScreen` (Widget), `SettingsScreen` (Widget)
 
-**Imports (project):** `src/models/playback_settings.dart`, `src/navigation/app_transitions.dart`, `src/screens/app_information_screens.dart`, `src/screens/credits_screen.dart`, `src/screens/legal_information_screen.dart`, `src/screens/subtitle_addons_screen.dart`, `src/services/accent_settings_controller.dart`, `src/services/playback_settings_controller.dart`, `src/services/torrent_source_preparer.dart`, `src/theme/glass_theme.dart`, `src/widgets/settings/settings_components.dart`, `src/widgets/tv/tv_focus.dart`
+**Imports (project):** `src/models/playback_settings.dart`, `src/navigation/app_transitions.dart`, `src/screens/app_information_screens.dart`, `src/screens/credits_screen.dart`, `src/screens/legal_information_screen.dart`, `src/screens/subtitle_addons_screen.dart`, `src/services/accent_settings_controller.dart`, `src/services/playback_settings_controller.dart`, `src/services/torrent_source_preparer.dart`, `src/theme/design_tokens.dart`, `src/theme/glass_theme.dart`, `src/widgets/settings/settings_components.dart`, `src/widgets/tv/tv_focus.dart`
 
 **Packages:** `flutter`, `material_symbols_icons`
 
@@ -819,13 +820,13 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/screens/plugin_details_screen.dart
 
-**Source:** [`lib/src/screens/plugin_details_screen.dart`](../../lib/src/screens/plugin_details_screen.dart) · **Platform:** Shared · **Lines:** 506
+**Source:** [`lib/src/screens/plugin_details_screen.dart`](../../lib/src/screens/plugin_details_screen.dart) · **Platform:** Shared · **Lines:** 547 · **Branches on:** isDesktop
 
 **Purpose:** A plugin-library repository's details page, from which it can be installed.
 
 **Declares:** `_Heading` (Widget), `_Hero` (Widget), `_InfoTable` (Widget), `_ManifestBox` (Widget), `_Note` (Widget), `PluginDetailsScreen` (Widget)
 
-**Imports (project):** `src/models/plugin_catalog.dart`, `src/services/plugin_library_query.dart`, `src/services/provider_plugin_service.dart`, `src/theme/glass_theme.dart`, `src/widgets/plugin_library/copy_manifest_button.dart`, `src/widgets/plugin_library/plugin_badges.dart`, `src/widgets/plugin_library/plugin_formatting.dart`, `src/widgets/plugin_library/plugin_install_button.dart`, `src/widgets/plugin_library/plugin_library_notices.dart`, `src/widgets/plugin_library/plugin_logo.dart`, `src/widgets/plugin_library/plugin_scraper_tile.dart`
+**Imports (project):** `src/models/plugin_catalog.dart`, `src/platform/device_capabilities.dart`, `src/services/plugin_library_query.dart`, `src/services/provider_plugin_service.dart`, `src/theme/design_tokens.dart`, `src/theme/glass_theme.dart`, `src/widgets/plugin_library/copy_manifest_button.dart`, `src/widgets/plugin_library/plugin_badges.dart`, `src/widgets/plugin_library/plugin_formatting.dart`, `src/widgets/plugin_library/plugin_install_button.dart`, `src/widgets/plugin_library/plugin_library_notices.dart`, `src/widgets/plugin_library/plugin_logo.dart`, `src/widgets/plugin_library/plugin_scraper_tile.dart`
 
 **Packages:** `flutter`, `material_symbols_icons`, `url_launcher`
 
@@ -835,23 +836,23 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/screens/plugin_library_screen.dart
 
-**Source:** [`lib/src/screens/plugin_library_screen.dart`](../../lib/src/screens/plugin_library_screen.dart) · **Platform:** Shared · **Lines:** 595
+**Source:** [`lib/src/screens/plugin_library_screen.dart`](../../lib/src/screens/plugin_library_screen.dart) · **Platform:** Shared · **Lines:** 766 · **Branches on:** isTv
 
-**Purpose:** Browse the community provider catalog and hand a manifest to the existing installer.
+**Purpose:** Browse the community provider catalog and hand a manifest to the existing installer: the library as its own page, opened from Plugins on phone and TV.
 
-**Declares:** `_Entrance` (Widget), `_Header` (Widget), `PluginLibraryScreen` (Widget), `_PluginLibraryScreenState` (Widget state), `_TopBar` (Widget)
+**Declares:** `_Entrance` (Widget), `_Header` (Widget), `_HeaderActions` (Widget), `PluginLibraryScreen` (Widget), `PluginLibraryView` (Widget), `_PluginLibraryViewState` (Widget state), `_TopBar` (Widget)
 
-**Imports (project):** `src/models/plugin_catalog.dart`, `src/navigation/app_transitions.dart`, `src/screens/plugin_details_screen.dart`, `src/services/plugin_library_query.dart`, `src/services/plugin_library_repository.dart`, `src/services/plugin_library_service.dart`, `src/services/provider_plugin_service.dart`, `src/theme/glass_theme.dart`, `src/widgets/plugin_library/plugin_card.dart`, `src/widgets/plugin_library/plugin_filter_bar.dart`, `src/widgets/plugin_library/plugin_formatting.dart`, `src/widgets/plugin_library/plugin_install_button.dart`, `src/widgets/plugin_library/plugin_library_notices.dart`, `src/widgets/plugin_library/plugin_search_bar.dart`, `src/widgets/plugin_library/plugin_skeleton.dart`, `src/widgets/plugin_library/plugin_stats.dart`, `src/widgets/provider_installer_modal.dart`
+**Imports (project):** `src/models/plugin_catalog.dart`, `src/navigation/app_transitions.dart`, `src/platform/device_capabilities.dart`, `src/screens/plugin_details_screen.dart`, `src/services/plugin_library_query.dart`, `src/services/plugin_library_repository.dart`, `src/services/plugin_library_service.dart`, `src/services/provider_plugin_service.dart`, `src/theme/design_tokens.dart`, `src/theme/glass_theme.dart`, `src/widgets/plugin_library/plugin_card.dart`, `src/widgets/plugin_library/plugin_filter_bar.dart`, `src/widgets/plugin_library/plugin_install_button.dart`, `src/widgets/plugin_library/plugin_library_notices.dart`, `src/widgets/plugin_library/plugin_search_bar.dart`, `src/widgets/plugin_library/plugin_skeleton.dart`, `src/widgets/plugin_library/plugin_stats.dart`, `src/widgets/provider_installer_modal.dart`, `src/widgets/tv/tv_focus.dart`
 
 **Packages:** `flutter`, `material_symbols_icons`
 
 **Imported by:** `src/desktop/desktop_plugins_page.dart`, `src/screens/plugins_screen.dart`
 
-**Tests importing it:** `test/plugin_library_test.dart`
+**Tests importing it:** `test/desktop_settings_plugins_test.dart`, `test/plugin_library_test.dart`
 
 ## lib/src/screens/plugins_screen.dart
 
-**Source:** [`lib/src/screens/plugins_screen.dart`](../../lib/src/screens/plugins_screen.dart) · **Platform:** Shared · **Lines:** 899
+**Source:** [`lib/src/screens/plugins_screen.dart`](../../lib/src/screens/plugins_screen.dart) · **Platform:** Shared · **Lines:** 929
 
 **Purpose:** The phone and TV Plugins page: installed repositories, enabling providers, script updates and the plugin library.
 
@@ -859,7 +860,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Top-level functions:** `_confirmRemoveFailed`
 
-**Imports (project):** `src/models/provider_plugin.dart`, `src/screens/plugin_library_screen.dart`, `src/services/plugin_library_repository.dart`, `src/services/provider_plugin_service.dart`, `src/theme/glass_theme.dart`, `src/widgets/provider_installer_modal.dart`
+**Imports (project):** `src/models/provider_plugin.dart`, `src/screens/plugin_library_screen.dart`, `src/services/plugin_library_repository.dart`, `src/services/provider_plugin_service.dart`, `src/theme/design_tokens.dart`, `src/theme/glass_theme.dart`, `src/widgets/provider_installer_modal.dart`
 
 **Packages:** `flutter`, `material_symbols_icons`
 
@@ -885,13 +886,13 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/screens/subtitle_addons_screen.dart
 
-**Source:** [`lib/src/screens/subtitle_addons_screen.dart`](../../lib/src/screens/subtitle_addons_screen.dart) · **Platform:** Shared · **Lines:** 235
+**Source:** [`lib/src/screens/subtitle_addons_screen.dart`](../../lib/src/screens/subtitle_addons_screen.dart) · **Platform:** Shared · **Lines:** 236
 
 **Purpose:** Stremio subtitle addons the player searches while you watch.
 
 **Declares:** `_AddonTile` (Widget), `SubtitleAddonsScreen` (Widget), `_SubtitleAddonsScreenState` (Widget state)
 
-**Imports (project):** `src/models/subtitle_addon.dart`, `src/services/subtitle_addon_service.dart`, `src/theme/glass_theme.dart`, `src/widgets/settings/settings_components.dart`
+**Imports (project):** `src/models/subtitle_addon.dart`, `src/services/subtitle_addon_service.dart`, `src/theme/design_tokens.dart`, `src/theme/glass_theme.dart`, `src/widgets/settings/settings_components.dart`
 
 **Packages:** `flutter`, `material_symbols_icons`
 
@@ -917,13 +918,13 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/screens/tv/tv_details_screen.dart
 
-**Source:** [`lib/src/screens/tv/tv_details_screen.dart`](../../lib/src/screens/tv/tv_details_screen.dart) · **Platform:** Android TV · **Lines:** 538
+**Source:** [`lib/src/screens/tv/tv_details_screen.dart`](../../lib/src/screens/tv/tv_details_screen.dart) · **Platform:** Android TV · **Lines:** 540
 
 **Purpose:** A movie or series on TV: the backdrop fills the screen behind the title, details and actions, with Play focused; a series lists its seasons and episodes below.
 
 **Declares:** `_EpisodeCard` (Widget), `TvMediaDetailsScreen` (Widget), `_TvMediaDetailsScreenState` (Widget state)
 
-**Imports (project):** `src/models/media_details.dart`, `src/models/media_item.dart`, `src/models/tv_season.dart`, `src/screens/tv/tv_browse.dart`, `src/services/tmdb_service.dart`, `src/theme/glass_theme.dart`, `src/viewmodels/details_view_model.dart`, `src/widgets/tv/tv_focus.dart`
+**Imports (project):** `src/models/media_details.dart`, `src/models/media_item.dart`, `src/models/tv_season.dart`, `src/screens/tv/tv_browse.dart`, `src/services/tmdb_service.dart`, `src/theme/design_tokens.dart`, `src/theme/glass_theme.dart`, `src/viewmodels/details_view_model.dart`, `src/widgets/tv/tv_focus.dart`
 
 **Packages:** `flutter`, `material_symbols_icons`
 
@@ -1167,11 +1168,11 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/services/plugin_library_query.dart
 
-**Source:** [`lib/src/services/plugin_library_query.dart`](../../lib/src/services/plugin_library_query.dart) · **Platform:** Shared · **Lines:** 295
+**Source:** [`lib/src/services/plugin_library_query.dart`](../../lib/src/services/plugin_library_query.dart) · **Platform:** Shared · **Lines:** 308
 
 **Purpose:** The search, filters and sort chosen in the Plugin Library.
 
-**Declares:** `PluginContentType` (Enum), `PluginLanguages` (Service type), `PluginLibraryFacets` (Service type), `PluginLibraryQuery` (Service type), `PluginLibraryStats` (Service type), `PluginSort` (Enum)
+**Declares:** `PluginAvailability` (Enum), `PluginContentType` (Enum), `PluginLanguages` (Service type), `PluginLibraryFacets` (Service type), `PluginLibraryQuery` (Service type), `PluginLibraryStats` (Service type), `PluginSort` (Enum)
 
 **Top-level functions:** `previewScrapers`
 
@@ -1491,9 +1492,25 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Tests importing it:** `integration_test/windows_update_channel_test.dart`, `test/windows_update_test.dart`
 
+## lib/src/theme/design_tokens.dart
+
+**Source:** [`lib/src/theme/design_tokens.dart`](../../lib/src/theme/design_tokens.dart) · **Platform:** Shared · **Lines:** 184
+
+**Purpose:** Reelish's design tokens: the spacing, radius, type, icon and motion steps every interface draws from.
+
+**Declares:** `AppIcon` (Theme), `AppMotion` (Theme), `AppRadius` (Theme), `AppSpace` (Theme), `AppTextSize` (Theme), `AppType` (Theme)
+
+**Imports (project):** none
+
+**Packages:** `flutter`
+
+**Imported by:** `src/desktop/desktop_plugins_page.dart`, `src/desktop/desktop_settings_page.dart`, `src/desktop/desktop_widgets.dart`, `src/screens/playback_settings_screen.dart`, `src/screens/plugin_details_screen.dart`, `src/screens/plugin_library_screen.dart`, `src/screens/plugins_screen.dart`, `src/screens/subtitle_addons_screen.dart`, `src/screens/tv/tv_details_screen.dart`, `src/widgets/media_card.dart`, `src/widgets/plugin_library/copy_manifest_button.dart`, `src/widgets/plugin_library/plugin_badges.dart`, `src/widgets/plugin_library/plugin_card.dart`, `src/widgets/plugin_library/plugin_filter_bar.dart`, `src/widgets/plugin_library/plugin_install_button.dart`, `src/widgets/plugin_library/plugin_library_notices.dart`, `src/widgets/plugin_library/plugin_logo.dart`, `src/widgets/plugin_library/plugin_scraper_tile.dart`, `src/widgets/plugin_library/plugin_search_bar.dart`, `src/widgets/plugin_library/plugin_skeleton.dart`, `src/widgets/plugin_library/plugin_stats.dart`, `src/widgets/settings/settings_components.dart`, `src/widgets/settings/tmdb_attribution.dart`
+
+**Tests importing it:** none directly (it may be covered through the files that import it)
+
 ## lib/src/theme/glass_theme.dart
 
-**Source:** [`lib/src/theme/glass_theme.dart`](../../lib/src/theme/glass_theme.dart) · **Platform:** Shared · **Lines:** 201
+**Source:** [`lib/src/theme/glass_theme.dart`](../../lib/src/theme/glass_theme.dart) · **Platform:** Shared · **Lines:** 216
 
 **Purpose:** Colours, accent palettes, typography and the Material themes for phone and TV/Windows.
 
@@ -1669,13 +1686,13 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/widgets/media_card.dart
 
-**Source:** [`lib/src/widgets/media_card.dart`](../../lib/src/widgets/media_card.dart) · **Platform:** Shared · **Lines:** 364
+**Source:** [`lib/src/widgets/media_card.dart`](../../lib/src/widgets/media_card.dart) · **Platform:** Shared · **Lines:** 370
 
 **Purpose:** The phone poster card, with favourite toggle and resume progress.
 
 **Declares:** `MediaCard` (Widget), `_MediaCardState` (Widget state)
 
-**Imports (project):** `src/models/media_item.dart`, `src/theme/glass_theme.dart`, `src/widgets/liquid_glass.dart`, `src/widgets/poster_image.dart`
+**Imports (project):** `src/models/media_item.dart`, `src/theme/design_tokens.dart`, `src/theme/glass_theme.dart`, `src/widgets/liquid_glass.dart`, `src/widgets/poster_image.dart`
 
 **Packages:** `flutter`, `material_symbols_icons`
 
@@ -1961,29 +1978,29 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/widgets/plugin_library/copy_manifest_button.dart
 
-**Source:** [`lib/src/widgets/plugin_library/copy_manifest_button.dart`](../../lib/src/widgets/plugin_library/copy_manifest_button.dart) · **Platform:** Shared · **Lines:** 108
+**Source:** [`lib/src/widgets/plugin_library/copy_manifest_button.dart`](../../lib/src/widgets/plugin_library/copy_manifest_button.dart) · **Platform:** Shared · **Lines:** 109
 
 **Purpose:** Copies a manifest URL and briefly confirms it in place and in a snackbar.
 
 **Declares:** `CopyManifestButton` (Widget), `_CopyManifestButtonState` (Widget state)
 
-**Imports (project):** `src/theme/glass_theme.dart`
+**Imports (project):** `src/theme/design_tokens.dart`, `src/theme/glass_theme.dart`
 
 **Packages:** `flutter`, `material_symbols_icons`
 
-**Imported by:** `src/screens/plugin_details_screen.dart`, `src/widgets/plugin_library/plugin_card.dart`
+**Imported by:** `src/screens/plugin_details_screen.dart`
 
 **Tests importing it:** none directly (it may be covered through the files that import it)
 
 ## lib/src/widgets/plugin_library/plugin_badges.dart
 
-**Source:** [`lib/src/widgets/plugin_library/plugin_badges.dart`](../../lib/src/widgets/plugin_library/plugin_badges.dart) · **Platform:** Shared · **Lines:** 132
+**Source:** [`lib/src/widgets/plugin_library/plugin_badges.dart`](../../lib/src/widgets/plugin_library/plugin_badges.dart) · **Platform:** Shared · **Lines:** 137
 
 **Purpose:** Status badges and metadata pills for plugin-library cards.
 
 **Declares:** `_Badge` (Widget), `PluginMetaPill` (Widget), `PluginStatusBadges` (Widget)
 
-**Imports (project):** `src/models/plugin_catalog.dart`, `src/theme/glass_theme.dart`
+**Imports (project):** `src/models/plugin_catalog.dart`, `src/theme/design_tokens.dart`, `src/theme/glass_theme.dart`
 
 **Packages:** `flutter`, `material_symbols_icons`
 
@@ -1993,13 +2010,13 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/widgets/plugin_library/plugin_card.dart
 
-**Source:** [`lib/src/widgets/plugin_library/plugin_card.dart`](../../lib/src/widgets/plugin_library/plugin_card.dart) · **Platform:** Shared · **Lines:** 233
+**Source:** [`lib/src/widgets/plugin_library/plugin_card.dart`](../../lib/src/widgets/plugin_library/plugin_card.dart) · **Platform:** Shared · **Lines:** 271
 
-**Purpose:** A provider in the library grid.
+**Purpose:** A provider in the library grid: who made it, what it covers, how fresh it is, and one contextual action (`action`, the install button).
 
 **Declares:** `PluginCard` (Widget), `_PluginCardState` (Widget state), `_SourceChip` (Widget)
 
-**Imports (project):** `src/models/plugin_catalog.dart`, `src/services/plugin_library_query.dart`, `src/theme/glass_theme.dart`, `src/widgets/plugin_library/copy_manifest_button.dart`, `src/widgets/plugin_library/plugin_badges.dart`, `src/widgets/plugin_library/plugin_logo.dart`
+**Imports (project):** `src/models/plugin_catalog.dart`, `src/services/plugin_library_query.dart`, `src/theme/design_tokens.dart`, `src/theme/glass_theme.dart`, `src/widgets/plugin_library/plugin_badges.dart`, `src/widgets/plugin_library/plugin_formatting.dart`, `src/widgets/plugin_library/plugin_logo.dart`
 
 **Packages:** `flutter`, `material_symbols_icons`
 
@@ -2009,43 +2026,45 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/widgets/plugin_library/plugin_filter_bar.dart
 
-**Source:** [`lib/src/widgets/plugin_library/plugin_filter_bar.dart`](../../lib/src/widgets/plugin_library/plugin_filter_bar.dart) · **Platform:** Shared · **Lines:** 151
+**Source:** [`lib/src/widgets/plugin_library/plugin_filter_bar.dart`](../../lib/src/widgets/plugin_library/plugin_filter_bar.dart) · **Platform:** Shared · **Lines:** 291 · **Branches on:** isDesktop
 
-**Purpose:** Language and content-type chips plus the sort menu.
+**Purpose:** Availability, content-type chips, and the language and sort menus.
 
-**Declares:** `PluginFilterBar` (Widget), `_SortMenu` (Widget)
+**Declares:** `_LanguageMenu` (Widget), `_MenuPill` (Widget), `PluginFilterBar` (Widget), `_Separator` (Widget), `_SortMenu` (Widget)
 
-**Imports (project):** `src/services/plugin_library_query.dart`, `src/theme/glass_theme.dart`, `src/widgets/category_chip.dart`
+**Imports (project):** `src/platform/device_capabilities.dart`, `src/services/plugin_library_query.dart`, `src/theme/design_tokens.dart`, `src/theme/glass_theme.dart`, `src/widgets/category_chip.dart`
 
 **Packages:** `flutter`, `material_symbols_icons`
 
 **Imported by:** `src/screens/plugin_library_screen.dart`
 
-**Tests importing it:** `test/plugin_library_test.dart`
+**Tests importing it:** none directly (it may be covered through the files that import it)
 
 ## lib/src/widgets/plugin_library/plugin_formatting.dart
 
-**Source:** [`lib/src/widgets/plugin_library/plugin_formatting.dart`](../../lib/src/widgets/plugin_library/plugin_formatting.dart) · **Platform:** Shared · **Lines:** 33
+**Source:** [`lib/src/widgets/plugin_library/plugin_formatting.dart`](../../lib/src/widgets/plugin_library/plugin_formatting.dart) · **Platform:** Shared · **Lines:** 50
 
 **Purpose:** Date formatting for the plugin library.
 
-**Top-level functions:** `formatPluginDate`, `relativePluginDate`
+**Top-level functions:** `describeInstallError`, `formatPluginDate`, `relativePluginDate`
 
 **Imports (project):** none
 
-**Imported by:** `src/screens/plugin_details_screen.dart`, `src/screens/plugin_library_screen.dart`
+**Packages:** `http`
 
-**Tests importing it:** none directly (it may be covered through the files that import it)
+**Imported by:** `src/screens/plugin_details_screen.dart`, `src/widgets/plugin_library/plugin_card.dart`, `src/widgets/plugin_library/plugin_install_button.dart`, `src/widgets/plugin_library/plugin_stats.dart`
+
+**Tests importing it:** `test/plugin_library_test.dart`
 
 ## lib/src/widgets/plugin_library/plugin_install_button.dart
 
-**Source:** [`lib/src/widgets/plugin_library/plugin_install_button.dart`](../../lib/src/widgets/plugin_library/plugin_install_button.dart) · **Platform:** Shared · **Lines:** 144
+**Source:** [`lib/src/widgets/plugin_library/plugin_install_button.dart`](../../lib/src/widgets/plugin_library/plugin_install_button.dart) · **Platform:** Shared · **Lines:** 280
 
 **Purpose:** Hands a catalog manifest to the existing provider installer.
 
-**Declares:** `PluginInstallButton` (Widget), `_PluginInstallButtonState` (Widget state)
+**Declares:** `PluginInstallButton` (Widget), `_PluginInstallButtonState` (Widget state), `PluginRemoveButton` (Widget), `_PluginRemoveButtonState` (Widget state)
 
-**Imports (project):** `src/models/plugin_catalog.dart`, `src/services/provider_plugin_service.dart`, `src/theme/glass_theme.dart`
+**Imports (project):** `src/models/plugin_catalog.dart`, `src/services/provider_plugin_service.dart`, `src/theme/design_tokens.dart`, `src/theme/glass_theme.dart`, `src/widgets/plugin_library/plugin_formatting.dart`
 
 **Packages:** `flutter`, `material_symbols_icons`
 
@@ -2055,13 +2074,13 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/widgets/plugin_library/plugin_library_notices.dart
 
-**Source:** [`lib/src/widgets/plugin_library/plugin_library_notices.dart`](../../lib/src/widgets/plugin_library/plugin_library_notices.dart) · **Platform:** Shared · **Lines:** 228
+**Source:** [`lib/src/widgets/plugin_library/plugin_library_notices.dart`](../../lib/src/widgets/plugin_library/plugin_library_notices.dart) · **Platform:** Shared · **Lines:** 238
 
 **Purpose:** Plugin-library notices: the safety note, the offline banner, message states and the manual-install prompt.
 
 **Declares:** `PluginManualInstallPrompt` (Widget), `PluginMessageState` (Widget), `PluginOfflineBanner` (Widget), `PluginSafetyNotice` (Widget)
 
-**Imports (project):** `src/theme/glass_theme.dart`
+**Imports (project):** `src/theme/design_tokens.dart`, `src/theme/glass_theme.dart`
 
 **Packages:** `flutter`, `material_symbols_icons`
 
@@ -2071,13 +2090,13 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/widgets/plugin_library/plugin_logo.dart
 
-**Source:** [`lib/src/widgets/plugin_library/plugin_logo.dart`](../../lib/src/widgets/plugin_library/plugin_logo.dart) · **Platform:** Shared · **Lines:** 117
+**Source:** [`lib/src/widgets/plugin_library/plugin_logo.dart`](../../lib/src/widgets/plugin_library/plugin_logo.dart) · **Platform:** Shared · **Lines:** 118
 
 **Purpose:** A provider's icon, or a monogram tile when the catalog has none or the image fails.
 
 **Declares:** `_Monogram` (Widget), `PluginLogo` (Widget)
 
-**Imports (project):** `src/theme/glass_theme.dart`
+**Imports (project):** `src/theme/design_tokens.dart`, `src/theme/glass_theme.dart`
 
 **Packages:** `flutter`, `material_symbols_icons`
 
@@ -2087,13 +2106,13 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/widgets/plugin_library/plugin_scraper_tile.dart
 
-**Source:** [`lib/src/widgets/plugin_library/plugin_scraper_tile.dart`](../../lib/src/widgets/plugin_library/plugin_scraper_tile.dart) · **Platform:** Shared · **Lines:** 116
+**Source:** [`lib/src/widgets/plugin_library/plugin_scraper_tile.dart`](../../lib/src/widgets/plugin_library/plugin_scraper_tile.dart) · **Platform:** Shared · **Lines:** 117
 
 **Purpose:** One source in a provider's details, as its manifest describes it.
 
 **Declares:** `PluginScraperTile` (Widget)
 
-**Imports (project):** `src/models/plugin_catalog.dart`, `src/services/plugin_library_query.dart`, `src/theme/glass_theme.dart`, `src/widgets/plugin_library/plugin_logo.dart`
+**Imports (project):** `src/models/plugin_catalog.dart`, `src/services/plugin_library_query.dart`, `src/theme/design_tokens.dart`, `src/theme/glass_theme.dart`, `src/widgets/plugin_library/plugin_logo.dart`
 
 **Packages:** `flutter`
 
@@ -2103,13 +2122,13 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/widgets/plugin_library/plugin_search_bar.dart
 
-**Source:** [`lib/src/widgets/plugin_library/plugin_search_bar.dart`](../../lib/src/widgets/plugin_library/plugin_search_bar.dart) · **Platform:** Shared · **Lines:** 56
+**Source:** [`lib/src/widgets/plugin_library/plugin_search_bar.dart`](../../lib/src/widgets/plugin_library/plugin_search_bar.dart) · **Platform:** Shared · **Lines:** 60
 
 **Purpose:** The plugin library's search field.
 
 **Declares:** `PluginSearchBar` (Widget)
 
-**Imports (project):** `src/theme/glass_theme.dart`
+**Imports (project):** `src/theme/design_tokens.dart`, `src/theme/glass_theme.dart`
 
 **Packages:** `flutter`, `material_symbols_icons`
 
@@ -2119,13 +2138,13 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/widgets/plugin_library/plugin_skeleton.dart
 
-**Source:** [`lib/src/widgets/plugin_library/plugin_skeleton.dart`](../../lib/src/widgets/plugin_library/plugin_skeleton.dart) · **Platform:** Shared · **Lines:** 146
+**Source:** [`lib/src/widgets/plugin_library/plugin_skeleton.dart`](../../lib/src/widgets/plugin_library/plugin_skeleton.dart) · **Platform:** Shared · **Lines:** 147
 
 **Purpose:** Shimmer placeholders shown while the plugin catalog loads.
 
 **Declares:** `_Block` (Widget), `PluginCardSkeleton` (Widget), `PluginShimmer` (Widget), `_PluginShimmerState` (Widget state), `_Slide` (Class)
 
-**Imports (project):** `src/theme/glass_theme.dart`
+**Imports (project):** `src/theme/design_tokens.dart`, `src/theme/glass_theme.dart`
 
 **Packages:** `flutter`
 
@@ -2135,13 +2154,13 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/widgets/plugin_library/plugin_stats.dart
 
-**Source:** [`lib/src/widgets/plugin_library/plugin_stats.dart`](../../lib/src/widgets/plugin_library/plugin_stats.dart) · **Platform:** Shared · **Lines:** 92
+**Source:** [`lib/src/widgets/plugin_library/plugin_stats.dart`](../../lib/src/widgets/plugin_library/plugin_stats.dart) · **Platform:** Shared · **Lines:** 58
 
-**Purpose:** Provider, source and language totals computed from the catalog.
+**Purpose:** Provider, source and language totals computed from the catalog, and when it was updated, as one quiet line under the library's title.
 
-**Declares:** `_Divider` (Widget), `PluginStats` (Widget), `_Stat` (Widget)
+**Declares:** `PluginStats` (Widget)
 
-**Imports (project):** `src/services/plugin_library_query.dart`, `src/theme/glass_theme.dart`
+**Imports (project):** `src/services/plugin_library_query.dart`, `src/theme/design_tokens.dart`, `src/theme/glass_theme.dart`, `src/widgets/plugin_library/plugin_formatting.dart`
 
 **Packages:** `flutter`
 
@@ -2169,7 +2188,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/widgets/provider_installer_modal.dart
 
-**Source:** [`lib/src/widgets/provider_installer_modal.dart`](../../lib/src/widgets/provider_installer_modal.dart) · **Platform:** Shared · **Lines:** 191 · **Branches on:** usesTvLayout
+**Source:** [`lib/src/widgets/provider_installer_modal.dart`](../../lib/src/widgets/provider_installer_modal.dart) · **Platform:** Shared · **Lines:** 187 · **Branches on:** usesTvLayout
 
 **Purpose:** The sheet for installing a provider repository from a manifest URL.
 
@@ -2201,13 +2220,13 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/widgets/settings/settings_components.dart
 
-**Source:** [`lib/src/widgets/settings/settings_components.dart`](../../lib/src/widgets/settings/settings_components.dart) · **Platform:** Shared · **Lines:** 674
+**Source:** [`lib/src/widgets/settings/settings_components.dart`](../../lib/src/widgets/settings/settings_components.dart) · **Platform:** Shared · **Lines:** 675
 
 **Purpose:** Shared settings layout: page scaffold, header, sections, rows and metrics.
 
 **Declares:** `_RootTitle` (Widget), `SettingsDivider` (Widget), `SettingsEmbedding` (Widget), `SettingsHeader` (Widget), `SettingsIconBadge` (Widget), `SettingsMetrics` (Class), `SettingsPage` (Widget), `SettingsParagraph` (Widget), `SettingsScaffold` (Widget), `SettingsSection` (Widget), `SettingsSectionHeader` (Widget), `SettingsSliderTile` (Widget), `SettingsSwitchTile` (Widget), `SettingsTile` (Widget)
 
-**Imports (project):** `src/theme/glass_theme.dart`, `src/widgets/settings/tmdb_attribution.dart`, `src/widgets/tv/tv_focus.dart`
+**Imports (project):** `src/theme/design_tokens.dart`, `src/theme/glass_theme.dart`, `src/widgets/settings/tmdb_attribution.dart`, `src/widgets/tv/tv_focus.dart`
 
 **Packages:** `flutter`, `material_symbols_icons`
 
@@ -2217,13 +2236,13 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/widgets/settings/tmdb_attribution.dart
 
-**Source:** [`lib/src/widgets/settings/tmdb_attribution.dart`](../../lib/src/widgets/settings/tmdb_attribution.dart) · **Platform:** Shared · **Lines:** 73
+**Source:** [`lib/src/widgets/settings/tmdb_attribution.dart`](../../lib/src/widgets/settings/tmdb_attribution.dart) · **Platform:** Shared · **Lines:** 78
 
 **Purpose:** TMDB attribution wording and assets, per https://developer.themoviedb.org/docs/faq and https://www.themoviedb.org/about/logos-attribution.
 
 **Declares:** `TmdbAttribution` (Class), `TmdbAttributionFooter` (Widget), `TmdbLogo` (Widget)
 
-**Imports (project):** `src/theme/glass_theme.dart`
+**Imports (project):** `src/theme/design_tokens.dart`, `src/theme/glass_theme.dart`
 
 **Packages:** `flutter`
 
@@ -2249,7 +2268,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/widgets/tv/tv_focus.dart
 
-**Source:** [`lib/src/widgets/tv/tv_focus.dart`](../../lib/src/widgets/tv/tv_focus.dart) · **Platform:** Android TV · **Lines:** 536 · **Branches on:** usesTvLayout
+**Source:** [`lib/src/widgets/tv/tv_focus.dart`](../../lib/src/widgets/tv/tv_focus.dart) · **Platform:** Android TV · **Lines:** 543 · **Branches on:** usesTvLayout
 
 **Purpose:** TV focus and remote helpers: overscan-safe margins, the focus ring, dialog focus, key scrolling and the on-screen text entry dialog.
 
@@ -2261,9 +2280,9 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Packages:** `flutter`, `material_symbols_icons`
 
-**Imported by:** `main.dart`, `src/screens/home_screen.dart`, `src/screens/legal_information_screen.dart`, `src/screens/playback_settings_screen.dart`, `src/screens/tv/tv_browse.dart`, `src/screens/tv/tv_details_screen.dart`, `src/screens/tv/tv_home_shell.dart`, `src/screens/tv/tv_pages.dart`, `src/widgets/player/subtitle_position_panel.dart`, `src/widgets/provider_installer_modal.dart`, `src/widgets/settings/settings_components.dart`, `src/widgets/tv/tv_poster_card.dart`
+**Imported by:** `main.dart`, `src/screens/home_screen.dart`, `src/screens/legal_information_screen.dart`, `src/screens/playback_settings_screen.dart`, `src/screens/plugin_library_screen.dart`, `src/screens/tv/tv_browse.dart`, `src/screens/tv/tv_details_screen.dart`, `src/screens/tv/tv_home_shell.dart`, `src/screens/tv/tv_pages.dart`, `src/widgets/player/subtitle_position_panel.dart`, `src/widgets/provider_installer_modal.dart`, `src/widgets/settings/settings_components.dart`, `src/widgets/tv/tv_poster_card.dart`
 
-**Tests importing it:** `test/details_screens_test.dart`, `test/search_library_screens_test.dart`, `test/tv_layout_test.dart`, `test/tv_support_test.dart`
+**Tests importing it:** `test/details_screens_test.dart`, `test/plugin_library_test.dart`, `test/search_library_screens_test.dart`, `test/tv_layout_test.dart`, `test/tv_support_test.dart`
 
 ## lib/src/widgets/tv/tv_poster_card.dart
 

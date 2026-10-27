@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
+import '../../theme/design_tokens.dart';
 import '../../theme/glass_theme.dart';
 
-const _warning = Color(0xFFFFB547);
+const _warning = GlassTheme.warning;
 
 /// The quiet community/third-party notice shown with the catalog.
 class PluginSafetyNotice extends StatelessWidget {
@@ -18,7 +19,7 @@ class PluginSafetyNotice extends StatelessWidget {
     padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
     decoration: BoxDecoration(
       color: Colors.white.withValues(alpha: .03),
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(AppRadius.lg),
       border: Border.all(color: GlassTheme.border),
     ),
     child: Row(
@@ -41,7 +42,7 @@ class PluginSafetyNotice extends StatelessWidget {
             '${attribution == null ? '' : '\n$attribution'}',
             style: const TextStyle(
               color: GlassTheme.muted,
-              fontSize: 11,
+              fontSize: AppTextSize.caption,
               height: 1.45,
             ),
           ),
@@ -71,7 +72,7 @@ class PluginOfflineBanner extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(14, 6, 6, 6),
       decoration: BoxDecoration(
         color: _warning.withValues(alpha: .08),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(AppRadius.card),
         border: Border.all(color: _warning.withValues(alpha: .2)),
       ),
       child: Row(
@@ -81,7 +82,10 @@ class PluginOfflineBanner extends StatelessWidget {
           Expanded(
             child: Text(
               message,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+              style: const TextStyle(
+                fontSize: AppTextSize.label,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
           TextButton(
@@ -145,7 +149,10 @@ class PluginMessageState extends StatelessWidget {
         Text(
           title,
           textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+          style: const TextStyle(
+            fontSize: AppTextSize.title,
+            fontWeight: FontWeight.w800,
+          ),
         ),
         const SizedBox(height: 6),
         Text(
@@ -153,7 +160,7 @@ class PluginMessageState extends StatelessWidget {
           textAlign: TextAlign.center,
           style: const TextStyle(
             color: GlassTheme.muted,
-            fontSize: 13,
+            fontSize: AppTextSize.bodySmall,
             height: 1.45,
           ),
         ),
@@ -204,7 +211,7 @@ class PluginManualInstallPrompt extends StatelessWidget {
     padding: const EdgeInsets.fromLTRB(14, 8, 8, 8),
     decoration: BoxDecoration(
       color: Colors.white.withValues(alpha: .03),
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(AppRadius.lg),
       border: Border.all(color: GlassTheme.border),
     ),
     child: Row(
@@ -214,7 +221,10 @@ class PluginManualInstallPrompt extends StatelessWidget {
         const Expanded(
           child: Text(
             "Can't find a provider? Paste its manifest URL.",
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            style: TextStyle(
+              fontSize: AppTextSize.label,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
         TextButton(

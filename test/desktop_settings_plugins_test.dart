@@ -6,6 +6,7 @@ import 'package:onfeed/src/desktop/desktop_plugins_page.dart';
 import 'package:onfeed/src/desktop/desktop_settings_page.dart';
 import 'package:onfeed/src/models/provider_plugin.dart';
 import 'package:onfeed/src/screens/playback_settings_screen.dart';
+import 'package:onfeed/src/screens/plugin_library_screen.dart';
 import 'package:onfeed/src/services/accent_settings_controller.dart';
 import 'package:onfeed/src/services/playback_settings_controller.dart';
 import 'package:onfeed/src/services/plugin_library_repository.dart';
@@ -216,6 +217,28 @@ void main() {
       await _pump(tester, page());
       expect(find.text('Needs attention'), findsOneWidget);
       expect(find.text('Allow update'), findsOneWidget);
+    });
+
+    testWidgets('Browse opens the Community Library in the page, beside the '
+        'sidebar, and Installed comes back', (tester) async {
+      await _pump(tester, page());
+      final navigator = tester.state<NavigatorState>(find.byType(Navigator));
+      await tester.tap(find.text('Browse Reelish Plugins'));
+      // The catalog may still be loading (an endless progress bar).
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      // Shown in place: nothing was pushed over the shell.
+      expect(find.byType(PluginLibraryView), findsOneWidget);
+      expect(find.byType(PluginLibraryScreen), findsNothing);
+      expect(navigator.canPop(), isFalse);
+      expect(find.text('Community Library'), findsOneWidget);
+      expect(find.text('Your repositories'), findsNothing);
+
+      await tester.tap(find.byTooltip('Your repositories and providers'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.byType(PluginLibraryView), findsNothing);
+      expect(find.text('Your repositories'), findsOneWidget);
     });
 
     testWidgets('with nothing installed, offers the library and a URL', (

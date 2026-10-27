@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:onfeed/src/models/media_item.dart';
@@ -194,6 +195,38 @@ void main() {
     await _press(tester, LogicalKeyboardKey.enter);
 
     expect(selected, 2);
+  });
+
+  testWidgets('a labelled TvFocusable is read once, and stays actionable', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    var selected = 0;
+    await _pumpTv(
+      tester,
+      Scaffold(
+        body: Center(
+          child: TvFocusable(
+            semanticLabel: 'Season 1',
+            onSelect: () => selected++,
+            child: const SizedBox(
+              width: 120,
+              height: 48,
+              child: Center(child: Text('Season 1')),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    // The visible text no longer repeats the label ("Season 1\nSeason 1").
+    final node = tester.getSemantics(find.bySemanticsLabel('Season 1'));
+    expect(node.label, 'Season 1');
+    expect(node.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
+    tester.semantics.tap(find.semantics.byLabel('Season 1'));
+    await tester.pump();
+    expect(selected, 1);
+    semantics.dispose();
   });
 
   testWidgets('rows move with the D-pad and remember focus per row', (

@@ -419,6 +419,44 @@ void main() {
       await tester.pumpWidget(const SizedBox());
     });
 
+    testWidgets('its actions meet text contrast (dark on the accent)', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      await _pumpHero(tester, _spotlight(3));
+      await expectLater(tester, meetsGuideline(textContrastGuideline));
+      await tester.pumpWidget(const SizedBox());
+      semantics.dispose();
+    });
+
+    testWidgets('holds still while keyboard focus is inside it', (
+      tester,
+    ) async {
+      await _pumpHero(tester, _spotlight(3));
+      bool focusInHero() {
+        final context = FocusManager.instance.primaryFocus?.context;
+        return context != null &&
+            context.findAncestorWidgetOfExactType<DesktopHero>() != null;
+      }
+
+      for (var i = 0; i < 20 && !focusInHero(); i++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pump();
+      }
+      expect(focusInHero(), isTrue);
+      await tester.pump(const Duration(seconds: 17));
+      await tester.pump(const Duration(seconds: 1));
+      expect(_heroTitle('Title 0 with a fairly long name'), findsOneWidget);
+
+      // Focus leaves: the rotation carries on.
+      FocusManager.instance.primaryFocus?.unfocus();
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 8));
+      await tester.pump(const Duration(seconds: 1));
+      expect(_heroTitle('Title 1 with a fairly long name'), findsOneWidget);
+      await tester.pumpWidget(const SizedBox());
+    });
+
     for (final size in _sizes) {
       testWidgets(
         'at ${size.width.toInt()}×${size.height.toInt()} the text and actions '

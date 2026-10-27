@@ -7,6 +7,7 @@ import '../../models/media_details.dart';
 import '../../models/media_item.dart';
 import '../../models/tv_season.dart';
 import '../../services/tmdb_service.dart';
+import '../../theme/design_tokens.dart';
 import '../../theme/glass_theme.dart';
 import '../../viewmodels/details_view_model.dart';
 import '../../widgets/tv/tv_focus.dart';
@@ -215,7 +216,7 @@ class _TvMediaDetailsScreenState extends State<TvMediaDetailsScreen> {
           _isSeries ? 'SERIES' : 'MOVIE',
           style: TextStyle(
             color: GlassTheme.coralBright,
-            fontSize: 13,
+            fontSize: 14,
             letterSpacing: 1.4,
             fontWeight: FontWeight.w800,
           ),
@@ -280,7 +281,7 @@ class _TvMediaDetailsScreenState extends State<TvMediaDetailsScreen> {
             'Starring ${cast.join(', ')}',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: GlassTheme.muted, fontSize: 13),
+            style: const TextStyle(color: GlassTheme.muted, fontSize: 14),
           ),
         ],
         const SizedBox(height: 24),
@@ -349,8 +350,9 @@ class _TvMediaDetailsScreenState extends State<TvMediaDetailsScreen> {
     ),
     const SizedBox(height: 12),
     if (_seasons.length > 1)
+      // 48 dp chips between the list's 4 dp paddings.
       SizedBox(
-        height: 52,
+        height: 56,
         child: ListView.separated(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
@@ -454,7 +456,7 @@ class _EpisodeCard extends StatelessWidget {
 
   static const width = 264.0;
   static const imageHeight = 148.0;
-  static const height = imageHeight + 72;
+  static const height = imageHeight + 76;
 
   @override
   Widget build(BuildContext context) {
@@ -515,7 +517,7 @@ class _EpisodeCard extends StatelessWidget {
             'E${number.toString().padLeft(2, '0')}  $title',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
+            style: AppType.titleSmall.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 4),
           Text(
@@ -527,7 +529,7 @@ class _EpisodeCard extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               color: GlassTheme.muted,
-              fontSize: 12,
+              fontSize: 14,
               height: 1.35,
             ),
           ),

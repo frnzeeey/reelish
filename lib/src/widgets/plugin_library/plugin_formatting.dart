@@ -1,3 +1,20 @@
+import 'dart:async';
+import 'dart:io';
+
+import 'package:http/http.dart' as http;
+
+/// A failed install as a sentence for people. The installer's own messages
+/// (already installed, no valid providers, a blocked destination) are kept
+/// word for word; only transport failures, which arrive as raw exceptions,
+/// are translated.
+String describeInstallError(Object error) => switch (error) {
+  SocketException() || http.ClientException() =>
+    "Couldn't reach the manifest. Check your connection and try again.",
+  TimeoutException() => 'The manifest took too long to answer. Try again.',
+  TlsException() => "The manifest's server could not be verified securely.",
+  _ => error.toString().replaceFirst(RegExp(r'^[A-Za-z]*Exception:\s*'), ''),
+};
+
 const _months = [
   'Jan',
   'Feb',

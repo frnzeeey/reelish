@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../theme/design_tokens.dart';
 import '../../theme/glass_theme.dart';
 
 /// One shimmer animation shared by every placeholder below it.
@@ -76,7 +77,7 @@ class PluginCardSkeleton extends StatelessWidget {
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
       color: GlassTheme.surface,
-      borderRadius: BorderRadius.circular(22),
+      borderRadius: BorderRadius.circular(AppRadius.xl),
       border: Border.all(color: GlassTheme.border),
     ),
     child: const Column(

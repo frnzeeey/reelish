@@ -3,6 +3,7 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import '../models/subtitle_addon.dart';
 import '../services/subtitle_addon_service.dart';
+import '../theme/design_tokens.dart';
 import '../theme/glass_theme.dart';
 import '../widgets/settings/settings_components.dart';
 
@@ -169,7 +170,7 @@ class _SubtitleAddonsScreenState extends State<SubtitleAddonsScreen> {
                       label: const Text('Add addon'),
                       style: FilledButton.styleFrom(
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(AppRadius.lg),
                         ),
                         textStyle: const TextStyle(
                           fontFamily: GlassTheme.fontFamily,

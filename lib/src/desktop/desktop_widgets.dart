@@ -7,6 +7,7 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import '../models/media_item.dart';
 import '../services/paged_feed_controller.dart';
+import '../theme/design_tokens.dart';
 import '../theme/glass_theme.dart';
 import '../widgets/poster_image.dart';
 
@@ -50,10 +51,10 @@ abstract final class DesktopSurfaces {
   /// Frosted panels laid over artwork (episode panel, previews).
   static const glass = Color(0xB3121218);
   static const hairline = Color(0x1FFFFFFF);
-  static const radius = 14.0;
+  static const radius = AppRadius.card;
 
   /// Entrances and selection changes; hover uses [desktopMotion]'s default.
-  static const curve = Curves.easeOutCubic;
+  static const curve = AppMotion.enter;
 }
 
 /// Calls [loadMore] after this frame if [controller]'s content does not
@@ -72,10 +73,15 @@ void loadMoreIfShort(ScrollController controller, VoidCallback loadMore) {
   });
 }
 
-Duration desktopMotion(BuildContext context, [int milliseconds = 180]) =>
-    MediaQuery.disableAnimationsOf(context)
-    ? Duration.zero
-    : Duration(milliseconds: milliseconds);
+/// [milliseconds] (by default [AppMotion.hover]), or zero under reduced
+/// motion.
+Duration desktopMotion(BuildContext context, [int? milliseconds]) =>
+    AppMotion.resolve(
+      context,
+      milliseconds == null
+          ? AppMotion.hover
+          : Duration(milliseconds: milliseconds),
+    );
 
 /// A movie or series poster for mouse and keyboard: lifts and outlines on
 /// hover, shows a coral ring when focused, opens on click or Enter.

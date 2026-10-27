@@ -1,92 +1,58 @@
 import 'package:flutter/material.dart';
 
 import '../../services/plugin_library_query.dart';
+import '../../theme/design_tokens.dart';
 import '../../theme/glass_theme.dart';
+import 'plugin_formatting.dart';
 
-/// Provider, source and language totals computed from the catalog.
+/// Provider, source and language totals computed from the catalog, and
+/// when it was updated, as one quiet line under the library's title.
 class PluginStats extends StatelessWidget {
-  const PluginStats({super.key, required this.stats});
+  const PluginStats({super.key, required this.stats, this.updatedAt});
 
   final PluginLibraryStats stats;
+  final DateTime? updatedAt;
+
+  static String _count(int value, String one, String many) =>
+      '$value ${value == 1 ? one : many}';
 
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(vertical: 16),
-    decoration: BoxDecoration(
-      borderRadius: BorderRadius.circular(22),
-      gradient: LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [GlassTheme.primary.withValues(alpha: .16), GlassTheme.surface],
-      ),
-      border: Border.all(color: GlassTheme.primary.withValues(alpha: .16)),
-    ),
-    child: IntrinsicHeight(
-      child: Row(
-        children: [
-          _Stat(value: stats.providerCount, label: 'Providers'),
-          const _Divider(),
-          _Stat(value: stats.sourceCount, label: 'Sources'),
-          const _Divider(),
-          _Stat(value: stats.languageCount, label: 'Languages'),
-        ],
-      ),
-    ),
-  );
-}
-
-class _Stat extends StatelessWidget {
-  const _Stat({required this.value, required this.label});
-
-  final int value;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) => Expanded(
-    child: Semantics(
-      label: '$value $label',
+  Widget build(BuildContext context) {
+    final parts = [
+      _count(stats.providerCount, 'provider', 'providers'),
+      _count(stats.sourceCount, 'source', 'sources'),
+      _count(stats.languageCount, 'language', 'languages'),
+    ];
+    final updated = updatedAt == null
+        ? null
+        : 'Updated ${formatPluginDate(updatedAt!)}';
+    return Semantics(
+      label: [...parts, ?updated].join(', '),
       excludeSemantics: true,
-      child: Column(
-        children: [
-          TweenAnimationBuilder<double>(
-            tween: Tween(end: value.toDouble()),
-            duration: MediaQuery.disableAnimationsOf(context)
-                ? Duration.zero
-                : const Duration(milliseconds: 700),
-            curve: Curves.easeOutCubic,
-            builder: (context, animated, _) => Text(
-              '${animated.round()}',
-              style: TextStyle(
-                color: GlassTheme.coralBright,
-                fontSize: 24,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -.6,
-                fontFeatures: const [FontFeature.tabularFigures()],
+      child: Text.rich(
+        TextSpan(
+          children: [
+            for (final (index, part) in parts.indexed) ...[
+              if (index > 0) const TextSpan(text: '  ·  '),
+              TextSpan(
+                text: part.split(' ').first,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: const TextStyle(
-              color: GlassTheme.muted,
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
+              TextSpan(text: ' ${part.split(' ').last}'),
+            ],
+            if (updated != null) TextSpan(text: '  ·  $updated'),
+          ],
+        ),
+        style: const TextStyle(
+          color: GlassTheme.muted,
+          fontSize: AppTextSize.bodySmall,
+          fontFeatures: [FontFeature.tabularFigures()],
+          height: 1.5,
+        ),
       ),
-    ),
-  );
-}
-
-class _Divider extends StatelessWidget {
-  const _Divider();
-
-  @override
-  Widget build(BuildContext context) => Container(
-    width: 1,
-    margin: const EdgeInsets.symmetric(vertical: 4),
-    color: GlassTheme.border,
-  );
+    );
+  }
 }

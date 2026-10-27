@@ -7,6 +7,7 @@ import '../navigation/app_transitions.dart';
 import '../services/accent_settings_controller.dart';
 import '../services/playback_settings_controller.dart';
 import '../services/torrent_source_preparer.dart';
+import '../theme/design_tokens.dart';
 import '../theme/glass_theme.dart';
 import '../widgets/settings/settings_components.dart';
 import '../widgets/tv/tv_focus.dart';
@@ -208,16 +209,16 @@ class _AccentChoice extends StatelessWidget {
     label: '${accent.label} accent color',
     child: InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(15),
+      borderRadius: BorderRadius.circular(AppRadius.lg),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
+        duration: AppMotion.resolve(context, AppMotion.hover),
         width: width,
         height: 72,
         decoration: BoxDecoration(
           color: selected
               ? accent.primary.withValues(alpha: .12)
               : GlassTheme.elevatedSurface,
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
           border: Border.all(
             color: selected ? accent.primary : GlassTheme.border,
             width: selected ? 1.5 : 1,
@@ -269,7 +270,7 @@ class _AccentChoice extends StatelessWidget {
               accent.label,
               style: TextStyle(
                 color: selected ? accent.bright : GlassTheme.textPrimary,
-                fontSize: 10,
+                fontSize: AppTextSize.micro,
                 fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
               ),
             ),
@@ -782,7 +783,7 @@ class PlaybackSettingsScreen extends StatelessWidget {
                       width: double.infinity,
                       decoration: BoxDecoration(
                         color: preview,
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
                         border: Border.all(color: Colors.white38),
                       ),
                     ),
@@ -917,7 +918,9 @@ class PlaybackSettingsScreen extends StatelessWidget {
     builder: (context) => Material(
       color: GlassTheme.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppRadius.xxl),
+        ),
         side: BorderSide(color: GlassTheme.border),
       ),
       child: SafeArea(
@@ -948,7 +951,7 @@ class PlaybackSettingsScreen extends StatelessWidget {
             for (final option in options)
               ListTile(
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(AppRadius.card),
                 ),
                 selected: option == current,
                 selectedColor: GlassTheme.coralBright,

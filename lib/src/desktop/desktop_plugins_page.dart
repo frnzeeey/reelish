@@ -7,6 +7,7 @@ import '../models/provider_plugin.dart';
 import '../screens/plugin_library_screen.dart';
 import '../services/plugin_library_repository.dart';
 import '../services/provider_plugin_service.dart';
+import '../theme/design_tokens.dart';
 import '../theme/glass_theme.dart';
 import '../widgets/provider_installer_modal.dart';
 import 'desktop_widgets.dart';
@@ -16,7 +17,7 @@ import 'desktop_widgets.dart';
 /// from the library or a manifest URL, refresh, switch providers on and
 /// off, remove, allow changed provider code) through the same
 /// [ProviderPluginService], so what is installed and enabled is shared.
-class DesktopPluginsPage extends StatelessWidget {
+class DesktopPluginsPage extends StatefulWidget {
   const DesktopPluginsPage({
     super.key,
     required this.pluginService,
@@ -26,57 +27,116 @@ class DesktopPluginsPage extends StatelessWidget {
   final ProviderPluginService pluginService;
   final PluginLibraryRepository pluginLibrary;
 
-  static const _warning = Color(0xFFFFB547);
+  static const _warning = GlassTheme.warning;
+
+  static final _filled = FilledButton.styleFrom(
+    backgroundColor: GlassTheme.primary,
+    foregroundColor: GlassTheme.background,
+    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+  );
+
+  static final _outlined = OutlinedButton.styleFrom(
+    foregroundColor: Colors.white,
+    backgroundColor: Colors.white.withValues(alpha: .05),
+    side: const BorderSide(color: DesktopSurfaces.hairline),
+    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+  );
+
+  @override
+  State<DesktopPluginsPage> createState() => _DesktopPluginsPageState();
+}
+
+/// What the Plugins page shows: what is installed, or the Community Library
+/// to add more. Both stay beside the sidebar.
+enum _PluginsView { installed, discover }
+
+class _DesktopPluginsPageState extends State<DesktopPluginsPage> {
+  var _view = _PluginsView.installed;
+
+  void _show(_PluginsView view) => setState(() => _view = view);
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-    listenable: pluginService,
+    listenable: widget.pluginService,
     builder: (context, _) {
+      final pluginService = widget.pluginService;
+      final pluginLibrary = widget.pluginLibrary;
       final repositories = pluginService.repositories;
       final plugins = repositories.expand((repo) => repo.plugins).toList();
       final enabled = plugins.where((plugin) => plugin.enabled).length;
       void install() => ProviderInstallerModal.show(context, pluginService);
-      void browse() => PluginLibraryScreen.open(
-        context,
-        repository: pluginLibrary,
-        pluginService: pluginService,
-      );
+      // The library opens in place, beside the sidebar.
+      void browse() => _show(_PluginsView.discover);
       final issues =
           pluginService.errors.length +
           pluginService.pendingScriptUpdates.length;
-      return CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(
-            child: DesktopPageHeader(
-              title: 'Plugins',
-              subtitle:
-                  'Choose which trusted providers Reelish can search when '
-                  'you press play.',
-              trailing: Wrap(
-                spacing: 10,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  IconButton(
-                    tooltip: 'Refresh repositories',
-                    onPressed: () => unawaited(pluginService.load()),
-                    icon: const Icon(Symbols.refresh_rounded),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: install,
-                    style: _outlined,
-                    icon: const Icon(Symbols.add_link_rounded),
-                    label: const Text('Paste a manifest URL'),
-                  ),
-                  FilledButton.icon(
-                    onPressed: browse,
-                    style: _filled,
-                    icon: const Icon(Symbols.storefront_rounded),
-                    label: const Text('Browse Reelish Plugins'),
-                  ),
-                ],
-              ),
+      final discover = _view == _PluginsView.discover;
+      final header = SliverToBoxAdapter(
+        child: DesktopPageHeader(
+          title: 'Plugins',
+          subtitle: discover
+              ? 'Find community providers and add them to Reelish.'
+              : 'Choose which trusted providers Reelish can search when '
+                    'you press play.',
+          // The library brings its own refresh and paste actions.
+          trailing: discover
+              ? null
+              : Wrap(
+                  spacing: 10,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    IconButton(
+                      tooltip: 'Refresh repositories',
+                      onPressed: () => unawaited(pluginService.load()),
+                      icon: const Icon(Symbols.refresh_rounded),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: install,
+                      style: DesktopPluginsPage._outlined,
+                      icon: const Icon(Symbols.add_link_rounded),
+                      label: const Text('Paste a manifest URL'),
+                    ),
+                    FilledButton.icon(
+                      onPressed: browse,
+                      style: DesktopPluginsPage._filled,
+                      icon: const Icon(Symbols.storefront_rounded),
+                      label: const Text('Browse Reelish Plugins'),
+                    ),
+                  ],
+                ),
+        ),
+      );
+      final switcher = SliverPadding(
+        padding: const EdgeInsets.fromLTRB(
+          DesktopMetrics.pagePadding,
+          AppSpace.xs,
+          DesktopMetrics.pagePadding,
+          AppSpace.xs,
+        ),
+        sliver: SliverToBoxAdapter(
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: _ViewSwitch(
+              view: _view,
+              installedCount: repositories.length,
+              onChanged: _show,
             ),
           ),
+        ),
+      );
+      if (discover) {
+        return PluginLibraryView(
+          repository: pluginLibrary,
+          pluginService: pluginService,
+          embedded: true,
+          gutter: DesktopMetrics.pagePadding,
+          leading: [header, switcher],
+        );
+      }
+      return CustomScrollView(
+        slivers: [
+          header,
+          switcher,
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(
               DesktopMetrics.pagePadding,
@@ -223,18 +283,55 @@ class DesktopPluginsPage extends StatelessWidget {
       );
     },
   );
+}
 
-  static final _filled = FilledButton.styleFrom(
-    backgroundColor: GlassTheme.primary,
-    foregroundColor: Colors.white,
-    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-  );
+/// Installed or Discover, under the page title.
+class _ViewSwitch extends StatelessWidget {
+  const _ViewSwitch({
+    required this.view,
+    required this.installedCount,
+    required this.onChanged,
+  });
 
-  static final _outlined = OutlinedButton.styleFrom(
-    foregroundColor: Colors.white,
-    backgroundColor: Colors.white.withValues(alpha: .05),
-    side: const BorderSide(color: DesktopSurfaces.hairline),
-    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+  final _PluginsView view;
+  final int installedCount;
+  final ValueChanged<_PluginsView> onChanged;
+
+  @override
+  Widget build(BuildContext context) => SegmentedButton<_PluginsView>(
+    showSelectedIcon: false,
+    segments: [
+      ButtonSegment(
+        value: _PluginsView.installed,
+        icon: const Icon(Symbols.extension_rounded, size: AppIcon.sm),
+        label: Text(
+          installedCount == 0 ? 'Installed' : 'Installed · $installedCount',
+        ),
+        tooltip: 'Your repositories and providers',
+      ),
+      const ButtonSegment(
+        value: _PluginsView.discover,
+        icon: Icon(Symbols.storefront_rounded, size: AppIcon.sm),
+        label: Text('Discover'),
+        tooltip: 'Browse the Community Library',
+      ),
+    ],
+    selected: {view},
+    onSelectionChanged: (selection) => onChanged(selection.single),
+    style: SegmentedButton.styleFrom(
+      minimumSize: const Size(0, 44),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpace.md),
+      backgroundColor: GlassTheme.surface,
+      foregroundColor: GlassTheme.muted,
+      selectedBackgroundColor: GlassTheme.primary.withValues(alpha: .16),
+      selectedForegroundColor: GlassTheme.coralBright,
+      side: const BorderSide(color: GlassTheme.border),
+      textStyle: const TextStyle(
+        fontFamily: GlassTheme.fontFamily,
+        fontSize: AppTextSize.bodySmall,
+        fontWeight: FontWeight.w700,
+      ),
+    ),
   );
 }
 
@@ -313,7 +410,10 @@ class _Heading extends StatelessWidget {
         ),
         Text(
           title,
-          style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800),
+          style: const TextStyle(
+            fontSize: AppTextSize.titleLarge,
+            fontWeight: FontWeight.w800,
+          ),
         ),
         const SizedBox(width: 14),
         Expanded(
@@ -321,7 +421,10 @@ class _Heading extends StatelessWidget {
             detail,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: GlassTheme.muted, fontSize: 13),
+            style: const TextStyle(
+              color: GlassTheme.muted,
+              fontSize: AppTextSize.bodySmall,
+            ),
           ),
         ),
       ],
@@ -366,7 +469,10 @@ class _Empty extends StatelessWidget {
             children: [
               Text(
                 'Start with a provider',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                style: TextStyle(
+                  fontSize: AppTextSize.title,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
               SizedBox(height: 6),
               Text(
@@ -484,7 +590,7 @@ class _Warning extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: GlassTheme.muted,
-                    fontSize: 13,
+                    fontSize: AppTextSize.bodySmall,
                     height: 1.4,
                   ),
                 ),
@@ -583,7 +689,7 @@ class _RepositoryCardState extends State<_RepositoryCard> {
                         height: 44,
                         decoration: BoxDecoration(
                           color: GlassTheme.primary.withValues(alpha: .12),
-                          borderRadius: BorderRadius.circular(13),
+                          borderRadius: BorderRadius.circular(AppRadius.md),
                         ),
                         child: Icon(
                           Symbols.dns_rounded,
@@ -601,7 +707,7 @@ class _RepositoryCardState extends State<_RepositoryCard> {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
-                                fontSize: 16,
+                                fontSize: AppTextSize.bodyLarge,
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
@@ -612,7 +718,7 @@ class _RepositoryCardState extends State<_RepositoryCard> {
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
                                 color: GlassTheme.muted,
-                                fontSize: 12,
+                                fontSize: AppTextSize.label,
                               ),
                             ),
                           ],
@@ -623,7 +729,7 @@ class _RepositoryCardState extends State<_RepositoryCard> {
                         '$active of ${repository.plugins.length} providers '
                         'active',
                         style: TextStyle(
-                          fontSize: 13,
+                          fontSize: AppTextSize.bodySmall,
                           fontWeight: FontWeight.w700,
                           color: active > 0
                               ? GlassTheme.coralBright
@@ -769,7 +875,7 @@ class _ProviderTile extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 14,
+                      fontSize: AppTextSize.body,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -794,7 +900,7 @@ class _ProviderTile extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: GlassTheme.muted,
-                        fontSize: 12,
+                        fontSize: AppTextSize.label,
                         height: 1.35,
                       ),
                     ),

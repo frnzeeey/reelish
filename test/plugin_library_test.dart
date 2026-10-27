@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -6,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:onfeed/src/models/plugin_catalog.dart';
 import 'package:onfeed/src/models/provider_plugin.dart';
+import 'package:onfeed/src/platform/device_capabilities.dart';
 import 'package:onfeed/src/screens/plugin_details_screen.dart';
 import 'package:onfeed/src/screens/plugin_library_screen.dart';
 import 'package:onfeed/src/services/plugin_library_query.dart';
@@ -14,9 +16,10 @@ import 'package:onfeed/src/services/plugin_library_service.dart';
 import 'package:onfeed/src/services/provider_plugin_service.dart';
 import 'package:onfeed/src/theme/glass_theme.dart';
 import 'package:onfeed/src/widgets/plugin_library/plugin_card.dart';
-import 'package:onfeed/src/widgets/plugin_library/plugin_filter_bar.dart';
+import 'package:onfeed/src/widgets/plugin_library/plugin_formatting.dart';
 import 'package:onfeed/src/widgets/plugin_library/plugin_install_button.dart';
 import 'package:onfeed/src/widgets/plugin_library/plugin_logo.dart';
+import 'package:onfeed/src/widgets/tv/tv_focus.dart';
 
 final _bundledJson = File('assets/data/plugins.json').readAsStringSync();
 
@@ -474,17 +477,23 @@ void main() {
       tester,
     ) async {
       await pumpLibrary(tester);
-      expect(find.text('Reelish Plugins'), findsOneWidget);
+      expect(find.text('Community Library'), findsOneWidget);
       expect(
         find.text(
           'Discover community providers and expand your streaming sources.',
         ),
         findsOneWidget,
       );
-      expect(find.bySemanticsLabel('3 Providers'), findsOneWidget);
-      expect(find.bySemanticsLabel('8 Sources'), findsOneWidget);
-      expect(find.text('Largest collections'), findsOneWidget);
+      expect(
+        find.bySemanticsLabel(RegExp(r'^3 providers, 8 sources, 1 language')),
+        findsOneWidget,
+      );
+      // Three providers: curated rails would only repeat the grid below.
+      expect(find.text('Largest collections'), findsNothing);
       expect(find.text('Popular providers'), findsNothing);
+      // One action per card, and it installs; tapping the card opens it.
+      expect(find.text('Install'), findsWidgets);
+      expect(find.text('View details'), findsNothing);
       await tester.scrollUntilVisible(
         find.text('All plugins'),
         300,
@@ -521,25 +530,14 @@ void main() {
       await tester.tap(find.text('Clear filters'));
       await tester.pumpAndSettle();
       expect(find.text('No plugins found'), findsNothing);
-      expect(find.text('Largest collections'), findsOneWidget);
+      expect(find.text('All plugins'), findsOneWidget);
     });
 
-    testWidgets('language chips and sort menu change the list', (tester) async {
+    testWidgets('the language and sort menus change the list', (tester) async {
       await pumpLibrary(tester);
-      final turkish = find.widgetWithText(ChoiceChip, 'Turkish');
-      await tester.scrollUntilVisible(
-        turkish,
-        100,
-        scrollable: find
-            .descendant(
-              of: find.byType(PluginFilterBar),
-              matching: find.byType(Scrollable),
-            )
-            .first,
-      );
-      await tester.ensureVisible(turkish);
+      await tester.tap(find.byTooltip('Filter by language'));
       await tester.pumpAndSettle();
-      await tester.tap(turkish);
+      await tester.tap(find.text('Turkish').last);
       await tester.pumpAndSettle();
       await tester.scrollUntilVisible(
         find.text('Results'),
@@ -547,8 +545,12 @@ void main() {
         scrollable: find.byType(Scrollable).first,
       );
       expect(find.text('1 provider'), findsOneWidget);
-      await tester.tap(turkish);
+      // The pill names the active language, and offers a way back.
+      await tester.tap(find.byTooltip(RegExp('^Language: Turkish')));
       await tester.pumpAndSettle();
+      await tester.tap(find.text('All languages').last);
+      await tester.pumpAndSettle();
+      expect(find.text('All plugins'), findsOneWidget);
 
       await tester.tap(find.text('Recommended'));
       await tester.pumpAndSettle();
@@ -561,7 +563,9 @@ void main() {
       tester,
     ) async {
       await pumpLibrary(tester);
-      await tester.tap(find.text('Copy').first);
+      await tester.tap(find.text('Charlie').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Copy manifest').first);
       await tester.pump();
       expect(clipboard, startsWith('https://raw.githubusercontent.com/'));
       expect(clipboard, endsWith('/manifest.json'));
@@ -571,9 +575,10 @@ void main() {
 
     testWidgets('a card opens the details screen', (tester) async {
       await pumpLibrary(tester);
-      await tester.tap(find.text('View details').first);
+      await tester.tap(find.text('Charlie').first);
       await tester.pumpAndSettle();
       expect(find.text('Install plugin'), findsOneWidget);
+      expect(find.text('Remove'), findsNothing);
       expect(find.text('Manifest'), findsOneWidget);
       expect(find.text('Not verified, community provider'), findsOneWidget);
       await tester.scrollUntilVisible(
@@ -645,5 +650,216 @@ void main() {
       expect(find.text('Unable to load plugins'), findsOneWidget);
       expect(find.text('Retry'), findsOneWidget);
     });
+
+    const charlieUrl =
+        'https://raw.githubusercontent.com/charlie/repo/main/manifest.json';
+    const bravoUrl =
+        'https://raw.githubusercontent.com/bravo/repo/main/manifest.json';
+
+    testWidgets('on TV, search uses the remote keyboard dialog and the D-pad '
+        'reaches the cards', (tester) async {
+      DeviceCapabilities.debugOverride = const DeviceCapabilities(
+        isTelevision: true,
+        hasTouchscreen: false,
+      );
+      addTearDown(
+        () => DeviceCapabilities.debugOverride = const DeviceCapabilities(),
+      );
+      await pumpLibrary(tester, size: const Size(1200, 1800));
+      expect(find.byType(TvTextField), findsOneWidget);
+      expect(find.byType(TextField), findsNothing);
+
+      bool onCard() =>
+          FocusManager.instance.primaryFocus?.context
+              ?.findAncestorWidgetOfExactType<PluginCard>() !=
+          null;
+      for (var i = 0; i < 20 && !onCard(); i++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+        await tester.pumpAndSettle();
+      }
+      expect(onCard(), isTrue);
+    });
+
+    testWidgets('availability chips split installed from not installed', (
+      tester,
+    ) async {
+      await pumpLibrary(tester, size: const Size(1200, 1800));
+      await tester.tap(find.text('Installed · 0'));
+      await tester.pumpAndSettle();
+      expect(find.text('Nothing installed from the library yet'), findsOne);
+      await tester.tap(find.text('Show all plugins'));
+      await tester.pumpAndSettle();
+      expect(find.text('All plugins'), findsOneWidget);
+
+      pluginService.repositories.add(
+        const ProviderRepository(url: charlieUrl, name: 'Charlie'),
+      );
+      pluginService.notifyListeners();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Installed · 1'));
+      await tester.pumpAndSettle();
+      expect(find.text('1 provider'), findsOneWidget);
+      expect(find.text('Charlie'), findsOneWidget);
+      await tester.tap(find.text('Not installed'));
+      await tester.pumpAndSettle();
+      expect(find.text('2 providers'), findsOneWidget);
+      expect(find.text('Charlie'), findsNothing);
+    });
+
+    testWidgets('a card installs through the service after confirmation, '
+        'and shows installed only once the service lists it', (tester) async {
+      final plugins = _RecordingPlugins();
+      pluginService = plugins;
+      await pumpLibrary(tester, size: const Size(1200, 1800));
+      final bravo = find.ancestor(
+        of: find.text('Bravo'),
+        matching: find.byType(PluginCard),
+      );
+      await tester.tap(
+        find.descendant(of: bravo, matching: find.text('Install')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Install Bravo?'), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, 'Install').last);
+      await tester.pump();
+
+      // Installing: the button is busy and cannot be pressed again.
+      expect(plugins.installed, [bravoUrl]);
+      expect(
+        find.descendant(of: bravo, matching: find.text('Installing…')),
+        findsOneWidget,
+      );
+      expect(
+        tester
+            .widget<ButtonStyleButton>(
+              find.descendant(
+                of: bravo,
+                matching: find.byWidgetPredicate((w) => w is ButtonStyleButton),
+              ),
+            )
+            .onPressed,
+        isNull,
+      );
+
+      plugins.finishInstall();
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(of: bravo, matching: find.text('Installed')),
+        findsWidgets,
+      );
+      expect(find.textContaining('Added 0 providers from Bravo'), findsOne);
+    });
+
+    testWidgets('a failed install says why and offers a retry', (tester) async {
+      final plugins = _RecordingPlugins(
+        error: const SocketException('Failed host lookup'),
+      );
+      pluginService = plugins;
+      await pumpLibrary(tester, size: const Size(1200, 1800));
+      final bravo = find.ancestor(
+        of: find.text('Bravo'),
+        matching: find.byType(PluginCard),
+      );
+      await tester.tap(
+        find.descendant(of: bravo, matching: find.text('Install')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Install').last);
+      await tester.pumpAndSettle();
+      expect(
+        find.text(
+          "Couldn't install Bravo. Couldn't reach the manifest. Check your "
+          'connection and try again.',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: bravo, matching: find.text('Retry install')),
+        findsOneWidget,
+      );
+      expect(pluginService.repositories, isEmpty);
+    });
+
+    testWidgets('details removes an installed plugin after confirmation', (
+      tester,
+    ) async {
+      final plugins = _RecordingPlugins();
+      plugins.repositories.add(
+        const ProviderRepository(url: charlieUrl, name: 'Charlie'),
+      );
+      pluginService = plugins;
+      await pumpLibrary(tester, size: const Size(1200, 1800));
+      await tester.tap(find.text('Charlie').first);
+      await tester.pumpAndSettle();
+      expect(find.text('Install plugin'), findsNothing);
+      await tester.tap(find.text('Remove'));
+      await tester.pumpAndSettle();
+      expect(find.text('Remove Charlie?'), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, 'Remove'));
+      await tester.pumpAndSettle();
+      expect(plugins.removed, [charlieUrl]);
+      expect(find.text('Install plugin'), findsOneWidget);
+      expect(find.text('Removed Charlie.'), findsOneWidget);
+    });
   });
+
+  group('describeInstallError', () {
+    test('translates transport failures', () {
+      expect(
+        describeInstallError(const SocketException('lookup')),
+        startsWith("Couldn't reach the manifest"),
+      );
+      expect(
+        describeInstallError(TimeoutException('slow')),
+        startsWith('The manifest took too long'),
+      );
+    });
+
+    test("keeps the installer's own messages word for word", () {
+      expect(
+        describeInstallError(
+          Exception('This provider repository is already installed.'),
+        ),
+        'This provider repository is already installed.',
+      );
+      expect(
+        describeInstallError(
+          const FormatException('Unsupported or malformed network URL.'),
+        ),
+        'Unsupported or malformed network URL.',
+      );
+    });
+  });
+}
+
+/// Installs and removals recorded instead of fetched and saved. An install
+/// waits for [finishInstall] unless [error] makes it fail at once.
+class _RecordingPlugins extends ProviderPluginService {
+  _RecordingPlugins({this.error});
+
+  final Object? error;
+  final installed = <String>[];
+  final removed = <String>[];
+  Completer<void>? _pending;
+
+  void finishInstall() => _pending?.complete();
+
+  @override
+  Future<ProviderRepository> install(String rawUrl) async {
+    installed.add(rawUrl);
+    if (error case final error?) throw error;
+    _pending = Completer<void>();
+    await _pending!.future;
+    final repository = ProviderRepository(url: rawUrl, name: 'Installed');
+    repositories.add(repository);
+    notifyListeners();
+    return repository;
+  }
+
+  @override
+  Future<void> remove(ProviderRepository repo) async {
+    removed.add(repo.url);
+    repositories.removeWhere((entry) => entry.url == repo.url);
+    notifyListeners();
+  }
 }

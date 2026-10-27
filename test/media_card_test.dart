@@ -20,6 +20,32 @@ void main() {
     expect(find.text('SERIES'), findsOneWidget);
   });
 
+  testWidgets('the My list heart is named, toggled and at least 47 dp', (
+    tester,
+  ) async {
+    var toggles = 0;
+    await _pump(
+      tester,
+      MediaCard(item: movie, onTap: () {}, onFavorite: () => toggles++),
+    );
+    final add = find.byTooltip('Add to My list');
+    expect(add, findsOneWidget);
+    final size = tester.getSize(
+      find.ancestor(of: add, matching: find.byType(IconButton)),
+    );
+    expect(size.width, greaterThanOrEqualTo(47));
+    expect(size.height, greaterThanOrEqualTo(47));
+
+    await tester.tap(add);
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(toggles, 1);
+    expect(find.byTooltip('Remove from My list'), findsOneWidget);
+    expect(
+      tester.widget<IconButton>(find.byType(IconButton)).isSelected,
+      isTrue,
+    );
+  });
+
   testWidgets('hides the type badge when a caller owns that corner', (
     tester,
   ) async {

@@ -4,6 +4,7 @@ import 'package:material_symbols_icons/symbols.dart';
 import '../models/provider_plugin.dart';
 import '../services/plugin_library_repository.dart';
 import '../services/provider_plugin_service.dart';
+import '../theme/design_tokens.dart';
 import '../theme/glass_theme.dart';
 import '../widgets/provider_installer_modal.dart';
 import 'plugin_library_screen.dart';
@@ -153,7 +154,7 @@ class _PluginsHeader extends StatelessWidget {
               'PERSONALIZE PLAYBACK',
               style: TextStyle(
                 color: GlassTheme.primary,
-                fontSize: 10,
+                fontSize: AppTextSize.micro,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 1.7,
               ),
@@ -213,7 +214,7 @@ class _PluginsHero extends StatelessWidget {
     // the padding, the Stack cut it off with a hard rectangle.
     clipBehavior: Clip.antiAlias,
     decoration: BoxDecoration(
-      borderRadius: BorderRadius.circular(25),
+      borderRadius: BorderRadius.circular(AppRadius.xxl),
       gradient: LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
@@ -251,7 +252,7 @@ class _PluginsHero extends StatelessWidget {
                     height: 42,
                     decoration: BoxDecoration(
                       color: GlassTheme.primary.withValues(alpha: .16),
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(AppRadius.card),
                     ),
                     child: Icon(Symbols.hub_rounded, color: GlassTheme.primary),
                   ),
@@ -264,7 +265,7 @@ class _PluginsHero extends StatelessWidget {
                           'SOURCE OVERVIEW',
                           style: TextStyle(
                             color: GlassTheme.muted,
-                            fontSize: 10,
+                            fontSize: AppTextSize.micro,
                             fontWeight: FontWeight.w800,
                             letterSpacing: 1.4,
                           ),
@@ -273,7 +274,7 @@ class _PluginsHero extends StatelessWidget {
                         Text(
                           'Your sources',
                           style: TextStyle(
-                            fontSize: 20,
+                            fontSize: AppTextSize.titleLarge,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
@@ -293,7 +294,7 @@ class _PluginsHero extends StatelessWidget {
                 style: TextStyle(
                   color: Colors.white70,
                   height: 1.4,
-                  fontSize: 12,
+                  fontSize: AppTextSize.label,
                 ),
               ),
               const SizedBox(height: 17),
@@ -328,7 +329,7 @@ class _MetricPill extends StatelessWidget {
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
     decoration: BoxDecoration(
       color: Colors.white.withValues(alpha: .06),
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(AppRadius.md),
       border: Border.all(color: Colors.white.withValues(alpha: .07)),
     ),
     child: Row(
@@ -338,14 +339,17 @@ class _MetricPill extends StatelessWidget {
           value,
           style: TextStyle(
             color: GlassTheme.primary,
-            fontSize: 12,
+            fontSize: AppTextSize.label,
             fontWeight: FontWeight.w800,
           ),
         ),
         const SizedBox(width: 5),
         Text(
           label,
-          style: const TextStyle(color: Colors.white70, fontSize: 10),
+          style: const TextStyle(
+            color: Colors.white70,
+            fontSize: AppTextSize.micro,
+          ),
         ),
       ],
     ),
@@ -366,12 +370,18 @@ class _SectionHeading extends StatelessWidget {
     children: [
       Text(
         title,
-        style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+        style: const TextStyle(
+          fontSize: AppTextSize.title,
+          fontWeight: FontWeight.w800,
+        ),
       ),
       const SizedBox(height: 3),
       Text(
         detail,
-        style: const TextStyle(color: GlassTheme.muted, fontSize: 11),
+        style: const TextStyle(
+          color: GlassTheme.muted,
+          fontSize: AppTextSize.caption,
+        ),
       ),
     ],
   );
@@ -387,7 +397,7 @@ class _LibraryEntry extends StatelessWidget {
   Widget build(BuildContext context) => Material(
     color: GlassTheme.surface,
     shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(AppRadius.xl),
       side: const BorderSide(color: GlassTheme.border),
     ),
     clipBehavior: Clip.antiAlias,
@@ -402,7 +412,7 @@ class _LibraryEntry extends StatelessWidget {
               height: 42,
               decoration: BoxDecoration(
                 color: GlassTheme.primary.withValues(alpha: .12),
-                borderRadius: BorderRadius.circular(13),
+                borderRadius: BorderRadius.circular(AppRadius.md),
               ),
               child: Icon(
                 Symbols.storefront_rounded,
@@ -417,14 +427,17 @@ class _LibraryEntry extends StatelessWidget {
                 children: [
                   Text(
                     'Browse Reelish Plugins',
-                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: AppTextSize.body,
+                    ),
                   ),
                   SizedBox(height: 3),
                   Text(
                     'Discover community providers and add them from the catalog.',
                     style: TextStyle(
                       color: GlassTheme.muted,
-                      fontSize: 11,
+                      fontSize: AppTextSize.caption,
                       height: 1.3,
                     ),
                   ),
@@ -450,7 +463,7 @@ class _EmptyPlugins extends StatelessWidget {
     padding: const EdgeInsets.fromLTRB(22, 26, 22, 22),
     decoration: BoxDecoration(
       color: GlassTheme.surface,
-      borderRadius: BorderRadius.circular(22),
+      borderRadius: BorderRadius.circular(AppRadius.xl),
       border: Border.all(color: GlassTheme.border),
     ),
     child: Column(
@@ -470,13 +483,20 @@ class _EmptyPlugins extends StatelessWidget {
         const SizedBox(height: 14),
         const Text(
           'Start with a provider',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+          style: TextStyle(
+            fontSize: AppTextSize.bodyLarge,
+            fontWeight: FontWeight.w800,
+          ),
         ),
         const SizedBox(height: 7),
         const Text(
           'Browse the library or paste a provider manifest URL to add streaming sources. You can turn each provider on or off at any time.',
           textAlign: TextAlign.center,
-          style: TextStyle(color: GlassTheme.muted, height: 1.45, fontSize: 12),
+          style: TextStyle(
+            color: GlassTheme.muted,
+            height: 1.45,
+            fontSize: AppTextSize.label,
+          ),
         ),
         const SizedBox(height: 18),
         Wrap(
@@ -548,11 +568,11 @@ class _RepositoryCardState extends State<_RepositoryCard> {
         .where((plugin) => plugin.enabled)
         .length;
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 180),
+      duration: AppMotion.resolve(context, AppMotion.hover),
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: GlassTheme.surface,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppRadius.xl),
         border: Border.all(
           color: _expanded
               ? GlassTheme.primary.withValues(alpha: .28)
@@ -572,7 +592,7 @@ class _RepositoryCardState extends State<_RepositoryCard> {
                 height: 42,
                 decoration: BoxDecoration(
                   color: GlassTheme.primary.withValues(alpha: .12),
-                  borderRadius: BorderRadius.circular(13),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                 ),
                 child: Icon(
                   Symbols.dns_rounded,
@@ -586,14 +606,17 @@ class _RepositoryCardState extends State<_RepositoryCard> {
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   fontWeight: FontWeight.w700,
-                  fontSize: 13,
+                  fontSize: AppTextSize.bodySmall,
                 ),
               ),
               subtitle: Padding(
                 padding: const EdgeInsets.only(top: 4),
                 child: Text(
                   '$enabledCount of ${repository.plugins.length} providers active',
-                  style: const TextStyle(color: GlassTheme.muted, fontSize: 10),
+                  style: const TextStyle(
+                    color: GlassTheme.muted,
+                    fontSize: AppTextSize.micro,
+                  ),
                 ),
               ),
               trailing: Row(
@@ -607,7 +630,7 @@ class _RepositoryCardState extends State<_RepositoryCard> {
                   ),
                   AnimatedRotation(
                     turns: _expanded ? .5 : 0,
-                    duration: const Duration(milliseconds: 180),
+                    duration: AppMotion.resolve(context, AppMotion.hover),
                     child: const Icon(Symbols.keyboard_arrow_down_rounded),
                   ),
                   const SizedBox(width: 6),
@@ -615,7 +638,7 @@ class _RepositoryCardState extends State<_RepositoryCard> {
               ),
             ),
             AnimatedCrossFade(
-              duration: const Duration(milliseconds: 180),
+              duration: AppMotion.resolve(context, AppMotion.hover),
               crossFadeState: _expanded
                   ? CrossFadeState.showSecond
                   : CrossFadeState.showFirst,
@@ -642,7 +665,10 @@ class _RepositoryCardState extends State<_RepositoryCard> {
                       padding: EdgeInsets.all(18),
                       child: Text(
                         'This repository contains no valid providers.',
-                        style: TextStyle(color: GlassTheme.muted, fontSize: 12),
+                        style: TextStyle(
+                          color: GlassTheme.muted,
+                          fontSize: AppTextSize.label,
+                        ),
                       ),
                     ),
                 ],
@@ -691,7 +717,7 @@ class _ProviderTile extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 12,
+                      fontSize: AppTextSize.label,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -703,7 +729,7 @@ class _ProviderTile extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: GlassTheme.muted,
-                        fontSize: 10,
+                        fontSize: AppTextSize.micro,
                         height: 1.3,
                       ),
                     ),
@@ -740,15 +766,15 @@ class _NoticeCard extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(14),
     decoration: BoxDecoration(
-      color: const Color(0xFFFFB547).withValues(alpha: .08),
-      borderRadius: BorderRadius.circular(17),
-      border: Border.all(color: const Color(0xFFFFB547).withValues(alpha: .2)),
+      color: GlassTheme.warning.withValues(alpha: .08),
+      borderRadius: BorderRadius.circular(AppRadius.lg),
+      border: Border.all(color: GlassTheme.warning.withValues(alpha: .2)),
     ),
     child: Row(
       children: [
         const Icon(
           Symbols.power_settings_new_rounded,
-          color: Color(0xFFFFB547),
+          color: GlassTheme.warning,
           size: 20,
         ),
         const SizedBox(width: 12),
@@ -759,9 +785,9 @@ class _NoticeCard extends StatelessWidget {
               Text(
                 title,
                 style: const TextStyle(
-                  color: Color(0xFFFFB547),
+                  color: GlassTheme.warning,
                   fontWeight: FontWeight.w700,
-                  fontSize: 12,
+                  fontSize: AppTextSize.label,
                 ),
               ),
               const SizedBox(height: 3),
@@ -769,7 +795,7 @@ class _NoticeCard extends StatelessWidget {
                 message,
                 style: const TextStyle(
                   color: GlassTheme.muted,
-                  fontSize: 10,
+                  fontSize: AppTextSize.micro,
                   height: 1.35,
                 ),
               ),
@@ -835,13 +861,17 @@ class _RepositoryError extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
     decoration: BoxDecoration(
-      color: const Color(0xFFFFB547).withValues(alpha: .07),
-      borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: const Color(0xFFFFB547).withValues(alpha: .18)),
+      color: GlassTheme.warning.withValues(alpha: .07),
+      borderRadius: BorderRadius.circular(AppRadius.lg),
+      border: Border.all(color: GlassTheme.warning.withValues(alpha: .18)),
     ),
     child: Row(
       children: [
-        const Icon(Symbols.warning_rounded, color: Color(0xFFFFB547), size: 20),
+        const Icon(
+          Symbols.warning_rounded,
+          color: GlassTheme.warning,
+          size: 20,
+        ),
         const SizedBox(width: 11),
         Expanded(
           child: Column(
@@ -853,7 +883,7 @@ class _RepositoryError extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   fontWeight: FontWeight.w700,
-                  fontSize: 11,
+                  fontSize: AppTextSize.caption,
                 ),
               ),
               const SizedBox(height: 3),
@@ -863,7 +893,7 @@ class _RepositoryError extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   color: GlassTheme.muted,
-                  fontSize: 10,
+                  fontSize: AppTextSize.micro,
                   height: 1.3,
                 ),
               ),

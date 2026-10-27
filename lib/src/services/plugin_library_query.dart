@@ -21,6 +21,19 @@ enum PluginContentType {
   final String label;
 }
 
+/// Whether the library lists every provider, only those not installed yet,
+/// or only installed ones. Installed state comes from the provider service,
+/// so it is applied after [PluginLibraryQuery], which knows only the
+/// catalog.
+enum PluginAvailability {
+  all('All'),
+  available('Not installed'),
+  installed('Installed');
+
+  const PluginAvailability(this.label);
+  final String label;
+}
+
 /// The search, filters and sort chosen in the Plugin Library.
 class PluginLibraryQuery {
   const PluginLibraryQuery({

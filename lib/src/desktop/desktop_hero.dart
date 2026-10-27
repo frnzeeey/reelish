@@ -13,8 +13,9 @@ import '../widgets/brand_logo.dart';
 /// The featured titles at the top of desktop Home: one full-bleed backdrop
 /// with the title, synopsis and actions on its left, and every Spotlight
 /// title in a rail along its foot, the one shown first and widest. Rotates
-/// every 8 s while Home is shown and pauses while the pointer is over it; a
-/// card in the rail shows its title at once.
+/// every 8 s while Home is shown and pauses while the pointer is over it or
+/// the keyboard or gamepad focus is inside it; a card in the rail shows its
+/// title at once.
 class DesktopHero extends StatefulWidget {
   const DesktopHero({
     super.key,
@@ -56,8 +57,21 @@ class _DesktopHeroState extends State<DesktopHero> {
   /// Steps moved in all, never wrapping; [_index] is it modulo the count.
   int _rotation = 0;
   bool _hovered = false;
+
+  /// Focus is on one of the hero's controls or rail cards.
+  bool _focusWithin = false;
   Timer? _timer;
   final _rail = ScrollController();
+
+  /// Paused for a pointer over the hero, or for keyboard or gamepad focus
+  /// inside it, so the title never changes under the control being used.
+  /// A mouse click leaves focus where it was, so only a visible focus
+  /// highlight counts.
+  bool get _paused =>
+      _hovered ||
+      (_focusWithin &&
+          FocusManager.instance.highlightMode ==
+              FocusHighlightMode.traditional);
 
   /// Logo URLs by title, '' for none; asked once per title.
   final Map<String, String> _logos = {};
@@ -110,7 +124,7 @@ class _DesktopHeroState extends State<DesktopHero> {
   void _schedule() {
     _timer?.cancel();
     _timer = Timer.periodic(_interval, (_) {
-      if (!mounted || _hovered || widget.items.length < 2) return;
+      if (!mounted || _paused || widget.items.length < 2) return;
       if (MediaQuery.disableAnimationsOf(context)) return;
       // Another page is shown: no rotating, and so no loading, unseen.
       if (!TickerMode.valuesOf(context).enabled) return;
@@ -180,85 +194,90 @@ class _DesktopHeroState extends State<DesktopHero> {
         return MouseRegion(
           onEnter: (_) => _hovered = true,
           onExit: (_) => _hovered = false,
-          child: SizedBox(
-            height: height,
-            width: width,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                // One surface: the artwork runs under the rail and fades
-                // into the page there.
-                AnimatedSwitcher(
-                  duration: desktopMotion(context, 700),
-                  switchInCurve: DesktopSurfaces.curve,
-                  child: _Backdrop(
-                    key: ValueKey('${item.type}:${item.id}'),
-                    item: item,
-                    width: width,
-                    railShare: railHeight / height,
-                  ),
-                ),
-                Positioned(
-                  left: pad,
-                  bottom: rail ? railHeight + 28 : 48,
-                  width: textWidth,
-                  child: AnimatedSwitcher(
-                    duration: desktopMotion(context, 480),
-                    // Old text fades out before the new one rises in, so
-                    // the two titles never overlap.
-                    switchInCurve: const Interval(
-                      .45,
-                      1,
-                      curve: Curves.easeOutCubic,
+          child: Focus(
+            canRequestFocus: false,
+            skipTraversal: true,
+            onFocusChange: (value) => _focusWithin = value,
+            child: SizedBox(
+              height: height,
+              width: width,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  // One surface: the artwork runs under the rail and fades
+                  // into the page there.
+                  AnimatedSwitcher(
+                    duration: desktopMotion(context, 700),
+                    switchInCurve: DesktopSurfaces.curve,
+                    child: _Backdrop(
+                      key: ValueKey('${item.type}:${item.id}'),
+                      item: item,
+                      width: width,
+                      railShare: railHeight / height,
                     ),
-                    switchOutCurve: const Interval(.5, 1),
-                    transitionBuilder: (child, animation) => FadeTransition(
-                      opacity: animation,
-                      child: SlideTransition(
-                        position: Tween(
-                          begin: const Offset(0, .04),
-                          end: Offset.zero,
-                        ).animate(animation),
-                        child: child,
+                  ),
+                  Positioned(
+                    left: pad,
+                    bottom: rail ? railHeight + 28 : 48,
+                    width: textWidth,
+                    child: AnimatedSwitcher(
+                      duration: desktopMotion(context, 480),
+                      // Old text fades out before the new one rises in, so
+                      // the two titles never overlap.
+                      switchInCurve: const Interval(
+                        .45,
+                        1,
+                        curve: Curves.easeOutCubic,
+                      ),
+                      switchOutCurve: const Interval(.5, 1),
+                      transitionBuilder: (child, animation) => FadeTransition(
+                        opacity: animation,
+                        child: SlideTransition(
+                          position: Tween(
+                            begin: const Offset(0, .04),
+                            end: Offset.zero,
+                          ).animate(animation),
+                          child: child,
+                        ),
+                      ),
+                      layoutBuilder: (current, previous) => Stack(
+                        alignment: Alignment.bottomLeft,
+                        children: [...previous, ?current],
+                      ),
+                      child: _HeroText(
+                        key: ValueKey('text:${item.type}:${item.id}'),
+                        item: item,
+                        logo: _logos[_key(item)] ?? '',
+                        favorite: widget.isFavorite(item),
+                        onPlay: () => widget.onPlay(item),
+                        onDetails: () => widget.onDetails(item),
+                        onToggleFavorite: () async {
+                          await widget.onToggleFavorite(item);
+                          if (mounted) setState(() {});
+                        },
                       ),
                     ),
-                    layoutBuilder: (current, previous) => Stack(
-                      alignment: Alignment.bottomLeft,
-                      children: [...previous, ?current],
-                    ),
-                    child: _HeroText(
-                      key: ValueKey('text:${item.type}:${item.id}'),
-                      item: item,
-                      logo: _logos[_key(item)] ?? '',
-                      favorite: widget.isFavorite(item),
-                      onPlay: () => widget.onPlay(item),
-                      onDetails: () => widget.onDetails(item),
-                      onToggleFavorite: () async {
-                        await widget.onToggleFavorite(item);
-                        if (mounted) setState(() {});
-                      },
-                    ),
                   ),
-                ),
-                if (rail)
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    height: railHeight,
-                    child: _SpotlightRail(
-                      items: widget.items,
-                      index: _index,
-                      rotation: _rotation,
-                      controller: _rail,
-                      posterWidth: posterWidth,
-                      cardHeight: cardHeight,
-                      onShow: _show,
-                      onOpenShown: () => widget.onDetails(item),
-                      onPlayShown: () => widget.onPlay(item),
+                  if (rail)
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      height: railHeight,
+                      child: _SpotlightRail(
+                        items: widget.items,
+                        index: _index,
+                        rotation: _rotation,
+                        controller: _rail,
+                        posterWidth: posterWidth,
+                        cardHeight: cardHeight,
+                        onShow: _show,
+                        onOpenShown: () => widget.onDetails(item),
+                        onPlayShown: () => widget.onPlay(item),
+                      ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
         );
@@ -601,6 +620,11 @@ class _HeroText extends StatelessWidget {
               style: secondary.copyWith(
                 padding: const WidgetStatePropertyAll(
                   EdgeInsets.symmetric(horizontal: 28),
+                ),
+                // Dark on the accent, as on phone and TV: white on coral
+                // is 3.2:1, below the 4.5:1 text needs.
+                foregroundColor: const WidgetStatePropertyAll(
+                  GlassTheme.background,
                 ),
                 backgroundColor: WidgetStateProperty.resolveWith(
                   (states) => states.contains(WidgetState.pressed)

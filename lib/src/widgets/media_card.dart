@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import '../models/media_item.dart';
+import '../theme/design_tokens.dart';
 import '../theme/glass_theme.dart';
 import 'liquid_glass.dart';
 import 'poster_image.dart';
@@ -208,54 +209,59 @@ class _MediaCardState extends State<MediaCard> {
                           ),
                           child: Text(
                             item.type == 'series' ? 'SERIES' : 'FILM',
-                            style: const TextStyle(
-                              fontSize: 8,
-                              letterSpacing: .5,
-                              fontWeight: FontWeight.w800,
-                            ),
+                            style: AppType.micro.copyWith(letterSpacing: .5),
                           ),
                         ),
                       ),
                     ),
                   if (widget.onFavorite != null)
+                    // A 35 dp glass circle in a 47 dp hit area that reaches
+                    // the card's corner, so the heart is easy to tap
+                    // without looking bigger.
                     Positioned(
-                      left: 6,
-                      top: 6,
-                      child: _frosted(
-                        radius: 30,
-                        child: SizedBox(
-                          width: 35,
-                          height: 35,
-                          child: IconButton(
-                            padding: EdgeInsets.zero,
-                            onPressed: _onFavoritePressed,
-                            icon: ValueListenableBuilder<int>(
-                              valueListenable: _heartPressCount,
-                              builder: (context, pressCount, child) {
-                                if (pressCount == 0 || reduceMotion) {
-                                  return child!;
-                                }
-                                return TweenAnimationBuilder<double>(
-                                  key: ValueKey(pressCount),
-                                  tween: Tween(begin: .72, end: 1),
-                                  duration: const Duration(milliseconds: 420),
-                                  curve: Curves.elasticOut,
-                                  builder: (context, progress, child) {
-                                    return Transform.scale(
-                                      scale: progress,
-                                      child: child,
-                                    );
-                                  },
-                                  child: child,
-                                );
-                              },
-                              child: Icon(
-                                Symbols.favorite_rounded,
-                                fill: _isFavorite ? 1 : 0,
-                                size: 18,
-                                color: _isFavorite
-                                    ? GlassTheme.primary
-                                    : Colors.white,
+                      left: 0,
+                      top: 0,
+                      child: SizedBox.square(
+                        dimension: 47,
+                        child: IconButton(
+                          padding: const EdgeInsets.all(6),
+                          tooltip: _isFavorite
+                              ? 'Remove from My list'
+                              : 'Add to My list',
+                          isSelected: _isFavorite,
+                          onPressed: _onFavoritePressed,
+                          icon: _frosted(
+                            radius: 30,
+                            child: SizedBox.square(
+                              dimension: 35,
+                              child: ValueListenableBuilder<int>(
+                                valueListenable: _heartPressCount,
+                                builder: (context, pressCount, child) {
+                                  if (pressCount == 0 || reduceMotion) {
+                                    return child!;
+                                  }
+                                  return TweenAnimationBuilder<double>(
+                                    key: ValueKey(pressCount),
+                                    tween: Tween(begin: .72, end: 1),
+                                    duration: const Duration(milliseconds: 420),
+                                    curve: Curves.elasticOut,
+                                    builder: (context, progress, child) {
+                                      return Transform.scale(
+                                        scale: progress,
+                                        child: child,
+                                      );
+                                    },
+                                    child: child,
+                                  );
+                                },
+                                child: Icon(
+                                  Symbols.favorite_rounded,
+                                  fill: _isFavorite ? 1 : 0,
+                                  size: 18,
+                                  color: _isFavorite
+                                      ? GlassTheme.primary
+                                      : Colors.white,
+                                ),
                               ),
                             ),
                           ),
