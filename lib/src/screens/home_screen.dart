@@ -1100,9 +1100,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ),
         const SizedBox(height: 13),
         SizedBox(
-          height: 264,
-          // Cards' frosted panels never overlap, so the whole row shares one
-          // backdrop blur pass instead of one per panel.
+          height: MediaCard.heightFor(context, MediaCard.rowWidthFor(context)),
+          // Anything frosted in the row shares one backdrop blur pass.
           child: BackdropGroup(
             child: NotificationListener<ScrollMetricsNotification>(
               // Also covers a row too short to scroll that has more pages.
@@ -1130,14 +1129,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     ),
   );
 
-  Widget _mediaCard(MediaItem item, {double width = MediaCard.defaultWidth}) {
+  /// A poster card; [width] defaults to a row card's width.
+  Widget _mediaCard(MediaItem item, {double? width}) {
     // Real progress for watch-history entries; catalog items have none.
     final resume = item.resumeMs > 0
         ? _resumeSummary(item)
         : ResumeSummary.unknown;
     return MediaCard(
       item: item,
-      width: width,
+      width: width ?? MediaCard.rowWidthFor(context),
       isFavorite: _favoriteKeys.contains(_favoriteKey(item)),
       progress: resume.fraction,
       progressLabel: resume.label,
@@ -1195,26 +1195,25 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ),
       SliverPadding(
         padding: const EdgeInsets.fromLTRB(gutter, 0, gutter, 22),
-        // Cards' frosted panels never overlap, so the grid shares one
-        // backdrop blur pass, as a row does.
+        // Anything frosted in the grid shares one backdrop blur pass.
         sliver: BackdropGroup(
           child: SliverLayoutBuilder(
             builder: (context, constraints) {
               final available = constraints.crossAxisExtent;
               // As many row-sized cards as fit, at least two, then widened
               // to fill the line exactly.
-              final columns =
-                  ((available + spacing) / (MediaCard.defaultWidth + spacing))
-                      .floor()
-                      .clamp(2, 8);
+              final cardWidth = MediaCard.rowWidthFor(context);
+              final columns = ((available + spacing) / (cardWidth + spacing))
+                  .floor()
+                  .clamp(2, 8);
               final width = (available - spacing * (columns - 1)) / columns;
               return SliverGrid(
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: columns,
                   crossAxisSpacing: spacing,
                   mainAxisSpacing: spacing,
-                  childAspectRatio:
-                      MediaCard.defaultWidth / MediaCard.defaultHeight,
+                  // A 2:3 poster and the caption, at the text size in use.
+                  mainAxisExtent: MediaCard.heightFor(context, width),
                 ),
                 delegate: SliverChildBuilderDelegate(
                   (context, index) => _mediaCard(items[index], width: width),
@@ -1248,34 +1247,42 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       if (!showRanks) return card;
 
       final rank = '${index + 1}';
+      final cardWidth = MediaCard.rowWidthFor(context);
+      // Room for the numeral before the poster: two digits need twice one,
+      // or the poster hides the 0 and 10 reads as 1.
+      final gap = rank.length > 1 ? 96.0 : 48.0;
       return SizedBox(
-        width: 194,
-        height: 264,
+        width: cardWidth + gap,
+        height: MediaCard.heightFor(context, cardWidth),
         child: Stack(
           clipBehavior: Clip.none,
           children: [
+            // The numeral stands on the poster's foot, not the caption's.
             Positioned(
               left: 0,
-              bottom: -7,
+              bottom: MediaCard.captionHeight(context) - 7,
               child: IgnorePointer(
                 child: Text(
                   rank,
                   maxLines: 1,
                   softWrap: false,
+                  // Bebas Neue: tall, condensed numerals, drawn as a clean
+                  // outline.
                   style: TextStyle(
-                    fontSize: 190,
-                    height: .82,
-                    letterSpacing: index == 9 ? -24 : -8,
-                    fontWeight: FontWeight.w900,
+                    fontFamily: 'BebasNeue',
+                    fontSize: 200,
+                    height: .8,
+                    letterSpacing: index == 9 ? -4 : 0,
                     foreground: Paint()
                       ..style = PaintingStyle.stroke
-                      ..strokeWidth = 3
-                      ..color = Colors.white.withValues(alpha: .78),
+                      ..strokeWidth = 2.5
+                      ..strokeJoin = StrokeJoin.round
+                      ..color = Colors.white.withValues(alpha: .85),
                   ),
                 ),
               ),
             ),
-            Positioned(left: 48, top: 0, child: card),
+            Positioned(left: gap, top: 0, child: card),
           ],
         ),
       );
@@ -1538,6 +1545,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         ),
                       ),
                       IconButton.filledTonal(
+                        // Also its name for screen readers.
+                        tooltip: 'Add a source',
                         onPressed: () => ProviderInstallerModal.show(
                           context,
                           _providerPlugins,
@@ -1646,7 +1655,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               enabled: _catalogSettled,
               feed: _top10,
               child: _pagedRow(
-                'Top 10 recommendations',
+                'Recommendations: A Few Worth Your Time',
                 _top10,
                 showRanks: true,
                 reserveSpace: _catalogSettled,
@@ -1657,7 +1666,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               enabled: _catalogSettled,
               feed: _releases,
               child: _pagedRow(
-                'New releases',
+                'New releases: The Premiere Pulse',
                 _releases,
                 reserveSpace: _catalogSettled,
               ),
@@ -1674,7 +1683,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           if (_category == 'Movies' && !isSearch)
             SliverToBoxAdapter(
               child: _pagedRow(
-                'Movies',
+                'Movies: Movies Unbound',
                 _movies,
                 showPlaceholder: rowPlaceholders,
               ),
@@ -1694,7 +1703,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           if (_category == 'For you' && !isSearch)
             SliverToBoxAdapter(
               child: _pagedRow(
-                'New movies',
+                'Movies: Fresh on the Reel',
                 _movies,
                 showPlaceholder: rowPlaceholders,
               ),
@@ -1702,7 +1711,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           if (_category == 'For you' && !isSearch)
             SliverToBoxAdapter(
               child: _pagedRow(
-                'Series worth the queue',
+                'Series: Worth Losing Sleep Over',
                 _series,
                 showPlaceholder: rowPlaceholders,
               ),
@@ -1802,13 +1811,23 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ),
             const SizedBox(height: 13),
             SizedBox(
-              height: 264,
+              height: MediaCard.heightFor(
+                context,
+                MediaCard.rowWidthFor(context),
+              ),
+              // Poster-shaped stand-ins at the row's real size, so nothing
+              // moves when the first page arrives.
               child: status == PagedFeedStatus.loading
-                  ? const Center(
-                      child: SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                  ? Semantics(
+                      label: 'Loading $title',
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: 6,
+                        separatorBuilder: (_, _) => const SizedBox(width: 13),
+                        itemBuilder: (context, _) => MediaCardSkeleton(
+                          width: MediaCard.rowWidthFor(context),
+                        ),
                       ),
                     )
                   : null,

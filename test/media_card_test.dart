@@ -15,9 +15,73 @@ void main() {
   const movie = MediaItem(id: '1', type: 'movie', name: 'Film');
   const series = MediaItem(id: '2', type: 'series', name: 'Show');
 
-  testWidgets('shows the type badge by default', (tester) async {
+  testWidgets('the details line names the kind by default', (tester) async {
     await _pump(tester, MediaCard(item: series, onTap: () {}));
-    expect(find.text('SERIES'), findsOneWidget);
+    expect(find.textContaining('Series', findRichText: true), findsOneWidget);
+  });
+
+  testWidgets('the artwork keeps the poster shape, with the caption below', (
+    tester,
+  ) async {
+    for (final width in const [MediaCard.defaultWidth, 182.0]) {
+      await _pump(tester, MediaCard(item: movie, onTap: () {}, width: width));
+      final art = tester.getSize(find.byType(PosterPlaceholder));
+      // 2:3, never cropped by the caption or stretched by the card.
+      expect(art.width, width);
+      expect(art.height, closeTo(width * 1.5, .5));
+      final card = tester.getRect(find.byType(MediaCard));
+      final title = tester.getRect(find.text('Film'));
+      expect(title.top, greaterThan(card.top + art.height));
+      expect(title.bottom, lessThanOrEqualTo(card.bottom));
+    }
+  });
+
+  testWidgets('a screen reader hears the title and details once', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    await _pump(
+      tester,
+      MediaCard(
+        item: const MediaItem(
+          id: '3',
+          type: 'series',
+          name: 'Oxygen',
+          year: '2021',
+          rating: '7.6',
+        ),
+        onTap: () {},
+      ),
+    );
+    expect(
+      find.bySemanticsLabel('Oxygen, 2021, Series, rated 7.6'),
+      findsOneWidget,
+    );
+    // The caption is not read again after the card's label.
+    expect(find.bySemanticsLabel('Oxygen'), findsNothing);
+    semantics.dispose();
+  });
+
+  testWidgets('missing details leave no stray separators', (tester) async {
+    await _pump(
+      tester,
+      MediaCard(
+        item: const MediaItem(id: '4', type: 'movie', name: 'Quiet'),
+        onTap: () {},
+      ),
+    );
+    final details = tester
+        .widget<RichText>(find.textContaining('Movie', findRichText: true))
+        .text
+        .toPlainText();
+    expect(details.trim(), 'Movie');
+  });
+
+  testWidgets('the loading skeleton is exactly a card\'s size', (tester) async {
+    await _pump(tester, const MediaCardSkeleton());
+    final skeleton = tester.getSize(find.byType(MediaCardSkeleton));
+    await _pump(tester, MediaCard(item: movie, onTap: () {}));
+    expect(tester.getSize(find.byType(MediaCard)), skeleton);
   });
 
   testWidgets('the My list heart is named, toggled and at least 47 dp', (
@@ -46,14 +110,14 @@ void main() {
     );
   });
 
-  testWidgets('hides the type badge when a caller owns that corner', (
+  testWidgets('leaves the kind out when a caller says it elsewhere', (
     tester,
   ) async {
     await _pump(
       tester,
       MediaCard(item: movie, onTap: () {}, showTypeBadge: false),
     );
-    expect(find.text('FILM'), findsNothing);
+    expect(find.textContaining('Movie', findRichText: true), findsNothing);
     expect(find.text('Film'), findsOneWidget);
   });
 

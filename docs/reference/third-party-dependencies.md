@@ -35,6 +35,8 @@ generated [dependency map](../codebase/dependency-map.md#package-usage).
 ## Bundled assets with their own licences
 
 - Montserrat font ([`assets/fonts/Montserrat-OFL.txt`](../../assets/fonts/Montserrat-OFL.txt)).
+- Bebas Neue font, the phone Top 10 numerals
+  ([`assets/fonts/BebasNeue-OFL.txt`](../../assets/fonts/BebasNeue-OFL.txt)).
 - Cheerio and CryptoJS in [`assets/js/cheerio_bundle.js`](../../assets/js/cheerio_bundle.js).
 - The TMDB logo, used under TMDB's attribution rules
   ([`tmdb_attribution.dart`](../../lib/src/widgets/settings/tmdb_attribution.dart)).

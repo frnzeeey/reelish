@@ -132,7 +132,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
                       height: 74,
                       child: ListView(
                         scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.fromLTRB(20, 18, 20, 10),
+                        // The row sets the chips' height: 74 - 16 - 10 is
+                        // 48 dp, a full-size touch target.
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 10),
                         children: [
                           _FilterChip(
                             label: 'Everything',
@@ -483,8 +485,11 @@ class _MediaSection extends StatelessWidget {
           )
         else
           SizedBox(
-            height: 264,
-            // Cards never overlap; the row shares one backdrop blur pass.
+            height: MediaCard.heightFor(
+              context,
+              MediaCard.rowWidthFor(context),
+            ),
+            // Anything frosted in the row shares one backdrop blur pass.
             child: BackdropGroup(
               child: ListView.separated(
                 key: PageStorageKey<String>('library-row-$title'),
@@ -501,82 +506,46 @@ class _MediaSection extends StatelessWidget {
                     children: [
                       MediaCard(
                         item: item,
+                        width: MediaCard.rowWidthFor(context),
                         isFavorite: favorite,
                         onTap: () => onPlay(item),
                         progress: resume.fraction,
-                        // Remove takes the badge's corner.
-                        showTypeBadge: onRemove == null,
+                        // What is left, in the details line under the
+                        // poster rather than a pill over the artwork.
+                        progressLabel: title == 'Continue watching'
+                            ? (resume.label.isEmpty ? 'Resume' : resume.label)
+                            : '',
                         onFavorite: favorite && onFavorite != null
                             ? () => onFavorite!(item)
                             : null,
                       ),
-                      if (title == 'Continue watching')
-                        Positioned(
-                          left: 7,
-                          top: 7,
-                          // Ends before the Remove button, so a long label
-                          // (or large text) shortens instead of covering it.
-                          right: onRemove == null ? 7 : 7 + 34 + 6,
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 5,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.black.withValues(alpha: .7),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: Colors.white.withValues(alpha: .15),
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Symbols.play_arrow_rounded,
-                                    fill: 1,
-                                    size: 12,
-                                    color: GlassTheme.primary,
-                                  ),
-                                  const SizedBox(width: 3),
-                                  Flexible(
-                                    child: Text(
-                                      resume.label.isEmpty
-                                          ? 'RESUME'
-                                          : resume.label.toUpperCase(),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      // Last, so it is always on top and can be tapped.
+                      // Last, so it is always on top and can be tapped: a
+                      // 33 dp circle in a 47 dp hit area in the poster's
+                      // corner, like the card's own heart.
                       if (onRemove != null)
                         Positioned(
-                          top: 7,
-                          right: 7,
-                          child: Material(
-                            color: Colors.black.withValues(alpha: .72),
-                            shape: const CircleBorder(),
+                          top: 0,
+                          right: 0,
+                          child: SizedBox.square(
+                            dimension: 47,
                             child: IconButton(
                               tooltip: 'Remove from watch history',
-                              visualDensity: VisualDensity.compact,
-                              constraints: const BoxConstraints.tightFor(
-                                width: 34,
-                                height: 34,
-                              ),
-                              padding: EdgeInsets.zero,
-                              icon: const Icon(Symbols.close_rounded, size: 17),
+                              padding: const EdgeInsets.all(7),
                               onPressed: () => onRemove!(item),
+                              icon: const DecoratedBox(
+                                decoration: BoxDecoration(
+                                  color: Color(0xB8000000),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: SizedBox.square(
+                                  dimension: 33,
+                                  child: Icon(
+                                    Symbols.close_rounded,
+                                    size: 17,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
                         ),

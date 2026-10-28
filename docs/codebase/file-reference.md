@@ -43,11 +43,11 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/platform/device_capabilities.dart`](#libsrcplatformdevice_capabilitiesdart) | Shared | 153 | What kind of device Reelish is running on, read once during startup. |
 | [`lib/src/platform/windows_installation.dart`](#libsrcplatformwindows_installationdart) | Windows | 102 | How the running Windows copy of Reelish was installed. |
 | [`lib/src/screens/app_information_screens.dart`](#libsrcscreensapp_information_screensdart) | Shared | 222 | About and Support screens, and the Reelish name, icon and tagline used where the app identifies itself. |
-| [`lib/src/screens/credits_screen.dart`](#libsrcscreenscredits_screendart) | Shared | 245 | Credits for the data, services and software Reelish relies on. |
+| [`lib/src/screens/credits_screen.dart`](#libsrcscreenscredits_screendart) | Shared | 249 | Credits for the data, services and software Reelish relies on. |
 | [`lib/src/screens/first_run_consent_screen.dart`](#libsrcscreensfirst_run_consent_screendart) | Shared | 254 | First-launch screen where the viewer reads and accepts the privacy policy and terms of use; remembers the acceptance. |
-| [`lib/src/screens/home_screen.dart`](#libsrcscreenshome_screendart) | Shared | 2440 | Home and the app's orchestration: phone tabs, and the TV and Windows shells; owns the catalog wiring, the play flow (`_openItem`: providers, source choice, player) and details navigation. |
+| [`lib/src/screens/home_screen.dart`](#libsrcscreenshome_screendart) | Shared | 2459 | Home and the app's orchestration: phone tabs, and the TV and Windows shells; owns the catalog wiring, the play flow (`_openItem`: providers, source choice, player) and details navigation. |
 | [`lib/src/screens/legal_information_screen.dart`](#libsrcscreenslegal_information_screendart) | Shared | 349 | Shows the privacy policy, terms of use and third-party notices. |
-| [`lib/src/screens/library_screen.dart`](#libsrcscreenslibrary_screendart) | Shared | 652 | The phone library tab: continue watching, My list and watch history from local storage. |
+| [`lib/src/screens/library_screen.dart`](#libsrcscreenslibrary_screendart) | Shared | 621 | The phone library tab: continue watching, My list and watch history from local storage. |
 | [`lib/src/screens/media_details_screen.dart`](#libsrcscreensmedia_details_screendart) | Shared | 717 | The phone details page for a movie or series, with seasons, episodes and playback. |
 | [`lib/src/screens/playback_settings_screen.dart`](#libsrcscreensplayback_settings_screendart) | Shared | 1112 | Settings, Appearance and Playback settings screens for phone and TV; Windows reuses their sub-pages. |
 | [`lib/src/screens/player_screen.dart`](#libsrcscreensplayer_screendart) | Shared | 71 | The route that hosts `CustomVideoPlayer` for one title and source. |
@@ -106,7 +106,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/widgets/category_chip.dart`](#libsrcwidgetscategory_chipdart) | Shared | 36 | A selectable category chip for the phone Home. |
 | [`lib/src/widgets/glass_box.dart`](#libsrcwidgetsglass_boxdart) | Shared | 28 | Lightweight glass panel for content in scrolling pages and dialogs. |
 | [`lib/src/widgets/liquid_glass.dart`](#libsrcwidgetsliquid_glassdart) | Shared | 568 | A bounded, reusable glass surface. |
-| [`lib/src/widgets/media_card.dart`](#libsrcwidgetsmedia_carddart) | Shared | 370 | The phone poster card, with favourite toggle and resume progress. |
+| [`lib/src/widgets/media_card.dart`](#libsrcwidgetsmedia_carddart) | Shared | 460 | A movie or series poster on the phone and tablet interface: the artwork at its true 2:3 shape, with the title and one line of details beneath it, so nothing covers the poster but the My list heart and, on Continue watching, a thin progress line along its foot. |
 | [`lib/src/widgets/player/audio_track_sheet.dart`](#libsrcwidgetsplayeraudio_track_sheetdart) | Shared | 53 | Picks an audio track. |
 | [`lib/src/widgets/player/custom_video_player.dart`](#libsrcwidgetsplayercustom_video_playerdart) | Shared | 3396 | The player session for every platform: engine and source attempts, controls, subtitles, audio and video tracks, resume and progress saving, and episode switching. |
 | [`lib/src/widgets/player/episode_panel.dart`](#libsrcwidgetsplayerepisode_paneldart) | Shared | 840 | Lists a series' episodes by season, with thumbnails, runtimes, synopses and the viewer's progress. |
@@ -691,7 +691,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/screens/credits_screen.dart
 
-**Source:** [`lib/src/screens/credits_screen.dart`](../../lib/src/screens/credits_screen.dart) · **Platform:** Shared · **Lines:** 245
+**Source:** [`lib/src/screens/credits_screen.dart`](../../lib/src/screens/credits_screen.dart) · **Platform:** Shared · **Lines:** 249
 
 **Purpose:** Credits for the data, services and software Reelish relies on.
 
@@ -725,7 +725,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/screens/home_screen.dart
 
-**Source:** [`lib/src/screens/home_screen.dart`](../../lib/src/screens/home_screen.dart) · **Platform:** Shared · **Lines:** 2440 · **Branches on:** isTv, isDesktop, TorrentSupport
+**Source:** [`lib/src/screens/home_screen.dart`](../../lib/src/screens/home_screen.dart) · **Platform:** Shared · **Lines:** 2459 · **Branches on:** isTv, isDesktop, TorrentSupport
 
 **Purpose:** Home and the app's orchestration: phone tabs, and the TV and Windows shells; owns the catalog wiring, the play flow (`_openItem`: providers, source choice, player) and details navigation.
 
@@ -757,7 +757,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/screens/library_screen.dart
 
-**Source:** [`lib/src/screens/library_screen.dart`](../../lib/src/screens/library_screen.dart) · **Platform:** Shared · **Lines:** 652
+**Source:** [`lib/src/screens/library_screen.dart`](../../lib/src/screens/library_screen.dart) · **Platform:** Shared · **Lines:** 621
 
 **Purpose:** The phone library tab: continue watching, My list and watch history from local storage.
 
@@ -1681,19 +1681,19 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Packages:** `flutter`
 
-**Imported by:** `src/platform/device_capabilities.dart`, `src/widgets/glass_box.dart`, `src/widgets/media_card.dart`, `src/widgets/soft_glass_dock.dart`
+**Imported by:** `src/platform/device_capabilities.dart`, `src/widgets/glass_box.dart`, `src/widgets/soft_glass_dock.dart`
 
 **Tests importing it:** `integration_test/ui_perf_test.dart`, `test/liquid_glass_test.dart`, `test/soft_glass_dock_test.dart`, `test/tv_support_test.dart`
 
 ## lib/src/widgets/media_card.dart
 
-**Source:** [`lib/src/widgets/media_card.dart`](../../lib/src/widgets/media_card.dart) · **Platform:** Shared · **Lines:** 370
+**Source:** [`lib/src/widgets/media_card.dart`](../../lib/src/widgets/media_card.dart) · **Platform:** Shared · **Lines:** 460
 
-**Purpose:** The phone poster card, with favourite toggle and resume progress.
+**Purpose:** A movie or series poster on the phone and tablet interface: the artwork at its true 2:3 shape, with the title and one line of details beneath it, so nothing covers the poster but the My list heart and, on Continue watching, a thin progress line along its foot.
 
-**Declares:** `MediaCard` (Widget), `_MediaCardState` (Widget state)
+**Declares:** `MediaCard` (Widget), `MediaCardSkeleton` (Widget), `_MediaCardState` (Widget state)
 
-**Imports (project):** `src/models/media_item.dart`, `src/theme/design_tokens.dart`, `src/theme/glass_theme.dart`, `src/widgets/liquid_glass.dart`, `src/widgets/poster_image.dart`
+**Imports (project):** `src/models/media_item.dart`, `src/theme/design_tokens.dart`, `src/theme/glass_theme.dart`, `src/widgets/poster_image.dart`
 
 **Packages:** `flutter`, `material_symbols_icons`
 
@@ -2201,7 +2201,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Imported by:** `src/desktop/desktop_details_screen.dart`, `src/desktop/desktop_hero.dart`, `src/desktop/desktop_shell.dart`, `src/desktop/desktop_top_ten.dart`, `src/desktop/desktop_widgets.dart`, `src/widgets/media_card.dart`, `src/widgets/tv/tv_poster_card.dart`
 
-**Tests importing it:** `test/media_card_test.dart`
+**Tests importing it:** `test/home_startup_budget_test.dart`, `test/media_card_test.dart`
 
 ## lib/src/widgets/provider_installer_modal.dart
 

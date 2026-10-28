@@ -15,7 +15,8 @@ import '../widgets/brand_logo.dart';
 bool _bundledLicensesRegistered = false;
 
 /// Adds licenses for bundled assets that no package reports, such as the
-/// Montserrat font, to Flutter's license registry. Safe to call repeatedly.
+/// Montserrat and Bebas Neue fonts, to Flutter's license registry. Safe to
+/// call repeatedly.
 void registerBundledLicenses() {
   if (_bundledLicensesRegistered) return;
   _bundledLicensesRegistered = true;
@@ -23,6 +24,9 @@ void registerBundledLicenses() {
     yield LicenseEntryWithLineBreaks(const [
       'Montserrat',
     ], await rootBundle.loadString('assets/fonts/Montserrat-OFL.txt'));
+    yield LicenseEntryWithLineBreaks(const [
+      'Bebas Neue',
+    ], await rootBundle.loadString('assets/fonts/BebasNeue-OFL.txt'));
   });
 }
 
@@ -138,9 +142,9 @@ class CreditsScreen extends StatelessWidget {
             const SettingsParagraph(
               text:
                   'Reelish is built with Flutter and open-source packages. '
-                  'The Montserrat typeface is used under the SIL Open Font '
-                  'License 1.1. Each component remains subject to its own '
-                  'license.',
+                  'The Montserrat and Bebas Neue typefaces are used under '
+                  'the SIL Open Font License 1.1. Each component remains '
+                  'subject to its own license.',
             ),
             SettingsTile(
               icon: Symbols.code_rounded,

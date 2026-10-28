@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:material_symbols_icons/symbols.dart';
 import 'package:onfeed/src/desktop/desktop_pages.dart';
 import 'package:onfeed/src/models/episode_progress.dart';
 import 'package:onfeed/src/models/media_item.dart';
@@ -268,26 +267,29 @@ void main() {
       Future<void> press(WidgetTester tester, String tooltip) =>
           tester.tap(find.byTooltip(tooltip).first);
 
-      testWidgets('the resume badge stays clear of the Remove button', (
+      testWidgets('what is left shows under the poster, clear of Remove', (
         tester,
       ) async {
-        // The wide test font gives the badge's label more than its room.
+        // The wide test font gives the label more than its room.
         await pumpPhone(tester);
         final button = tester.getRect(
           find.byTooltip('Remove from watch history').first,
         );
-        final badge = tester.getRect(
+        // The card's own details line, not the section's subtitle.
+        final label = tester.getRect(
           find
-              .ancestor(
-                of: find.byWidgetPredicate(
-                  (w) => w is Icon && w.icon == Symbols.play_arrow_rounded,
+              .descendant(
+                of: find.byType(MediaCard),
+                matching: find.textContaining(
+                  RegExp('left|Resume'),
+                  findRichText: true,
                 ),
-                matching: find.byType(Container),
               )
               .first,
         );
-        expect(badge.right, lessThanOrEqualTo(button.left));
-        expect(badge.overlaps(button), isFalse);
+        // In the details line below the artwork, not over it.
+        expect(label.top, greaterThan(button.bottom));
+        expect(label.overlaps(button), isFalse);
       });
 
       testWidgets('a removal is passed on once saved', (tester) async {

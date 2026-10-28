@@ -16,6 +16,7 @@ import 'package:onfeed/src/services/storage_service.dart';
 import 'package:onfeed/src/services/tmdb_response_cache.dart';
 import 'package:onfeed/src/services/tmdb_service.dart';
 import 'package:onfeed/src/widgets/media_card.dart';
+import 'package:onfeed/src/widgets/poster_image.dart';
 import 'package:onfeed/src/widgets/soft_glass_dock.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -313,8 +314,16 @@ void main() {
     expect(second.right, closeTo(430 - 18, .5));
     expect(third.left, closeTo(18, .5));
     expect(third.top, greaterThan(first.bottom));
-    // Cards keep their shape when widened.
-    expect(first.width / first.height, closeTo(146 / 264, .001));
+    // Widened, the artwork keeps the 2:3 poster shape (the caption below it
+    // keeps its height).
+    final art = tester.getSize(
+      find.descendant(
+        of: cards.at(0),
+        matching: find.byType(PosterPlaceholder),
+      ),
+    );
+    expect(art.width, closeTo(first.width, .5));
+    expect(art.height / art.width, closeTo(1.5, .01));
 
     // A result still opens its details page.
     await tester.tap(cards.at(0));

@@ -122,7 +122,7 @@ The files imported by the most other `lib/` files. A change to one of these reac
 | [`lib/src/services/media_catalog_rules.dart`](../../lib/src/services/media_catalog_rules.dart) | 7 | 7 |
 | [`lib/src/services/plugin_library_query.dart`](../../lib/src/services/plugin_library_query.dart) | 7 | 1 |
 | [`lib/src/widgets/brand_logo.dart`](../../lib/src/widgets/brand_logo.dart) | 7 | 1 |
-| [`lib/src/widgets/poster_image.dart`](../../lib/src/widgets/poster_image.dart) | 7 | 1 |
+| [`lib/src/widgets/poster_image.dart`](../../lib/src/widgets/poster_image.dart) | 7 | 2 |
 | [`lib/src/models/app_update.dart`](../../lib/src/models/app_update.dart) | 6 | 7 |
 | [`lib/src/services/playback_settings_controller.dart`](../../lib/src/services/playback_settings_controller.dart) | 6 | 7 |
 | [`lib/src/models/episode_context.dart`](../../lib/src/models/episode_context.dart) | 5 | 3 |

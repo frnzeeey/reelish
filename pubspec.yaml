@@ -92,6 +92,7 @@ flutter:
   assets:
     - assets/js/cheerio_bundle.js
     - assets/fonts/Montserrat-OFL.txt
+    - assets/fonts/BebasNeue-OFL.txt
     - assets/icons/reelish_icon.png
     - assets/icons/Primary_logo.png
     - assets/icons/logo_icon.png
@@ -110,6 +111,10 @@ flutter:
           weight: 600
         - asset: assets/fonts/Montserrat-Bold.ttf
           weight: 700
+    # Tall condensed numerals for the phone Top 10 row.
+    - family: BebasNeue
+      fonts:
+        - asset: assets/fonts/BebasNeue-Regular.ttf
 
   # To add assets to your application, add an assets section, like this:
   # assets:
