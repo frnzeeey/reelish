@@ -1666,7 +1666,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               enabled: _catalogSettled,
               feed: _releases,
               child: _pagedRow(
-                'New releases: The Premiere Pulse',
+                'New releases: Just Dropped',
                 _releases,
                 reserveSpace: _catalogSettled,
               ),
