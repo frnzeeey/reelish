@@ -202,7 +202,7 @@ void main() {
     await settle(tester, rounds: 40);
     expect(urls.where(isNewReleases), isEmpty);
 
-    await revealRow(tester, 'New releases');
+    await revealRow(tester, 'New releases: Just Dropped');
 
     expect(urls.where(isNewReleases), hasLength(3));
     expect(urls.where(isNewReleases).map(pageOf), everyElement(1));
@@ -217,7 +217,7 @@ void main() {
   ) async {
     await pumpHome(tester);
     await settle(tester, rounds: 40);
-    await revealRow(tester, 'New movies');
+    await revealRow(tester, 'Movies: Fresh on the Reel');
     final before = urls.length;
     final seriesBefore = urls.where(isSeries).length;
     final releasesBefore = urls.where(isNewReleases).length;
@@ -226,7 +226,10 @@ void main() {
     // Page 1 holds 20 cards; drag toward the end in steps, as a viewer
     // would, so the row reports many scroll updates near its end.
     for (var i = 0; i < 12; i++) {
-      await tester.drag(row('New movies'), const Offset(-260, 0));
+      await tester.drag(
+        row('Movies: Fresh on the Reel'),
+        const Offset(-260, 0),
+      );
       await tester.pump(const Duration(milliseconds: 16));
     }
     await settle(tester, rounds: 15);
@@ -238,7 +241,7 @@ void main() {
     expect(urls.where(isNewReleases), hasLength(releasesBefore));
     expect(urls.where(isRecommendations), hasLength(recommendationsBefore));
     // Page 2's titles were appended to the row.
-    final list = tester.widget<ListView>(row('New movies'));
+    final list = tester.widget<ListView>(row('Movies: Fresh on the Reel'));
     expect(list.childrenDelegate.estimatedChildCount, greaterThan(20 * 2));
 
     await disposeHome(tester);
