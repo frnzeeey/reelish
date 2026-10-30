@@ -100,6 +100,7 @@ class DesktopPosterCard extends StatefulWidget {
     this.onRemove,
     this.removeLabel = 'Remove from watch history',
     this.caption = '',
+    this.showType = true,
   });
 
   final MediaItem item;
@@ -130,6 +131,10 @@ class DesktopPosterCard extends StatefulWidget {
   /// Shown under the title instead of the year and type, in the accent:
   /// where the viewer is ("34 min left"), in Continue watching.
   final String caption;
+
+  /// Whether the line under the title says Movie or Series; a page of one
+  /// kind leaves it out.
+  final bool showType;
 
   @override
   State<DesktopPosterCard> createState() => _DesktopPosterCardState();
@@ -191,7 +196,7 @@ class _DesktopPosterCardState extends State<DesktopPosterCard> {
     final radius = BorderRadius.circular(14);
     final meta = [
       if (item.year.isNotEmpty) item.year,
-      item.type == 'series' ? 'Series' : 'Movie',
+      if (widget.showType) item.type == 'series' ? 'Series' : 'Movie',
     ].join(' · ');
     return SizedBox(
       width: width,
@@ -928,11 +933,15 @@ class DesktopPosterGrid extends StatelessWidget {
     this.onToggleFavorite,
     this.progressOf,
     this.footer,
+    this.showType = true,
   });
 
   final List<MediaItem> items;
   final ValueChanged<MediaItem> onOpen;
   final bool Function(MediaItem item)? isFavorite;
+
+  /// See [DesktopPosterCard.showType]: off for a page of one kind.
+  final bool showType;
 
   /// Adds a title to My list or takes it off, from its card.
   final Future<void> Function(MediaItem item)? onToggleFavorite;
@@ -968,6 +977,7 @@ class DesktopPosterGrid extends StatelessWidget {
               isFavorite: isFavorite?.call(items[index]) ?? false,
               onToggleFavorite: bindItem(onToggleFavorite, items[index]),
               progress: progressOf?.call(items[index]) ?? 0,
+              showType: showType,
             ),
             childCount: items.length,
           ),
@@ -1033,7 +1043,8 @@ class DesktopPageHeader extends StatelessWidget {
                     subtitle,
                     style: const TextStyle(
                       color: GlassTheme.muted,
-                      fontSize: 14,
+                      fontSize: AppTextSize.body,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ],

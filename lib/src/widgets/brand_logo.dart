@@ -1,5 +1,7 @@
 // Reelish's brand images: their asset paths, and the wordmark and mark drawn
 // without their canvases' transparent margins.
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 
 /// Reelish's brand images, in one place. Each is an 846 × 846 PNG in
@@ -29,16 +31,50 @@ abstract final class BrandAssets {
 /// The Reelish wordmark at [height], without its canvas's transparent
 /// margins. Read out as "Reelish".
 class ReelishWordmark extends StatelessWidget {
-  const ReelishWordmark({super.key, required this.height});
+  const ReelishWordmark({super.key, required this.height, this.lifted = false});
 
   final double height;
 
+  /// Whether a soft shadow in the letters' shape sits under it, so it stands
+  /// off bright artwork instead of lying flat on it.
+  final bool lifted;
+
   @override
-  Widget build(BuildContext context) => _BrandArtwork(
-    asset: BrandAssets.wordLogo,
-    bounds: BrandAssets.wordLogoBounds,
-    height: height,
-  );
+  Widget build(BuildContext context) {
+    final artwork = _BrandArtwork(
+      asset: BrandAssets.wordLogo,
+      bounds: BrandAssets.wordLogoBounds,
+      height: height,
+    );
+    if (!lifted) return artwork;
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        // The same image, darkened and blurred, a little below.
+        Positioned.fill(
+          child: Transform.translate(
+            offset: Offset(0, height * .1),
+            child: ExcludeSemantics(
+              child: ImageFiltered(
+                imageFilter: ImageFilter.blur(
+                  sigmaX: height * .16,
+                  sigmaY: height * .16,
+                ),
+                child: ColorFiltered(
+                  colorFilter: const ColorFilter.mode(
+                    Color(0x99000000),
+                    BlendMode.srcIn,
+                  ),
+                  child: artwork,
+                ),
+              ),
+            ),
+          ),
+        ),
+        artwork,
+      ],
+    );
+  }
 }
 
 /// The Reelish mark at [height], without its canvas's transparent margins.

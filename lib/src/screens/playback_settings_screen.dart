@@ -177,6 +177,19 @@ class AppearanceSettingsScreen extends StatelessWidget {
                           width: itemWidth,
                           onTap: () => controller.update(accent),
                         ),
+                      // Last: the user's own colour, or a colour wheel
+                      // until one is picked.
+                      _AccentChoice(
+                        accent: controller.value.isCustom
+                            ? controller.value
+                            : AccentPalette.custom(GlassTheme.coral.primary),
+                        selected: controller.value.isCustom,
+                        width: itemWidth,
+                        swatch: controller.value.isCustom
+                            ? null
+                            : const _ColorWheelSwatch(),
+                        onTap: () => _editCustom(context),
+                      ),
                     ],
                   );
                 },
@@ -187,6 +200,16 @@ class AppearanceSettingsScreen extends StatelessWidget {
       ),
     ],
   );
+
+  /// Opens the custom accent editor from the current custom colour (or the
+  /// current accent) and applies what the user chooses.
+  Future<void> _editCustom(BuildContext context) async {
+    final chosen = await showDialog<AccentPalette>(
+      context: context,
+      builder: (_) => _CustomAccentDialog(initial: controller.value.primary),
+    );
+    if (chosen != null) await controller.update(chosen);
+  }
 }
 
 class _AccentChoice extends StatelessWidget {
@@ -195,12 +218,16 @@ class _AccentChoice extends StatelessWidget {
     required this.selected,
     required this.width,
     required this.onTap,
+    this.swatch,
   });
 
   final AccentPalette accent;
   final bool selected;
   final double width;
   final VoidCallback onTap;
+
+  /// Drawn instead of the accent's dot (the Custom tile's colour wheel).
+  final Widget? swatch;
 
   @override
   Widget build(BuildContext context) => Semantics(
@@ -230,20 +257,21 @@ class _AccentChoice extends StatelessWidget {
             Stack(
               clipBehavior: Clip.none,
               children: [
-                Container(
-                  width: 23,
-                  height: 23,
-                  decoration: BoxDecoration(
-                    color: accent.primary,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: accent.primary.withValues(alpha: .35),
-                        blurRadius: 10,
+                swatch ??
+                    Container(
+                      width: 23,
+                      height: 23,
+                      decoration: BoxDecoration(
+                        color: accent.primary,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: accent.primary.withValues(alpha: .35),
+                            blurRadius: 10,
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                ),
+                    ),
                 if (selected)
                   Positioned(
                     right: -5,
@@ -279,6 +307,303 @@ class _AccentChoice extends StatelessWidget {
       ),
     ),
   );
+}
+
+/// The Custom tile's dot before a colour is picked: the hue wheel.
+class _ColorWheelSwatch extends StatelessWidget {
+  const _ColorWheelSwatch();
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 23,
+    height: 23,
+    decoration: const BoxDecoration(
+      shape: BoxShape.circle,
+      gradient: SweepGradient(colors: _hues),
+    ),
+  );
+}
+
+/// Red round to red, for the colour wheel and the hue slider.
+const _hues = [
+  Color(0xFFFF4D4D),
+  Color(0xFFFFD24D),
+  Color(0xFF7CFF4D),
+  Color(0xFF4DFFD2),
+  Color(0xFF4D9BFF),
+  Color(0xFFB84DFF),
+  Color(0xFFFF4D4D),
+];
+
+/// Picks a custom accent by hue and vividness. Lightness is not offered:
+/// [AccentPalette.custom] sets it so text stays readable, and the preview
+/// shows the colour that will actually be used.
+class _CustomAccentDialog extends StatefulWidget {
+  const _CustomAccentDialog({required this.initial});
+
+  final Color initial;
+
+  @override
+  State<_CustomAccentDialog> createState() => _CustomAccentDialogState();
+}
+
+class _CustomAccentDialogState extends State<_CustomAccentDialog> {
+  late double _hue;
+  late double _vividness;
+
+  @override
+  void initState() {
+    super.initState();
+    final hsl = HSLColor.fromColor(widget.initial);
+    _hue = hsl.hue;
+    _vividness = hsl.saturation.clamp(.35, 1).toDouble();
+  }
+
+  AccentPalette get _palette => AccentPalette.custom(
+    HSLColor.fromAHSL(1, _hue, _vividness, .6).toColor(),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = _palette;
+    final hex = palette.id.substring(AccentPalette.customPrefix.length);
+    return AlertDialog(
+      title: const Text('Custom accent'),
+      content: SizedBox(
+        width: 360,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _AccentPreview(palette: palette),
+              const SizedBox(height: AppSpace.lg),
+              _GradientSlider(
+                label: 'Hue',
+                value: _hue,
+                max: 360,
+                colors: _hues,
+                onChanged: (value) => setState(() => _hue = value),
+              ),
+              _GradientSlider(
+                label: 'Vividness',
+                value: _vividness,
+                min: .35,
+                max: 1,
+                colors: [
+                  HSLColor.fromAHSL(1, _hue, .35, .6).toColor(),
+                  HSLColor.fromAHSL(1, _hue, 1, .6).toColor(),
+                ],
+                onChanged: (value) => setState(() => _vividness = value),
+              ),
+              const SizedBox(height: AppSpace.xs),
+              Text(
+                '#${hex.toUpperCase()} · brightness is set for you so text '
+                'stays readable.',
+                style: const TextStyle(
+                  color: GlassTheme.muted,
+                  fontSize: AppTextSize.caption,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          style: FilledButton.styleFrom(
+            backgroundColor: palette.primary,
+            foregroundColor: GlassTheme.background,
+          ),
+          onPressed: () => Navigator.pop(context, palette),
+          child: const Text('Use color'),
+        ),
+      ],
+    );
+  }
+}
+
+/// A few of the places the accent shows (a filled button, a selected chip,
+/// a progress bar), drawn in [palette] before it is applied.
+class _AccentPreview extends StatelessWidget {
+  const _AccentPreview({required this.palette});
+
+  final AccentPalette palette;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(AppSpace.md),
+    decoration: BoxDecoration(
+      color: GlassTheme.background,
+      borderRadius: BorderRadius.circular(AppRadius.lg),
+      border: Border.all(color: GlassTheme.border),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: palette.primary,
+                borderRadius: BorderRadius.circular(AppRadius.pill),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Symbols.play_arrow_rounded,
+                    size: 16,
+                    color: GlassTheme.background,
+                    fill: 1,
+                  ),
+                  SizedBox(width: 4),
+                  Text(
+                    'Play',
+                    style: TextStyle(
+                      color: GlassTheme.background,
+                      fontSize: AppTextSize.label,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: AppSpace.sm),
+            Flexible(
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 7,
+                ),
+                decoration: BoxDecoration(
+                  color: palette.primary.withValues(alpha: .15),
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                  border: Border.all(
+                    color: palette.primary.withValues(alpha: .45),
+                  ),
+                ),
+                child: Text(
+                  'Selected',
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: palette.bright,
+                    fontSize: AppTextSize.label,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpace.md),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(2),
+          child: LinearProgressIndicator(
+            value: .62,
+            minHeight: 4,
+            color: palette.primary,
+            backgroundColor: Colors.white12,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+/// A labelled slider whose track is a gradient of [colors].
+class _GradientSlider extends StatelessWidget {
+  const _GradientSlider({
+    required this.label,
+    required this.value,
+    required this.colors,
+    required this.onChanged,
+    this.min = 0,
+    required this.max,
+  });
+
+  final String label;
+  final double value;
+  final double min;
+  final double max;
+  final List<Color> colors;
+  final ValueChanged<double> onChanged;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Padding(
+        padding: const EdgeInsets.only(top: AppSpace.sm),
+        child: Text(
+          label,
+          style: const TextStyle(
+            fontSize: AppTextSize.label,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+      SliderTheme(
+        data: SliderTheme.of(context).copyWith(
+          trackHeight: 10,
+          trackShape: _GradientTrackShape(colors),
+          thumbColor: Colors.white,
+          thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
+          overlayColor: Colors.white24,
+        ),
+        child: TvSliderNavigation(
+          child: Slider(
+            value: value.clamp(min, max).toDouble(),
+            min: min,
+            max: max,
+            semanticFormatterCallback: (value) => max > 1
+                ? '${value.round()} degrees'
+                : '${(value * 100).round()} percent',
+            onChanged: onChanged,
+          ),
+        ),
+      ),
+    ],
+  );
+}
+
+class _GradientTrackShape extends RoundedRectSliderTrackShape {
+  const _GradientTrackShape(this.colors);
+
+  final List<Color> colors;
+
+  @override
+  void paint(
+    PaintingContext context,
+    Offset offset, {
+    required RenderBox parentBox,
+    required SliderThemeData sliderTheme,
+    required Animation<double> enableAnimation,
+    required TextDirection textDirection,
+    required Offset thumbCenter,
+    Offset? secondaryOffset,
+    bool isDiscrete = false,
+    bool isEnabled = false,
+    double additionalActiveTrackHeight = 2,
+  }) {
+    final rect = getPreferredRect(
+      parentBox: parentBox,
+      offset: offset,
+      sliderTheme: sliderTheme,
+      isEnabled: isEnabled,
+      isDiscrete: isDiscrete,
+    );
+    context.canvas.drawRRect(
+      RRect.fromRectAndRadius(rect, Radius.circular(rect.height / 2)),
+      Paint()..shader = LinearGradient(colors: colors).createShader(rect),
+    );
+  }
 }
 
 class PlaybackSettingsScreen extends StatelessWidget {

@@ -269,17 +269,20 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                     horizontal: 10,
                     vertical: 6,
                   ),
+                  // Dark glass with the brighter accent, so the label keeps
+                  // its contrast on any artwork (a coral tint on coral text
+                  // fell under 4.5:1).
                   decoration: BoxDecoration(
-                    color: GlassTheme.primary.withValues(alpha: .16),
+                    color: Colors.black.withValues(alpha: .38),
                     borderRadius: BorderRadius.circular(30),
                     border: Border.all(
-                      color: GlassTheme.primary.withValues(alpha: .35),
+                      color: GlassTheme.primary.withValues(alpha: .45),
                     ),
                   ),
                   child: Text(
                     item.type == 'series' ? 'SERIES' : 'MOVIE',
                     style: TextStyle(
-                      color: GlassTheme.primary,
+                      color: GlassTheme.coralBright,
                       fontSize: 10,
                       letterSpacing: 1.1,
                       fontWeight: FontWeight.w800,
@@ -289,7 +292,8 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                 const SizedBox(height: 12),
                 Text(
                   item.name,
-                  maxLines: 2,
+                  // The details page is where a long title is read in full.
+                  maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 34,
@@ -369,12 +373,14 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
   );
 
   Widget _metadata(String text, {bool highlight = false, IconData? icon}) {
-    final color = highlight ? GlassTheme.primary : Colors.white70;
+    // Highlighted: the brighter accent on dark glass, which keeps its
+    // contrast on artwork (a coral tint behind coral text did not).
+    final color = highlight ? GlassTheme.coralBright : Colors.white70;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: highlight
-            ? GlassTheme.primary.withValues(alpha: .15)
+            ? Colors.black.withValues(alpha: .38)
             : Colors.white.withValues(alpha: .10),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
@@ -516,14 +522,19 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _sectionTitle('Synopsis'),
-              Text(
-                synopsis.isNotEmpty
-                    ? synopsis
-                    : 'No synopsis is available for this title.',
-                style: const TextStyle(
-                  color: Colors.white70,
-                  height: 1.55,
-                  fontSize: 14,
+              // About 75 characters a line at most: a tablet's full width
+              // made lines too long to follow.
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 720),
+                child: Text(
+                  synopsis.isNotEmpty
+                      ? synopsis
+                      : 'No synopsis is available for this title.',
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    height: 1.55,
+                    fontSize: 14,
+                  ),
                 ),
               ),
               if (_details?.genres.isNotEmpty == true) ...[
@@ -695,12 +706,13 @@ class _StatusBarScrim extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final inset = MediaQuery.paddingOf(context).top;
-    if (inset == 0) return const SizedBox.shrink();
+    // Down past the back button (6 + 48 below the inset), so headings
+    // scrolling under it fade instead of colliding with it.
     return Positioned(
       top: 0,
       left: 0,
       right: 0,
-      height: inset + 24,
+      height: inset + 80,
       child: const IgnorePointer(
         child: DecoratedBox(
           decoration: BoxDecoration(

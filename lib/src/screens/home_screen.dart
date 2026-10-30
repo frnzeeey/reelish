@@ -36,6 +36,7 @@ import '../viewmodels/home_view_model.dart';
 import '../widgets/provider_installer_modal.dart';
 import '../widgets/app_update_flow.dart';
 import '../widgets/category_chip.dart';
+import '../widgets/top_lit_edge.dart';
 import '../widgets/glass_box.dart';
 import '../widgets/media_card.dart';
 import '../widgets/settings/settings_components.dart';
@@ -1290,14 +1291,23 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   );
 
   Widget _brandMark() => Container(
-    width: 36,
-    height: 36,
+    width: 40,
+    height: 40,
     decoration: BoxDecoration(
-      borderRadius: BorderRadius.circular(12),
-      boxShadow: [BoxShadow(color: GlassTheme.coralGlow, blurRadius: 18)],
+      borderRadius: BorderRadius.circular(13),
+      // A dark drop for lift, under the accent glow.
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: .28),
+          blurRadius: 12,
+          offset: const Offset(0, 2),
+        ),
+        BoxShadow(color: GlassTheme.coralGlow, blurRadius: 18),
+      ],
     ),
+    foregroundDecoration: const TopLitEdge(radius: 13),
     child: ClipRRect(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(13),
       child: Image.asset(BrandAssets.appIcon, fit: BoxFit.cover),
     ),
   );
@@ -1365,8 +1375,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 key: const ValueKey('brand-header'),
                 children: [
                   _brandMark(),
-                  const SizedBox(width: 12),
-                  const ReelishWordmark(height: 17),
+                  const SizedBox(width: 10),
+                  // Letters about a third of the icon's height, so neither
+                  // outweighs the other.
+                  const ReelishWordmark(height: 16, lifted: true),
                   const Spacer(),
                   IconButton(
                     tooltip: 'Search',
@@ -1981,7 +1993,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const ReelishWordmark(height: 8),
+                    // A touch under the label's cap height, as the heavier
+                    // wordmark reads larger; nudged down onto its baseline.
+                    Transform.translate(
+                      offset: const Offset(0, 1),
+                      child: const ReelishWordmark(height: 7),
+                    ),
                     const SizedBox(width: 6),
                     Text(
                       'SPOTLIGHT',

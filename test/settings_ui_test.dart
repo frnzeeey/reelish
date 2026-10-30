@@ -7,6 +7,7 @@ import 'package:onfeed/src/screens/playback_settings_screen.dart';
 import 'package:onfeed/src/screens/subtitle_addons_screen.dart';
 import 'package:onfeed/src/services/accent_settings_controller.dart';
 import 'package:onfeed/src/services/playback_settings_controller.dart';
+import 'package:onfeed/src/theme/glass_theme.dart';
 import 'package:onfeed/src/widgets/settings/settings_components.dart';
 import 'package:onfeed/src/widgets/settings/tmdb_attribution.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -169,6 +170,42 @@ void main() {
     await _scrollTo(tester, find.text(_disclaimer));
     expect(find.text(_disclaimer), findsOneWidget);
     expect(_logo, findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('appearance offers the presets and a custom accent', (
+    tester,
+  ) async {
+    final accent = AccentSettingsController();
+    addTearDown(accent.dispose);
+    addTearDown(() => GlassTheme.setAccent(GlassTheme.coral));
+    await _pump(
+      tester,
+      Scaffold(
+        body: AppearanceSettingsScreen(controller: accent, onBack: () {}),
+      ),
+      size: const Size(360, 740),
+    );
+    for (final preset in GlassTheme.accents) {
+      expect(find.text(preset.label), findsOneWidget, reason: preset.id);
+    }
+    await tester.tap(find.text('Custom'));
+    await tester.pumpAndSettle();
+    expect(find.text('Custom accent'), findsOneWidget);
+    expect(find.text('Hue'), findsOneWidget);
+
+    // Cancel leaves the accent alone.
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(accent.value, same(GlassTheme.coral));
+
+    await tester.tap(find.text('Custom'));
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(Slider).first, const Offset(80, 0));
+    await tester.tap(find.text('Use color'));
+    await tester.pumpAndSettle();
+    expect(accent.value.isCustom, isTrue);
+    expect(GlassTheme.primary, accent.value.primary);
     expect(tester.takeException(), isNull);
   });
 

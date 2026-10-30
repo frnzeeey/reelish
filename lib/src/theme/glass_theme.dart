@@ -57,15 +57,42 @@ abstract final class GlassTheme {
     bright: Color(0xFF8997FF),
     dark: Color(0xFF4859D9),
   );
+  static const rose = AccentPalette(
+    id: 'rose',
+    label: 'Rose',
+    primary: Color(0xFFFF5FA2),
+    bright: Color(0xFFFF85B9),
+    dark: Color(0xFFD9407F),
+  );
+  static const lime = AccentPalette(
+    id: 'lime',
+    label: 'Lime',
+    primary: Color(0xFFA6D93C),
+    bright: Color(0xFFBDE86A),
+    dark: Color(0xFF84B021),
+  );
+  static const slate = AccentPalette(
+    id: 'slate',
+    label: 'Slate',
+    primary: Color(0xFF9AA9C2),
+    bright: Color(0xFFB6C2D6),
+    dark: Color(0xFF74839C),
+  );
+
+  /// The presets in the order they are offered: the default first, then
+  /// round the colour wheel, then the neutral.
   static const accents = [
     coral,
-    violet,
-    blue,
-    green,
-    amber,
     orange,
+    amber,
+    lime,
+    green,
     teal,
+    blue,
     indigo,
+    violet,
+    rose,
+    slate,
   ];
   static AccentPalette _accent = coral;
   static AccentPalette get accent => _accent;
@@ -208,9 +235,53 @@ class AccentPalette {
     required this.dark,
   });
 
+  /// A palette from any colour the user picks, with its lightness raised
+  /// until it reads on the page background (and dark text reads on it), as
+  /// the presets do. Its [id] is `custom:rrggbb`, the colour actually used.
+  factory AccentPalette.custom(Color color) {
+    final hsl = HSLColor.fromColor(color.withValues(alpha: 1));
+    var lightness = hsl.lightness.clamp(.45, .8).toDouble();
+    // 4.5:1 against the page background needs a luminance of about .2.
+    while (lightness < .8 &&
+        hsl.withLightness(lightness).toColor().computeLuminance() < .2) {
+      lightness += .01;
+    }
+    final primary = hsl.withLightness(lightness).toColor();
+    final hex = (primary.toARGB32() & 0xFFFFFF)
+        .toRadixString(16)
+        .padLeft(6, '0');
+    return AccentPalette(
+      id: '$customPrefix$hex',
+      label: 'Custom',
+      primary: primary,
+      bright: hsl.withLightness((lightness + .08).clamp(0, .88)).toColor(),
+      dark: hsl.withLightness((lightness - .12).clamp(.2, 1)).toColor(),
+    );
+  }
+
+  /// The saved form of a custom accent starts with this.
+  static const customPrefix = 'custom:';
+
+  /// The palette saved as [id], or null when it is neither a preset nor a
+  /// well-formed custom colour.
+  static AccentPalette? fromId(String? id) {
+    if (id == null) return null;
+    if (id.startsWith(customPrefix)) {
+      final hex = id.substring(customPrefix.length);
+      final rgb = hex.length == 6 ? int.tryParse(hex, radix: 16) : null;
+      return rgb == null ? null : AccentPalette.custom(Color(0xFF000000 | rgb));
+    }
+    for (final accent in GlassTheme.accents) {
+      if (accent.id == id) return accent;
+    }
+    return null;
+  }
+
   final String id;
   final String label;
   final Color primary;
   final Color bright;
   final Color dark;
+
+  bool get isCustom => id.startsWith(customPrefix);
 }

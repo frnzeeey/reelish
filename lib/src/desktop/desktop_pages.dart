@@ -311,6 +311,8 @@ class _DesktopCatalogPageState extends State<DesktopCatalogPage> {
               onOpen: widget.onOpen,
               isFavorite: widget.isFavorite,
               onToggleFavorite: widget.onToggleFavorite,
+              // One feed, one kind: the page title already says which.
+              showType: false,
             ),
           if (state.isLoadingMore)
             const SliverToBoxAdapter(

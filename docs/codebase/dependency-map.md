@@ -34,7 +34,7 @@ graph LR
   screens["screens"] -->|31| services["services"]
   screens["screens"] -->|17| theme["theme"]
   screens["screens"] -->|3| viewmodels["viewmodels"]
-  screens["screens"] -->|15| widgets["widgets"]
+  screens["screens"] -->|16| widgets["widgets"]
   screens["screens"] -->|4| widgets_player["widgets/player"]
   screens["screens"] -->|14| widgets_plugin_library["widgets/plugin_library"]
   screens["screens"] -->|8| widgets_settings["widgets/settings"]
@@ -86,7 +86,7 @@ graph LR
 | `models` | nothing outside itself |
 | `navigation` | nothing outside itself |
 | `platform` | `widgets` (1) |
-| `screens` | `app` (1), `desktop` (7), `models` (21), `navigation` (4), `platform` (5), `screens/tv` (3), `services` (31), `theme` (17), `viewmodels` (3), `widgets` (15), `widgets/player` (4), `widgets/plugin_library` (14), `widgets/settings` (8), `widgets/tv` (4) |
+| `screens` | `app` (1), `desktop` (7), `models` (21), `navigation` (4), `platform` (5), `screens/tv` (3), `services` (31), `theme` (17), `viewmodels` (3), `widgets` (16), `widgets/player` (4), `widgets/plugin_library` (14), `widgets/settings` (8), `widgets/tv` (4) |
 | `screens/tv` | `models` (5), `navigation` (1), `services` (5), `theme` (5), `viewmodels` (4), `widgets` (1), `widgets/settings` (1), `widgets/tv` (5) |
 | `services` | `models` (34), `platform` (2), `theme` (1), `lib/tmdb_config.local.dart` (1) |
 | `theme` | nothing outside itself |
@@ -103,7 +103,7 @@ The files imported by the most other `lib/` files. A change to one of these reac
 
 | File | Imported by (lib files) | Imported by (tests) |
 |---|---|---|
-| [`lib/src/theme/glass_theme.dart`](../../lib/src/theme/glass_theme.dart) | 59 | 17 |
+| [`lib/src/theme/glass_theme.dart`](../../lib/src/theme/glass_theme.dart) | 59 | 19 |
 | [`lib/src/models/media_item.dart`](../../lib/src/models/media_item.dart) | 29 | 31 |
 | [`lib/src/theme/design_tokens.dart`](../../lib/src/theme/design_tokens.dart) | 24 | 0 |
 | [`lib/src/models/stream_source.dart`](../../lib/src/models/stream_source.dart) | 18 | 14 |
@@ -136,7 +136,7 @@ Each third-party package imported by `lib/`, A–Z, with the files that import i
 | Package | Imported by |
 |---|---|
 | `crypto` | `src/services/github_update_service.dart`, `src/services/provider_plugin_service.dart` |
-| `flutter` | 105 files, including `main.dart`, `src/desktop/desktop_details_screen.dart`, `src/desktop/desktop_hero.dart`, `src/desktop/desktop_pages.dart`, `src/desktop/desktop_plugins_page.dart`, `src/desktop/desktop_provider_search.dart` |
+| `flutter` | 106 files, including `main.dart`, `src/desktop/desktop_details_screen.dart`, `src/desktop/desktop_hero.dart`, `src/desktop/desktop_pages.dart`, `src/desktop/desktop_plugins_page.dart`, `src/desktop/desktop_provider_search.dart` |
 | `flutter_go_torrent_streamer` | `src/services/torrent_source_preparer.dart`, `src/widgets/player/custom_video_player.dart` |
 | `flutter_js` | `src/services/provider_fetch_bridge.dart`, `src/services/provider_runner.dart` |
 | `http` | `src/services/github_update_service.dart`, `src/services/network_target_policy.dart`, `src/services/plugin_library_service.dart`, `src/services/provider_fetch_bridge.dart`, `src/services/provider_plugin_service.dart`, `src/services/subtitle_addon_service.dart`, `src/services/subtitle_loader.dart`, `src/services/tmdb_service.dart`, `src/widgets/plugin_library/plugin_formatting.dart` |

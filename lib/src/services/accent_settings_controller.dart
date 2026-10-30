@@ -14,10 +14,8 @@ class AccentSettingsController extends ChangeNotifier {
 
   Future<void> load() async {
     final id = await _storage.readSetting(_key);
-    _value = GlassTheme.accents.firstWhere(
-      (accent) => accent.id == id,
-      orElse: () => GlassTheme.coral,
-    );
+    // A preset id, or `custom:rrggbb`; anything else falls back to coral.
+    _value = AccentPalette.fromId(id) ?? GlassTheme.coral;
     GlassTheme.setAccent(_value);
     notifyListeners();
   }

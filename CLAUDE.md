@@ -35,7 +35,8 @@ the interface once per launch:
   (`lib/src/widgets/player/`), and the phone Settings/Plugins sub-pages
   that the TV and Windows pages reuse.
 - Styling comes from `GlassTheme` (`lib/src/theme/glass_theme.dart`;
-  colours, Montserrat) and `lib/src/theme/design_tokens.dart` (`AppSpace`,
+  colours, Montserrat; the bundled Bebas Neue is only for the phone Top 10
+  numerals) and `lib/src/theme/design_tokens.dart` (`AppSpace`,
   `AppRadius`, `AppTextSize`/`AppType`, `AppIcon`, `AppMotion`). The accent
   is user-selectable: read `GlassTheme.primary`, never hard-code coral. Run
   animation durations through `AppMotion.resolve` so reduced motion applies.

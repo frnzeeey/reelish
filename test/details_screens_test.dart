@@ -182,7 +182,7 @@ void main() {
       expect(find.text('7.8 / 10'), findsOneWidget);
       expect(find.textContaining('★'), findsNothing);
       final star = tester.widget<Icon>(find.byIcon(Symbols.star_rounded));
-      expect(star.color, GlassTheme.primary);
+      expect(star.color, GlassTheme.coralBright);
     });
 
     testWidgets('a movie asks for no seasons', (tester) async {

@@ -5,6 +5,7 @@ import '../models/media_item.dart';
 import '../theme/design_tokens.dart';
 import '../theme/glass_theme.dart';
 import 'poster_image.dart';
+import 'top_lit_edge.dart';
 
 /// A movie or series poster on the phone and tablet interface: the artwork
 /// at its true 2:3 shape, with the title and one line of details beneath
@@ -243,18 +244,29 @@ class _MediaCardState extends State<MediaCard> {
               ),
             ),
           ],
-          // A hairline edge, so dark posters keep their shape on the dark
-          // page.
-          IgnorePointer(
+          // A hairline edge lit from above, so posters keep their shape on
+          // the dark page and read as raised rather than flat.
+          const IgnorePointer(
             child: DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: radius,
-                border: Border.all(color: Colors.white.withValues(alpha: .07)),
-              ),
+              decoration: TopLitEdge(radius: _radius, top: .3, bottom: .06),
             ),
           ),
         ],
       ),
+    );
+    // A soft drop under the poster; plain box shadows, no blur filter.
+    final raised = DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: radius,
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x73000000),
+            blurRadius: 14,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
+      child: poster,
     );
     return SizedBox(
       width: width,
@@ -298,7 +310,7 @@ class _MediaCardState extends State<MediaCard> {
                             child: child,
                           ),
                         ),
-                        child: poster,
+                        child: raised,
                       ),
                       if (widget.onFavorite != null)
                         // A 33 dp circle in a 47 dp hit area that reaches the
