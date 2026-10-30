@@ -1,0 +1,7 @@
+# Copy to .dev.vars for `wrangler dev`. Placeholders only: never commit real values.
+# Generate keys with: node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+TMDB_READ_TOKEN=replace-with-tmdb-api-read-access-token
+TRAKT_CLIENT_ID=replace-with-trakt-client-id
+TRAKT_CLIENT_SECRET=replace-with-trakt-client-secret
+SESSION_SIGNING_KEY=replace-with-32-random-bytes-base64
+TOKEN_ENCRYPTION_KEY=replace-with-32-random-bytes-base64

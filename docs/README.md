@@ -47,6 +47,13 @@ search the generated references below: every file, class and function in
 | [Player engines](playback/platform-player-engines.md) | Media3 and libmpv, selection, the engine gate, torrents |
 | [Troubleshooting](playback/troubleshooting.md) | Symptoms mapped to code and logs |
 
+## Backend
+
+| Page | What it covers |
+|---|---|
+| [Reelish API](backend/README.md) | Trakt sign-in, sessions, the TMDB gateway: architecture, API, data, threat model |
+| [API operations](backend/operations.md) | Setup, secrets, deploy, rollback, backups, rotation, monitoring, incidents, costs |
+
 ## Platforms
 
 | Page | What it covers |

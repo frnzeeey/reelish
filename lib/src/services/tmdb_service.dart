@@ -6,7 +6,8 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import '../../tmdb_config.local.dart' as tmdb_config;
+import '../account/account_controller.dart';
+import '../account/backend_config.dart';
 import '../models/media_details.dart';
 import '../models/media_item.dart';
 import 'media_catalog_rules.dart';
@@ -18,7 +19,7 @@ import 'tmdb_response_cache.dart';
 class TmdbService {
   TmdbService({
     String? baseUrl,
-    String? apiKey,
+    Future<String?> Function({bool forceRefresh})? accessToken,
     NetworkDestinationValidator? network,
     http.Client? testClient,
     TmdbResponseCache? cache,
@@ -28,8 +29,14 @@ class TmdbService {
     this.maxConcurrentRequests = 4,
     this.language,
     this.region,
-  }) : baseUrl = (baseUrl ?? defaultBaseUrl).replaceFirst(RegExp(r'/$'), ''),
-       apiKey = apiKey ?? tmdb_config.tmdbApiKey,
+  }) : baseUrl = (baseUrl ?? BackendConfig.tmdbBaseUrl).replaceFirst(
+         RegExp(r'/$'),
+         '',
+       ),
+       _accessToken =
+           accessToken ??
+           (({bool forceRefresh = false}) => AccountController.instance
+               .accessToken(forceRefresh: forceRefresh)),
        _network = network ?? NetworkDestinationValidator(),
        _testClient = testClient,
        _cache = cache ?? TmdbResponseCache(),
@@ -37,7 +44,6 @@ class TmdbService {
        _jitter = jitter ?? Random().nextDouble,
        _limiter = _TmdbRequestLimiter(maxConcurrentRequests);
 
-  static const defaultBaseUrl = 'https://api.themoviedb.org/3';
   static const requestTimeout = Duration(seconds: 12);
   static const maxResponseBytes = 5 * 1024 * 1024;
 
@@ -45,8 +51,10 @@ class TmdbService {
   /// answers all three when a title is opened and then played.
   static const _detailsParams = {'append_to_response': 'credits,external_ids'};
 
+  /// The Reelish TMDB gateway, which holds the TMDB credential; the app
+  /// never has one. Requests carry the signed-in session's access token.
   final String baseUrl;
-  final String apiKey;
+  final Future<String?> Function({bool forceRefresh}) _accessToken;
   final int maxRetries;
   final int maxConcurrentRequests;
 
@@ -814,7 +822,9 @@ class TmdbService {
     required Duration ttl,
     _TmdbRequestPriority priority = _TmdbRequestPriority.critical,
   }) async {
-    if (apiKey.isEmpty) throw Exception('TMDB API key is not configured.');
+    if (baseUrl.isEmpty) {
+      throw Exception('The Reelish catalog service is not configured.');
+    }
     final normalizedPath = path.startsWith('/') ? path.substring(1) : path;
     final language = this.language;
     final sortedParams = Map<String, String>.fromEntries(
@@ -823,14 +833,14 @@ class TmdbService {
         if (language != null && language.isNotEmpty) 'language': language,
       }.entries.toList()..sort((a, b) => a.key.compareTo(b.key)),
     );
+    // Responses are the same for every user, so the key is just the URL.
     final requestKey =
         '$baseUrl/$normalizedPath?'
-        '${Uri(queryParameters: sortedParams).query}'
-        '&credential=${_stableHash(apiKey)}';
+        '${Uri(queryParameters: sortedParams).query}';
     final requestLabel = _requestLabel(path, sortedParams);
     final uri = Uri.parse(
       '$baseUrl/$normalizedPath',
-    ).replace(queryParameters: {...sortedParams, 'api_key': apiKey});
+    ).replace(queryParameters: sortedParams.isEmpty ? null : sortedParams);
 
     if (!forceRefresh) {
       TmdbCachedResponse? cached;
@@ -944,14 +954,26 @@ class TmdbService {
     String label,
     _TmdbRequestPriority priority,
   ) async {
+    var token = await _accessToken();
+    var refreshedSession = false;
     for (var attempt = 0; ; attempt++) {
+      final current = token;
+      if (current == null) throw const TmdbSignedOutException();
       try {
         final response = await _limiter.run(
           priority,
-          () => _sendFollowingRedirects(uri),
+          () => _sendFollowingRedirects(uri, current),
         );
         if (response.statusCode >= 200 && response.statusCode < 300) {
           return response;
+        }
+        // The session expired or was revoked: refresh it once and resend;
+        // that is not a retry. A second 401 ends here.
+        if (response.statusCode == 401 && !refreshedSession) {
+          refreshedSession = true;
+          token = await _accessToken(forceRefresh: true);
+          attempt--;
+          continue;
         }
         throw _TmdbHttpException(
           response.statusCode,
@@ -971,9 +993,8 @@ class TmdbService {
           '[TMDB] RETRY timeout attempt=${attempt + 1} delay=${delay.inMilliseconds}ms $label',
         );
         await _wait(delay);
-      } on http.ClientException catch (error) {
-        // ClientException carries the request URL, which holds the API key.
-        if (attempt >= maxRetries) throw _redactedClientException(error);
+      } on http.ClientException catch (_) {
+        if (attempt >= maxRetries) rethrow;
         final delay = _backoff(attempt);
         _log(
           '[TMDB] RETRY network attempt=${attempt + 1} delay=${delay.inMilliseconds}ms $label',
@@ -1026,10 +1047,15 @@ class TmdbService {
     });
   }
 
-  Future<http.Response> _sendFollowingRedirects(Uri uri) async {
+  Future<http.Response> _sendFollowingRedirects(Uri uri, String token) async {
     var current = uri;
     for (var redirects = 0; redirects <= 3; redirects++) {
       final request = http.Request('GET', current)..followRedirects = false;
+      // The session token goes only to the gateway's own origin, never to
+      // a host a redirect points at.
+      if (current.origin == uri.origin) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
       final response = await _network.sendForBytes(
         request,
         allowedSchemes: const {'https'},
@@ -1083,22 +1109,6 @@ class TmdbService {
     }
   }
 
-  /// Copies [error] without the `api_key` query parameter in its URL or
-  /// message, so the key cannot reach logs or error text.
-  http.ClientException _redactedClientException(http.ClientException error) {
-    final uri = error.uri;
-    final redactedUri = uri?.replace(
-      queryParameters: {
-        for (final entry in uri.queryParameters.entries)
-          if (entry.key != 'api_key') entry.key: entry.value,
-      },
-    );
-    final message = apiKey.isEmpty
-        ? error.message
-        : error.message.replaceAll(apiKey, '<redacted>');
-    return http.ClientException(message, redactedUri);
-  }
-
   static bool _isRetryableStatus(int status) =>
       status == 429 ||
       status == 500 ||
@@ -1111,18 +1121,17 @@ class TmdbService {
     return page == null ? path : '$path?page=$page';
   }
 
-  static int _stableHash(String value) {
-    var hash = 0xcbf29ce484222325;
-    for (final byte in utf8.encode(value)) {
-      hash ^= byte;
-      hash = (hash * 0x100000001b3) & 0xffffffffffffffff;
-    }
-    return hash;
-  }
-
   static void _log(String message) {
     if (kDebugMode) debugPrint(message);
   }
+}
+
+/// No signed-in session: the catalog needs a Trakt sign-in.
+class TmdbSignedOutException implements Exception {
+  const TmdbSignedOutException();
+
+  @override
+  String toString() => 'Sign in to load the catalog.';
 }
 
 enum _TmdbRequestPriority { critical, deferred }

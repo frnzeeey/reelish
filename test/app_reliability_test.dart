@@ -67,7 +67,8 @@ void main() {
     });
     final cache = TmdbResponseCache(directory: cacheRoot);
     final tmdb = TmdbService(
-      apiKey: 'test-key',
+      baseUrl: 'https://api.themoviedb.org/3',
+      accessToken: ({bool forceRefresh = false}) async => 'test-token',
       testClient: client,
       network: NetworkDestinationValidator(
         lookup: (_) async => [InternetAddress('8.8.8.8')],

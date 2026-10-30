@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
+import '../account/account_controller.dart';
 import '../models/playback_settings.dart';
 import '../navigation/app_transitions.dart';
 import '../services/accent_settings_controller.dart';
@@ -11,6 +12,7 @@ import '../theme/design_tokens.dart';
 import '../theme/glass_theme.dart';
 import '../widgets/settings/settings_components.dart';
 import '../widgets/tv/tv_focus.dart';
+import 'account_settings_screen.dart';
 import 'app_information_screens.dart';
 import 'credits_screen.dart';
 import 'legal_information_screen.dart';
@@ -38,6 +40,27 @@ class SettingsScreen extends StatelessWidget {
     subtitle: 'Make Reelish work the way you like.',
     bottomClearance: SettingsMetrics.dockClearance,
     children: [
+      SettingsSection(
+        label: 'ACCOUNT',
+        children: [
+          ListenableBuilder(
+            listenable: AccountController.instance,
+            builder: (context, _) => SettingsTile(
+              icon: Symbols.account_circle_rounded,
+              title: 'Trakt account',
+              description: 'Sign out, or manage your Reelish account',
+              value: AccountController.instance.username,
+              onTap: () => _open(
+                context,
+                (context) => AccountSettingsScreen(
+                  account: AccountController.instance,
+                  onBack: () => Navigator.of(context).pop(),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
       SettingsSection(
         label: 'GENERAL',
         children: [

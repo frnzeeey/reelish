@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
+import '../account/account_controller.dart';
+import '../screens/account_settings_screen.dart';
 import '../screens/app_information_screens.dart';
 import '../screens/credits_screen.dart';
 import '../screens/legal_information_screen.dart';
@@ -15,6 +17,11 @@ import 'desktop_widgets.dart';
 
 /// The settings pages a Windows Settings category shows.
 enum DesktopSettingsSection {
+  account(
+    'Trakt account',
+    'Sign out, or manage your Reelish account',
+    Symbols.account_circle_rounded,
+  ),
   appearance(
     'Appearance',
     'Accent color for highlights and controls',
@@ -89,6 +96,7 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
   late DesktopSettingsSection _section = widget.initialSection;
 
   static const _groups = [
+    ('ACCOUNT', [DesktopSettingsSection.account]),
     ('GENERAL', [DesktopSettingsSection.appearance]),
     (
       'PLAYBACK',
@@ -104,6 +112,10 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
 
   Widget _page(DesktopSettingsSection section) => switch (section) {
     // The pages' Back is hidden in the pane (see SettingsEmbedding).
+    DesktopSettingsSection.account => AccountSettingsScreen(
+      account: AccountController.instance,
+      onBack: () {},
+    ),
     DesktopSettingsSection.appearance => AppearanceSettingsScreen(
       controller: widget.accentSettings,
       onBack: () {},

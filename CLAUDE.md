@@ -57,9 +57,11 @@ the interface once per launch:
    files and remote responses are untrusted. Never weaken
    `NetworkDestinationValidator`, the QuickJS limits, script-change
    approval, or Authenticode checks to make something work.
-5. **Secrets.** `lib/tmdb_config.local.dart` (gitignored) holds the TMDB key.
-   Never print, copy, commit or log it, nor keystore or signing material.
-   Don't log full stream URLs or auth headers.
+5. **Secrets.** The TMDB credential lives only in the Reelish API's Worker
+   secrets (`backend/`, `docs/backend/operations.md`); the app has none and
+   must never get one back. Never print, copy, commit or log secrets,
+   session or Trakt tokens, keystore or signing material. Don't log full
+   stream URLs or auth headers.
 6. **Persisted data stays readable.** SharedPreferences keys and JSON shapes
    in `StorageService` are user data; keep old values loadable.
 7. **Focused changes.** No broad refactors, new dependencies, or unrelated
@@ -69,12 +71,14 @@ the interface once per launch:
 
 ## Commands
 
-Setup needs the gitignored `lib/tmdb_config.local.dart`
-(`const tmdbApiKey = '...';`); if it is missing, ask rather than create it.
+The catalog needs a Trakt sign-in against a deployed Reelish API: pass its
+HTTPS address with `--dart-define=REELISH_API_URL=...` (ask for the staging
+URL if you don't have it). Widget tests inject sessions and fakes instead.
 
 ```sh
 flutter pub get
-flutter run -d windows                              # Windows interface
+flutter run -d windows --dart-define=REELISH_API_URL=https://...   # Windows interface
+cd backend && npm ci && npm test                   # Reelish API (Cloudflare Worker)
 flutter run --dart-define=REELISH_FORCE_TV=true     # TV interface on any device
 flutter test test/<name>_test.dart                  # one test file
 flutter test test/<name>_test.dart --plain-name "<test name>"   # one test

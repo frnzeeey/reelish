@@ -65,7 +65,8 @@ void main() {
     int maxConcurrentRequests = 4,
     Future<void> Function(Duration)? wait,
   }) => TmdbService(
-    apiKey: 'test-key',
+    baseUrl: 'https://api.themoviedb.org/3',
+    accessToken: ({bool forceRefresh = false}) async => 'test-token',
     testClient: client,
     network: network,
     cache: cache ?? TmdbResponseCache(directory: cacheRoot),
@@ -351,8 +352,9 @@ void main() {
         final accentSettings = await pumpHome(tester, service(client));
         await settle(tester);
 
-        // Retryable statuses use the service's own retries (maxRetries 2).
-        final attempts = status == 401 ? 1 : 3;
+        // Retryable statuses use the service's own retries (maxRetries 2);
+        // a 401 refreshes the session once and resends, then stops.
+        final attempts = status == 401 ? 2 : 3;
         expect(releaseRequests, 3 * attempts);
         expect(recommendationRequests, 2 * attempts);
         expect(find.text('Retry'), findsNWidgets(2));

@@ -1,0 +1,68 @@
+# Reelish API: Trakt sign-in, Reelish sessions and the TMDB gateway.
+# Secrets are never written here; see docs/backend/operations.md for
+# `wrangler secret put` and .dev.vars.example for local development.
+name = "reelish-api"
+main = "src/index.ts"
+compatibility_date = "2026-08-22"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = false
+
+[vars]
+ENVIRONMENT = "development"
+TRAKT_API_URL = "https://api.trakt.tv"
+TMDB_API_URL = "https://api.themoviedb.org/3"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "reelish"
+database_id = "00000000-0000-0000-0000-000000000000" # local only
+migrations_dir = "migrations"
+
+# Fixed-window limits enforced at Cloudflare's edge (period 10 or 60 s).
+[[ratelimits]]
+name = "AUTH_LIMITER"
+namespace_id = "1001"
+simple = { limit = 20, period = 60 }
+
+[[ratelimits]]
+name = "TMDB_USER_LIMITER"
+namespace_id = "1002"
+simple = { limit = 240, period = 60 }
+
+[[ratelimits]]
+name = "TMDB_IP_LIMITER"
+namespace_id = "1003"
+simple = { limit = 600, period = 60 }
+
+[observability]
+enabled = true
+
+[env.staging]
+name = "reelish-api-staging"
+# No custom domain yet: served at reelish-api-staging.<subdomain>.workers.dev.
+workers_dev = true
+vars = { ENVIRONMENT = "staging", TRAKT_API_URL = "https://api.trakt.tv", TMDB_API_URL = "https://api.themoviedb.org/3" }
+d1_databases = [
+  { binding = "DB", database_name = "reelish-staging", database_id = "3c059848-a838-4fe1-8cfb-3573831323d2", migrations_dir = "migrations" },
+]
+ratelimits = [
+  { name = "AUTH_LIMITER", namespace_id = "2001", simple = { limit = 20, period = 60 } },
+  { name = "TMDB_USER_LIMITER", namespace_id = "2002", simple = { limit = 240, period = 60 } },
+  { name = "TMDB_IP_LIMITER", namespace_id = "2003", simple = { limit = 600, period = 60 } },
+]
+observability = { enabled = true }
+
+[env.production]
+name = "reelish-api"
+# No custom domain yet: served at reelish-api.<subdomain>.workers.dev.
+workers_dev = true
+vars = { ENVIRONMENT = "production", TRAKT_API_URL = "https://api.trakt.tv", TMDB_API_URL = "https://api.themoviedb.org/3" }
+d1_databases = [
+  { binding = "DB", database_name = "reelish-production", database_id = "55df1ede-5244-4a26-8827-d0d347bccf1d", migrations_dir = "migrations" },
+]
+ratelimits = [
+  { name = "AUTH_LIMITER", namespace_id = "3001", simple = { limit = 20, period = 60 } },
+  { name = "TMDB_USER_LIMITER", namespace_id = "3002", simple = { limit = 240, period = 60 } },
+  { name = "TMDB_IP_LIMITER", namespace_id = "3003", simple = { limit = 600, period = 60 } },
+]
+observability = { enabled = true }

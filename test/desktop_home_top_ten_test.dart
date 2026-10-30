@@ -120,7 +120,8 @@ void main() {
     if (!keepData) SharedPreferences.setMockInitialValues({});
     accentSettings = AccentSettingsController();
     final tmdb = TmdbService(
-      apiKey: 'test-key',
+      baseUrl: 'https://api.themoviedb.org/3',
+      accessToken: ({bool forceRefresh = false}) async => 'test-token',
       testClient: client,
       network: NetworkDestinationValidator(
         lookup: (_) async => [InternetAddress('8.8.8.8')],

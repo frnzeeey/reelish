@@ -29,7 +29,8 @@ void main() {
   });
 
   TmdbService tmdb() => TmdbService(
-    apiKey: 'test-key',
+    baseUrl: 'https://api.themoviedb.org/3',
+    accessToken: ({bool forceRefresh = false}) async => 'test-token',
     testClient: MockClient((request) async {
       requests.add(request.url);
       return http.Response(jsonEncode(answer), 200);

@@ -1,0 +1,33 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Reelish (staging API)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "args": [
+        "--dart-define=REELISH_API_URL=https://reelish-api-staging.frnzgularez.workers.dev"
+      ]
+    },
+    {
+      "name": "Reelish (production API)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "args": [
+        "--dart-define=REELISH_API_URL=https://reelish-api.frnzgularez.workers.dev"
+      ]
+    },
+    {
+      "name": "Reelish TV (staging API)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "args": [
+        "--dart-define=REELISH_API_URL=https://reelish-api-staging.frnzgularez.workers.dev",
+        "--dart-define=REELISH_FORCE_TV=true"
+      ]
+    }
+  ]
+}

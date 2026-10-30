@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'src/account/account_controller.dart';
 import 'src/platform/desktop_gamepad.dart';
 import 'src/platform/desktop_window.dart';
 import 'src/platform/device_capabilities.dart';
 import 'src/screens/home_screen.dart';
+import 'src/screens/sign_in_screen.dart';
 import 'src/screens/splash_screen.dart';
 import 'src/screens/first_run_consent_screen.dart';
 import 'src/services/perf_timeline.dart';
@@ -95,6 +97,8 @@ class _StartupScreenState extends State<_StartupScreen> {
       widget.accentSettings.load().catchError((Object _) {}),
       // Never fails; an unanswered query keeps the mobile interface.
       DeviceCapabilities.load(),
+      // A local secure-storage read; the network is not touched.
+      AccountController.instance.restore(),
     ]);
     return results.first! as bool;
   }
@@ -104,7 +108,11 @@ class _StartupScreenState extends State<_StartupScreen> {
     initialize: _initialize,
     builder: (context, hasAcceptedDocuments) {
       if (hasAcceptedDocuments || _acceptedThisSession) {
-        return HomeScreen(accentSettings: widget.accentSettings);
+        // The catalog needs a Trakt sign-in; Home appears once signed in.
+        return AccountGate(
+          account: AccountController.instance,
+          child: HomeScreen(accentSettings: widget.accentSettings),
+        );
       }
       return FirstRunConsentScreen(
         onAccepted: () => setState(() => _acceptedThisSession = true),

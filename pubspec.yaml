@@ -50,6 +50,7 @@ dependencies:
   flutter_js:
     path: third_party/flutter_js
   material_symbols_icons: ^4.2960.0
+  flutter_secure_storage: ^11.2.0
 
 dev_dependencies:
   flutter_test:

@@ -50,7 +50,8 @@ void main() {
     String? language,
     String? region,
   }) => TmdbService(
-    apiKey: 'test-key',
+    baseUrl: 'https://api.themoviedb.org/3',
+    accessToken: ({bool forceRefresh = false}) async => 'test-token',
     testClient: client,
     network: network,
     cache: cache ?? TmdbResponseCache(directory: cacheRoot),
@@ -91,30 +92,33 @@ void main() {
     'genre_ids': [18],
   };
 
-  test('stale New releases refresh in the background with one update', () async {
-    var requests = 0;
-    final client = MockClient((request) async {
-      requests++;
-      return request.url.path.endsWith('/discover/movie')
-          ? results([recentMovie(1)])
-          : results([recentSeries(2)]);
-    });
-    final cache = staleCache();
-    final tmdb = service(client, cache: cache);
+  test(
+    'stale New releases refresh in the background with one update',
+    () async {
+      var requests = 0;
+      final client = MockClient((request) async {
+        requests++;
+        return request.url.path.endsWith('/discover/movie')
+            ? results([recentMovie(1)])
+            : results([recentSeries(2)]);
+      });
+      final cache = staleCache();
+      final tmdb = service(client, cache: cache);
 
-    expect(await tmdb.newReleases(), hasLength(2));
-    expect(requests, 3);
+      expect(await tmdb.newReleases(), hasLength(2));
+      expect(requests, 3);
 
-    var updates = 0;
-    final stale = await tmdb.newReleases(onRevalidated: (_) => updates++);
-    expect(stale, hasLength(2));
-    await _until(() => requests == 6);
-    await Future<void>.delayed(const Duration(milliseconds: 50));
-    expect(updates, 1);
+      var updates = 0;
+      final stale = await tmdb.newReleases(onRevalidated: (_) => updates++);
+      expect(stale, hasLength(2));
+      await _until(() => requests == 6);
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(updates, 1);
 
-    await cache.flush();
-    client.close();
-  });
+      await cache.flush();
+      client.close();
+    },
+  );
 
   test('a stale value during the failure cooldown starts no refresh and '
       'keeps no callback', () async {

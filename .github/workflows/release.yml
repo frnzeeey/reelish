@@ -118,20 +118,21 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Restore signing keystore and TMDB config
+      - name: Restore signing keystore and check the API address
         env:
           KEYSTORE_BASE64: ${{ secrets.ONFEED_RELEASE_KEYSTORE_BASE64 }}
           STORE_PASSWORD: ${{ secrets.ONFEED_RELEASE_STORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.ONFEED_RELEASE_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.ONFEED_RELEASE_KEY_PASSWORD }}
-          TMDB_API_KEY: ${{ secrets.ONFEED_TMDB_API_KEY }}
+          # The app's Reelish API address: a repository variable, not a secret.
+          REELISH_API_URL: ${{ vars.REELISH_API_URL }}
           # Encrypts the debug symbols kept for each release (see the
           # "Upload encrypted debug symbols" step). Checked here so a missing
           # secret fails in seconds, not after the build.
           SYMBOLS_PASSPHRASE: ${{ secrets.ONFEED_SYMBOLS_PASSPHRASE }}
         run: |
           set -euo pipefail
-          for name in KEYSTORE_BASE64 STORE_PASSWORD KEY_ALIAS KEY_PASSWORD TMDB_API_KEY SYMBOLS_PASSPHRASE; do
+          for name in KEYSTORE_BASE64 STORE_PASSWORD KEY_ALIAS KEY_PASSWORD SYMBOLS_PASSPHRASE; do
             if [[ -z "${!name}" ]]; then
               echo "::error::Missing GitHub Actions secret for $name (see docs/releasing.md)."
               exit 1
@@ -164,12 +165,13 @@ jobs:
           fi
           echo "ONFEED_RELEASE_STORE_FILE=$KEYSTORE" >> "$GITHUB_ENV"
 
-          # The app imports this git-ignored file (see README).
-          if [[ ! "$TMDB_API_KEY" =~ ^[A-Za-z0-9._-]+$ ]]; then
-            echo "::error::ONFEED_TMDB_API_KEY contains unexpected characters."
+          # The app reaches TMDB through the Reelish API and carries no TMDB
+          # key; it only needs the API's address.
+          if [[ ! "$REELISH_API_URL" =~ ^https://[A-Za-z0-9.-]+(/[A-Za-z0-9._/-]*)?$ ]]; then
+            echo "::error::Repository variable REELISH_API_URL must be an https:// address (see docs/backend/operations.md)."
             exit 1
           fi
-          printf "const tmdbApiKey = '%s';\n" "$TMDB_API_KEY" > lib/tmdb_config.local.dart
+          echo "REELISH_API_URL=$REELISH_API_URL" >> "$GITHUB_ENV"
 
       - name: Set up Flutter
         uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
@@ -232,7 +234,8 @@ jobs:
             --obfuscate \
             --split-debug-info="$SYMBOLS_DIR" \
             --dart-define="REELISH_GIT_SHA=$GITHUB_SHA" \
-            --dart-define="REELISH_BUILD_TAG=$TAG"
+            --dart-define="REELISH_BUILD_TAG=$TAG" \
+            --dart-define="REELISH_API_URL=$REELISH_API_URL"
 
       - name: Verify APK
         id: apk

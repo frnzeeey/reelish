@@ -1,0 +1,96 @@
+name: Backend
+
+# Checks the Reelish API (backend/) on every change to it, and deploys it
+# only when started by hand for a protected environment.
+on:
+  push:
+    branches: [main]
+    paths: ['backend/**', '.github/workflows/backend.yml']
+  pull_request:
+    paths: ['backend/**', '.github/workflows/backend.yml']
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environment to deploy
+        type: choice
+        options: [staging, production]
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-${{ github.ref }}-${{ inputs.environment || 'check' }}
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Typecheck, test and audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      # The deployed Worker has no runtime dependencies; this reports
+      # advisories in the local tooling (wrangler, miniflare) without
+      # failing the build on them.
+      - run: npm audit --audit-level=critical || true
+      - name: Bundle without deploying
+        run: npx wrangler deploy --dry-run --outdir dist
+
+  deploy:
+    name: Deploy to ${{ inputs.environment }}
+    if: github.event_name == 'workflow_dispatch'
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Protect these environments in GitHub (required reviewers for
+    # production); CLOUDFLARE_API_TOKEN lives there, scoped to Workers
+    # Scripts and D1 edit for this account only.
+    environment: ${{ inputs.environment }}
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - name: Apply database migrations
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler d1 migrations apply "reelish-${{ inputs.environment }}" --remote --env "${{ inputs.environment }}"
+      - name: Deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler deploy --env "${{ inputs.environment }}"
+      - name: Health check
+        env:
+          API_URL: ${{ vars.REELISH_API_URL }}
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3 4 5; do
+            if curl --fail --silent --show-error --max-time 10 "$API_URL/health"; then exit 0; fi
+            sleep 5
+          done
+          echo "::error::Health check failed; roll back with: npx wrangler rollback --env ${{ inputs.environment }}"
+          exit 1
