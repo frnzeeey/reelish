@@ -29,7 +29,7 @@ Reading them:
 | Area | Start at | Then |
 |---|---|---|
 | App start, blank screen | `_StartupScreenState._initialize` ([`main.dart`](../../lib/main.dart)) | `DeviceCapabilities.load`, `SplashGate` |
-| Wrong interface (phone UI on a TV) | `DeviceCapabilities.load` | `MainActivity.deviceCapabilities()`; force with `REELISH_FORCE_TV` |
+| Wrong interface (phone UI on a TV) | `DeviceCapabilities.load` | `ReelishActivity.deviceCapabilities()`; force with `REELISH_FORCE_TV` |
 | A row is empty or stale | `HomeViewModel`, the row's `PagedFeedController` state | `TmdbService`, `TmdbResponseCache`, catalog rules |
 | Continue watching wrong | `HomeViewModel.loadHistory` | `StorageService.history`, `seriesProgress`, `ResumeSummary` |
 | Navigation or Back | `HomeScreen._showDetails`, the shells | `DesktopShortcuts`, `DesktopGamepad`, `TvPopupFocusObserver` |

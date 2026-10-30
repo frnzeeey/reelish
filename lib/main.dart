@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'src/account/account_controller.dart';
+import 'src/account/profile_controller.dart';
+import 'src/account/watchlist_sync.dart';
+import 'src/notifications/episode_alerts.dart';
 import 'src/platform/desktop_gamepad.dart';
 import 'src/platform/desktop_window.dart';
 import 'src/platform/device_capabilities.dart';
@@ -100,6 +103,19 @@ class _StartupScreenState extends State<_StartupScreen> {
       // A local secure-storage read; the network is not touched.
       AccountController.instance.restore(),
     ]);
+    // The device-local profile follows whichever Trakt account is signed in.
+    ProfileController.instance.attach(AccountController.instance);
+    // My list and the Trakt watchlist, when the user turned that on.
+    WatchlistSync.instance.attach(AccountController.instance);
+    // New-episode alerts (Android phones and Windows; off until turned on).
+    if (EpisodeAlerts.supported) {
+      try {
+        await EpisodeAlerts.initializeBackground();
+      } catch (_) {
+        // Alerts then check only while the app runs.
+      }
+      EpisodeAlerts.instance.attach(AccountController.instance);
+    }
     return results.first! as bool;
   }
 

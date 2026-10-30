@@ -1,0 +1,15 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <application>
+        <!-- Release builds launch only through the icon aliases in the main
+             manifest. The activity's own launcher filter exists for
+             `flutter run`/`drive`; without this removal a release install
+             would show a second Reelish icon. -->
+        <activity android:name="com.example.onfeed.ReelishActivity">
+            <intent-filter tools:node="remove">
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

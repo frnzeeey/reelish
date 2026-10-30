@@ -26,6 +26,7 @@ abstract final class BrandAssets {
   /// soft shadows. Update these if the images are redrawn.
   static const logoIconBounds = Rect.fromLTRB(.194, .281, .809, .745);
   static const wordLogoBounds = Rect.fromLTRB(.217, .466, .785, .535);
+  static const primaryLogoBounds = Rect.fromLTRB(.195, .208, .806, .809);
 }
 
 /// The Reelish wordmark at [height], without its canvas's transparent
@@ -75,6 +76,21 @@ class ReelishWordmark extends StatelessWidget {
       ],
     );
   }
+}
+
+/// The primary logo (the mark over the wordmark) at [height], without its
+/// canvas's transparent margins. Read out as "Reelish".
+class ReelishPrimaryLogo extends StatelessWidget {
+  const ReelishPrimaryLogo({super.key, required this.height});
+
+  final double height;
+
+  @override
+  Widget build(BuildContext context) => _BrandArtwork(
+    asset: BrandAssets.primaryLogo,
+    bounds: BrandAssets.primaryLogoBounds,
+    height: height,
+  );
 }
 
 /// The Reelish mark at [height], without its canvas's transparent margins.

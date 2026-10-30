@@ -27,7 +27,12 @@ import androidx.core.content.FileProvider
 import java.io.File
 import java.security.MessageDigest
 
-class MainActivity : FlutterActivity() {
+/**
+ * The app's only activity. Launcher entries are activity aliases of it
+ * (AndroidManifest.xml): `.MainActivity` for the default icon, which keeps
+ * the component name every earlier release used, and one per icon preset.
+ */
+class ReelishActivity : FlutterActivity() {
     private val channelName = "onfeed/player"
     private val updateChannelName = "onfeed/app_update"
     private val deviceChannelName = "onfeed/device"
@@ -114,6 +119,18 @@ class MainActivity : FlutterActivity() {
         playerChannel?.invokeMethod("pipChanged", isInPictureInPictureMode)
     }
 
+    override fun onStop() {
+        super.onStop()
+        // A new launcher icon replaces the old one only once the app is in
+        // the background: disabling the entry the app was launched from
+        // closes its window (see AppIconSwitcher).
+        try {
+            AppIconSwitcher(applicationContext).applyPending()
+        } catch (_: Exception) {
+            // Retried the next time the app leaves the foreground.
+        }
+    }
+
     override fun onDestroy() {
         pipReceiver?.let { unregisterReceiver(it) }
         pipReceiver = null
@@ -141,6 +158,27 @@ class MainActivity : FlutterActivity() {
             when (call.method) {
                 "capabilities" -> result.success(deviceCapabilities())
                 else -> result.notImplemented()
+            }
+        }
+        // Launcher icon presets (Settings → Appearance → App icon); phones
+        // and tablets only: the TV launcher shows the banner instead.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "onfeed/app_icon").setMethodCallHandler { call, result ->
+            val icons = AppIconSwitcher(applicationContext)
+            try {
+                when (call.method) {
+                    "current" -> result.success(icons.current())
+                    "select" -> {
+                        val id = call.argument<String>("id")
+                        if (id == null || id !in AppIconSwitcher.aliases) {
+                            result.error("unknown_icon", "Unknown icon", null)
+                        } else {
+                            result.success(icons.select(id))
+                        }
+                    }
+                    else -> result.notImplemented()
+                }
+            } catch (error: Exception) {
+                result.error("icon_failed", error.javaClass.simpleName, null)
             }
         }
         val player = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channelName)

@@ -7,6 +7,9 @@ import { log } from './audit';
 import { authenticate } from './sessions';
 import { tmdbRequest } from './tmdb/gateway';
 import * as auth from './auth';
+import * as web from './web-auth';
+import * as sync from './trakt-sync';
+import * as alerts from './episode-alerts';
 
 const version = '/api/v1';
 
@@ -57,6 +60,25 @@ async function route(request: Request, env: Env, requestId: string): Promise<Res
     await limit(env.AUTH_LIMITER, `poll:${ip}`);
     return auth.pollDevice(env, request, requestId);
   }
+  if (post('/auth/web/start')) {
+    await limit(env.AUTH_LIMITER, `webstart:${ip}`);
+    return web.startWeb(env, request, requestId);
+  }
+  if (post('/auth/web/poll')) {
+    await limit(env.AUTH_LIMITER, `webpoll:${ip}`);
+    return web.pollWeb(env, request, requestId);
+  }
+  if (rest === '/auth/web/callback' && method === 'GET') {
+    await limit(env.AUTH_LIMITER, `callback:${ip}`);
+    return web.webCallback(env, url);
+  }
+  if (post('/notifications/episodes')) {
+    // Its own narrow token (background checks cannot refresh a session).
+    await limit(env.AUTH_LIMITER, `alerts-ip:${ip}`);
+    const owner = await alerts.authenticateNotify(env, request);
+    await limit(env.SYNC_LIMITER, `alerts:${owner.sessionId}`);
+    return alerts.checkEpisodes(env, owner, request, requestId);
+  }
   if (post('/auth/refresh')) {
     await limit(env.AUTH_LIMITER, `refresh:${ip}`);
     return auth.refresh(env, request, requestId);
@@ -69,6 +91,16 @@ async function route(request: Request, env: Env, requestId: string): Promise<Res
   if (rest === '/me' && method === 'GET') return auth.me(env, principal, requestId);
   if (rest === '/me' && method === 'DELETE') return auth.deleteAccount(env, principal, requestId);
   if (rest === '/sessions' && method === 'GET') return auth.listSessions(env, principal, requestId);
+  if (post('/notifications/token')) {
+    await limit(env.SYNC_LIMITER, principal.userId);
+    return alerts.issueToken(env, principal, requestId);
+  }
+  if (rest === '/trakt/watchlist' && (method === 'GET' || method === 'POST')) {
+    await limit(env.SYNC_LIMITER, principal.userId);
+    return method === 'GET'
+      ? sync.getWatchlist(env, principal, requestId)
+      : sync.updateWatchlist(env, principal, request, requestId);
+  }
   const session = /^\/sessions\/([0-9a-f-]{36})$/.exec(rest);
   if (session && method === 'DELETE') return auth.deleteSession(env, principal, session[1], requestId);
   throw new ApiError(404, 'not_found', 'Not found.');

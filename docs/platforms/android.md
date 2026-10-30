@@ -15,7 +15,7 @@ which switch to the [TV interface](android-tv.md) at runtime.
 | Cards and glass | [`media_card.dart`](../../lib/src/widgets/media_card.dart), [`liquid_glass.dart`](../../lib/src/widgets/liquid_glass.dart), [`glass_box.dart`](../../lib/src/widgets/glass_box.dart) |
 | Player (shared) | [`lib/src/widgets/player/`](../../lib/src/widgets/player); touch in [`gesture_touch_layer.dart`](../../lib/src/widgets/player/gesture_touch_layer.dart) |
 | Updates | [`github_update_service.dart`](../../lib/src/services/github_update_service.dart), [`app_update_flow.dart`](../../lib/src/widgets/app_update_flow.dart), [`update_dialog.dart`](../../lib/src/widgets/update_dialog.dart) |
-| Native | [`MainActivity.kt`](../../android/app/src/main/kotlin/com/example/onfeed/MainActivity.kt): `onfeed/device`, `onfeed/player`, `onfeed/app_update` |
+| Native | [`ReelishActivity.kt`](../../android/app/src/main/kotlin/com/example/onfeed/ReelishActivity.kt): `onfeed/device`, `onfeed/player`, `onfeed/app_update` |
 
 ## Interface
 

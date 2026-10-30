@@ -13,7 +13,7 @@ not a substitute for keeping secrets off the client.
 | Android code (Kotlin/Java, plugins, AndroidX) | R8 shrinking and obfuscation, which the Flutter Gradle plugin enables for every release build. In v1.10.1, 1,570 of 2,037 classes ship with short renamed names; Kotlin's standard library is renamed or removed | Flutter Gradle plugin defaults (no app-level keep rules are needed) |
 | Debug symbols and R8 mapping | Kept out of the APK and the workspace, encrypted (AES-256, PBKDF2) and uploaded as a private workflow artifact | Workflow, "Package/Upload encrypted debug symbols"; [releasing.md](releasing.md#debug-symbols) |
 | Release logs | App logging is `kDebugMode`-gated. The vendored QuickJS runtime no longer prints JavaScript exceptions or channel errors in release builds | `third_party/flutter_js/lib/quickjs/quickjs_runtime2.dart` |
-| APK integrity | Every release is built by CI from the tagged commit, checksummed (SHA-256 published with the APK), and signed with one key. The in-app updater only installs an APK whose package, version and signing certificate match the installed app | Workflow, "Verify APK"; `lib/src/services/github_update_service.dart`, `MainActivity.kt` |
+| APK integrity | Every release is built by CI from the tagged commit, checksummed (SHA-256 published with the APK), and signed with one key. The in-app updater only installs an APK whose package, version and signing certificate match the installed app | Workflow, "Verify APK"; `lib/src/services/github_update_service.dart`, `ReelishActivity.kt` |
 
 Measured on the v1.10.1 sources: the obfuscated release APK is 2.9 MB smaller
 (83.8 → 80.9 MB). The only file that changes is `libapp.so` (8.3 → 7.0 MB
@@ -67,7 +67,7 @@ Anyone with the APK can still see:
   channel names, error messages, and the **TMDB API key**.
 - Assets (`cheerio_bundle.js`, `plugins.json`, fonts, images) and resources.
 - The Android manifest, permissions and component names.
-- Class names R8 must keep (entry points, `MainActivity`, Media3 factories
+- Class names R8 must keep (entry points, `ReelishActivity` (the `.MainActivity` launcher alias targets it), Media3 factories
   loaded by reflection, JNI classes) and native library exports.
 - The app's behavior: network traffic can be observed with a proxy, and the
   AOT code can still be disassembled.

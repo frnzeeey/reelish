@@ -8,7 +8,14 @@ import '../services/storage_service.dart';
 /// The viewer's library for the mobile, TV and Windows library pages: watch
 /// history, My list, and where each series in the history was left.
 class LibraryViewModel extends ChangeNotifier {
-  LibraryViewModel({required this._storage});
+  LibraryViewModel({required this._storage}) {
+    // My list can change elsewhere too (Trakt sync, another screen).
+    StorageService.favoritesRevision.addListener(_favoritesChanged);
+  }
+
+  void _favoritesChanged() {
+    if (!_disposed) load().catchError((Object _) {});
+  }
 
   final StorageService _storage;
 
@@ -68,6 +75,7 @@ class LibraryViewModel extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    StorageService.favoritesRevision.removeListener(_favoritesChanged);
     super.dispose();
   }
 }

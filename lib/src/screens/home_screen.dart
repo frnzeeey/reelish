@@ -384,20 +384,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   String _catalogFailureMessage(Object error) {
+    // The catalog comes through the Reelish API; the app holds no TMDB key.
     final message = error.toString();
-    if (message.contains('TMDB API key is not configured')) {
-      return 'TMDB is not configured. Add a valid API key, then restart the app.';
+    if (message.contains('catalog service is not configured')) {
+      return 'This build has no Reelish service configured.';
     }
     final status = RegExp(
       r'TMDB request failed \((\d{3})\)',
     ).firstMatch(message)?.group(1);
     if (status == '401' || status == '403') {
-      return 'TMDB rejected the API key. Check that the configured key is active.';
+      return 'Your session could not be verified. Sign out and in again.';
     }
-    if (status == '429') {
-      return 'TMDB is rate limiting requests. Wait a moment and retry.';
+    if (status == '429' || status == '503') {
+      return 'The catalog is busy right now. Wait a moment and retry.';
     }
-    return 'Could not load titles from TMDB. Check your connection and retry.';
+    return 'Could not load titles. Check your connection and retry.';
   }
 
   void _closeSearch() {
@@ -1642,7 +1643,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     Text(
                       feedError == null
                           ? 'Try another search or refresh your picks.'
-                          : 'Your API key is not shown in this message. Retry after checking the connection or key.',
+                          : 'Titles you saved or started are still on this device.',
                       textAlign: TextAlign.center,
                       style: TextStyle(color: GlassTheme.muted),
                     ),

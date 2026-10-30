@@ -33,7 +33,7 @@ graph TD
   Services["Services<br/>lib/src/services"]
   Models["Models<br/>lib/src/models"]
   Platform["Platform glue<br/>lib/src/platform"]
-  Native["Native code<br/>android/ (MainActivity.kt), windows/runner"]
+  Native["Native code<br/>android/ (ReelishActivity.kt), windows/runner"]
   Vendored["Vendored packages<br/>flutter_js (QuickJS), video_player_media_kit (libmpv),<br/>flutter_go_torrent_streamer"]
 
   Phone --> Home

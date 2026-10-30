@@ -22,6 +22,8 @@ import '../services/tmdb_service.dart';
 /// approach the screen.
 class HomeViewModel extends ChangeNotifier {
   HomeViewModel({required this._tmdb, required this._storage}) {
+    // My list can change elsewhere too (Trakt sync, another screen).
+    StorageService.favoritesRevision.addListener(_favoritesChanged);
     movies = PagedFeedController(
       label: 'NewMovies',
       staleAfter: TmdbCacheTtl.catalog,
@@ -204,9 +206,12 @@ class HomeViewModel extends ChangeNotifier {
     return keys.contains(keyOf(item));
   }
 
+  void _favoritesChanged() => loadFavorites().ignore();
+
   @override
   void dispose() {
     _disposed = true;
+    StorageService.favoritesRevision.removeListener(_favoritesChanged);
     // Requests still running for these rows finish without touching them.
     for (final feed in catalogFeeds) {
       feed.dispose();

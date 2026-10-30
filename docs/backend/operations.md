@@ -8,7 +8,7 @@ API reference are in [the backend overview](README.md).
 | What | Where to get it | Stored as |
 |---|---|---|
 | Cloudflare account | dash.cloudflare.com | — |
-| Trakt application | trakt.tv → Settings → Your API Apps → New. Redirect URI `urn:ietf:wg:oauth:2.0:oob` (device flow) | `TRAKT_CLIENT_ID`, `TRAKT_CLIENT_SECRET` Worker secrets |
+| Trakt application | trakt.tv → Settings → Your API Apps → New. Redirect URIs, one per line: `urn:ietf:wg:oauth:2.0:oob` (device flow) and `https://<worker host>/api/v1/auth/web/callback` for each environment with browser sign-in | `TRAKT_CLIENT_ID`, `TRAKT_CLIENT_SECRET` Worker secrets |
 | TMDB API Read Access Token | themoviedb.org → Settings → API | `TMDB_READ_TOKEN` Worker secret |
 | Session signing key | `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"` | `SESSION_SIGNING_KEY` Worker secret |
 | Token encryption key | same command, a different value | `TOKEN_ENCRYPTION_KEY` Worker secret |
@@ -16,6 +16,17 @@ API reference are in [the backend overview](README.md).
 Use separate Trakt applications, TMDB tokens and keys for staging and
 production. Never put a real value in `wrangler.toml`, the repository, an
 issue or a log.
+
+## Browser sign-in
+
+Phones and Windows open Trakt in the browser; Trakt returns the browser to
+the Worker's `/api/v1/auth/web/callback`, never to the app. It is on in
+an environment only when that environment's `PUBLIC_URL` var is set in
+`wrangler.toml` **and** `<PUBLIC_URL>/api/v1/auth/web/callback` is a
+redirect URI of its Trakt app. Until then Trakt answers
+`invalid_redirect`; with `PUBLIC_URL` unset, `/auth/web/start`
+answers 503 `web_sign_in_unavailable` and the app falls back to a code.
+To turn it off in an emergency, remove `PUBLIC_URL` and deploy.
 
 ## First setup
 

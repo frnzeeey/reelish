@@ -119,6 +119,37 @@ export async function pollDeviceToken(env: Env, deviceCode: string, deps: TraktD
   }
 }
 
+/**
+ * Exchanges a browser sign-in's authorization code (with its PKCE
+ * verifier and the client secret). Null when Trakt rejects the code:
+ * used, expired, or issued for another redirect or verifier.
+ */
+export async function exchangeAuthorizationCode(
+  env: Env,
+  code: string,
+  verifier: string,
+  redirectUri: string,
+  deps: TraktDeps = {},
+): Promise<TraktTokens | null> {
+  const response = await call(env, '/oauth/token', {
+    method: 'POST',
+    body: {
+      code,
+      client_id: env.TRAKT_CLIENT_ID,
+      client_secret: env.TRAKT_CLIENT_SECRET,
+      redirect_uri: redirectUri,
+      grant_type: 'authorization_code',
+      code_verifier: verifier,
+    },
+  }, deps);
+  if (response.status === 200) {
+    return validTokens(await jsonOf<TraktTokens>(response, '/oauth/token'));
+  }
+  log('warn', 'trakt.code_exchange_failed', { status: response.status });
+  if (response.status === 400 || response.status === 401) return null;
+  throw new ApiError(502, 'trakt_unavailable', 'Trakt is not available right now.');
+}
+
 function validTokens(tokens: TraktTokens): TraktTokens {
   if (
     typeof tokens.access_token !== 'string' || typeof tokens.refresh_token !== 'string' ||
@@ -149,14 +180,24 @@ export async function fetchIdentity(env: Env, accessToken: string, deps: TraktDe
 const aadFor = (userId: string, field: string) => `trakt:${userId}:${field}`;
 
 /** Stores (or replaces) the user's Trakt tokens, encrypted. */
-export async function saveTraktTokens(env: Env, userId: string, tokens: TraktTokens): Promise<void> {
+/** The redirect URI device grants are refreshed with. */
+export const outOfBand = 'urn:ietf:wg:oauth:2.0:oob';
+
+/**
+ * Stores a new grant. [redirectUri] is the one it was issued for (the
+ * API's callback for browser sign-ins, [outOfBand] for device sign-ins);
+ * refreshing names it.
+ */
+export async function saveTraktTokens(env: Env, userId: string, tokens: TraktTokens, redirectUri: string): Promise<void> {
   const at = Math.floor(Date.now() / 1000);
   await env.DB.prepare(
-    `INSERT INTO trakt_credentials (user_id, access_token_enc, refresh_token_enc, expires_at, scope, version, updated_at)
-     VALUES (?, ?, ?, ?, ?, 1, ?)
+    `INSERT INTO trakt_credentials (user_id, access_token_enc, refresh_token_enc, expires_at, scope, version,
+       updated_at, redirect_uri)
+     VALUES (?, ?, ?, ?, ?, 1, ?, ?)
      ON CONFLICT(user_id) DO UPDATE SET access_token_enc = excluded.access_token_enc,
        refresh_token_enc = excluded.refresh_token_enc, expires_at = excluded.expires_at,
-       scope = excluded.scope, version = trakt_credentials.version + 1, updated_at = excluded.updated_at`,
+       scope = excluded.scope, version = trakt_credentials.version + 1, updated_at = excluded.updated_at,
+       redirect_uri = excluded.redirect_uri`,
   ).bind(
     userId,
     await encrypt(env.TOKEN_ENCRYPTION_KEY, tokens.access_token, aadFor(userId, 'access')),
@@ -164,7 +205,19 @@ export async function saveTraktTokens(env: Env, userId: string, tokens: TraktTok
     tokens.created_at + tokens.expires_in,
     tokens.scope ?? '',
     at,
+    redirectUri,
   ).run();
+}
+
+/** Calls Trakt's API as the user, with their access token. */
+export async function traktApi(
+  env: Env,
+  accessToken: string,
+  path: string,
+  init: { method: 'GET' | 'POST'; body?: unknown },
+  deps: TraktDeps = {},
+): Promise<Response> {
+  return call(env, path, { ...init, accessToken }, deps);
 }
 
 interface CredentialRow {
@@ -172,6 +225,17 @@ interface CredentialRow {
   refresh_token_enc: string;
   expires_at: number;
   version: number;
+  redirect_uri: string;
+}
+
+/**
+ * The redirect URIs to refresh a grant with, the one it was issued for
+ * first. Grants saved before that was recorded try the API's callback and
+ * then out-of-band.
+ */
+function refreshRedirects(env: Env, stored: string): string[] {
+  const callback = env.PUBLIC_URL ? `${env.PUBLIC_URL.trim()}/api/v1/auth/web/callback` : '';
+  return [...new Set([stored, callback, outOfBand].filter(Boolean))];
 }
 
 /**
@@ -182,7 +246,8 @@ interface CredentialRow {
 export async function traktAccessToken(env: Env, userId: string, deps: TraktDeps = {}): Promise<string> {
   for (let attempt = 0; attempt < 3; attempt++) {
     const row = await env.DB.prepare(
-      `SELECT access_token_enc, refresh_token_enc, expires_at, version FROM trakt_credentials WHERE user_id = ?`,
+      `SELECT access_token_enc, refresh_token_enc, expires_at, version, redirect_uri
+       FROM trakt_credentials WHERE user_id = ?`,
     ).bind(userId).first<CredentialRow>();
     if (!row) throw reauthRequired();
     const now = Math.floor(Date.now() / 1000);
@@ -190,16 +255,25 @@ export async function traktAccessToken(env: Env, userId: string, deps: TraktDeps
       return decrypt(env.TOKEN_ENCRYPTION_KEY, row.access_token_enc, aadFor(userId, 'access'));
     }
     const refreshToken = await decrypt(env.TOKEN_ENCRYPTION_KEY, row.refresh_token_enc, aadFor(userId, 'refresh'));
-    const response = await call(env, '/oauth/token', {
-      method: 'POST',
-      body: {
-        refresh_token: refreshToken,
-        client_id: env.TRAKT_CLIENT_ID,
-        client_secret: env.TRAKT_CLIENT_SECRET,
-        redirect_uri: 'urn:ietf:wg:oauth:2.0:oob',
-        grant_type: 'refresh_token',
-      },
-    }, deps);
+    // A redirect URI Trakt does not accept for this grant is refused before
+    // the refresh token is used, so the next one can be tried.
+    let response: Response | undefined;
+    let redirectUri = '';
+    for (const candidate of refreshRedirects(env, row.redirect_uri)) {
+      redirectUri = candidate;
+      response = await call(env, '/oauth/token', {
+        method: 'POST',
+        body: {
+          refresh_token: refreshToken,
+          client_id: env.TRAKT_CLIENT_ID,
+          client_secret: env.TRAKT_CLIENT_SECRET,
+          redirect_uri: candidate,
+          grant_type: 'refresh_token',
+        },
+      }, deps);
+      if (response.status !== 400 && response.status !== 401) break;
+    }
+    if (!response) throw reauthRequired();
     if (response.status === 400 || response.status === 401) {
       // Revoked at Trakt, or the refresh token was already spent elsewhere.
       const current = await env.DB.prepare(`SELECT version FROM trakt_credentials WHERE user_id = ?`)
@@ -217,7 +291,7 @@ export async function traktAccessToken(env: Env, userId: string, deps: TraktDeps
     const tokens = validTokens(await jsonOf<TraktTokens>(response, '/oauth/token'));
     const result = await env.DB.prepare(
       `UPDATE trakt_credentials SET access_token_enc = ?, refresh_token_enc = ?, expires_at = ?,
-         scope = ?, version = version + 1, updated_at = ?
+         scope = ?, version = version + 1, updated_at = ?, redirect_uri = ?
        WHERE user_id = ? AND version = ?`,
     ).bind(
       await encrypt(env.TOKEN_ENCRYPTION_KEY, tokens.access_token, aadFor(userId, 'access')),
@@ -225,6 +299,7 @@ export async function traktAccessToken(env: Env, userId: string, deps: TraktDeps
       tokens.created_at + tokens.expires_in,
       tokens.scope ?? '',
       now,
+      redirectUri,
       userId,
       row.version,
     ).run();

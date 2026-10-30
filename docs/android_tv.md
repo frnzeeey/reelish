@@ -8,7 +8,7 @@ runtime, the TMDB cache and both playback engines are the same on every device.
 
 ## How TV detection works
 
-`MainActivity.deviceCapabilities()` (channel `onfeed/device`) reports:
+`ReelishActivity.deviceCapabilities()` (channel `onfeed/device`) reports:
 
 | Key | Source |
 |---|---|

@@ -25,7 +25,7 @@ graph TD
     WinPlat["DesktopWindow, DesktopShortcuts, DesktopGamepad,<br/>WindowsInstallation, WindowsUpdateController"]
   end
   subgraph Native["Native"]
-    Kotlin["android/.../MainActivity.kt<br/>onfeed/device, onfeed/player, onfeed/app_update"]
+    Kotlin["android/.../ReelishActivity.kt<br/>onfeed/device, onfeed/player, onfeed/app_update"]
     Runner["windows/runner<br/>reelish/window, reelish/gamepad, reelish/app_update"]
   end
   PhoneUI --> Shared
@@ -85,12 +85,13 @@ platforms and say so in the change. See
 
 | Channel | Side | Methods | Used by |
 |---|---|---|---|
-| `onfeed/device` | Android (`MainActivity.kt`) | `capabilities` | `DeviceCapabilities.load` |
+| `onfeed/device` | Android (`ReelishActivity.kt`) | `capabilities` | `DeviceCapabilities.load` |
+| `onfeed/app_icon` | Android (`ReelishActivity.kt`, `AppIconSwitcher.kt`) | `current`, `select` (launcher icon presets: activity aliases; the old entry is disabled once the app is in the background) | `AppIconService` |
 | `onfeed/player` | Android | `setBrightness`, `resetBrightness`, `keepScreenOn`, `isEmulator`, `enterPip` | Player, `PlayerEngineBootstrap` |
 | `onfeed/app_update` | Android | `canRequestPackageInstalls`, `openInstallPermissionSettings`, `inspectApk`, `installApk` | `GitHubUpdateService`, update dialogs |
 | `reelish/window` | Windows runner (`flutter_window.cpp`) | `setFullscreen`, `isFullscreen` | `DesktopWindow` |
 | `reelish/gamepad` | Windows runner (`gamepad_channel.cpp`) | `state`, sent from the runner to Dart with XInput buttons and stick | `DesktopGamepad` |
 | `reelish/app_update` | Windows runner (`app_update_channel.cpp`) | `inspectInstaller`, `freeDiskSpace`, `launchInstaller` | `WindowsInstallation`, used by `WindowsUpdateController` |
 
-Android code: [`MainActivity.kt`](../../android/app/src/main/kotlin/com/example/onfeed/MainActivity.kt).
+Android code: [`ReelishActivity.kt`](../../android/app/src/main/kotlin/com/example/onfeed/ReelishActivity.kt).
 Windows runner: [`windows/runner/`](../../windows/runner).

@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -7,6 +9,11 @@ import 'package:onfeed/src/account/account_api.dart';
 import 'package:onfeed/src/account/account_controller.dart';
 import 'package:onfeed/src/account/backend_config.dart';
 import 'package:onfeed/src/account/session_store.dart';
+import 'package:onfeed/src/platform/device_capabilities.dart';
+import 'package:onfeed/src/screens/playback_settings_screen.dart';
+import 'package:onfeed/src/screens/sign_in_screen.dart';
+import 'package:onfeed/src/services/accent_settings_controller.dart';
+import 'package:onfeed/src/theme/glass_theme.dart';
 import 'package:onfeed/src/services/network_target_policy.dart';
 import 'package:onfeed/src/services/tmdb_response_cache.dart';
 import 'package:onfeed/src/services/tmdb_service.dart';
@@ -198,7 +205,7 @@ void main() {
         store: store,
       );
       await account.restore();
-      final signIn = account.startSignIn();
+      final signIn = account.startSignIn(method: SignInMethod.code);
       for (var i = 0; i < 10; i++) {
         await tester.pump(const Duration(milliseconds: 1));
       }
@@ -239,7 +246,7 @@ void main() {
           return _error(code == 'sign_in_denied' ? 403 : 410, code);
         });
         await account.restore();
-        final signIn = account.startSignIn();
+        final signIn = account.startSignIn(method: SignInMethod.code);
         await tester.pump();
         await tester.pump(const Duration(seconds: 1));
         expect(signIn.phase, phase);
@@ -248,6 +255,343 @@ void main() {
         expect(account.status, AccountStatus.signedOut);
         signIn.dispose();
       }
+    });
+  });
+
+  group('Browser sign-in', () {
+    const authorize =
+        'https://trakt.tv/oauth/authorize?response_type=code&state=s';
+
+    http.Response webStart([String url = authorize]) => _json({
+      'pollToken': 'w' * 43,
+      'authorizeUrl': url,
+      'expiresIn': 600,
+      'interval': 4,
+    });
+
+    testWidgets('opens Trakt, polls the web endpoint, then signs in', (
+      tester,
+    ) async {
+      final opened = <Uri>[];
+      final paths = <String>[];
+      var polls = 0;
+      final account = AccountController(
+        api: AccountApi(
+          baseUrl: Uri.parse('https://api.reelish.test'),
+          client: MockClient((request) async {
+            paths.add(request.url.path);
+            if (request.url.path.endsWith('/web/start')) return webStart();
+            polls++;
+            if (polls < 2) {
+              return _json({'status': 'pending', 'interval': 4}, 202);
+            }
+            return _json({
+              'status': 'authorized',
+              'session': _tokens(1),
+              'user': {'id': 'u9', 'username': 'browserfan'},
+            });
+          }),
+        ),
+        store: MemorySessionStore(),
+        openBrowser: (url) async {
+          opened.add(url);
+          return true;
+        },
+      );
+      await account.restore();
+      final signIn = account.startSignIn(method: SignInMethod.browser);
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 1));
+      }
+      expect(signIn.phase, DeviceSignInPhase.waiting);
+      expect(opened.single.toString(), authorize);
+      expect(signIn.code, isNull);
+
+      for (var i = 0; i < 2; i++) {
+        await tester.pump(const Duration(seconds: 4));
+      }
+      expect(paths.where((p) => p.endsWith('/web/poll')), hasLength(2));
+      expect(paths.any((p) => p.contains('/device/')), false);
+      expect(signIn.phase, DeviceSignInPhase.done);
+      expect(account.username, 'browserfan');
+      signIn.dispose();
+    });
+
+    testWidgets('falls back to a code where the API has it turned off', (
+      tester,
+    ) async {
+      final opened = <Uri>[];
+      final account = AccountController(
+        api: AccountApi(
+          baseUrl: Uri.parse('https://api.reelish.test'),
+          client: MockClient((request) async {
+            if (request.url.path.endsWith('/web/start')) {
+              return _error(503, 'web_sign_in_unavailable');
+            }
+            return _json({
+              'pollToken': 'p' * 43,
+              'userCode': 'CODE1234',
+              'verificationUrl': 'https://trakt.tv/activate',
+              'expiresIn': 600,
+              'interval': 5,
+            });
+          }),
+        ),
+        store: MemorySessionStore(),
+        openBrowser: (url) async {
+          opened.add(url);
+          return true;
+        },
+      );
+      await account.restore();
+      final signIn = account.startSignIn(method: SignInMethod.browser);
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 1));
+      }
+      expect(signIn.method, SignInMethod.code);
+      expect(signIn.phase, DeviceSignInPhase.waiting);
+      expect(signIn.code!.userCode, 'CODE1234');
+      expect(opened, isEmpty);
+      signIn.dispose();
+    });
+
+    testWidgets('never opens an address that is not on Trakt', (tester) async {
+      for (final url in [
+        'https://evil.example/oauth/authorize',
+        'http://trakt.tv/oauth/authorize',
+        'https://trakt.tv.evil.example/x',
+        'https://user@trakt.tv/x',
+        'https://trakt.tv:8443/x',
+        'intent://trakt.tv/x',
+      ]) {
+        final opened = <Uri>[];
+        final account = AccountController(
+          api: AccountApi(
+            baseUrl: Uri.parse('https://api.reelish.test'),
+            client: MockClient((_) async => webStart(url)),
+          ),
+          store: MemorySessionStore(),
+          openBrowser: (url) async {
+            opened.add(url);
+            return true;
+          },
+        );
+        await account.restore();
+        final signIn = account.startSignIn(method: SignInMethod.browser);
+        for (var i = 0; i < 5; i++) {
+          await tester.pump(const Duration(milliseconds: 1));
+        }
+        expect(signIn.phase, DeviceSignInPhase.failed, reason: url);
+        expect(opened, isEmpty, reason: url);
+        signIn.dispose();
+      }
+    });
+
+    testWidgets('a browser that will not open is reported, polling goes on', (
+      tester,
+    ) async {
+      final account = AccountController(
+        api: AccountApi(
+          baseUrl: Uri.parse('https://api.reelish.test'),
+          client: MockClient((request) async {
+            if (request.url.path.endsWith('/web/start')) return webStart();
+            return _json({'status': 'pending', 'interval': 4}, 202);
+          }),
+        ),
+        store: MemorySessionStore(),
+        openBrowser: (_) async => false,
+      );
+      await account.restore();
+      final signIn = account.startSignIn(method: SignInMethod.browser);
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 1));
+      }
+      expect(signIn.phase, DeviceSignInPhase.waiting);
+      expect(signIn.browserFailed, true);
+      signIn.dispose();
+    });
+  });
+
+  group('Sign-in screen', () {
+    Future<void> loadFonts(WidgetTester tester) => tester.runAsync(() async {
+      final loader = FontLoader('Montserrat');
+      for (final weight in const ['Regular', 'Medium', 'SemiBold', 'Bold']) {
+        loader.addFont(rootBundle.load('assets/fonts/Montserrat-$weight.ttf'));
+      }
+      await loader.load();
+    });
+
+    AccountController browserAccount() => AccountController(
+      api: AccountApi(
+        baseUrl: Uri.parse('https://api.reelish.test'),
+        client: MockClient((request) async {
+          if (request.url.path.endsWith('/web/start')) {
+            return _json({
+              'pollToken': 'w' * 43,
+              'authorizeUrl': 'https://trakt.tv/oauth/authorize',
+              'expiresIn': 600,
+              'interval': 4,
+            });
+          }
+          if (request.url.path.endsWith('/device/start')) {
+            return _json({
+              'pollToken': 'p' * 43,
+              'userCode': 'ABCD1234',
+              'verificationUrl': 'https://trakt.tv/activate',
+              'expiresIn': 600,
+              'interval': 5,
+            });
+          }
+          return _json({'status': 'pending', 'interval': 5}, 202);
+        }),
+      ),
+      store: MemorySessionStore(),
+      openBrowser: (_) async => true,
+    );
+
+    Widget app(AccountController account) => MaterialApp(
+      theme: GlassTheme.dark,
+      home: AccountGate(account: account, child: const Text('Home')),
+    );
+
+    for (final (name, size) in [
+      ('small phone', const Size(320, 640)),
+      ('phone', const Size(412, 892)),
+    ]) {
+      testWidgets('phone: browser first, code on request ($name)', (
+        tester,
+      ) async {
+        tester.view.physicalSize = size;
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        await loadFonts(tester);
+        final account = browserAccount();
+        await account.restore();
+        await tester.pumpWidget(app(account));
+        await tester.pump();
+
+        expect(find.text('Sign in to Reelish'), findsOneWidget);
+        expect(find.text('Continue with Trakt'), findsOneWidget);
+        expect(find.text('Sign in with a code instead'), findsOneWidget);
+
+        await tester.tap(find.text('Continue with Trakt'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+        expect(find.text('Continue in your browser'), findsOneWidget);
+        expect(find.text('Open Trakt again'), findsOneWidget);
+
+        await tester.tap(find.text('Use a code instead'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+        expect(find.text('ABCD1234'), findsOneWidget);
+        expect(find.text('Copy code and open Trakt'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+
+        await tester.ensureVisible(find.text('Cancel'));
+        await tester.tap(find.text('Cancel'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+        expect(find.text('Continue with Trakt'), findsOneWidget);
+      });
+    }
+
+    testWidgets(
+      'Windows: browser sign-in with the same choices',
+      (tester) async {
+        tester.view.physicalSize = const Size(1280, 800);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        await loadFonts(tester);
+        final account = browserAccount();
+        await account.restore();
+        await tester.pumpWidget(app(account));
+        await tester.pump();
+        expect(find.text('Continue with Trakt'), findsOneWidget);
+        expect(find.text('Sign in with a code instead'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.windows),
+    );
+
+    testWidgets('TV: a code to enter elsewhere, no browser buttons', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1920, 1080);
+      tester.view.devicePixelRatio = 1.5;
+      addTearDown(tester.view.reset);
+      DeviceCapabilities.debugOverride = const DeviceCapabilities(
+        isTelevision: true,
+        hasTouchscreen: false,
+      );
+      addTearDown(
+        () => DeviceCapabilities.debugOverride = const DeviceCapabilities(),
+      );
+      await loadFonts(tester);
+      final account = browserAccount();
+      await account.restore();
+      await tester.pumpWidget(app(account));
+      await tester.pump();
+      expect(find.text('Sign in with a code instead'), findsNothing);
+
+      await tester.tap(find.text('Sign in with Trakt'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('ABCD1234'), findsOneWidget);
+      expect(find.textContaining('On your phone or computer'), findsOneWidget);
+      expect(find.text('Copy code and open Trakt'), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('Account settings', () {
+    testWidgets('opens from Settings on a themed page with the profile', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(412, 892);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final saved = AccountController.instance;
+      addTearDown(() => AccountController.instance = saved);
+      final account = AccountController(store: MemorySessionStore(_session()));
+      await account.restore();
+      AccountController.instance = account;
+      final accent = AccentSettingsController();
+      addTearDown(accent.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: GlassTheme.dark,
+          home: Scaffold(
+            body: SettingsScreen(
+              onPlaybackSettings: () {},
+              onAppearanceSettings: () {},
+              accentSettings: accent,
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Profile and account'));
+      await tester.pumpAndSettle();
+
+      // Text outside a Material draws in the debug fallback style (yellow
+      // underlines): the page must bring its own Scaffold.
+      final subtitle = find.text(
+        'Your profile and Trakt sign-in on this device.',
+      );
+      expect(subtitle, findsOneWidget);
+      expect(
+        find.ancestor(of: subtitle, matching: find.byType(Scaffold)),
+        findsOneWidget,
+      );
+      expect(find.text('viewer'), findsOneWidget);
+      expect(find.text('Signed in with Trakt'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('DANGER ZONE'),
+        300,
+        scrollable: find.byType(Scrollable).last,
+      );
+      expect(find.text('DANGER ZONE'), findsOneWidget);
+      expect(tester.takeException(), isNull);
     });
   });
 

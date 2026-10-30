@@ -5,19 +5,18 @@
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <!-- flutter_go_torrent_streamer declares a notification foreground
          service that Reelish never starts (torrents stream only while the
-         player is open). Drop it and the permissions it alone needs. -->
+         player is open). Drop it and the permissions it alone needs.
+         POST_NOTIFICATIONS stays: new-episode alerts use it, and Android 13+
+         asks the user only when they turn alerts on. -->
     <uses-permission
         android:name="android.permission.FOREGROUND_SERVICE"
         tools:node="remove" />
     <uses-permission
         android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"
         tools:node="remove" />
-    <uses-permission
-        android:name="android.permission.POST_NOTIFICATIONS"
-        tools:node="remove" />
     <!-- Android TV and Google TV. Neither feature is required, so phones and
          tablets install exactly as before, and TVs (no touchscreen) are not
-         filtered out. MainActivity reports at runtime which kind of device
+         filtered out. ReelishActivity reports at runtime which kind of device
          it is running on; see lib/src/platform/device_capabilities.dart. -->
     <uses-feature
         android:name="android.software.leanback"
@@ -45,8 +44,13 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/update_file_paths" />
         </provider>
+        <!-- The only activity. Its launcher entries are the aliases below;
+             the MAIN/LAUNCHER filter here is for `flutter run`/`drive`
+             (flutter_tools finds the app through an <activity>, not an
+             alias) and is removed from release builds by
+             src/release/AndroidManifest.xml. -->
         <activity
-            android:name=".MainActivity"
+            android:name=".ReelishActivity"
             android:exported="true"
             android:supportsPictureInPicture="true"
             android:resizeableActivity="true"
@@ -68,13 +72,107 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+        </activity>
+        <!-- Launcher entries, one per app icon preset; exactly one is enabled
+             (AppIconSwitcher.kt). The default keeps the component name of
+             every earlier release, so home-screen and TV shortcuts survive
+             updates. -->
+        <activity-alias
+            android:name=".MainActivity"
+            android:targetActivity=".ReelishActivity"
+            android:exported="true"
+            android:enabled="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
             <!-- Puts Reelish on the Android TV / Google TV home screen, shown
                  with the application banner. Phones ignore this category. -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER"/>
             </intent-filter>
-        </activity>
+        </activity-alias>
+        <activity-alias android:name=".IconAmber" android:targetActivity=".ReelishActivity"
+            android:icon="@mipmap/ic_launcher_amber" android:roundIcon="@mipmap/ic_launcher_amber"
+            android:exported="true" android:enabled="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".IconBlue" android:targetActivity=".ReelishActivity"
+            android:icon="@mipmap/ic_launcher_blue" android:roundIcon="@mipmap/ic_launcher_blue"
+            android:exported="true" android:enabled="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".IconGreen" android:targetActivity=".ReelishActivity"
+            android:icon="@mipmap/ic_launcher_green" android:roundIcon="@mipmap/ic_launcher_green"
+            android:exported="true" android:enabled="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".IconIndigo" android:targetActivity=".ReelishActivity"
+            android:icon="@mipmap/ic_launcher_indigo" android:roundIcon="@mipmap/ic_launcher_indigo"
+            android:exported="true" android:enabled="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".IconLime" android:targetActivity=".ReelishActivity"
+            android:icon="@mipmap/ic_launcher_lime" android:roundIcon="@mipmap/ic_launcher_lime"
+            android:exported="true" android:enabled="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".IconOrange" android:targetActivity=".ReelishActivity"
+            android:icon="@mipmap/ic_launcher_orange" android:roundIcon="@mipmap/ic_launcher_orange"
+            android:exported="true" android:enabled="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".IconRose" android:targetActivity=".ReelishActivity"
+            android:icon="@mipmap/ic_launcher_rose" android:roundIcon="@mipmap/ic_launcher_rose"
+            android:exported="true" android:enabled="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".IconSlate" android:targetActivity=".ReelishActivity"
+            android:icon="@mipmap/ic_launcher_slate" android:roundIcon="@mipmap/ic_launcher_slate"
+            android:exported="true" android:enabled="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".IconTeal" android:targetActivity=".ReelishActivity"
+            android:icon="@mipmap/ic_launcher_teal" android:roundIcon="@mipmap/ic_launcher_teal"
+            android:exported="true" android:enabled="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".IconViolet" android:targetActivity=".ReelishActivity"
+            android:icon="@mipmap/ic_launcher_violet" android:roundIcon="@mipmap/ic_launcher_violet"
+            android:exported="true" android:enabled="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity-alias>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

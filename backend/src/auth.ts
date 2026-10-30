@@ -10,14 +10,14 @@ import {
   revokeSession, type Principal, type SessionTokens,
 } from './sessions';
 import {
-  fetchIdentity, forgetTraktTokens, pollDeviceToken, saveTraktTokens,
+  fetchIdentity, forgetTraktTokens, outOfBand, pollDeviceToken, saveTraktTokens,
   startDeviceCode, type TraktDeps,
 } from './trakt';
 
 const platforms = new Set(['android', 'android_tv', 'windows']);
 const now = () => Math.floor(Date.now() / 1000);
 
-function deviceFrom(body: Record<string, unknown>) {
+export function deviceFrom(body: Record<string, unknown>) {
   const platform = shortText(body.platform, 20);
   if (!platforms.has(platform)) {
     throw new ApiError(400, 'invalid_platform', 'Unknown platform.');
@@ -25,7 +25,7 @@ function deviceFrom(body: Record<string, unknown>) {
   return { name: shortText(body.deviceName, 60), platform };
 }
 
-function sessionBody(tokens: SessionTokens) {
+export function sessionBody(tokens: SessionTokens) {
   return {
     sessionId: tokens.sessionId,
     accessToken: tokens.accessToken,
@@ -137,7 +137,7 @@ export async function pollDevice(env: Env, request: Request, requestId: string, 
   }
   const identity = await fetchIdentity(env, result.tokens.access_token, deps);
   const userId = await upsertUser(env, identity.uuid, identity.username);
-  await saveTraktTokens(env, userId, result.tokens);
+  await saveTraktTokens(env, userId, result.tokens, outOfBand);
   const tokens = await createSession(env, userId, { name: row.device_name, platform: row.platform });
   await audit(env, 'auth.signed_in', { userId, sessionId: tokens.sessionId, detail: row.platform });
   return json({
@@ -147,7 +147,7 @@ export async function pollDevice(env: Env, request: Request, requestId: string, 
   }, requestId);
 }
 
-async function upsertUser(env: Env, traktUuid: string, username: string): Promise<string> {
+export async function upsertUser(env: Env, traktUuid: string, username: string): Promise<string> {
   const at = now();
   const row = await env.DB.prepare(
     `INSERT INTO users (id, trakt_uuid, trakt_username, created_at, updated_at)

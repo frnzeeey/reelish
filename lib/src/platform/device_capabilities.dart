@@ -8,7 +8,7 @@ import '../widgets/liquid_glass.dart';
 
 /// What kind of device Reelish is running on, read once during startup.
 ///
-/// Android reports it from `MainActivity.deviceCapabilities()`: a device is a
+/// Android reports it from `ReelishActivity.deviceCapabilities()`: a device is a
 /// TV when its UI mode is `UI_MODE_TYPE_TELEVISION` or it declares the
 /// leanback feature (every Android TV and Google TV device does). Screen size
 /// is never used, so a large tablet stays a tablet and a small TV stays a TV.

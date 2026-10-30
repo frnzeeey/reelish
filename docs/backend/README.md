@@ -47,12 +47,17 @@ from a serverless runtime. D1 holds a few small tables. Supabase Auth and
 Firebase Auth were not used: Trakt is the identity, and a second identity
 system would only duplicate it.
 
-**Device sign-in on every platform.** Trakt's device flow (a code entered
-at trakt.tv) works on TV, phone and Windows alike. It needs no redirect
-URI, so there is no custom URL scheme or loopback listener to intercept,
-and it does not depend on PKCE, which Trakt's documentation does not
-clearly cover. Phones and Windows open trakt.tv in the browser for the
-user; TV shows the address and code.
+**Browser sign-in on phone and Windows, a code on TV.** Phones and
+Windows open Trakt's authorization page (authorization-code flow with
+PKCE S256; Trakt keeps a client-supplied `code_challenge`, checked
+2026-10-30). The redirect URI is the Worker's own HTTPS callback, not the
+app, so there is no custom URL scheme or loopback listener to intercept
+and the Trakt code never reaches the device. The callback exchanges the
+code with the client secret and the verifier, which never leave the
+server; the app learns the outcome by polling with its own token, as in
+the device flow. TV uses the device flow (a code entered at trakt.tv on
+another device), which is also every platform's fallback and the whole
+flow wherever `PUBLIC_URL` is unset.
 
 **Sign-in is required.** Every TMDB request needs a Reelish session (the
 product decision for this release). Data kept on the device (My list,
@@ -71,8 +76,19 @@ needs the client secret, and Trakt access tokens now last 24 hours, so the
 server refreshes them. They are AES-256-GCM encrypted with associated data
 binding each value to its user and field. Trakt returns a new refresh token
 on each refresh, so refreshes use optimistic locking on a row version.
-Trakt features (history sync, scrobbling, watchlist) will use
-`traktAccessToken()`; none are exposed yet.
+Each grant records the redirect URI it was issued for (the callback for
+browser sign-ins, out-of-band for device sign-ins), and refreshing names
+it; grants saved before that was recorded try the callback, then
+out-of-band. The watchlist routes use `traktAccessToken()`; history sync
+and scrobbling will too.
+
+**Watchlist ↔ My list, merged by the app.** The API only reads and edits
+the Trakt watchlist (by TMDB id). The app, when the user turns sync on,
+merges three ways against the state after its last sync: changes on
+either side since then reach the other, and a first sync (or the first
+after turning it back on) only combines the two lists. Titles Trakt
+cannot find, or that have no TMDB id, are left alone on My list. A lost
+Trakt grant answers 409, never 401, so the app is not signed out.
 
 **Stable identity.** Users are keyed by Trakt's account UUID
 (`/users/settings` → `user.ids.uuid`), never by the username, which can
@@ -89,11 +105,18 @@ its own).
 | `GET /health` | — | Liveness |
 | `POST /api/v1/auth/device/start` | — | `{platform, deviceName}` → `{pollToken, userCode, verificationUrl, expiresIn, interval}` |
 | `POST /api/v1/auth/device/poll` | — | `{pollToken}` → `202 {status:"pending", interval}` or `200 {status:"authorized", session, user}` |
+| `POST /api/v1/auth/web/start` | — | `{platform, deviceName}` → `{pollToken, authorizeUrl, expiresIn, interval}`; 503 `web_sign_in_unavailable` without `PUBLIC_URL` |
+| `GET /api/v1/auth/web/callback` | — | Trakt's redirect target (`code`, `state`); answers a fixed HTML page |
+| `POST /api/v1/auth/web/poll` | — | As `device/poll`; also 502 `sign_in_failed` |
 | `POST /api/v1/auth/refresh` | — | `{refreshToken}` → `{session}` (the old refresh token stops working) |
 | `POST /api/v1/auth/logout` | Bearer | End this session |
 | `POST /api/v1/auth/logout-all` | Bearer | End every session of the account |
 | `GET /api/v1/me` | Bearer | `{user, traktLinked, sessionId}` |
 | `DELETE /api/v1/me` | Bearer | Revoke Trakt access, delete the account and its sessions |
+| `GET /api/v1/trakt/watchlist` | Bearer | `{items: [{type, tmdbId, listedAt}]}` (`movie` or `series`) |
+| `POST /api/v1/trakt/watchlist` | Bearer | `{add, remove}` (≤ 100 `{type, tmdbId}` each) → `{added, removed, notFound}`; 409 `trakt_limit` or `trakt_reauth_required` |
+| `POST /api/v1/notifications/token` | Bearer | `{token}`: an episode-check token for this session (replaces the previous one) |
+| `POST /api/v1/notifications/episodes` | Alert token | `{series: [tmdbId] (≤ 150), popular}` → each series' `lastEpisode`, and TMDB's popular series when asked |
 | `GET /api/v1/sessions` | Bearer | The account's signed-in devices |
 | `DELETE /api/v1/sessions/{id}` | Bearer | End one of the account's own sessions |
 | `GET /api/v1/tmdb/{tmdb path}` | Bearer | Allowlisted TMDB v3 request (below) |
@@ -139,9 +162,10 @@ which needs no credential.
 | Table | Holds | Owner |
 |---|---|---|
 | `users` | Internal id, Trakt UUID, Trakt username (display) | Reelish |
-| `trakt_credentials` | Encrypted Trakt access/refresh tokens, expiry, version | Reelish, on Trakt's behalf |
+| `trakt_credentials` | Encrypted Trakt access/refresh tokens, expiry, version, the grant's redirect URI | Reelish, on Trakt's behalf |
 | `sessions` | Hashed refresh token, previous hash, platform, generic device label, timestamps | Reelish |
 | `device_authorizations` | Pending sign-ins: hashed poll token, encrypted Trakt device code | Reelish (minutes) |
+| `web_authorizations` | Pending browser sign-ins: hashed state and poll token, encrypted PKCE verifier, outcome | Reelish (minutes) |
 | `audit_events` | Security events by id (sign-in, logout, reuse, deletion) | Reelish |
 
 Trakt owns the user's profile, history and lists; Reelish stores none of
@@ -160,6 +184,10 @@ as before.
 | Stolen Trakt tokens (database leak) | AES-256-GCM with per-field associated data; key held as a secret | Database and key leaked together |
 | Sign-in replay / CSRF | Poll tokens are random, hashed, single use; device code never leaves the server | — |
 | Device-flow phishing (a code sent to a victim) | Trakt shows the app name on approval | Inherent to device flows |
+| Browser sign-in: stolen or intercepted code | Redirect to the Worker only (Trakt checks registered URIs); PKCE verifier and client secret stay on the server; state single use, 10 minutes | — |
+| Browser sign-in: a victim sent someone else's sign-in link | Trakt's consent page names the app; the link expires in 10 minutes | Same as device-flow phishing |
+| Background task reusing a rotated refresh token (which revokes the session) | Background checks never refresh: they carry a per-session alert token (`rnt_…`, stored hashed) that opens only `/notifications/episodes` | The token reads public TMDB data until its session is revoked or expires |
+| Callback page injection | Fixed pages, nothing from the request echoed; CSP `default-src 'none'`, no scripts, `no-referrer` | — |
 | SSRF through the gateway | Fixed upstream host and HTTPS; regex-allowlisted paths; manual redirects | — |
 | Cross-account access | Every account route filters by the token's user id; foreign ids answer 404 | — |
 | Secrets in logs | Logs carry paths, statuses and ids only; no query strings, tokens or codes | — |

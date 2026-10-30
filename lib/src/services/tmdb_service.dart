@@ -583,6 +583,19 @@ class TmdbService {
     return MediaDetails.fromTmdb(data);
   }
 
+  /// The movie or series with TMDB id [tmdbId] as a list item, for titles
+  /// that arrive by id alone (Trakt watchlist sync). Shares the details
+  /// request, and its cache, with [details].
+  Future<MediaItem> itemById(String type, int tmdbId) async {
+    final data = await _get(
+      '/${type == 'series' ? 'tv' : 'movie'}/$tmdbId',
+      params: _detailsParams,
+      ttl: TmdbCacheTtl.metadata,
+      priority: _TmdbRequestPriority.deferred,
+    );
+    return MediaItem.fromTmdb(data, mediaType: type);
+  }
+
   /// The title's logo artwork as an image URL, English or text-free, or ''
   /// when TMDB has none. A PNG only (some logos are SVG, which images here
   /// cannot draw). Cached for a day and sent behind other requests: it is

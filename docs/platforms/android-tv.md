@@ -7,7 +7,7 @@ focus rules, testing and limitations is
 
 ## How Reelish knows it is on a TV
 
-`MainActivity.deviceCapabilities()` reports a TV when the UI mode is
+`ReelishActivity.deviceCapabilities()` reports a TV when the UI mode is
 `UI_MODE_TYPE_TELEVISION` or the device declares the `leanback` feature.
 `DeviceCapabilities.load` reads it over `onfeed/device` during startup,
 before the first screen, so the TV theme (`GlassTheme.tv`) and remote focus

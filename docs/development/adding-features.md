@@ -13,7 +13,7 @@ A path that fits how the code is built. Read the
 | TV UI | [`lib/src/screens/tv/`](../../lib/src/screens/tv), [`lib/src/widgets/tv/`](../../lib/src/widgets/tv) |
 | Windows UI | [`lib/src/desktop/`](../../lib/src/desktop) |
 | The player | [`lib/src/widgets/player/`](../../lib/src/widgets/player), keeping the touch, remote and desktop paths separate |
-| Native behaviour | A method on an existing channel (`MainActivity.kt`, `windows/runner/`) and a thin Dart wrapper in [`lib/src/platform/`](../../lib/src/platform) |
+| Native behaviour | A method on an existing channel (`ReelishActivity.kt`, `windows/runner/`) and a thin Dart wrapper in [`lib/src/platform/`](../../lib/src/platform) |
 
 A feature that exists on every platform usually means one service or view
 model and up to three thin widgets.

@@ -3,19 +3,26 @@ import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../account/account_controller.dart';
+import '../account/profile_controller.dart';
 import '../models/playback_settings.dart';
 import '../navigation/app_transitions.dart';
+import '../notifications/episode_alerts.dart';
+import '../platform/app_icon.dart';
 import '../services/accent_settings_controller.dart';
 import '../services/playback_settings_controller.dart';
 import '../services/torrent_source_preparer.dart';
 import '../theme/design_tokens.dart';
 import '../theme/glass_theme.dart';
+import '../widgets/settings/developer_credit.dart';
 import '../widgets/settings/settings_components.dart';
 import '../widgets/tv/tv_focus.dart';
+
 import 'account_settings_screen.dart';
+import 'app_icon_settings_screen.dart';
 import 'app_information_screens.dart';
 import 'credits_screen.dart';
 import 'legal_information_screen.dart';
+import 'notification_settings_screen.dart';
 import 'subtitle_addons_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -36,6 +43,8 @@ class SettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SettingsPage(
+    // Who made Reelish; TMDB's attribution is in Credits & attribution.
+    footer: const DeveloperCreditFooter(),
     title: 'Settings',
     subtitle: 'Make Reelish work the way you like.',
     bottomClearance: SettingsMetrics.dockClearance,
@@ -44,17 +53,27 @@ class SettingsScreen extends StatelessWidget {
         label: 'ACCOUNT',
         children: [
           ListenableBuilder(
-            listenable: AccountController.instance,
+            listenable: Listenable.merge([
+              AccountController.instance,
+              ProfileController.instance,
+            ]),
             builder: (context, _) => SettingsTile(
               icon: Symbols.account_circle_rounded,
-              title: 'Trakt account',
-              description: 'Sign out, or manage your Reelish account',
-              value: AccountController.instance.username,
+              title: 'Profile and account',
+              description: 'Display name, avatar and Trakt sign-in',
+              value: ProfileController.instance.nameOr(
+                AccountController.instance.username,
+              ),
               onTap: () => _open(
                 context,
-                (context) => AccountSettingsScreen(
-                  account: AccountController.instance,
-                  onBack: () => Navigator.of(context).pop(),
+                // A Scaffold, as Home gives its settings pages: without a
+                // Material above it the page's text has no theme.
+                (context) => Scaffold(
+                  backgroundColor: GlassTheme.background,
+                  body: AccountSettingsScreen(
+                    account: AccountController.instance,
+                    onBack: () => Navigator.of(context).pop(),
+                  ),
                 ),
               ),
             ),
@@ -74,6 +93,26 @@ class SettingsScreen extends StatelessWidget {
               onTap: onAppearanceSettings,
             ),
           ),
+          if (EpisodeAlerts.supported)
+            ListenableBuilder(
+              listenable: EpisodeAlerts.instance,
+              builder: (context, _) => SettingsTile(
+                icon: Symbols.notifications_rounded,
+                title: 'Notifications',
+                description: 'Alerts when new episodes are out',
+                value: EpisodeAlerts.instance.settings.enabled ? 'On' : 'Off',
+                onTap: () => _open(
+                  context,
+                  // A Scaffold, as Home gives its settings pages.
+                  (context) => Scaffold(
+                    backgroundColor: GlassTheme.background,
+                    body: NotificationSettingsScreen(
+                      onBack: () => Navigator.of(context).pop(),
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
       SettingsSection(
@@ -221,6 +260,30 @@ class AppearanceSettingsScreen extends StatelessWidget {
           ],
         ),
       ),
+      // Android phones and tablets: Windows embeds its icon in the
+      // executable, and Android TV shows the banner.
+      if (AppIconService.supported)
+        SettingsSection(
+          label: 'APP ICON',
+          children: [
+            SettingsTile(
+              icon: Symbols.apps_rounded,
+              title: 'App icon',
+              description: 'Choose the icon on your home screen',
+              onTap: () => Navigator.of(context).push(
+                AppPageRoute<void>(
+                  context: context,
+                  builder: (context) => Scaffold(
+                    backgroundColor: GlassTheme.background,
+                    body: AppIconSettingsScreen(
+                      onBack: () => Navigator.of(context).pop(),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
     ],
   );
 

@@ -120,7 +120,7 @@ void main() {
   });
 
   testWidgets('main settings on a compact phone lists entries and ends with '
-      'the TMDB footer', (tester) async {
+      'the developer credit', (tester) async {
     final accent = AccentSettingsController();
     addTearDown(accent.dispose);
     await _pump(
@@ -148,8 +148,19 @@ void main() {
       await _scrollTo(tester, find.text(label));
       expect(find.text(label), findsOneWidget, reason: label);
     }
-    await _scrollTo(tester, find.text(_disclaimer));
-    expect(find.text(_disclaimer), findsOneWidget);
+    final credit = find.textContaining('HedgeByte', findRichText: true);
+    await _scrollTo(tester, credit);
+    expect(
+      find.textContaining('Designed & Developed by', findRichText: true),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('Software Engineer', findRichText: true),
+      findsOneWidget,
+    );
+    expect(find.bySemanticsLabel(RegExp('Reelish')), findsWidgets);
+    // TMDB's attribution moved to Credits & attribution.
+    expect(find.text(_disclaimer), findsNothing);
     expect(tester.takeException(), isNull);
   });
 

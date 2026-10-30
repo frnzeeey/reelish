@@ -3,6 +3,7 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import '../account/account_controller.dart';
 import '../screens/account_settings_screen.dart';
+import '../screens/notification_settings_screen.dart';
 import '../screens/app_information_screens.dart';
 import '../screens/credits_screen.dart';
 import '../screens/legal_information_screen.dart';
@@ -18,14 +19,19 @@ import 'desktop_widgets.dart';
 /// The settings pages a Windows Settings category shows.
 enum DesktopSettingsSection {
   account(
-    'Trakt account',
-    'Sign out, or manage your Reelish account',
+    'Profile and account',
+    'Display name, avatar and Trakt sign-in',
     Symbols.account_circle_rounded,
   ),
   appearance(
     'Appearance',
     'Accent color for highlights and controls',
     Symbols.palette_rounded,
+  ),
+  notifications(
+    'Notifications',
+    'Alerts when new episodes are out',
+    Symbols.notifications_rounded,
   ),
   playback(
     'Playback',
@@ -97,7 +103,10 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
 
   static const _groups = [
     ('ACCOUNT', [DesktopSettingsSection.account]),
-    ('GENERAL', [DesktopSettingsSection.appearance]),
+    (
+      'GENERAL',
+      [DesktopSettingsSection.appearance, DesktopSettingsSection.notifications],
+    ),
     (
       'PLAYBACK',
       [DesktopSettingsSection.playback, DesktopSettingsSection.subtitles],
@@ -118,6 +127,9 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
     ),
     DesktopSettingsSection.appearance => AppearanceSettingsScreen(
       controller: widget.accentSettings,
+      onBack: () {},
+    ),
+    DesktopSettingsSection.notifications => NotificationSettingsScreen(
       onBack: () {},
     ),
     DesktopSettingsSection.playback => PlaybackSettingsScreen(

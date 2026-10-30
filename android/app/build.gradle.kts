@@ -48,6 +48,8 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // Required by flutter_local_notifications (new-episode alerts).
+        isCoreLibraryDesugaringEnabled = true
     }
 
     defaultConfig {
@@ -81,6 +83,11 @@ kotlin {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    // Java 8+ APIs on older Android, for flutter_local_notifications.
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }
 
 // Release APKs ship ARM code only. x86_64 libraries (libmpv, the torrent

@@ -5,10 +5,20 @@ export interface Env {
   AUTH_LIMITER: RateLimit;
   TMDB_USER_LIMITER: RateLimit;
   TMDB_IP_LIMITER: RateLimit;
+  /** Trakt sync calls per user. */
+  SYNC_LIMITER: RateLimit;
 
   ENVIRONMENT: string;
   TRAKT_API_URL: string;
   TMDB_API_URL: string;
+  /** Trakt's browser authorization page. */
+  TRAKT_AUTHORIZE_URL: string;
+  /**
+   * This Worker's public HTTPS origin, for the browser sign-in callback
+   * (registered as a redirect URI on the Trakt app). Unset turns browser
+   * sign-in off; the device code still works.
+   */
+  PUBLIC_URL?: string;
 
   // Secrets (wrangler secret put / .dev.vars).
   /** TMDB API Read Access Token (v4 bearer), sent only to TMDB. */

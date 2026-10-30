@@ -50,7 +50,8 @@ void main() {
     await tester.pumpWidget(const ReelishApp());
     await tester.pump(const Duration(seconds: 6));
 
-    expect(find.text('Sign in with Trakt'), findsWidgets);
+    expect(find.text('Sign in to Reelish'), findsOneWidget);
+    expect(find.text('Continue with Trakt'), findsOneWidget);
     expect(find.text('Home'), findsNothing);
   });
 }

@@ -1,7 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart'
-    show TargetPlatform, defaultTargetPlatform, visibleForTesting;
+    show
+        TargetPlatform,
+        ValueNotifier,
+        defaultTargetPlatform,
+        visibleForTesting;
 import 'package:flutter_go_torrent_streamer/flutter_go_torrent_streamer.dart'
     show FlutterTorrentStreamer;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -295,6 +299,10 @@ class StorageService {
     }
   }
 
+  /// Changes whenever My list is written, so screens and Trakt sync can
+  /// follow edits made elsewhere.
+  static final favoritesRevision = ValueNotifier<int>(0);
+
   Future<void> toggleFavorite(MediaItem item) => _serialized(() async {
     final all = await favorites();
     if (all.any((e) => e.id == item.id && e.type == item.type)) {
@@ -303,6 +311,24 @@ class StorageService {
       all.insert(0, item);
     }
     await _saveItems(_favorites, all);
+    favoritesRevision.value++;
+  });
+
+  /// Adds [items] not already on My list at its end, and removes those
+  /// whose `type:id` is in [remove], in one write (used by Trakt sync).
+  Future<void> updateFavorites({
+    List<MediaItem> add = const [],
+    Set<String> remove = const {},
+  }) => _serialized(() async {
+    if (add.isEmpty && remove.isEmpty) return;
+    final all = await favorites()
+      ..removeWhere((e) => remove.contains('${e.type}:${e.id}'));
+    final present = {for (final e in all) '${e.type}:${e.id}'};
+    for (final item in add) {
+      if (present.add('${item.type}:${item.id}')) all.add(item);
+    }
+    await _saveItems(_favorites, all);
+    favoritesRevision.value++;
   });
 
   Future<void> removeHistory(MediaItem item) => _serialized(() async {

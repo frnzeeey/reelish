@@ -16,6 +16,7 @@ export default defineConfig({
           TRAKT_CLIENT_SECRET: 'test-trakt-client-secret',
           SESSION_SIGNING_KEY: key(1),
           TOKEN_ENCRYPTION_KEY: key(2),
+          PUBLIC_URL: 'https://api.reelish.test',
         },
       },
     })),

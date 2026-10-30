@@ -3,6 +3,7 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  file_selector_windows
   flutter_js
   flutter_secure_storage_windows
   media_kit_libs_windows_video
@@ -12,6 +13,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST
   flutter_go_torrent_streamer
+  flutter_local_notifications_windows
   jni
 )
 

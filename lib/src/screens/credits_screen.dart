@@ -137,6 +137,21 @@ class CreditsScreen extends StatelessWidget {
           ],
         ),
         SettingsSection(
+          label: 'ARTWORK',
+          children: [
+            SettingsTile(
+              icon: Symbols.face_rounded,
+              title: 'Profile avatars',
+              description: 'Illustrations by angelina888 on Figma',
+              onTap: () => _openExternal(
+                context,
+                Uri.parse('https://www.figma.com/@angelina888'),
+                'Figma',
+              ),
+            ),
+          ],
+        ),
+        SettingsSection(
           label: 'OPEN-SOURCE ACKNOWLEDGMENTS',
           children: [
             const SettingsParagraph(
