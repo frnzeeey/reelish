@@ -145,9 +145,11 @@ class SystemEpisodeNotifier implements EpisodeNotifier {
 
 const _taskName = 'reelish.episodeAlerts';
 
-/// WorkManager's entry point for the background check (Android).
-@pragma('vm:entry-point')
-void episodeAlertsDispatcher() {
+/// Runs the background check when WorkManager starts the task (Android).
+/// Called from `episodeAlertsDispatcher` in `main.dart`: the entry point
+/// lives there because a callback handle keeps its library's URI in the
+/// release binary, and the release check rejects `package:onfeed/src`.
+void runEpisodeAlertsTask() {
   Workmanager().executeTask((task, _) async {
     DartPluginRegistrant.ensureInitialized();
     try {
@@ -207,10 +209,12 @@ class EpisodeAlerts extends ChangeNotifier {
   String? get error => _error;
   bool get checking => _checking;
 
-  /// Starts the background scheduler on Android; call once at startup.
-  static Future<void> initializeBackground() async {
+  /// Starts the background scheduler on Android with [dispatcher], a
+  /// top-level `@pragma('vm:entry-point')` function that calls
+  /// [runEpisodeAlertsTask]; call once at startup.
+  static Future<void> initializeBackground(void Function() dispatcher) async {
     if (kIsWeb || !Platform.isAndroid) return;
-    await Workmanager().initialize(episodeAlertsDispatcher);
+    await Workmanager().initialize(dispatcher);
   }
 
   void attach(AccountController account) {

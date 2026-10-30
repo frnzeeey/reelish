@@ -16,6 +16,11 @@ import 'src/services/accent_settings_controller.dart';
 import 'src/theme/glass_theme.dart';
 import 'src/widgets/tv/tv_focus.dart';
 
+/// WorkManager's entry point for the new-episode check (Android). It stays
+/// in this library: see [runEpisodeAlertsTask].
+@pragma('vm:entry-point')
+void episodeAlertsDispatcher() => runEpisodeAlertsTask();
+
 void main() {
   PerfTimeline.appStarted();
   WidgetsFlutterBinding.ensureInitialized();
@@ -110,7 +115,7 @@ class _StartupScreenState extends State<_StartupScreen> {
     // New-episode alerts (Android phones and Windows; off until turned on).
     if (EpisodeAlerts.supported) {
       try {
-        await EpisodeAlerts.initializeBackground();
+        await EpisodeAlerts.initializeBackground(episodeAlertsDispatcher);
       } catch (_) {
         // Alerts then check only while the app runs.
       }

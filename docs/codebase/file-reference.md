@@ -8,7 +8,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 | File | Platform | Lines | Purpose |
 |---|---|---|---|
-| [`lib/main.dart`](#libmaindart) | Shared | 138 | App entry point: initialises the player engines, builds `ReelishApp` (theme, navigator, Windows shortcuts and gamepad) and the startup gate that shows first-run consent or `HomeScreen`. |
+| [`lib/main.dart`](#libmaindart) | Shared | 143 | App entry point: initialises the player engines, builds `ReelishApp` (theme, navigator, Windows shortcuts and gamepad) and the startup gate that shows first-run consent or `HomeScreen`. |
 | [`lib/src/account/account_api.dart`](#libsrcaccountaccount_apidart) | Shared | 294 | HTTP calls to the Reelish API's account routes, with timeouts and a typed error for every failure the UI distinguishes. |
 | [`lib/src/account/account_controller.dart`](#libsrcaccountaccount_controllerdart) | Shared | 343 | The signed-in Trakt account: restores the stored session at launch, hands out fresh access tokens (one shared refresh at a time), runs the device sign-in, and signs out. |
 | [`lib/src/account/avatar_image.dart`](#libsrcaccountavatar_imagedart) | Shared | 110 | Turns a picked image (untrusted) into a small square PNG avatar: size and dimensions are checked before decoding, only a reduced copy is ever decoded, and re-encoding drops all of the original's metadata. |
@@ -45,7 +45,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/models/tv_season.dart`](#libsrcmodelstv_seasondart) | Shared | 68 | A season of a series, as TMDB lists it on the series' details. |
 | [`lib/src/navigation/app_destination.dart`](#libsrcnavigationapp_destinationdart) | Shared | 18 | The places in the app's navigation: the TV rail and the Windows sidebar. |
 | [`lib/src/navigation/app_transitions.dart`](#libsrcnavigationapp_transitionsdart) | Shared | 126 | Page route and tab transitions shared by every interface. |
-| [`lib/src/notifications/episode_alerts.dart`](#libsrcnotificationsepisode_alertsdart) | Shared | 432 | New-episode alerts: the settings the user changes, the system notifications, and the checks: every few hours in the background on Android (WorkManager), and while the app runs (launch, resume, a timer) on Android and Windows. |
+| [`lib/src/notifications/episode_alerts.dart`](#libsrcnotificationsepisode_alertsdart) | Shared | 436 | New-episode alerts: the settings the user changes, the system notifications, and the checks: every few hours in the background on Android (WorkManager), and while the app runs (launch, resume, a timer) on Android and Windows. |
 | [`lib/src/notifications/episode_check.dart`](#libsrcnotificationsepisode_checkdart) | Shared | 290 | Finds newly aired episodes of the series the user follows, for alerts. |
 | [`lib/src/platform/app_icon.dart`](#libsrcplatformapp_icondart) | Shared | 116 | Launcher icon presets and switching between them (Settings → Appearance → App icon). |
 | [`lib/src/platform/desktop_gamepad.dart`](#libsrcplatformdesktop_gamepaddart) | Windows | 200 | Controller navigation for the Windows interface. |
@@ -166,13 +166,13 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/main.dart
 
-**Source:** [`lib/main.dart`](../../lib/main.dart) · **Platform:** Shared · **Lines:** 138 · **Branches on:** isDesktop, usesTvLayout, isDesktopPlatform
+**Source:** [`lib/main.dart`](../../lib/main.dart) · **Platform:** Shared · **Lines:** 143 · **Branches on:** isDesktop, usesTvLayout, isDesktopPlatform
 
 **Purpose:** App entry point: initialises the player engines, builds `ReelishApp` (theme, navigator, Windows shortcuts and gamepad) and the startup gate that shows first-run consent or `HomeScreen`.
 
 **Declares:** `ReelishApp` (Widget), `_ReelishAppState` (Widget state), `_StartupScreen` (Widget), `_StartupScreenState` (Widget state)
 
-**Top-level functions:** `main`
+**Top-level functions:** `episodeAlertsDispatcher`, `main`
 
 **Imports (project):** `src/account/account_controller.dart`, `src/account/profile_controller.dart`, `src/account/watchlist_sync.dart`, `src/notifications/episode_alerts.dart`, `src/platform/desktop_gamepad.dart`, `src/platform/desktop_window.dart`, `src/platform/device_capabilities.dart`, `src/screens/first_run_consent_screen.dart`, `src/screens/home_screen.dart`, `src/screens/sign_in_screen.dart`, `src/screens/splash_screen.dart`, `src/services/accent_settings_controller.dart`, `src/services/perf_timeline.dart`, `src/services/player_engine.dart`, `src/theme/glass_theme.dart`, `src/widgets/tv/tv_focus.dart`
 
@@ -740,13 +740,13 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/notifications/episode_alerts.dart
 
-**Source:** [`lib/src/notifications/episode_alerts.dart`](../../lib/src/notifications/episode_alerts.dart) · **Platform:** Shared · **Lines:** 432 · **Branches on:** isTv, Platform.isWindows, Platform.isAndroid
+**Source:** [`lib/src/notifications/episode_alerts.dart`](../../lib/src/notifications/episode_alerts.dart) · **Platform:** Shared · **Lines:** 436 · **Branches on:** isTv, Platform.isWindows, Platform.isAndroid
 
 **Purpose:** New-episode alerts: the settings the user changes, the system notifications, and the checks: every few hours in the background on Android (WorkManager), and while the app runs (launch, resume, a timer) on Android and Windows.
 
 **Declares:** `AlertTokenStore` (Class), `EpisodeAlerts` (Notifier / controller), `SystemEpisodeNotifier` (Class)
 
-**Top-level functions:** `episodeAlertsDispatcher`
+**Top-level functions:** `runEpisodeAlertsTask`
 
 **Imports (project):** `src/account/account_api.dart`, `src/account/account_controller.dart`, `src/account/backend_config.dart`, `src/notifications/episode_check.dart`, `src/platform/device_capabilities.dart`, `src/services/storage_service.dart`
 
