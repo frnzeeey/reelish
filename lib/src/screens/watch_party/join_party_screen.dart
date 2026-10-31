@@ -249,7 +249,6 @@ class _JoinPartyScreenState extends State<JoinPartyScreen> {
     return SettingsScaffold(
       title: 'Join a party',
       subtitle: 'Enter the 8-digit code the host shared with you.',
-      icon: Symbols.groups_rounded,
       footer: null,
       bottomBar: SafeArea(
         top: false,
@@ -310,28 +309,14 @@ class _JoinPartyScreenState extends State<JoinPartyScreen> {
                       ),
                     )
                   else
-                    TextField(
+                    // The same eight boxes as on Windows, sized to fit.
+                    PartyCodeBoxes(
                       controller: _field,
                       focusNode: _focus,
-                      autofocus: true,
-                      keyboardType: TextInputType.number,
-                      textAlign: TextAlign.center,
-                      textInputAction: TextInputAction.done,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly,
-                        LengthLimitingTextInputFormatter(8),
-                      ],
                       onChanged: _changed,
-                      style: const TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 8,
-                        fontFeatures: [FontFeature.tabularFigures()],
-                      ),
-                      decoration: const InputDecoration(
-                        hintText: '00000000',
-                        counterText: '',
-                      ),
+                      onSubmitted: found != null && !found.full && !_joining
+                          ? _join
+                          : null,
                     ),
                   // A TV rarely has anything to paste.
                   if (!DeviceCapabilities.isTv) ...[
@@ -340,6 +325,15 @@ class _JoinPartyScreenState extends State<JoinPartyScreen> {
                       onPressed: _paste,
                       icon: const Icon(Symbols.content_paste_rounded),
                       label: const Text('Paste code'),
+                    ),
+                    const Text(
+                      'The host sees it in their waiting room. Pasting a '
+                      'whole invitation works too.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: GlassTheme.muted,
+                        fontSize: AppTextSize.label,
+                      ),
                     ),
                   ],
                 ],

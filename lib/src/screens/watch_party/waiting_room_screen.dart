@@ -11,6 +11,7 @@ import '../../theme/glass_theme.dart';
 import '../../watch_party/party_models.dart';
 import '../../watch_party/watch_party_controller.dart';
 import '../../widgets/settings/settings_components.dart';
+import 'party_desktop.dart';
 import 'party_launcher.dart';
 import 'party_widgets.dart';
 
@@ -148,157 +149,263 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
       if (reason != null && reason != PartyEndReason.left) {
         return _EndedView(message: partyEndMessage(reason));
       }
-      final room = _party.room;
       return PopScope(
         canPop: reason != null,
         onPopInvokedWithResult: (didPop, _) {
           if (!didPop) _leave();
         },
-        child: SettingsScaffold(
-          title: 'Watch party',
-          subtitle: room == null
-              ? 'Connecting…'
-              : _party.isHost
-              ? 'Share the code. You control playback.'
-              : 'Hosted by ${room.hostName}',
-          icon: Symbols.groups_rounded,
-          footer: null,
-          bottomBar: _bottomBar(),
-          children: room == null
-              ? const [_Connecting()]
-              : [
-                  if (_party.connection == PartyConnection.reconnecting)
-                    const _Banner(
-                      icon: Symbols.wifi_off_rounded,
-                      text: 'Reconnecting to the party…',
-                    )
-                  else if (!room.hostConnected)
-                    const _Banner(
-                      icon: Symbols.hourglass_top_rounded,
-                      text:
-                          'The host lost their connection. If they don’t '
-                          'return in a minute, someone else becomes host.',
-                    ),
-                  SettingsSection(
-                    children: [
-                      PartyCodeBlock(
-                        code: room.code,
-                        title: room.content.title,
-                      ),
-                    ],
-                  ),
-                  SettingsSection(
-                    label: 'WATCHING',
-                    children: [PartyContentCard(content: room.content)],
-                  ),
-                  SettingsSection(
-                    label:
-                        'PEOPLE  ${room.participants.length}/${room.settings.capacity}',
-                    children: [
-                      for (final person in room.participants)
-                        _ParticipantTile(
-                          person: person,
-                          you: person.pid == _party.you,
-                          canManage: _party.isHost && person.pid != _party.you,
-                          onMakeHost: () => _party.makeHost(person.pid),
-                          onRemove: () => _party.remove(person.pid),
-                        ),
-                    ],
-                  ),
-                  if (_party.isHost)
-                    SettingsSection(
-                      label: 'ROOM',
-                      children: [
-                        SettingsSwitchTile(
-                          icon: Symbols.play_pause_rounded,
-                          title: 'Everyone can play and pause',
-                          value: room.settings.guestControl,
-                          onChanged: (value) =>
-                              _party.updateSettings(guestControl: value),
-                        ),
-                        SettingsSwitchTile(
-                          icon: Symbols.hourglass_top_rounded,
-                          title: 'Wait for everyone',
-                          description: 'Start once everyone’s player is ready',
-                          value: room.settings.waitForAll,
-                          onChanged: (value) =>
-                              _party.updateSettings(waitForAll: value),
-                        ),
-                      ],
-                    ),
-                ],
-        ),
+        child: DeviceCapabilities.isDesktop
+            ? _desktop(context)
+            : _phoneAndTv(context),
       );
     },
   );
 
-  Widget _bottomBar() => SafeArea(
-    top: false,
-    child: Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpace.lg,
-        AppSpace.sm,
-        AppSpace.lg,
-        AppSpace.md,
+  String get _subtitle {
+    final room = _party.room;
+    if (room == null) return 'Connecting…';
+    if (_party.isHost) return 'Share the code. You control playback.';
+    return 'Hosted by ${room.hostName}';
+  }
+
+  /// A connection problem, above everything else.
+  Widget? _banner(PartyRoom room) {
+    if (_party.connection == PartyConnection.reconnecting) {
+      return const _Banner(
+        icon: Symbols.wifi_off_rounded,
+        text: 'Reconnecting to the party…',
+      );
+    }
+    if (!room.hostConnected) {
+      return const _Banner(
+        icon: Symbols.hourglass_top_rounded,
+        text:
+            'The host lost their connection. If they don’t return in a '
+            'minute, someone else becomes host.',
+      );
+    }
+    return null;
+  }
+
+  /// "2 of 3 ready" once everyone's player is loading the title.
+  String? _readiness(PartyRoom room) {
+    if (room.phase != PartyPhase.watching) return null;
+    final ready = room.participants
+        .where((p) => participantSettled(p.status))
+        .length;
+    return '$ready of ${room.participants.length} ready';
+  }
+
+  Widget _people(PartyRoom room) => SettingsSection(
+    label: 'PEOPLE  ${room.participants.length}/${room.settings.capacity}',
+    description: _readiness(room),
+    children: [
+      for (final person in room.participants)
+        _ParticipantTile(
+          person: person,
+          you: person.pid == _party.you,
+          canManage: _party.isHost && person.pid != _party.you,
+          onMakeHost: () => _party.makeHost(person.pid),
+          onRemove: () => _party.remove(person.pid),
+        ),
+    ],
+  );
+
+  Widget _roomSettings(PartyRoom room) => SettingsSection(
+    label: 'ROOM',
+    children: [
+      SettingsSwitchTile(
+        icon: Symbols.play_pause_rounded,
+        title: 'Everyone can play and pause',
+        value: room.settings.guestControl,
+        onChanged: (value) => _party.updateSettings(guestControl: value),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (_primaryAction() case final action?) ...[
-            SizedBox(
-              height: 54,
-              width: double.infinity,
-              child: FilledButton.icon(
-                // The remote starts on the main action.
-                autofocus: DeviceCapabilities.isTv,
-                style: FilledButton.styleFrom(
-                  backgroundColor: GlassTheme.primary,
-                  foregroundColor: GlassTheme.background,
-                ),
-                onPressed: action.onPressed,
-                icon: Icon(action.icon, fill: 1),
-                label: Text(
-                  action.label,
-                  style: const TextStyle(fontWeight: FontWeight.w800),
-                ),
+      SettingsSwitchTile(
+        icon: Symbols.hourglass_top_rounded,
+        title: 'Wait for everyone',
+        description: 'Start once everyone’s player is ready',
+        value: room.settings.waitForAll,
+        onChanged: (value) => _party.updateSettings(waitForAll: value),
+      ),
+    ],
+  );
+
+  /// Phone and TV: one column, and the actions at the foot of the screen;
+  /// ending the party for everyone sits apart, at the end of the page.
+  Widget _phoneAndTv(BuildContext context) {
+    final room = _party.room;
+    return SettingsScaffold(
+      title: 'Watch party',
+      subtitle: _subtitle,
+      footer: null,
+      bottomBar: _bottomBar(),
+      children: room == null
+          ? const [_Connecting()]
+          : [
+              ?_banner(room),
+              SettingsSection(
+                children: [
+                  PartyCodeBlock(code: room.code, title: room.content.title),
+                ],
               ),
-            ),
-            const SizedBox(height: AppSpace.sm),
-          ],
-          Row(
-            children: [
-              Expanded(
-                child: SizedBox(
-                  height: 52,
-                  child: OutlinedButton.icon(
-                    onPressed: _leave,
-                    icon: const Icon(Symbols.logout_rounded),
-                    label: const Text('Leave'),
+              SettingsSection(
+                label: 'WATCHING',
+                children: [PartyContentCard(content: room.content)],
+              ),
+              _people(room),
+              if (_party.isHost) ...[
+                _roomSettings(room),
+                SettingsSection(children: [_EndPartyTile(onTap: _end)]),
+              ],
+            ],
+    );
+  }
+
+  /// Windows: the code and the title on the left, the people and the room
+  /// on the right, and the actions in one row under them.
+  Widget _desktop(BuildContext context) {
+    final room = _party.room;
+    return PartyDesktopFrame(
+      title: 'Watch party',
+      subtitle: _subtitle,
+      maxWidth: 1120,
+      child: room == null
+          ? const _Connecting()
+          : Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: 380,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      PartyDesktopCard(
+                        padding: const EdgeInsets.all(AppSpace.md),
+                        child: PartyCodeBlock(
+                          code: room.code,
+                          title: room.content.title,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpace.md),
+                      PartyDesktopCard(
+                        padding: const EdgeInsets.all(AppSpace.xs),
+                        child: PartyContentCard(content: room.content),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-              if (_party.isHost) ...[
-                const SizedBox(width: AppSpace.sm),
+                const SizedBox(width: AppSpace.xl),
                 Expanded(
-                  child: SizedBox(
-                    height: 52,
-                    child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: GlassTheme.danger,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      ?_banner(room),
+                      // The settings sections without their page margins.
+                      MediaQuery.removePadding(
+                        context: context,
+                        removeLeft: true,
+                        removeRight: true,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _people(room),
+                            if (_party.isHost) _roomSettings(room),
+                          ],
+                        ),
                       ),
-                      onPressed: _end,
-                      icon: const Icon(Symbols.cancel_rounded),
-                      label: const Text('End party'),
-                    ),
+                      const SizedBox(height: AppSpace.md),
+                      Row(
+                        children: [
+                          if (_party.isHost)
+                            TextButton.icon(
+                              style: TextButton.styleFrom(
+                                foregroundColor: GlassTheme.danger,
+                              ),
+                              onPressed: _end,
+                              icon: const Icon(Symbols.cancel_rounded),
+                              label: const Text('End party'),
+                            ),
+                          const Spacer(),
+                          SizedBox(
+                            height: 52,
+                            child: OutlinedButton.icon(
+                              onPressed: _leave,
+                              icon: const Icon(Symbols.logout_rounded),
+                              label: const Text('Leave'),
+                            ),
+                          ),
+                          if (_primaryAction() case final action?) ...[
+                            const SizedBox(width: AppSpace.sm),
+                            PartyDesktopButton(
+                              label: action.label,
+                              icon: action.icon,
+                              onPressed: action.onPressed,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
                   ),
                 ),
               ],
+            ),
+    );
+  }
+
+  /// Leave beside the main action; Leave alone when there is none.
+  Widget _bottomBar() {
+    final action = _primaryAction();
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpace.lg,
+          AppSpace.sm,
+          AppSpace.lg,
+          AppSpace.md,
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: SizedBox(
+                height: 54,
+                child: OutlinedButton.icon(
+                  onPressed: _leave,
+                  icon: const Icon(Symbols.logout_rounded),
+                  label: const Text('Leave'),
+                ),
+              ),
+            ),
+            if (action != null) ...[
+              const SizedBox(width: AppSpace.sm),
+              Expanded(
+                flex: 2,
+                child: SizedBox(
+                  height: 54,
+                  child: FilledButton.icon(
+                    // The remote starts on the main action.
+                    autofocus: DeviceCapabilities.isTv,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: GlassTheme.primary,
+                      foregroundColor: GlassTheme.background,
+                    ),
+                    onPressed: action.onPressed,
+                    icon: Icon(action.icon, fill: 1),
+                    label: Text(
+                      action.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                ),
+              ),
             ],
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 
   /// The host starts the party; once it is on, anyone back in the room can
   /// return to the player.
@@ -341,7 +448,6 @@ class _ParticipantTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final name = you ? '${person.name} (you)' : person.name;
-    final status = participantStatusLabel(person.status);
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpace.md,
@@ -372,18 +478,8 @@ class _ParticipantTile extends StatelessWidget {
                       ],
                     ],
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    status,
-                    style: TextStyle(
-                      color:
-                          person.status == ParticipantStatus.unavailable ||
-                              person.status == ParticipantStatus.error
-                          ? GlassTheme.warning
-                          : GlassTheme.muted,
-                      fontSize: AppTextSize.caption,
-                    ),
-                  ),
+                  const SizedBox(height: 4),
+                  PartyStatusLine(status: person.status),
                 ],
               ),
             ),
@@ -406,6 +502,62 @@ class _ParticipantTile extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Ends the party for everyone: in the danger colour, apart from the main
+/// actions so it is not pressed by mistake.
+class _EndPartyTile extends StatelessWidget {
+  const _EndPartyTile({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+    onTap: onTap,
+    child: Padding(
+      padding: const EdgeInsets.all(AppSpace.md),
+      child: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: GlassTheme.danger.withValues(alpha: .14),
+              borderRadius: BorderRadius.circular(AppRadius.md),
+            ),
+            child: const Icon(
+              Symbols.cancel_rounded,
+              color: GlassTheme.danger,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: AppSpace.md),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'End party',
+                  style: TextStyle(
+                    color: GlassTheme.danger,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  'Everyone leaves and the code stops working',
+                  style: TextStyle(
+                    color: GlassTheme.muted,
+                    fontSize: AppTextSize.label,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 class _HostChip extends StatelessWidget {

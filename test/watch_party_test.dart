@@ -891,7 +891,8 @@ void main() {
       expect(find.text('Host (you)'), findsOneWidget);
       expect(find.text('Can’t play this title'), findsOneWidget);
       expect(find.text('HOST'), findsOneWidget);
-      expect(find.text('End party'), findsOneWidget);
+      // Leave and Start share the bar; the leave button is always there.
+      expect(find.widgetWithText(OutlinedButton, 'Leave'), findsOneWidget);
 
       await tester.tap(find.byTooltip('Options for Guest'));
       await tester.pumpAndSettle();
@@ -904,9 +905,46 @@ void main() {
       await tester.tap(find.text('Wait for everyone'));
       await tester.pump();
       expect(socket.ofType('settings').single['waitForAll'], isFalse);
+
+      // Ending the party for everyone sits apart, at the end of the page,
+      // and asks first.
+      await tester.scrollUntilVisible(
+        find.text('End party'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(find.text('End party'));
+      await tester.pumpAndSettle();
+      expect(find.text('End the party?'), findsOneWidget);
+      await tester.tap(find.text('Stay'));
+      await tester.pumpAndSettle();
+      expect(socket.ofType('end'), isEmpty);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
     });
+
+    testWidgets(
+      'Windows: the waiting room keeps its actions in one row, not across '
+      'the window',
+      (tester) async {
+        tester.view.physicalSize = const Size(1920, 1080);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        final (party, socket) = await connected(tester);
+        await tester.pumpWidget(app(WaitingRoomScreen(party: party)));
+        socket.receive(_welcome('host-pid'));
+        await deliver(tester);
+        final start = find.widgetWithText(FilledButton, 'Start watching');
+        expect(tester.getSize(start).width, lessThan(400));
+        final leave = find.widgetWithText(OutlinedButton, 'Leave');
+        expect(tester.getCenter(leave).dy, tester.getCenter(start).dy);
+        expect(find.text('End party'), findsOneWidget);
+        expect(find.text('1234 5678'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox());
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.windows),
+    );
 
     testWidgets('starting opens everyone\'s player once, and says when no '
         'source was found', (tester) async {

@@ -243,7 +243,6 @@ class _CreatePartyScreenState extends State<CreatePartyScreen> {
   Widget _phoneAndTv(BuildContext context) => SettingsScaffold(
     title: 'Watch together',
     subtitle: 'Start a party, share the code, and watch in sync.',
-    icon: Symbols.groups_rounded,
     footer: null,
     bottomBar: SafeArea(
       top: false,
@@ -299,10 +298,11 @@ class _CreatePartyScreenState extends State<CreatePartyScreen> {
         label: 'WATCHING',
         children: [PartyContentCard(content: widget.content)],
       ),
-      _roomSection(
-        description:
-            'Everyone plays the title from their own sources, so each '
-            'person needs a source for it.',
+      _roomSection(),
+      // What happens next, for a first party; each person needs a source.
+      const SettingsSection(
+        label: 'HOW IT WORKS',
+        children: [PartyHowItWorks(vertical: true)],
       ),
     ],
   );
