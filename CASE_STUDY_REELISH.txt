@@ -1,13 +1,13 @@
 ﻿REELISH
 IN-DEPTH PRODUCT CASE STUDY
 
-Project type: Cross-platform media discovery and playback app
-Platform: Flutter application; one Android APK for phones, tablets, Android TV, and Google TV
+Project type: Cross-platform media discovery, playback and co-watching app with its own API
+Platforms: Flutter application; one Android APK for phones, tablets, Android TV, and Google TV, and a Windows 10/11 desktop app; a Cloudflare Worker API
 Project naming: The repository is named Onfeed; the application title and README identify the product as Reelish. This case study uses Reelish (Onfeed) to make that naming clear.
 
 OVERVIEW
 
-Reelish brings entertainment discovery, personal watch tracking, and stream playback into one dark, cinematic interface. People can browse and search a TMDB-powered catalog, explore title and episode details, configure compatible provider add-ons, find available streams, and continue playback with subtitles and personalized player settings. The same app runs on phones and on Android TV and Google TV, where it switches to an interface built for a remote control. The product is a catalog and playback client: catalog data, add-ons, streams, subtitles, and artwork come from external services and providers.
+Reelish brings entertainment discovery, personal watch tracking, stream playback and watching together into one dark, cinematic interface. People sign in with Trakt, browse and search a TMDB-powered catalog, explore title and episode details, configure compatible provider add-ons, find available streams, and continue playback with subtitles and personalized player settings. They can also start a Watch Party, share a code, and watch the same movie or episode in sync with friends on their own devices. The same app runs on phones, on Android TV and Google TV with an interface built for a remote, and on Windows with a desktop interface for mouse, keyboard and gamepad. The product is a catalog and playback client backed by a small API it owns: catalog data, add-ons, streams, subtitles, and artwork come from external services and providers.
 
 THE PROBLEM
 
@@ -15,86 +15,112 @@ The viewing journey is fragmented. Someone may discover a movie in one catalog, 
 
 There is also a product and engineering challenge behind the interface: source availability depends on independently maintained providers and returned URLs. Responses may be incomplete, duplicated, malformed, slow, or unsuitable for playback. A client must coordinate those providers while keeping the user informed, protect itself from untrusted network destinations, and still present a coherent player experience across platforms.
 
-The living room adds a different constraint. Movies are usually watched on a television, but a phone interface does not carry over: a TV has no touchscreen, the remote has a D-pad, and the screen is read from across the room. Every control has to be reachable without touch, focus has to be visible at all times, and the low-power hardware in many streaming sticks cannot afford the blur and glass effects the phone interface uses.
+The living room and the desk add different constraints. A TV has no touchscreen, the remote has a D-pad, the screen is read from across the room, and many streaming sticks cannot afford the phone interface's blur and glass effects. A desktop window is the opposite: it is resized from a laptop to a 4K monitor, driven by a mouse and keyboard, and a phone layout stretched across it wastes most of the screen.
+
+Two later problems came from growth. A catalog key shipped inside every build can be copied and abused, and the library lived on one device only. And watching "together" usually means someone counting down over a call: there was no way to share a viewing session when every person streams from their own sources.
 
 THE SOLUTION
 
-Reelish combines discovery and playback in a single app, while treating catalog metadata and stream providers as separate services.
+Reelish combines discovery and playback in a single app, treats catalog metadata and stream providers as separate services, and adds a small API for what a device should not do on its own.
 
-• Discovery: A home screen brings together trending and popular titles, search, recommendations, new releases, and a featured spotlight. Quality and recency rules rank spotlight and release collections rather than relying on one undifferentiated feed.
+• Discovery: A home screen brings together trending and popular titles, search, recommendations, new releases, and a featured Spotlight. Quality and recency rules rank Spotlight and release collections rather than relying on one undifferentiated feed.
 • Exploration: Title details include metadata and artwork; series pages load seasons and episodes so users can move from a show to a specific episode.
 • Extensible source discovery: Users can install Nuvio-compatible provider manifests, enable or disable individual providers, and discover sources for a title. Stream normalization and validation turn provider results into a consistent set of playable choices.
 • Playback: A custom player provides playback controls, stream selection, episode navigation, subtitle selection, and configurable viewing preferences. Supported text subtitles include WebVTT and SRT. Playback settings cover gestures, playback speed, next-episode behavior, language preferences, and subtitle appearance.
 • Living-room experience: On Android TV and Google TV, the same APK shows a remote-first interface: a side navigation rail, a hero that previews the focused title, poster rows that remember focus, TV details pages with season and episode rows, and search through the TV keyboard. The player responds to the remote's media keys and D-pad, and Back while watching first reveals the controls instead of ending playback.
-• Continuity: A local library keeps favorites and watch history, including saved playback progress. The app can retain a recently used stream for optional reuse.
-• Resilience and trust boundaries: TMDB requests use response caching, in-flight request deduplication, bounded concurrency, and retry handling. Provider code runs in a bounded QuickJS environment. Network requests validate public destinations and redirects, while provider-returned sources are normalized and checked before playback.
+• Desktop experience: On Windows, a desktop interface with a collapsible glass sidebar, keyboard shortcuts, gamepad support, fullscreen playback through libmpv, a per-user installer, and verified in-app updates.
+• Accounts without passwords: Trakt is the only identity. Phones and Windows sign in through Trakt's page in the browser; a TV shows a short code to enter on another device.
+• An API the app owns: A Cloudflare Worker issues Reelish sessions, keeps Trakt tokens encrypted on the server, and reaches TMDB through an allowlisted, cached gateway, so no catalog key ships in any build.
+• Continuity across devices: The library keeps favorites, history and saved progress on the device, and My list can sync with the Trakt watchlist across a person's devices. New-episode alerts cover series on My list, series in progress, and popular series.
+• Personal touches: A display name and avatar (illustrated presets, or a photo that never leaves the device), an accent color that the app logo follows, and on Android a choice of launcher icon colors.
+• Watch Party: Start a party from a title, share an 8-digit code, and up to five people watch in sync. Each person's player finds a source with their own providers; the host's play, pause, seek and episode changes are followed, and players that drift apart catch up on their own.
+• Resilience and trust boundaries: Catalog requests use response caching, in-flight request deduplication, bounded concurrency, and retry handling. Provider code runs in a bounded QuickJS environment. Network requests validate public destinations and redirects, while provider-returned sources are normalized and checked before playback.
 
 THE EXPERIENCE FLOW
 
-1. Browse a curated home feed or search the catalog.
+1. Sign in with Trakt, then browse a curated home feed or search the catalog.
 2. Open a title to review its synopsis and details; for a series, select a season and episode.
 3. Ask the enabled providers for sources and choose an available stream, or use configured automatic selection.
 4. Watch with the player controls and subtitle options that fit the viewing setup.
-5. Return later through the library and resume from saved progress.
+5. Return later through the library, on the same or another signed-in device, and resume.
 
-On a TV, the same flow runs entirely on the remote: move through the rail and poster rows with the D-pad, press Select to open a title and play it, and use the remote's media keys during playback.
+To watch together, the host chooses Watch together on a title, shares the code from the waiting room, and starts once friends have joined; everyone's player opens on the same title and follows the host.
+
+On a TV, the same flow runs entirely on the remote: move through the rail and poster rows with the D-pad, press Select to open a title and play it, and use the remote's media keys during playback. On Windows it runs with the mouse, the keyboard, or a game controller.
 
 TECH STACK
 
 • Flutter and Dart for the cross-platform application and interface.
-• Material widgets with a custom dark glass visual theme, Montserrat typography, and Material Symbols icons.
-• TMDB API for catalog, search, metadata, recommendation, season, and episode data; the http package handles API requests.
+• Material widgets with a custom dark glass visual theme, user-selectable accent palettes, design tokens for spacing, type and motion, Montserrat typography, and Material Symbols icons.
+• Cloudflare Workers (TypeScript) for the Reelish API, D1 (SQLite) for users, sessions and encrypted Trakt tokens, Workers rate limiting, and the Cache API for the TMDB gateway; tested with Vitest inside the Workers runtime.
+• Cloudflare Durable Objects (SQLite-backed, the kind available on the Workers Free plan) for Watch Party rooms, with the WebSocket Hibernation API so an idle room costs no compute time.
+• Trakt OAuth (device code, and authorization code with PKCE through the API's own HTTPS callback) and the Trakt watchlist API.
+• TMDB API for catalog, search, metadata, recommendation, season, and episode data, reached only through the API's gateway.
 • Stremio-compatible add-on support documented by the project, plus Nuvio-compatible provider manifests and a locally bundled Cheerio JavaScript bundle for provider compatibility.
 • flutter_js with a bundled QuickJS runtime to execute provider scripts in an isolated, resource-bounded environment.
-• video_player as the app-facing playback API, with Android video_player/Media3 registration and a local MediaKit adapter available in the project; other platforms use the registered Flutter video player implementation. The player engine is abstracted behind a Dart interface.
-• shared_preferences for on-device library, provider, and playback preferences; path_provider for application storage and torrent cache paths.
-• http, url_launcher, package_info_plus, and platform-specific Flutter packages for networking, external links, app version information, and playback support.
-• Android TV support through a Kotlin platform channel that reports the device type (UiModeManager television mode or the leanback feature), a leanback launcher entry and TV banner, and Flutter's focus system (focus scopes, traversal policies, and key event handling) for remote navigation. No new dependencies were added.
+• video_player as the app-facing playback API, with Media3 on Android and libmpv (media_kit) on Android and Windows behind a Dart engine interface; a Go torrent streamer on Android.
+• shared_preferences for on-device library, provider, and playback preferences; flutter_secure_storage (Keystore, DPAPI) for sessions; flutter_local_notifications and WorkManager for new-episode alerts.
+• Android TV support through a Kotlin platform channel that reports the device type, a leanback launcher entry and TV banner, and Flutter's focus system for remote navigation. Launcher icon colors use Android activity aliases.
+• A Windows runner in C++ for the window, fullscreen, gamepad input and the update installer's Authenticode and version checks; an Inno Setup installer; release builds by GitHub Actions from version tags, obfuscated, with SHA-256 checksums.
 
 MY ROLE
 
-I worked as the end-to-end Flutter app developer, shaping the product flow and implementing the application across its interface, data services, provider integration, local persistence, and playback experience. My responsibilities included:
+I worked as the end-to-end developer, shaping the product flow and implementing the application and its API. My responsibilities included:
 
-• Structuring the application into screens, models, services, reusable widgets, and a shared visual theme.
+• Structuring the application into screens, models, services, view models, reusable widgets, and a shared visual theme.
 • Building catalog browsing, search, details, episode selection, the library, and settings flows.
 • Integrating TMDB and implementing caching, request coordination, ranking, and error handling for discovery data.
 • Designing the provider installation and execution flow, including script isolation, scheduling, stream normalization, and source validation.
 • Connecting the custom player to platform playback engines and implementing playback, subtitles, resume progress, and user preferences.
 • Adding network destination checks and request bounds around external metadata, provider, and subtitle traffic.
-• Extending the app to Android TV and Google TV: device detection, the TV navigation shell and pages, remote control of the player, remote-safe dialogs and text entry, and validation on an Android TV emulator.
+• Extending the app to Android TV and Google TV, and to Windows with its own desktop interface, installer and updater.
+• Designing and building the Reelish API: Trakt sign-in, sessions with rotating refresh tokens, encrypted token custody, the TMDB gateway, watchlist sync, episode checks, and the Watch Party rooms, with staging and production environments.
+• Building Watch Party end to end: the room protocol, the sync engine in the player, and the create, join and waiting-room screens on phone, TV and Windows.
 
-The codebase supports describing the role as hands-on product engineering across the client. It does not establish team size, project dates, research activities, or measurable business outcomes, so those are intentionally not claimed here.
+The codebase supports describing the role as hands-on product engineering across the client and its API. It does not establish team size, project dates, research activities, or measurable business outcomes, so those are intentionally not claimed here.
 
 KEY DESIGN AND ENGINEERING DECISIONS
 
-Keep catalog and playback responsibilities separate. TMDB answers “what should I watch?” while independently configured providers answer “what sources are available?” This lets catalog discovery remain useful even as provider availability changes.
+Keep catalog and playback responsibilities separate. TMDB answers "what should I watch?" while independently configured providers answer "what sources are available?" This lets catalog discovery remain useful even as provider availability changes.
 
 Normalize external results before they reach the player. A consistent stream model and validation path reduce UI complexity and make provider-specific response formats easier to handle.
 
 Bound untrusted provider work. Provider scripts run without direct filesystem or credential access, with limits on execution time, memory, concurrent runtimes, and HTTP payloads. Destinations and redirects are checked before Dart HTTP requests are sent.
 
-Make repeat use local and immediate. Favorites, history, progress, and preferences are stored on device, so the app has a personal library without requiring an account backend.
-
-Add TV as a second interface, not a second app. Phones and TVs share one codebase and one APK, and the TV pages reuse the same catalog controllers, storage, provider runtime, play flow, and playback engines; only the presentation differs. The device is identified by what Android reports about it rather than by screen size, so a large tablet keeps the touch interface and a small TV still gets the remote one. Everything TV-specific sits behind that single check, which keeps the phone experience unchanged.
+Add platforms as interfaces, not apps. Phones, TVs and Windows share one codebase, and the TV and desktop pages reuse the same catalog controllers, storage, provider runtime, play flow, and playback engines; only the presentation differs. A TV is identified by what Android reports about it rather than by screen size, so a large tablet keeps the touch interface and a small TV still gets the remote one.
 
 Design focus as the cursor. With a remote, focus is the only pointer, so it is always drawn, hidden controls are removed from focus rather than just faded out, rows keep the focused poster in a fixed position and remember it, and dialogs open with the safe action selected so Select never confirms something by accident.
 
-Test on a real TV image, not only in widget tests. Running the app on an Android TV emulator with the D-pad alone found problems the automated tests had missed: focus that disappeared onto disabled controls, legal documents that could not be scrolled to the end with a remote (which would have blocked first launch on a TV), a focus highlight hidden behind a card, dialogs that opened with nothing focused, and a focus handler that overrode a field's own autofocus. Each was fixed and given a regression test.
+Move secrets off the device, not just out of the repository. A catalog key inside an app can be extracted from any build. The TMDB credential now lives only in the API's secrets, and the gateway forwards an allowlist of requests that mirrors what the app uses, with caching and rate limits per user and per address.
+
+Use an existing identity instead of inventing one. Trakt already holds people's watch history, so it is the only sign-in. Browser sign-in returns to the API's own HTTPS callback rather than a custom URL scheme, so the authorization code never reaches the device, and PKCE ties the exchange to the request that started it.
+
+Design sessions for theft and for background work. Access tokens are short-lived and refresh tokens rotate; reusing an old refresh token revokes the session. Because a background check cannot safely rotate a token, episode alerts use a separate, narrow per-session token that only opens the episode-check route.
+
+Make the server the authority for a shared room, and stay inside the free tier. Each Watch Party room is one Durable Object holding the playback timeline, the participants, host authority and expiry. Clients send play, pause and seek; the room stamps and broadcasts them with an increasing sequence number, so every device applies the same order. Storage is written only when the room's state changes, host heartbeats stay in memory, keep-alives are protocol pings that do not wake the room, and idle rooms hibernate, which by our estimate keeps a two-hour party for five people to about 40 to 60 billed requests.
+
+Synchronize timelines, not video. Each person streams from their own providers, so a party shares only the title, a position and the moment it was true. Each device estimates the server clock, works out where the room's timeline is now, ignores small gaps, plays slightly faster or slower to close medium ones, and seeks only when far apart. Commands from the room go through a separate path in the player from the viewer's own taps, so applying a remote pause is never sent back as a new pause.
+
+Test on real devices, not only in widget tests. Running the app on an Android TV emulator with the D-pad alone found problems the automated tests had missed, from focus that disappeared onto disabled controls to legal documents that could not be scrolled to the end with a remote. Release pipelines check that the shipped binary is obfuscated; one release failed that check because a background entry point kept its library path, which was fixed before shipping. Live checks against the staging API caught a sign-in failure under Trakt rate limits and a logo that did not follow the accent color, each fixed and covered by a test.
 
 OUTCOME
 
-The result is a feature-complete client architecture that connects browsing, provider-based source discovery, and playback in one application. Its strongest product contribution is the joined-up viewing flow; its strongest technical contribution is the boundary it creates between a polished client experience and variable external provider behavior.
+The result is a client architecture that connects browsing, provider-based source discovery, and playback in one application, on a phone, a TV or a desktop, and a small API that removes the catalog key from the client, adds accounts and sync, and makes watching together possible without relaying any video.
 
-The same client now extends to the living room: Android TV and Google TV support shipped in version 1.10.0 as part of the single release APK, without changing the phone interface.
+Android TV and Google TV support shipped in version 1.10.0 as part of the single release APK. Trakt accounts, the Reelish API, profiles, watchlist sync, new-episode alerts and launcher icon colors shipped in version 1.22.1, and Watch Party shipped in 1.23.0 on Android, Android TV and Windows.
 
-The repository contains automated Flutter tests for areas including discovery ranking, provider fetching, stream discovery, playback settings and pipeline, app transitions, network destination validation, and TV behavior (device detection, focus navigation and memory, the rail and Back order, D-pad scrubbing, remote text entry, and the TV home screen). No performance, adoption, or user research results are stated here because those figures are not established by the project files.
+The repository contains automated tests for areas including discovery ranking, provider fetching, stream discovery, playback settings and pipeline, network destination validation, TV behavior, Windows layouts, account and session handling, watchlist sync, episode alerts, and Watch Party (the room's rules and limits with real WebSockets in the Workers runtime, the clock and drift arithmetic, the sync engine with a simulated player, and the party screens). No performance, adoption, or user research results are stated here because those figures are not established by the project files.
 
 SCOPE AND LIMITATIONS
 
-Reelish does not host or supply a media library. Availability and quality depend on external catalogs, configured providers, hosts, and networks. The README states that direct HTTP(S) stream URLs supported by the platform player can be played; on Android, compatible torrent sources returned by providers can also be played through a built-in torrent streamer, which other platforms do not offer. Provider repositories are user-configured executable code and are not cryptographically signed by the current repository format. Native playback and torrent networking have limits that are described in docs/streaming_security.md, so the client-side network checks do not mean every native media request is pinned or inspected.
+Reelish does not host or supply a media library. Availability and quality depend on external catalogs, configured providers, hosts, and networks. Direct HTTP(S) stream URLs supported by the platform player can be played; on Android, compatible torrent sources returned by providers can also be played through a built-in torrent streamer, which other platforms do not offer. Provider repositories are user-configured executable code and are not cryptographically signed by the current repository format. Native playback and torrent networking have limits that are described in docs/streaming_security.md, so the client-side network checks do not mean every native media request is pinned or inspected.
 
-TV support was validated with widget tests and on an Android TV emulator using the D-pad only. Remote control of the player has not yet been tested on a TV with a provider installed, frame timing has not been measured on low-end TV hardware, and Google Play's TV quality review has not been pursued, since releases are distributed through GitHub. Known TV limitations are listed in docs/android_tv.md.
+The catalog now requires a signed-in Trakt account and a reachable Reelish API. The API runs within Cloudflare's free plan; if a daily limit is reached, Watch Party reports that it is unavailable while normal watching continues, and the catalog gateway shares the same daily request budget.
+
+Watch Party synchronizes timelines rather than pictures: two releases of the same title (an extra studio intro, a different cut) can be a few seconds apart even when the timelines match, and live or unseekable streams cannot be synchronized. Playback stays at normal speed during a party. Watch Party was validated with automated tests and live on a single device against the staging API; a full session with two people on separate devices, network interruptions during playback, and remote control on TV hardware have not yet been tested.
+
+TV support was validated with widget tests and on an Android TV emulator using the D-pad only. Frame timing has not been measured on low-end TV hardware, and Google Play's TV quality review has not been pursued, since releases are distributed through GitHub. The Windows installer is not yet code-signed. Known TV limitations are listed in docs/android_tv.md.
 
 PORTFOLIO SUMMARY
 
-I built Reelish (Onfeed), a Flutter streaming catalog client that connects TMDB discovery with configurable provider-based stream lookup and a customizable video player, on phones and on Android TV and Google TV from a single APK. I focused on making the end-to-end viewing journey feel coherent, on a touchscreen or with a remote, while building the service boundaries, local library, playback controls, and safeguards needed to handle variable third-party data.
+I built Reelish (Onfeed), a Flutter streaming catalog client that connects TMDB discovery with configurable provider-based stream lookup and a customizable video player on phones, Android TV and Google TV, and Windows, together with a Cloudflare Workers API for Trakt sign-in, a server-side catalog gateway, watchlist sync, and Watch Party rooms that keep friends in sync without relaying any video. I focused on making the end-to-end viewing journey feel coherent on a touchscreen, with a remote, or at a desk, while building the service boundaries, account security, playback controls, and safeguards needed to handle variable third-party data.
