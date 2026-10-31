@@ -85,9 +85,9 @@ graph LR
   widgets["widgets"] -->|1| account["account"]
   widgets["widgets"] -->|1| desktop["desktop"]
   widgets["widgets"] -->|3| models["models"]
-  widgets["widgets"] -->|1| platform["platform"]
+  widgets["widgets"] -->|2| platform["platform"]
   widgets["widgets"] -->|4| services["services"]
-  widgets["widgets"] -->|10| theme["theme"]
+  widgets["widgets"] -->|11| theme["theme"]
   widgets["widgets"] -->|1| widgets_tv["widgets/tv"]
   widgets_player["widgets/player"] -->|1| account["account"]
   widgets_player["widgets/player"] -->|17| models["models"]
@@ -128,7 +128,7 @@ graph LR
 | `theme` | nothing outside itself |
 | `viewmodels` | `models` (11), `services` (13) |
 | `watch_party` | `account` (4), `models` (1) |
-| `widgets` | `account` (1), `desktop` (1), `models` (3), `platform` (1), `services` (4), `theme` (10), `widgets/tv` (1) |
+| `widgets` | `account` (1), `desktop` (1), `models` (3), `platform` (2), `services` (4), `theme` (11), `widgets/tv` (1) |
 | `widgets/player` | `account` (1), `models` (17), `platform` (7), `services` (15), `theme` (10), `watch_party` (3), `widgets` (3), `widgets/tv` (1) |
 | `widgets/plugin_library` | `models` (4), `platform` (1), `services` (5), `theme` (22), `widgets` (1) |
 | `widgets/settings` | `theme` (6), `widgets` (1), `widgets/tv` (1) |
@@ -140,7 +140,7 @@ The files imported by the most other `lib/` files. A change to one of these reac
 
 | File | Imported by (lib files) | Imported by (tests) |
 |---|---|---|
-| [`lib/src/theme/glass_theme.dart`](../../lib/src/theme/glass_theme.dart) | 70 | 24 |
+| [`lib/src/theme/glass_theme.dart`](../../lib/src/theme/glass_theme.dart) | 71 | 25 |
 | [`lib/src/theme/design_tokens.dart`](../../lib/src/theme/design_tokens.dart) | 34 | 0 |
 | [`lib/src/models/media_item.dart`](../../lib/src/models/media_item.dart) | 31 | 34 |
 | [`lib/src/platform/device_capabilities.dart`](../../lib/src/platform/device_capabilities.dart) | 25 | 9 |

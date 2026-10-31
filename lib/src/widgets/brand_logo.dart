@@ -4,6 +4,9 @@ import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 
+import '../platform/app_icon.dart';
+import '../theme/glass_theme.dart';
+
 /// Reelish's brand images, in one place. Each is an 846 × 846 PNG in
 /// `assets/icons/`; the platform icons, the Android splash and TV banner,
 /// and the Windows icon are generated from them by
@@ -27,6 +30,64 @@ abstract final class BrandAssets {
   static const logoIconBounds = Rect.fromLTRB(.194, .281, .809, .745);
   static const wordLogoBounds = Rect.fromLTRB(.217, .466, .785, .535);
   static const primaryLogoBounds = Rect.fromLTRB(.195, .208, .806, .809);
+}
+
+/// The app icon in the chosen accent colour: the App icon preset of the
+/// same colour (each built-in accent has one; coral is the default icon),
+/// or for a custom colour the white mark on a tile of that colour. Read out
+/// as "Reelish".
+class AccentAppIcon extends StatelessWidget {
+  const AccentAppIcon({super.key, required this.size, this.radius = 13});
+
+  final double size;
+  final double radius;
+
+  /// The icon artwork for [accentId], or null for a custom colour.
+  static String? assetFor(String accentId) {
+    if (accentId == GlassTheme.coral.id) return BrandAssets.appIcon;
+    for (final preset in AppIconPreset.all) {
+      if (preset.id == accentId) return preset.preview;
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = GlassTheme.accent;
+    final asset = assetFor(accent.id);
+    return Semantics(
+      label: 'Reelish',
+      image: true,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(radius),
+        child: SizedBox.square(
+          dimension: size,
+          child: asset != null
+              ? Image.asset(
+                  asset,
+                  fit: BoxFit.cover,
+                  cacheWidth: (size * MediaQuery.devicePixelRatioOf(context))
+                      .ceil(),
+                  excludeFromSemantics: true,
+                )
+              : DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [accent.bright, accent.dark],
+                    ),
+                  ),
+                  child: Center(
+                    child: ExcludeSemantics(
+                      child: ReelishMark(height: size * .42),
+                    ),
+                  ),
+                ),
+        ),
+      ),
+    );
+  }
 }
 
 /// The Reelish wordmark at [height], without its canvas's transparent

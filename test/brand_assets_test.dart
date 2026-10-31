@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:onfeed/src/screens/splash_screen.dart';
+import 'package:onfeed/src/theme/glass_theme.dart';
 import 'package:onfeed/src/widgets/brand_logo.dart';
 
 void main() {
@@ -44,4 +45,46 @@ void main() {
       expect(find.bySemanticsLabel('Reelish'), findsOneWidget);
     });
   }
+
+  group('AccentAppIcon', () {
+    tearDown(() => GlassTheme.setAccent(GlassTheme.coral));
+
+    test('every built-in accent has icon artwork of its colour', () async {
+      expect(AccentAppIcon.assetFor('coral'), BrandAssets.appIcon);
+      for (final accent in GlassTheme.accents) {
+        final asset = AccentAppIcon.assetFor(accent.id);
+        expect(asset, isNotNull, reason: accent.id);
+        // Bundled, so the icon never falls back to a broken image.
+        await rootBundle.load(asset!);
+      }
+      expect(AccentAppIcon.assetFor('custom:123456'), isNull);
+    });
+
+    testWidgets('follows the accent, and draws a tile for a custom colour', (
+      tester,
+    ) async {
+      GlassTheme.setAccent(GlassTheme.teal);
+      await tester.pumpWidget(
+        const MaterialApp(home: Center(child: AccentAppIcon(size: 40))),
+      );
+      final image = tester.widget<Image>(find.byType(Image));
+      expect(
+        (image.image as ResizeImage).imageProvider,
+        isA<AssetImage>().having(
+          (a) => a.assetName,
+          'asset',
+          'assets/images/app_icons/teal.png',
+        ),
+      );
+
+      GlassTheme.setAccent(AccentPalette.custom(const Color(0xFF123456)));
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Center(child: AccentAppIcon(key: ValueKey('c'), size: 40)),
+        ),
+      );
+      expect(find.byType(ReelishMark), findsOneWidget);
+      expect(find.bySemanticsLabel('Reelish'), findsOneWidget);
+    });
+  });
 }
