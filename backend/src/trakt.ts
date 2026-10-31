@@ -8,6 +8,9 @@ import { ApiError } from './http';
 import { audit, log } from './audit';
 
 const timeoutMs = 10_000;
+/** Trakt rate limits in bursts; a short Retry-After is waited out. */
+const maxAttempts = 3;
+const maxRetryWaitMs = 3_000;
 /** Refresh this long before Trakt's expiry. */
 const refreshMarginSeconds = 5 * 60;
 
@@ -40,12 +43,13 @@ export type DevicePoll =
 
 export interface TraktDeps {
   fetch?: typeof fetch;
+  wait?: (ms: number) => Promise<void>;
 }
 
 async function call(
   env: Env,
   path: string,
-  init: { method: 'GET' | 'POST'; body?: unknown; accessToken?: string },
+  init: { method: 'GET' | 'POST'; body?: unknown; accessToken?: string; retryRateLimit?: boolean },
   deps: TraktDeps,
 ): Promise<Response> {
   const headers: Record<string, string> = {
@@ -55,17 +59,35 @@ async function call(
     'trakt-api-key': env.TRAKT_CLIENT_ID,
   };
   if (init.accessToken) headers.Authorization = `Bearer ${init.accessToken}`;
-  try {
-    return await (deps.fetch ?? fetch)(`${env.TRAKT_API_URL}${path}`, {
-      method: init.method,
-      headers,
-      body: init.body === undefined ? undefined : JSON.stringify(init.body),
-      redirect: 'manual',
-      signal: AbortSignal.timeout(timeoutMs),
-    });
-  } catch (error) {
-    log('warn', 'trakt.unreachable', { path, message: String(error) });
-    throw new ApiError(502, 'trakt_unavailable', 'Trakt is not responding.');
+  const wait = deps.wait ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
+  for (let attempt = 1; ; attempt++) {
+    let response: Response;
+    try {
+      response = await (deps.fetch ?? fetch)(`${env.TRAKT_API_URL}${path}`, {
+        method: init.method,
+        headers,
+        body: init.body === undefined ? undefined : JSON.stringify(init.body),
+        redirect: 'manual',
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+    } catch (error) {
+      log('warn', 'trakt.unreachable', { path, message: String(error) });
+      throw new ApiError(502, 'trakt_unavailable', 'Trakt is not responding.');
+    }
+    // A rate-limited request was refused before Trakt acted on it (an
+    // authorization code stays unused), so it is safe to send again.
+    if (response.status !== 429 || init.retryRateLimit === false || attempt >= maxAttempts) {
+      return response;
+    }
+    const retryAfter = Number(response.headers.get('Retry-After') ?? '1');
+    const delay = Math.max(Number.isFinite(retryAfter) ? retryAfter : 1, 1) * 1000;
+    if (delay > maxRetryWaitMs) {
+      log('warn', 'trakt.rate_limited_long', { path, retryAfterMs: delay });
+      return response;
+    }
+    log('info', 'trakt.rate_limited', { path, attempt, retryAfterMs: delay });
+    await response.body?.cancel();
+    await wait(delay);
   }
 }
 
@@ -103,6 +125,8 @@ export async function pollDeviceToken(env: Env, deviceCode: string, deps: TraktD
   const response = await call(env, '/oauth/device/token', {
     method: 'POST',
     body: { code: deviceCode, client_id: env.TRAKT_CLIENT_ID, client_secret: env.TRAKT_CLIENT_SECRET },
+    // Here 429 is Trakt's "slow down" answer to the app's polling.
+    retryRateLimit: false,
   }, deps);
   switch (response.status) {
     case 200:

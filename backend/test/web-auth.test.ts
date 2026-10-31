@@ -21,11 +21,16 @@ const callback = (query: Record<string, string>) =>
 const poll = (pollToken: string) => call('/api/v1/auth/web/poll', { body: { pollToken } });
 
 /** Fakes Trakt's token exchange and account lookup; records exchanges. */
-function fakeTrakt(options: { tokenStatus?: number; uuid?: string } = {}) {
+function fakeTrakt(options: { tokenStatus?: number; uuid?: string; rateLimited?: number; retryAfter?: string } = {}) {
   const exchanges: Record<string, string>[] = [];
+  let limited = options.rateLimited ?? 0;
   const calls = fakeUpstream((url, init) => {
     if (url.pathname === '/oauth/token') {
       exchanges.push(JSON.parse(String(init.body)));
+      if (limited > 0) {
+        limited--;
+        return new Response('', { status: 429, headers: { 'Retry-After': options.retryAfter ?? '1' } });
+      }
       if ((options.tokenStatus ?? 200) !== 200) return new Response('', { status: options.tokenStatus });
       return jsonResponse({
         access_token: 'trakt-web-access',
@@ -126,6 +131,23 @@ describe('Trakt browser sign-in', () => {
     const answer = await poll(started.pollToken);
     expect(answer.status).toBe(403);
     expect(await codeOf(answer)).toBe('sign_in_denied');
+  });
+
+  it('waits out a short Trakt rate limit and finishes the sign-in', async () => {
+    const started = await start();
+    const { exchanges } = fakeTrakt({ rateLimited: 1 });
+    expect((await callback({ code: 'trakt-code', state: started.state })).status).toBe(200);
+    // The same unused code, sent again after Retry-After.
+    expect(exchanges.map((e) => e.code)).toEqual(['trakt-code', 'trakt-code']);
+    expect((await poll(started.pollToken)).status).toBe(200);
+  });
+
+  it('does not wait out a long Trakt rate limit', async () => {
+    const started = await start();
+    const { exchanges } = fakeTrakt({ rateLimited: 1, retryAfter: '60' });
+    expect((await callback({ code: 'trakt-code', state: started.state })).status).toBe(400);
+    expect(exchanges).toHaveLength(1);
+    expect(await codeOf(await poll(started.pollToken))).toBe('sign_in_failed');
   });
 
   it('a rejected code fails the sign-in without a session', async () => {
