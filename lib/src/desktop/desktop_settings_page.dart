@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../account/account_controller.dart';
+import '../navigation/app_transitions.dart';
 import '../screens/account_settings_screen.dart';
 import '../screens/notification_settings_screen.dart';
 import '../screens/app_information_screens.dart';
@@ -9,6 +10,7 @@ import '../screens/credits_screen.dart';
 import '../screens/legal_information_screen.dart';
 import '../screens/playback_settings_screen.dart';
 import '../screens/subtitle_addons_screen.dart';
+import '../screens/watch_party/join_party_screen.dart';
 import '../services/accent_settings_controller.dart';
 import '../services/playback_settings_controller.dart';
 import '../theme/design_tokens.dart';
@@ -178,6 +180,19 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
                                 ? widget.accentSettings.value.label
                                 : null,
                             onTap: () => setState(() => _section = section),
+                          ),
+                        ),
+                      if (label == 'GENERAL')
+                        _RailItem.action(
+                          title: 'Join a watch party',
+                          description:
+                              'Enter a code to watch in sync with friends',
+                          icon: Symbols.groups_rounded,
+                          onTap: () => Navigator.of(context).push(
+                            AppPageRoute<void>(
+                              context: context,
+                              builder: (_) => const JoinPartyScreen(),
+                            ),
                           ),
                         ),
                       if (label == 'ABOUT & INFORMATION')

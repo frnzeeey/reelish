@@ -30,10 +30,12 @@ import '../../services/network_target_policy.dart';
 import '../../services/subtitle_addon_service.dart';
 import '../../services/subtitle_loader.dart';
 import '../../services/torrent_source_preparer.dart';
+import '../../watch_party/party_player_sync.dart';
 import 'audio_track_sheet.dart';
 import 'episode_panel.dart';
 import 'external_cue_clock.dart';
 import 'gesture_touch_layer.dart';
+import 'party_badge.dart';
 import 'paused_overlay.dart';
 import 'player_controls.dart';
 import 'player_lock_overlay.dart';
@@ -140,6 +142,10 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
   VideoPlayerController? _controller;
   StreamSource? _source;
   bool _ready = false, _error = false;
+
+  /// The watch party this title plays in, if any. Null outside a party,
+  /// and then nothing below behaves differently.
+  PartyPlayerSync? _party;
 
   /// Controls visibility. A notifier, so showing or hiding controls rebuilds
   /// only the overlay, never the video surface or the rest of the player.
@@ -398,6 +404,12 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
     }
     _sources = List.of(widget.sources);
     _playbackCoordinator.replaceCandidates(_sources);
+    _party = PartyPlayerSync.forTitle(
+      id: widget.item.id,
+      type: widget.item.type,
+      season: widget.season,
+      episode: widget.episode,
+    )?..attach(_PartyHandle(this));
     _source = widget.source;
     final discovery = widget.discovery;
     if (discovery != null) _listenForSources(discovery);
@@ -902,6 +914,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
           ? 'Could not play $attempted sources. ${failure.userMessage}'
           : failure.userMessage;
     });
+    _party?.playerChanged();
   }
 
   /// Playback stuck buffering for the stall limit: handled like a dropped
@@ -963,6 +976,8 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
   Future<void> _beginHoldSpeed() async {
     final controller = _controller;
     if (!_playback.holdToSpeed || controller == null || !_ready) return;
+    // A party plays at the room's pace.
+    if (_party != null) return;
     if (_speedBeforeHold != null) return;
     _speedBeforeHold = _speed;
     try {
@@ -1023,11 +1038,17 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
   /// The single way this player moves to another episode. The current
   /// position is saved first, so each episode keeps its own progress.
   /// Repeated taps while a switch is running are ignored.
-  Future<void> _playEpisode(EpisodeRef target) async {
+  Future<void> _playEpisode(EpisodeRef target, {bool remote = false}) async {
     final play = widget.onPlayEpisode;
     if (play == null || _switchingEpisode || !mounted) return;
     if (target.season == widget.season && target.episode == widget.episode) {
       return;
+    }
+    // In a party the host moves everyone; a guest follows ([remote]).
+    final party = _party;
+    if (party != null && !remote) {
+      if (!party.allowEpisodeChange()) return;
+      party.localEpisode(target.season, target.episode);
     }
     setState(() => _switchingEpisode = true);
     _nextEpisodeTimer?.cancel();
@@ -1647,13 +1668,21 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
   void _togglePlay() {
     final c = _controller;
     if (c == null || !_ready) return;
+    final party = _party;
+    if (party != null && !party.allowLocal()) {
+      _show();
+      return;
+    }
     final value = c.value;
     if (value.isCompleted && !value.isPlaying) {
       unawaited(c.seekTo(Duration.zero).then((_) => c.play()));
+      party?.localPlay(Duration.zero);
     } else if (value.isPlaying) {
       unawaited(c.pause());
+      party?.localPause(value.position);
     } else {
       unawaited(c.play());
+      party?.localPlay(value.position);
     }
     _show();
   }
@@ -1671,11 +1700,14 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
   void _seekTo(Duration target) {
     final c = _controller;
     if (c == null || !_ready) return;
+    final party = _party;
+    if (party != null && !party.allowLocal()) return;
     final max = c.value.duration;
     final clamped = target < Duration.zero
         ? Duration.zero
         : (max > Duration.zero && target > max ? max : target);
     unawaited(c.seekTo(clamped));
+    party?.localSeek(clamped);
   }
 
   void _seekBy(Duration delta) {
@@ -1689,6 +1721,9 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
   void _doubleTapSeek(bool forward) {
     final c = _controller;
     if (c == null || !_ready) return;
+    // No "+10 s" flash for a seek the party will not allow.
+    final party = _party;
+    if (party != null && !party.allowLocal()) return;
     final now = DateTime.now();
     final last = _seekFlash.value;
     final continuing =
@@ -2005,12 +2040,21 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
     }
     // Apply only what changed: re-selecting the same quality can make the
     // engine switch renditions, and reloading subtitles blanks them.
-    final speedChanged = result.speed != _speed;
+    // A party plays at the room's pace; its speed is not the viewer's.
+    final speed = _party == null ? result.speed : _speed;
+    if (speed != result.speed) {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        const SnackBar(
+          content: Text('Speed stays at 1x while watching together.'),
+        ),
+      );
+    }
+    final speedChanged = speed != _speed;
     final trackChanged = result.videoTrack != _selectedVideoTrack;
     final subtitleChanged = result.subtitle?.key != _subtitle?.key;
     final delayChanged = result.subtitleDelay != _subtitleDelay;
     setState(() {
-      _speed = result.speed;
+      _speed = speed;
       _fit = result.fit;
       _ratio = result.ratio;
       _subtitleDelay = result.subtitleDelay;
@@ -2755,6 +2799,8 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
         unawaited(DesktopWindow.setFullscreen(false));
       }
     }
+    _party?.dispose();
+    _party = null;
     // Detach first: nothing below may be notified after it is disposed.
     _controller?.removeListener(_tick);
     _stallWatchdog?.dispose();
@@ -2892,6 +2938,8 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
     final duration = c.value.duration;
     if (widget.item.type == 'series' &&
         widget.onPlayEpisode != null &&
+        // In a party only the host moves on; guests follow.
+        (_party == null || _party!.isHost) &&
         !_nextEpisodeHandled &&
         _hasNextEpisode &&
         duration > Duration.zero &&
@@ -2920,6 +2968,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
       _save?.cancel();
       _save = Timer(const Duration(milliseconds: 300), _saveProgress);
     }
+    _party?.playerChanged();
   }
 
   bool _canShowPauseScreen(VideoPlayerValue value) =>
@@ -3357,6 +3406,20 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
                       )
                     : null,
               ),
+            // 8. The watch party's code, people and sync, below the top
+            // bar. Only in a party; it never takes taps.
+            if (_party != null)
+              Positioned(
+                top: MediaQuery.paddingOf(context).top + 64,
+                left: 16,
+                right: 16,
+                child: Center(
+                  child: PartyBadge(
+                    sync: _party!,
+                    controlsVisible: _controlsVisible,
+                  ),
+                ),
+              ),
           ],
         ],
       ),
@@ -3392,5 +3455,96 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
       playing: playing,
       ratio: value?.aspectRatio ?? 0,
     );
+  }
+}
+
+/// The player as watch party sync sees it. Its commands act on the engine
+/// directly, never through [_CustomVideoPlayerState._togglePlay] or
+/// [_CustomVideoPlayerState._seekTo], so the room's changes are not sent
+/// back to the room as the viewer's.
+class _PartyHandle implements PartyPlayerHandle {
+  _PartyHandle(this._state);
+
+  final _CustomVideoPlayerState _state;
+
+  VideoPlayerController? get _engine {
+    final c = _state._controller;
+    return _state.mounted && c != null && c.value.isInitialized ? c : null;
+  }
+
+  @override
+  bool get ready => _state._ready && _engine != null;
+
+  @override
+  bool get playing => _engine?.value.isPlaying ?? false;
+
+  @override
+  bool get buffering => _engine?.value.isBuffering ?? false;
+
+  @override
+  bool get failed => _state._error;
+
+  @override
+  Duration get position => _engine?.value.position ?? Duration.zero;
+
+  @override
+  int? get season => _state.widget.season;
+
+  @override
+  int? get episode => _state.widget.episode;
+
+  @override
+  Future<void> remotePlay() async {
+    try {
+      await _engine?.play();
+    } catch (_) {
+      // The next check tries again.
+    }
+  }
+
+  @override
+  Future<void> remotePause() async {
+    try {
+      await _engine?.pause();
+    } catch (_) {}
+  }
+
+  @override
+  Future<void> remoteSeek(Duration position) async {
+    final engine = _engine;
+    if (engine == null) return;
+    final max = engine.value.duration;
+    try {
+      await engine.seekTo(
+        max > Duration.zero && position > max ? max : position,
+      );
+    } catch (_) {}
+  }
+
+  @override
+  Future<void> remoteSpeed(double rate) async {
+    try {
+      await _engine?.setPlaybackSpeed(rate);
+    } catch (_) {
+      // Without speed control drift is corrected by seeking instead.
+    }
+  }
+
+  @override
+  void remoteEpisode(int season, int episode) => unawaited(
+    _state._playEpisode(
+      EpisodeRef(season: season, episode: episode),
+      remote: true,
+    ),
+  );
+
+  @override
+  void notice(String message) {
+    if (!_state.mounted) return;
+    ScaffoldMessenger.maybeOf(_state.context)
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(content: Text(message), duration: const Duration(seconds: 2)),
+      );
   }
 }

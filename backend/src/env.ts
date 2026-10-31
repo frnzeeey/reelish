@@ -1,5 +1,7 @@
 // Bindings, variables and secrets the Worker runs with.
 
+import type { WatchPartyRoom } from './party-room';
+
 export interface Env {
   DB: D1Database;
   AUTH_LIMITER: RateLimit;
@@ -7,6 +9,10 @@ export interface Env {
   TMDB_IP_LIMITER: RateLimit;
   /** Trakt sync calls per user. */
   SYNC_LIMITER: RateLimit;
+  /** Watch party creates, code lookups and joins, per user and per IP. */
+  PARTY_LIMITER: RateLimit;
+  /** One watch party room per code (SQLite-backed Durable Objects). */
+  PARTY_ROOMS: DurableObjectNamespace<WatchPartyRoom>;
 
   ENVIRONMENT: string;
   TRAKT_API_URL: string;
@@ -19,6 +25,8 @@ export interface Env {
    * sign-in off; the device code still works.
    */
   PUBLIC_URL?: string;
+  /** Most participants a watch party may allow (2–20; default 5). */
+  PARTY_MAX_CAPACITY?: string;
 
   // Secrets (wrangler secret put / .dev.vars).
   /** TMDB API Read Access Token (v4 bearer), sent only to TMDB. */

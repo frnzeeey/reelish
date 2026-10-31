@@ -10,7 +10,9 @@ import '../../services/tmdb_service.dart';
 import '../../theme/design_tokens.dart';
 import '../../theme/glass_theme.dart';
 import '../../viewmodels/details_view_model.dart';
+import '../../watch_party/party_models.dart';
 import '../../widgets/tv/tv_focus.dart';
+import '../watch_party/party_widgets.dart';
 import 'tv_browse.dart' show TvMetaLine, TvRating;
 
 /// A movie or series on TV: the backdrop fills the screen behind the title,
@@ -27,11 +29,17 @@ class TvMediaDetailsScreen extends StatefulWidget {
     required this.onPlayEpisode,
     this.isFavorite = false,
     this.onToggleFavorite,
+    this.onWatchTogether,
   });
 
   final MediaItem item;
   final TmdbService tmdb;
   final ValueChanged<BuildContext> onPlay;
+
+  /// Starts a watch party for the movie or a chosen episode; without it the
+  /// page offers no Watch together button.
+  final void Function(BuildContext context, PartyContent content)?
+  onWatchTogether;
   final void Function(BuildContext context, int season, int episode)
   onPlayEpisode;
   final bool isFavorite;
@@ -306,6 +314,16 @@ class _TvMediaDetailsScreenState extends State<TvMediaDetailsScreen> {
                 ),
                 label: Text(_favorite ? 'On My list' : 'My list'),
               ),
+            if (widget.onWatchTogether != null &&
+                int.tryParse(widget.item.id) != null)
+              OutlinedButton.icon(
+                style: _actionStyle(filled: false),
+                onPressed: _isSeries && _episodes.isEmpty
+                    ? null
+                    : _watchTogether,
+                icon: const Icon(Symbols.groups_rounded),
+                label: const Text('Watch together'),
+              ),
             if (_loading)
               SizedBox.square(
                 dimension: 22,
@@ -324,6 +342,32 @@ class _TvMediaDetailsScreenState extends State<TvMediaDetailsScreen> {
         ),
       ],
     );
+  }
+
+  /// A movie starts its party at once; a series asks which episode of the
+  /// season shown below.
+  Future<void> _watchTogether() async {
+    final start = widget.onWatchTogether;
+    if (start == null) return;
+    if (!_isSeries) {
+      final content = PartyContent.fromItem(widget.item);
+      if (content != null) start(context, content);
+      return;
+    }
+    final season = _selectedSeason;
+    if (season == null) return;
+    final number = await pickPartyEpisode(
+      context,
+      season: season,
+      episodes: _episodes,
+    );
+    if (number == null || !mounted) return;
+    final content = PartyContent.fromItem(
+      widget.item,
+      season: season,
+      episode: number,
+    );
+    if (content != null) start(context, content);
   }
 
   static ButtonStyle _actionStyle({required bool filled}) =>

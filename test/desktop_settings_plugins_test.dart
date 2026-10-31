@@ -154,7 +154,17 @@ void main() {
       // The page's width in a 1024 px window, beside the compact rail.
       await _pump(tester, page(), size: const Size(944, 700));
       final title = tester.getRect(find.text('Open-source licenses'));
-      final icon = tester.getRect(find.byIcon(Symbols.open_in_new_rounded));
+      // The licenses row's icon (other rows open something too).
+      final icon = find
+          .byIcon(Symbols.open_in_new_rounded)
+          .evaluate()
+          .map((element) {
+            final box = element.renderObject! as RenderBox;
+            return box.localToGlobal(Offset.zero) & box.size;
+          })
+          .firstWhere(
+            (rect) => rect.top < title.bottom && rect.bottom > title.top,
+          );
       expect(icon.left - title.right, greaterThanOrEqualTo(8));
     });
 

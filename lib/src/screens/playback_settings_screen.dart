@@ -24,6 +24,7 @@ import 'credits_screen.dart';
 import 'legal_information_screen.dart';
 import 'notification_settings_screen.dart';
 import 'subtitle_addons_screen.dart';
+import 'watch_party/join_party_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({
@@ -113,6 +114,14 @@ class SettingsScreen extends StatelessWidget {
                 ),
               ),
             ),
+          // On TV this is the way into a party; phones also have the
+          // button on Home.
+          SettingsTile(
+            icon: Symbols.groups_rounded,
+            title: 'Join a watch party',
+            description: 'Enter a code to watch in sync with friends',
+            onTap: () => _open(context, (_) => const JoinPartyScreen()),
+          ),
         ],
       ),
       SettingsSection(

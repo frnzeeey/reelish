@@ -10,7 +10,9 @@ import '../models/media_item.dart';
 import '../models/tv_season.dart';
 import '../services/tmdb_service.dart';
 import '../theme/glass_theme.dart';
+import '../screens/watch_party/party_widgets.dart';
 import '../viewmodels/details_view_model.dart';
+import '../watch_party/party_models.dart';
 import '../widgets/poster_image.dart';
 import 'desktop_widgets.dart';
 
@@ -31,7 +33,13 @@ class DesktopDetailsScreen extends StatefulWidget {
     required this.isFavorite,
     required this.onToggleFavorite,
     this.seriesProgress,
+    this.onWatchTogether,
   });
+
+  /// Starts a watch party for the movie or a chosen episode; without it the
+  /// page offers no Watch together button.
+  final void Function(BuildContext context, PartyContent content)?
+  onWatchTogether;
 
   final MediaItem item;
   final TmdbService tmdb;
@@ -156,6 +164,32 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
   }
 
   static bool _aired(TvEpisode episode) => episode.airedBy(DateTime.now());
+
+  /// A movie starts its party at once; a series asks which episode of the
+  /// shown season.
+  Future<void> _watchTogether() async {
+    final start = widget.onWatchTogether;
+    if (start == null) return;
+    if (!_isSeries) {
+      final content = PartyContent.fromItem(_item);
+      if (content != null) start(context, content);
+      return;
+    }
+    final season = _selectedSeason;
+    if (season == null) return;
+    final number = await pickPartyEpisode(
+      context,
+      season: season,
+      episodes: _episodes.where(_aired).toList(),
+    );
+    if (number == null || !mounted) return;
+    final content = PartyContent.fromItem(
+      _item,
+      season: season,
+      episode: number,
+    );
+    if (content != null) start(context, content);
+  }
 
   void _openRelated(MediaItem item) {
     Navigator.of(context).push(
@@ -520,6 +554,35 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
                                   ),
                                 ),
                               ),
+                              if (widget.onWatchTogether != null &&
+                                  int.tryParse(_item.id) != null)
+                                OutlinedButton.icon(
+                                  onPressed: _isSeries && !_episodes.any(_aired)
+                                      ? null
+                                      : _watchTogether,
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: Colors.white,
+                                    backgroundColor: Colors.white.withValues(
+                                      alpha: .1,
+                                    ),
+                                    side: BorderSide(
+                                      color: Colors.white.withValues(
+                                        alpha: .28,
+                                      ),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 22,
+                                      vertical: 18,
+                                    ),
+                                  ),
+                                  icon: const Icon(Symbols.groups_rounded),
+                                  label: const Text(
+                                    'Watch together',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
                             ],
                           ),
                         ],

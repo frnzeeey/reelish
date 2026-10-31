@@ -31,6 +31,8 @@ Reelish app ──HTTPS──▶ Cloudflare Worker  /api/v1
 | TMDB allowlist | `backend/src/tmdb/allowlist.ts` | Mirrors `lib/src/services/tmdb_service.dart` |
 | TMDB gateway | `backend/src/tmdb/gateway.ts` | Cache, dedup, retries, timeout, size cap |
 | Crypto helpers | `backend/src/crypto.ts` | Web Crypto only: HMAC-SHA256, AES-256-GCM, SHA-256 |
+| Watch party routes | `backend/src/watch-party.ts` | Create, preview by code, open the room's WebSocket |
+| Watch party room | `backend/src/party-room.ts` | One SQLite-backed Durable Object per code: playback authority, participants, expiry |
 | Schema | `backend/migrations/0001_init.sql` | |
 | App: account state | `lib/src/account/account_controller.dart` | Restore, refresh, sign-in, sign-out |
 | App: API client | `lib/src/account/account_api.dart` | Typed errors, timeouts |
@@ -120,6 +122,9 @@ its own).
 | `GET /api/v1/sessions` | Bearer | The account's signed-in devices |
 | `DELETE /api/v1/sessions/{id}` | Bearer | End one of the account's own sessions |
 | `GET /api/v1/tmdb/{tmdb path}` | Bearer | Allowlisted TMDB v3 request (below) |
+| `POST /api/v1/party` | Bearer | `{content, settings?, profile?}` → `201 {code, expiresAt, settings}`; ends the caller's previous party |
+| `GET /api/v1/party/{code}` | Bearer | `{code, phase, content, host, participants, capacity}`; 404 `party_not_found` |
+| `GET /api/v1/party/{code}/socket` | Bearer | WebSocket upgrade into the room (below); 409 `party_full`, 403 `party_removed` |
 
 `session` is `{sessionId, accessToken, accessExpiresAt, refreshToken,
 refreshExpiresAt}` (Unix seconds). `platform` is `android`, `android_tv`
@@ -129,6 +134,42 @@ Device sign-in errors: `sign_in_denied` (403), `sign_in_expired` (410),
 `unknown_sign_in` (404). Session errors (401): `missing_token`,
 `invalid_token`, `token_expired`, `invalid_refresh`, `refresh_conflict`,
 `session_revoked`. Limits: `rate_limited` (429, `Retry-After`).
+
+### Watch party
+
+A room is a Durable Object named by its 8-digit code (Workers Free plan:
+SQLite-backed only). Sockets use the Hibernation API; the app keeps them
+alive with WebSocket protocol pings, which Cloudflare answers without
+waking the room or counting a request (a text `ping` still gets `pong`).
+Storage is written only when the room's state changes; host heartbeats
+are kept in memory unless the host has drifted. Rooms end 30 minutes after the last
+participant leaves (60 if nobody joined), and after 12 hours at most. A
+host who disconnects keeps the room for 60 seconds; then the
+longest-connected participant hosts. `PARTY_MAX_CAPACITY` (default 5) caps
+every room. When a Free plan daily limit is spent, room calls fail with
+503 `party_unavailable` and normal watching is unaffected.
+
+The `content` is `{tmdbId, type: "movie"|"series", season, episode, title,
+posterPath?}` (season and episode for series). Participants are named by
+`pid`, a per-room hash of the account; account ids are never sent.
+
+| Client → room | Who | Fields |
+|---|---|---|
+| `hello` | anyone | `name` (≤ 40), `avatar` (`avatar1`–`avatar8` or null) |
+| `time` | anyone, ≤ 8 | `c` (client clock) → `time {c, s}` |
+| `status` | anyone | `state`: `joined`, `loading`, `ready`, `playing`, `paused`, `buffering`, `unavailable`, `error` |
+| `control` | host, or anyone with `guestControl` | `action`: `play`, `pause`, `seek`, `ended`; `positionMs`; `at` (server-time estimate) |
+| `heartbeat` | host | `seq`, `positionMs`, `at` (while playing) |
+| `start`, `content`, `settings`, `kick`, `transfer`, `end` | host | `content`; `guestControl`, `waitForAll`, `capacity`; `pid` |
+| `leave` | anyone | (a leaving host hands over at once) |
+
+The room sends `welcome {you, room, serverTime}`, `room {room}`, `state
+{playback}`, `participants {participants, hostConnected}`, `time`, `error
+{code}`, `removed` and `ended {reason}`. `playback` is `{status, positionMs,
+rate, at, seq, by}`: the position was true at server time `at`, and `seq`
+grows with every change. Close codes: 4000 ended, 4001 replaced by another
+connection of the same account, 4003 removed, 4004 not found, 4029 too
+many messages.
 
 ### TMDB gateway
 

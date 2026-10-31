@@ -42,6 +42,21 @@ name = "SYNC_LIMITER"
 namespace_id = "1004"
 simple = { limit = 30, period = 60 }
 
+[[ratelimits]]
+name = "PARTY_LIMITER"
+namespace_id = "1005"
+simple = { limit = 20, period = 60 }
+
+# Watch party rooms: SQLite-backed Durable Objects, the only kind on the
+# Workers Free plan. Rooms hibernate between messages.
+[[durable_objects.bindings]]
+name = "PARTY_ROOMS"
+class_name = "WatchPartyRoom"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["WatchPartyRoom"]
+
 [observability]
 enabled = true
 
@@ -49,7 +64,7 @@ enabled = true
 name = "reelish-api-staging"
 # No custom domain yet: served at reelish-api-staging.<subdomain>.workers.dev.
 workers_dev = true
-vars = { ENVIRONMENT = "staging", TRAKT_API_URL = "https://api.trakt.tv", TMDB_API_URL = "https://api.themoviedb.org/3", TRAKT_AUTHORIZE_URL = "https://trakt.tv/oauth/authorize", PUBLIC_URL = "https://reelish-api-staging.frnzgularez.workers.dev" }
+vars = { ENVIRONMENT = "staging", TRAKT_API_URL = "https://api.trakt.tv", TMDB_API_URL = "https://api.themoviedb.org/3", TRAKT_AUTHORIZE_URL = "https://trakt.tv/oauth/authorize", PUBLIC_URL = "https://reelish-api-staging.frnzgularez.workers.dev", PARTY_MAX_CAPACITY = "5" }
 d1_databases = [
   { binding = "DB", database_name = "reelish-staging", database_id = "3c059848-a838-4fe1-8cfb-3573831323d2", migrations_dir = "migrations" },
 ]
@@ -58,14 +73,16 @@ ratelimits = [
   { name = "TMDB_USER_LIMITER", namespace_id = "2002", simple = { limit = 240, period = 60 } },
   { name = "TMDB_IP_LIMITER", namespace_id = "2003", simple = { limit = 600, period = 60 } },
   { name = "SYNC_LIMITER", namespace_id = "2004", simple = { limit = 30, period = 60 } },
+  { name = "PARTY_LIMITER", namespace_id = "2005", simple = { limit = 20, period = 60 } },
 ]
+durable_objects = { bindings = [{ name = "PARTY_ROOMS", class_name = "WatchPartyRoom" }] }
 observability = { enabled = true }
 
 [env.production]
 name = "reelish-api"
 # No custom domain yet: served at reelish-api.<subdomain>.workers.dev.
 workers_dev = true
-vars = { ENVIRONMENT = "production", TRAKT_API_URL = "https://api.trakt.tv", TMDB_API_URL = "https://api.themoviedb.org/3", TRAKT_AUTHORIZE_URL = "https://trakt.tv/oauth/authorize", PUBLIC_URL = "https://reelish-api.frnzgularez.workers.dev" }
+vars = { ENVIRONMENT = "production", TRAKT_API_URL = "https://api.trakt.tv", TMDB_API_URL = "https://api.themoviedb.org/3", TRAKT_AUTHORIZE_URL = "https://trakt.tv/oauth/authorize", PUBLIC_URL = "https://reelish-api.frnzgularez.workers.dev", PARTY_MAX_CAPACITY = "5" }
 d1_databases = [
   { binding = "DB", database_name = "reelish-production", database_id = "55df1ede-5244-4a26-8827-d0d347bccf1d", migrations_dir = "migrations" },
 ]
@@ -74,5 +91,7 @@ ratelimits = [
   { name = "TMDB_USER_LIMITER", namespace_id = "3002", simple = { limit = 240, period = 60 } },
   { name = "TMDB_IP_LIMITER", namespace_id = "3003", simple = { limit = 600, period = 60 } },
   { name = "SYNC_LIMITER", namespace_id = "3004", simple = { limit = 30, period = 60 } },
+  { name = "PARTY_LIMITER", namespace_id = "3005", simple = { limit = 20, period = 60 } },
 ]
+durable_objects = { bindings = [{ name = "PARTY_ROOMS", class_name = "WatchPartyRoom" }] }
 observability = { enabled = true }

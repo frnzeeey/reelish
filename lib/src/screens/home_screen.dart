@@ -55,6 +55,10 @@ import 'library_screen.dart';
 import 'player_screen.dart';
 import 'media_details_screen.dart';
 import 'playback_settings_screen.dart';
+import 'watch_party/create_party_screen.dart';
+import 'watch_party/join_party_screen.dart';
+import 'watch_party/party_launcher.dart';
+import '../watch_party/party_models.dart';
 import '../widgets/brand_logo.dart';
 
 /// One independently loaded single-request list (Trending, search). Its
@@ -149,6 +153,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
     WidgetsBinding.instance.addObserver(this);
     _providerPlugins.addListener(_onPluginChange);
+    PartyPlayerLauncher.open = _openPartyTitle;
     _startSpotlightTimer();
     _start();
     unawaited(_loadFavorites());
@@ -436,6 +441,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       _favoriteKeys.contains(_favoriteKey(target)),
                   onToggleFavorite: _toggleFavorite,
                   seriesProgress: _storage.seriesProgress,
+                  onWatchTogether: _startParty,
                 )
               : DeviceCapabilities.isTv
               ? TvMediaDetailsScreen(
@@ -451,6 +457,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     selectedSeason: season,
                     selectedEpisode: episode,
                   ),
+                  onWatchTogether: _startParty,
                 )
               : MediaDetailsScreen(
                   item: item,
@@ -465,6 +472,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     selectedSeason: season,
                     selectedEpisode: episode,
                   ),
+                  onWatchTogether: _startParty,
                 ),
         ),
       );
@@ -527,6 +535,39 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   /// player: the search shows over it, a failure leaves it playing, and on
   /// success it releases its video engine and the new episode's player
   /// replaces it.
+  /// Watch together, from any details page: the party's settings first.
+  void _startParty(BuildContext detailsContext, PartyContent content) =>
+      unawaited(
+        Navigator.push(
+          detailsContext,
+          AppPageRoute<void>(
+            context: detailsContext,
+            builder: (_) => CreatePartyScreen(content: content),
+          ),
+        ),
+      );
+
+  /// A watch party's title, through the same source search as Play. The
+  /// catalog entry is fetched for the year and ids providers match on.
+  Future<void> _openPartyTitle(
+    BuildContext context,
+    PartyContent content,
+  ) async {
+    var item = content.toItem();
+    try {
+      item = await _tmdb.itemById(content.type, content.tmdbId);
+    } catch (_) {
+      // The room's own title and id still find most sources.
+    }
+    if (!mounted || !context.mounted) return;
+    await _openItem(
+      item,
+      presentationContext: context,
+      selectedSeason: content.season,
+      selectedEpisode: content.episode,
+    );
+  }
+
   Future<void> _openItem(
     MediaItem item, {
     BuildContext? presentationContext,
@@ -973,6 +1014,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _search.dispose();
     _searchFocus.dispose();
     _providerPlugins.removeListener(_onPluginChange);
+    if (PartyPlayerLauncher.open == _openPartyTitle) {
+      PartyPlayerLauncher.open = null;
+    }
     _services.dispose();
     for (final timer in _gateTimers.values) {
       timer.cancel();
@@ -1375,12 +1419,41 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             : Row(
                 key: const ValueKey('brand-header'),
                 children: [
-                  _brandMark(),
-                  const SizedBox(width: 10),
-                  // Letters about a third of the icon's height, so neither
-                  // outweighs the other.
-                  const ReelishWordmark(height: 16, lifted: true),
+                  // Over the Spotlight the icon stands alone, leaving the
+                  // artwork room; it is still read out as Reelish.
+                  if (spotlight)
+                    Semantics(
+                      label: 'Reelish',
+                      image: true,
+                      child: _brandMark(),
+                    )
+                  else ...[
+                    _brandMark(),
+                    const SizedBox(width: 10),
+                    // Letters about a third of the icon's height, so neither
+                    // outweighs the other.
+                    const ReelishWordmark(height: 16, lifted: true),
+                  ],
                   const Spacer(),
+                  IconButton(
+                    tooltip: 'Join a watch party',
+                    onPressed: () => Navigator.push(
+                      context,
+                      AppPageRoute<void>(
+                        context: context,
+                        builder: (_) => const JoinPartyScreen(),
+                      ),
+                    ),
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.black.withValues(alpha: .38),
+                      foregroundColor: Colors.white,
+                      side: BorderSide(
+                        color: Colors.white.withValues(alpha: .14),
+                      ),
+                    ),
+                    icon: const Icon(Symbols.groups_rounded),
+                  ),
+                  const SizedBox(width: 8),
                   IconButton(
                     tooltip: 'Search',
                     onPressed: () {
@@ -1990,27 +2063,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     color: GlassTheme.primary.withValues(alpha: .35),
                   ),
                 ),
-                // The Reelish wordmark, then the section's name.
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // A touch under the label's cap height, as the heavier
-                    // wordmark reads larger; nudged down onto its baseline.
-                    Transform.translate(
-                      offset: const Offset(0, 1),
-                      child: const ReelishWordmark(height: 7),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'SPOTLIGHT',
-                      style: TextStyle(
-                        color: GlassTheme.primary,
-                        fontSize: 10,
-                        letterSpacing: 1.5,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  'SPOTLIGHT',
+                  style: TextStyle(
+                    color: GlassTheme.primary,
+                    fontSize: 10,
+                    letterSpacing: 1.5,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
               const SizedBox(height: 11),

@@ -236,6 +236,41 @@ class AccountApi {
     return (series: maps(body['series']), popular: maps(body['popular']));
   }
 
+  /// Creates a watch party hosted by this account (ending its previous
+  /// one); returns the room's 8-digit code.
+  Future<String> createParty(
+    String accessToken, {
+    required Map<String, Object> content,
+    required Map<String, Object> settings,
+    required Map<String, Object?> profile,
+  }) async {
+    final body = await _send(
+      'POST',
+      '/party',
+      token: accessToken,
+      body: {'content': content, 'settings': settings, 'profile': profile},
+    );
+    final code = body['code'];
+    if (code is! String || !RegExp(r'^\d{8}$').hasMatch(code)) {
+      throw const AccountApiException('unavailable', 'Unexpected response.');
+    }
+    return code;
+  }
+
+  /// What the party with [code] plays, who hosts it, and how full it is.
+  Future<Map<String, dynamic>> previewParty(String accessToken, String code) =>
+      _send('GET', '/party/$code', token: accessToken);
+
+  /// The room's WebSocket address (wss://), or null without a service.
+  Uri? partySocket(String code) {
+    final base = baseUrl;
+    if (base == null) return null;
+    return base.replace(
+      scheme: 'wss',
+      path: '${base.path}/api/v1/party/$code/socket',
+    );
+  }
+
   Future<void> logout(String accessToken) =>
       _send('POST', '/auth/logout', token: accessToken);
 

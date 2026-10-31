@@ -10,6 +10,7 @@ import 'package:onfeed/src/screens/media_details_screen.dart';
 import 'package:onfeed/src/screens/tv/tv_details_screen.dart';
 import 'package:onfeed/src/services/tmdb_service.dart';
 import 'package:onfeed/src/theme/glass_theme.dart';
+import 'package:onfeed/src/watch_party/party_models.dart';
 import 'package:onfeed/src/widgets/tv/tv_focus.dart';
 
 /// Behaviour of the three details screens (phone, TV, Windows) as users see
@@ -401,6 +402,105 @@ void main() {
         findsOneWidget,
       );
       expect(tmdb.calls.last, 'episodes 2');
+    });
+  });
+
+  group('Watch together', () {
+    late List<PartyContent> started;
+    setUp(() => started = []);
+    void start(BuildContext _, PartyContent content) => started.add(content);
+    String key(PartyContent c) =>
+        '${c.type}:${c.tmdbId}:${c.season}:${c.episode}';
+
+    testWidgets('phone: a movie starts at once, a series asks which episode', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        MediaDetailsScreen(
+          item: _movie,
+          tmdb: tmdb,
+          onPlay: (_) {},
+          onPlayEpisode: (_, _, _) {},
+          onWatchTogether: start,
+        ),
+      );
+      await tester.tap(find.byTooltip('Watch together'));
+      expect(started.map(key), ['movie:8:null:null']);
+
+      await _pump(
+        tester,
+        MediaDetailsScreen(
+          // A new page, not the movie's state reused.
+          key: const ValueKey('series'),
+          item: _series,
+          tmdb: tmdb,
+          onPlay: (_) {},
+          onPlayEpisode: (_, _, _) {},
+          onWatchTogether: start,
+        ),
+      );
+      // A labelled button in the header (a series has no play bar).
+      await tester.tap(find.text('Watch together'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.textContaining('Second').last);
+      await tester.pumpAndSettle();
+      expect(started.map(key).last, 'series:7:1:2');
+    });
+
+    testWidgets('TV: the button sits with the actions and picks an episode', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        TvMediaDetailsScreen(
+          item: _series,
+          tmdb: tmdb,
+          onPlay: (_) {},
+          onPlayEpisode: (_, _, _) {},
+          onWatchTogether: start,
+        ),
+        tv: true,
+      );
+      await tester.tap(find.text('Watch together'));
+      await tester.pumpAndSettle();
+      expect(find.text('Watch together: season 1'), findsOneWidget);
+      await tester.tap(find.textContaining('Second').last);
+      await tester.pumpAndSettle();
+      expect(started.map(key), ['series:7:1:2']);
+    });
+
+    testWidgets('Windows: a movie starts its party from the header', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        DesktopDetailsScreen(
+          item: _movie,
+          tmdb: tmdb,
+          onPlay: (_, _) {},
+          onPlayEpisode: (_, _, _, _) {},
+          isFavorite: (_) => false,
+          onToggleFavorite: (_) async => true,
+          onWatchTogether: start,
+        ),
+      );
+      await tester.tap(find.text('Watch together'));
+      expect(started.map(key), ['movie:8:null:null']);
+    });
+
+    testWidgets('no button where the page offers none', (tester) async {
+      await _pump(
+        tester,
+        TvMediaDetailsScreen(
+          item: _movie,
+          tmdb: tmdb,
+          onPlay: (_) {},
+          onPlayEpisode: (_, _, _) {},
+        ),
+        tv: true,
+      );
+      expect(find.text('Watch together'), findsNothing);
     });
   });
 }

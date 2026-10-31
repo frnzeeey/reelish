@@ -10,6 +10,9 @@ import * as auth from './auth';
 import * as web from './web-auth';
 import * as sync from './trakt-sync';
 import * as alerts from './episode-alerts';
+import * as party from './watch-party';
+
+export { WatchPartyRoom } from './party-room';
 
 const version = '/api/v1';
 
@@ -100,6 +103,24 @@ async function route(request: Request, env: Env, requestId: string): Promise<Res
     return method === 'GET'
       ? sync.getWatchlist(env, principal, requestId)
       : sync.updateWatchlist(env, principal, request, requestId);
+  }
+  if (post('/party')) {
+    await limit(env.PARTY_LIMITER, `create:${principal.userId}`);
+    return party.createParty(env, principal, request, requestId);
+  }
+  const partyRoute = /^\/party\/([^/]+)(\/socket)?$/.exec(rest);
+  if (partyRoute && method === 'GET') {
+    // Lookups are limited per account and per address, so codes cannot be
+    // enumerated; a malformed code is answered like an unknown one.
+    await limit(env.PARTY_LIMITER, `lookup:${principal.userId}`);
+    await limit(env.PARTY_LIMITER, `lookup-ip:${ip}`);
+    const code = partyRoute[1];
+    if (!party.codePattern.test(code)) {
+      throw new ApiError(404, 'party_not_found', 'No party has that code. Check it and try again.');
+    }
+    return partyRoute[2]
+      ? party.connectParty(env, principal, request, code)
+      : party.previewParty(env, code, requestId);
   }
   const session = /^\/sessions\/([0-9a-f-]{36})$/.exec(rest);
   if (session && method === 'DELETE') return auth.deleteSession(env, principal, session[1], requestId);

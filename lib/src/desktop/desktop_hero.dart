@@ -501,21 +501,14 @@ class _HeroText extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // The Reelish wordmark, then the section's name.
-        Row(
-          children: [
-            const ReelishWordmark(height: 11),
-            const SizedBox(width: 9),
-            Text(
-              'SPOTLIGHT',
-              style: TextStyle(
-                color: GlassTheme.coralBright,
-                fontSize: 11,
-                letterSpacing: 2,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ],
+        Text(
+          'SPOTLIGHT',
+          style: TextStyle(
+            color: GlassTheme.coralBright,
+            fontSize: 11,
+            letterSpacing: 2,
+            fontWeight: FontWeight.w800,
+          ),
         ),
         const SizedBox(height: 16),
         if (logo.isEmpty) title else _logo(context, title),

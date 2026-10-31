@@ -6,6 +6,7 @@ import '../models/tv_season.dart';
 import '../services/tmdb_service.dart';
 import '../theme/glass_theme.dart';
 import '../viewmodels/details_view_model.dart';
+import '../watch_party/party_models.dart';
 
 class MediaDetailsScreen extends StatefulWidget {
   const MediaDetailsScreen({
@@ -16,6 +17,7 @@ class MediaDetailsScreen extends StatefulWidget {
     required this.onPlayEpisode,
     this.isFavorite = false,
     this.onToggleFavorite,
+    this.onWatchTogether,
   });
 
   final MediaItem item;
@@ -30,6 +32,11 @@ class MediaDetailsScreen extends StatefulWidget {
   /// Adds or removes the title and returns whether it is now on My list.
   /// Without it the page shows no My list button.
   final Future<bool> Function()? onToggleFavorite;
+
+  /// Starts a watch party for the movie or a chosen episode. Without it
+  /// the page offers no Watch together button.
+  final void Function(BuildContext context, PartyContent content)?
+  onWatchTogether;
 
   @override
   State<MediaDetailsScreen> createState() => _MediaDetailsScreenState();
@@ -99,6 +106,51 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
 
   String _imageUrl(String path) =>
       path.isEmpty ? '' : 'https://image.tmdb.org/t/p/w342$path';
+
+  /// Asks which episode of the shown season the party watches.
+  Future<void> _chooseEpisodeToWatchTogether(MediaItem item) async {
+    final season = _selectedSeason;
+    final start = widget.onWatchTogether;
+    if (season == null || start == null) return;
+    final number = await showModalBottomSheet<int>(
+      context: context,
+      showDragHandle: true,
+      backgroundColor: GlassTheme.surface,
+      builder: (context) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+              child: Text(
+                'Watch together: which episode?',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
+            for (final episode in _episodes)
+              if ((episode.number ?? 0) > 0)
+                ListTile(
+                  leading: const Icon(Symbols.play_circle_rounded),
+                  title: Text(
+                    'E${episode.number.toString().padLeft(2, '0')}  '
+                    '${episode.name ?? 'Episode ${episode.number}'}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  onTap: () => Navigator.pop(context, episode.number),
+                ),
+          ],
+        ),
+      ),
+    );
+    if (number == null || !mounted) return;
+    final content = PartyContent.fromItem(
+      item,
+      season: season,
+      episode: number,
+    );
+    if (content != null) start(context, content);
+  }
 
   Widget _episodeCard(TvEpisode episode) {
     final number = episode.number ?? 0;
@@ -333,9 +385,19 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                     ),
                   ),
                 ],
-                if (widget.onToggleFavorite != null) ...[
+                if (widget.onToggleFavorite != null ||
+                    _offersSeriesParty(item)) ...[
                   const SizedBox(height: 14),
-                  _myListButton(),
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: [
+                      if (widget.onToggleFavorite != null) _myListButton(),
+                      // A series has no play bar, so its watch party starts
+                      // here; it asks which episode of the shown season.
+                      if (_offersSeriesParty(item)) _watchTogetherButton(item),
+                    ],
+                  ),
                 ],
               ],
             ),
@@ -347,6 +409,31 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
 
   /// Styled as the Spotlight's My list button; it also says when the title
   /// is already saved.
+  bool _offersSeriesParty(MediaItem item) =>
+      widget.onWatchTogether != null &&
+      item.type == 'series' &&
+      PartyContent.fromItem(item, season: 1, episode: 1) != null;
+
+  /// Watch together for a series, in the My list button's style; ready once
+  /// the season's episodes are listed.
+  Widget _watchTogetherButton(MediaItem item) => OutlinedButton.icon(
+    style: OutlinedButton.styleFrom(
+      foregroundColor: Colors.white,
+      backgroundColor: Colors.black.withValues(alpha: .28),
+      shape: const StadiumBorder(),
+      side: BorderSide(color: Colors.white.withValues(alpha: .35)),
+      padding: const EdgeInsets.symmetric(horizontal: 19, vertical: 13),
+    ),
+    onPressed: _selectedSeason != null && _episodes.isNotEmpty
+        ? () => _chooseEpisodeToWatchTogether(item)
+        : null,
+    icon: const Icon(Symbols.groups_rounded, size: 19),
+    label: const Text(
+      'Watch together',
+      style: TextStyle(fontWeight: FontWeight.w700),
+    ),
+  );
+
   Widget _myListButton() => OutlinedButton.icon(
     style: OutlinedButton.styleFrom(
       foregroundColor: _favorite ? GlassTheme.primary : Colors.white,
@@ -679,19 +766,42 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
             padding: const EdgeInsets.fromLTRB(18, 10, 18, 12),
             child: SizedBox(
               height: 54,
-              child: FilledButton.icon(
-                style: FilledButton.styleFrom(
-                  backgroundColor: GlassTheme.primary,
-                  foregroundColor: GlassTheme.background,
-                ),
-                onPressed: () => widget.onPlay(context),
-                icon: const Icon(Symbols.play_arrow_rounded, fill: 1),
-                label: Text(
-                  item.type == 'series'
-                      ? 'Choose episode and play'
-                      : 'Play movie',
-                  style: const TextStyle(fontWeight: FontWeight.w800),
-                ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: SizedBox.expand(
+                      child: FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: GlassTheme.primary,
+                          foregroundColor: GlassTheme.background,
+                        ),
+                        onPressed: () => widget.onPlay(context),
+                        icon: const Icon(Symbols.play_arrow_rounded, fill: 1),
+                        label: Text(
+                          item.type == 'series'
+                              ? 'Choose episode and play'
+                              : 'Play movie',
+                          style: const TextStyle(fontWeight: FontWeight.w800),
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (widget.onWatchTogether != null &&
+                      PartyContent.fromItem(item) != null) ...[
+                    const SizedBox(width: 10),
+                    SizedBox.square(
+                      dimension: 54,
+                      child: IconButton.outlined(
+                        tooltip: 'Watch together',
+                        onPressed: () => widget.onWatchTogether!(
+                          context,
+                          PartyContent.fromItem(item)!,
+                        ),
+                        icon: const Icon(Symbols.groups_rounded),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
           ),
