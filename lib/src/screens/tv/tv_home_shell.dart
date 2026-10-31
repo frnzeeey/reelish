@@ -5,8 +5,17 @@ import '../../navigation/app_destination.dart';
 import '../../theme/glass_theme.dart';
 import '../../widgets/tv/tv_focus.dart';
 import '../../widgets/brand_logo.dart';
+import '../../widgets/profile_avatar.dart';
 
 export '../../navigation/app_destination.dart';
+
+/// The rail's order, top to bottom: Profile first, where Google TV keeps the
+/// account, then the destinations in their usual order.
+final List<TvDestination> tvRailOrder = [
+  TvDestination.profile,
+  for (final destination in TvDestination.values)
+    if (destination != TvDestination.profile) destination,
+];
 
 /// The TV interface's frame: a navigation rail on the left and the selected
 /// page beside it. Moving through the rail switches pages as it goes.
@@ -299,7 +308,7 @@ class _TvNavigationRail extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(left: 6, bottom: 28),
+            padding: const EdgeInsets.only(left: 6, bottom: 20),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(10),
               child: Image.asset(
@@ -311,9 +320,10 @@ class _TvNavigationRail extends StatelessWidget {
               ),
             ),
           ),
-          for (final destination in TvDestination.values)
+          // Profile first, where Google TV keeps it; then the rest in order.
+          for (final destination in tvRailOrder)
             Padding(
-              padding: const EdgeInsets.only(bottom: 6),
+              padding: const EdgeInsets.only(bottom: 4),
               child: _RailItem(
                 destination: destination,
                 focusNode: nodes[destination]!,
@@ -408,12 +418,19 @@ class _RailItemState extends State<_RailItem> {
             ),
             child: Row(
               children: [
-                Icon(
-                  widget.destination.icon,
-                  fill: widget.selected || _focused ? 1 : 0,
-                  color: color,
-                  size: 24,
-                ),
+                // Profile shows whose it is; the others their icon.
+                if (widget.destination == TvDestination.profile)
+                  const SizedBox.square(
+                    dimension: 24,
+                    child: MyProfileAvatar(size: 24),
+                  )
+                else
+                  Icon(
+                    widget.destination.icon,
+                    fill: widget.selected || _focused ? 1 : 0,
+                    color: color,
+                    size: 24,
+                  ),
                 // Labels show only while the rail is open.
                 Flexible(
                   child: AnimatedOpacity(

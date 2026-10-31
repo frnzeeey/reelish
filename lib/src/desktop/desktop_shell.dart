@@ -15,6 +15,7 @@ import '../theme/glass_theme.dart';
 import '../widgets/poster_image.dart';
 import 'desktop_widgets.dart';
 import '../widgets/brand_logo.dart';
+import '../widgets/profile_avatar.dart';
 
 /// The Windows interface's frame: a compact icon rail on the left and the
 /// selected page beside it.
@@ -606,12 +607,19 @@ class _SidebarItemState extends State<_SidebarItem> {
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),
-                      Icon(
-                        widget.destination.icon,
-                        size: 23,
-                        fill: selected ? 1 : 0,
-                        color: color,
-                      ),
+                      // Profile shows whose it is; the others their icon.
+                      if (widget.destination == TvDestination.profile)
+                        const SizedBox.square(
+                          dimension: 23,
+                          child: MyProfileAvatar(size: 23),
+                        )
+                      else
+                        Icon(
+                          widget.destination.icon,
+                          size: 23,
+                          fill: selected ? 1 : 0,
+                          color: color,
+                        ),
                       // Built only while open: a hidden label would still
                       // take clicks and screen-reader focus at the rail's
                       // edge.

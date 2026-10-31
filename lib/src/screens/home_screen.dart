@@ -55,11 +55,13 @@ import 'library_screen.dart';
 import 'player_screen.dart';
 import 'media_details_screen.dart';
 import 'playback_settings_screen.dart';
+import 'profile_screen.dart';
 import 'watch_party/create_party_screen.dart';
 import 'watch_party/join_party_screen.dart';
 import 'watch_party/party_launcher.dart';
 import '../watch_party/party_models.dart';
 import '../widgets/brand_logo.dart';
+import '../widgets/profile_avatar.dart';
 
 /// One independently loaded single-request list (Trending, search). Its
 /// fields change only inside the home screen's setState. The catalog rows
@@ -1473,6 +1475,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     ),
                     icon: const Icon(Symbols.search_rounded),
                   ),
+                  const SizedBox(width: 8),
+                  // The profile at the top right, where streaming apps keep
+                  // it; the dock stays for the main places.
+                  IconButton(
+                    tooltip: 'Profile',
+                    onPressed: () => _openProfile(context),
+                    padding: const EdgeInsets.all(4),
+                    icon: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: .22),
+                        ),
+                      ),
+                      padding: const EdgeInsets.all(2),
+                      child: const MyProfileAvatar(size: 36),
+                    ),
+                  ),
                 ],
               ),
       ),
@@ -2217,11 +2237,55 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     return error == null ? null : _catalogFailureMessage(error);
   }
 
+  /// Phone: opens a dock tab, refreshing what it shows.
+  void _selectTab(int value) {
+    setState(() {
+      _tab = value;
+      if (value == 2) _libraryRefreshToken++;
+    });
+    if (value == 2) {
+      unawaited(_loadHistory());
+    }
+    if (value == 0) {
+      unawaited(_loadFavorites());
+      _revalidateStaleFeeds();
+    }
+  }
+
+  /// Phone: the Profile page, over Home; its shortcuts close it and open
+  /// the tab they name.
+  void _openProfile(BuildContext from) => unawaited(
+    Navigator.push(
+      from,
+      AppPageRoute<void>(
+        context: from,
+        builder: (pageContext) => Scaffold(
+          backgroundColor: GlassTheme.background,
+          body: ProfileScreen(
+            storage: _storage,
+            onBack: () => Navigator.of(pageContext).pop(),
+            onOpenLibrary: () {
+              Navigator.of(pageContext).pop();
+              _selectTab(2);
+            },
+            onOpenSettings: () {
+              Navigator.of(pageContext).pop();
+              _selectTab(3);
+            },
+          ),
+        ),
+      ),
+    ),
+  );
+
   /// The same refreshes the mobile dock runs when a tab opens.
   void _onTvDestinationChanged(TvDestination destination) {
     setState(() {
       _tvDestination = destination;
-      if (destination == TvDestination.library) _libraryRefreshToken++;
+      if (destination == TvDestination.library ||
+          destination == TvDestination.profile) {
+        _libraryRefreshToken++;
+      }
     });
     if (destination == TvDestination.library) unawaited(_loadHistory());
     if (destination == TvDestination.home) {
@@ -2297,6 +2361,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               onAppearanceSettings: () => unawaited(_openAppearanceSettings()),
               onPlaybackSettings: () =>
                   unawaited(_openPlaybackSettings(availablePlugins)),
+            ),
+            TvDestination.profile => TvReadableWidth(
+              maxWidth: 900,
+              child: ProfileScreen(
+                storage: _storage,
+                refreshToken: _libraryRefreshToken,
+                onOpenLibrary: () =>
+                    _onTvDestinationChanged(TvDestination.library),
+                onOpenSettings: () =>
+                    _onTvDestinationChanged(TvDestination.settings),
+              ),
             ),
           },
         ),
@@ -2411,6 +2486,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               playbackSettings: _playbackSettings,
               plugins: availablePlugins,
             ),
+            // A readable column in the middle of the window.
+            TvDestination.profile => Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 860),
+                child: ProfileScreen(
+                  storage: _storage,
+                  refreshToken: _libraryRefreshToken,
+                  onOpenLibrary: () =>
+                      _onTvDestinationChanged(TvDestination.library),
+                  onOpenSettings: () =>
+                      _onTvDestinationChanged(TvDestination.settings),
+                ),
+              ),
+            ),
           },
         ),
         if (_resolvingStreams) _resolvingOverlay(),
@@ -2513,22 +2602,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             right: 0,
             bottom: 0,
             child: RepaintBoundary(
-              child: SoftGlassDock(
-                selectedIndex: _tab,
-                onSelected: (value) {
-                  setState(() {
-                    _tab = value;
-                    if (value == 2) _libraryRefreshToken++;
-                  });
-                  if (value == 2) {
-                    unawaited(_loadHistory());
-                  }
-                  if (value == 0) {
-                    unawaited(_loadFavorites());
-                    _revalidateStaleFeeds();
-                  }
-                },
-              ),
+              child: SoftGlassDock(selectedIndex: _tab, onSelected: _selectTab),
             ),
           ),
           if (_resolvingStreams) _resolvingOverlay(),

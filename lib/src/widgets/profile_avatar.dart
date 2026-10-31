@@ -3,8 +3,45 @@
 
 import 'package:flutter/material.dart';
 
+import '../account/account_controller.dart';
 import '../account/profile_controller.dart';
 import '../theme/glass_theme.dart';
+
+/// The signed-in person's avatar, as their profile sets it on this device;
+/// redrawn when they change it or another account signs in.
+class MyProfileAvatar extends StatelessWidget {
+  const MyProfileAvatar({
+    super.key,
+    this.size = 32,
+    this.shadow = false,
+    this.profile,
+    this.account,
+  });
+
+  final double size;
+  final bool shadow;
+  final ProfileController? profile;
+  final AccountController? account;
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = this.profile ?? ProfileController.instance;
+    final account = this.account ?? AccountController.instance;
+    return ListenableBuilder(
+      listenable: Listenable.merge([profile, account]),
+      builder: (context, _) {
+        final photo = profile.photo;
+        return ProfileAvatarView(
+          avatar: profile.avatar,
+          name: profile.nameOr(account.username),
+          photo: photo == null ? null : FileImage(photo),
+          size: size,
+          shadow: shadow,
+        );
+      },
+    );
+  }
+}
 
 /// Draws [avatar] at [size]. [name] gives the initial when it has none.
 class ProfileAvatarView extends StatelessWidget {
