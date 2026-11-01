@@ -21,6 +21,10 @@ class LegalInformationScreen extends StatefulWidget {
 
   static const _effectiveDate = 'October 16, 2026';
 
+  /// The privacy policy's own date: it changed with accounts and the
+  /// Reelish API, while the terms did not.
+  static const _privacyDate = 'October 31, 2026';
+
   /// What Reelish is and is not responsible for. Shown first in the Terms of
   /// use and on the Credits screen; keep the wording exact.
   static const contentDisclaimer = (
@@ -139,7 +143,8 @@ class _LegalInformationScreenState extends State<LegalInformationScreen> {
 
     return SettingsScaffold(
       title: _title,
-      subtitle: 'Reelish · Updated ${LegalInformationScreen._effectiveDate}',
+      subtitle:
+          'Reelish · Updated ${widget.document == LegalDocument.privacy ? LegalInformationScreen._privacyDate : LegalInformationScreen._effectiveDate}',
       icon: _icon,
       controller: _scrollController,
       bottomBar: widget.requireReadToEnd
@@ -213,64 +218,107 @@ class _LegalInformationScreenState extends State<LegalInformationScreen> {
   static const _privacySections = <(String, String)>[
     (
       'Who this applies to',
-      'This policy describes the Reelish app. The app does not ask '
-          'you to create an account and has no app-operated account service. '
-          'Your device and the services you choose to use still process data as '
-          'described below.',
+      'This policy describes the Reelish app and the Reelish API, the '
+          'online service the app uses for accounts, the catalog and watch '
+          'parties. To browse the catalog you sign in with a Trakt account; '
+          'Reelish has no passwords of its own. Your device and the services '
+          'you choose to use also process data as described below.',
+    ),
+    (
+      'Your Reelish account',
+      'You sign in on Trakt’s own page in your browser, or by entering a '
+          'code on Trakt’s website from a TV. Reelish never sees your Trakt '
+          'password. When you sign in, the Reelish API stores your Trakt '
+          'account ID and username; your Trakt access tokens, encrypted, so '
+          'the service can reach Trakt for you; and, for each signed-in '
+          'device, a general label (such as “Android phone” or “Windows”), '
+          'when it signed in and was last used, and session tokens kept only '
+          'in hashed form. The service does not ask for your email address, '
+          'contacts, payment details or precise location. Trakt’s own privacy '
+          'policy applies to your Trakt account.',
     ),
     (
       'Information kept on your device',
       'The app stores your favorites, recently played titles and resume '
-          'positions, playback preferences, installed add-on repository '
+          'positions, playback and notification preferences, your profile '
+          'display name and avatar choice, installed add-on repository '
           'addresses and settings, a short-lived cache of selected stream '
-          'sources, and a copy of the plugin library catalog. These are stored in the app’s private device storage. The '
-          'app does not currently include its own advertising or analytics '
-          'service. You can remove favorites and history in Library, remove '
-          'add-ons in Plugins, clear the torrent cache in Playback settings, '
-          'or erase app data by uninstalling the app. Device backups and '
-          'operating-system behavior are controlled by your platform provider.',
+          'sources, and a copy of the plugin library catalog in the app’s '
+          'private storage, and your sign-in session in the device’s secure '
+          'storage. A profile photo you choose stays on the device and is '
+          'never uploaded. The app does not include its own advertising or '
+          'analytics service. You can remove favorites and history in '
+          'Library, remove add-ons in Plugins, clear the torrent cache in '
+          'Playback settings, or erase app data by uninstalling the app. '
+          'Device backups and operating-system behavior are controlled by '
+          'your platform provider.',
     ),
     (
       'Information sent when you use network features',
-      'When you browse, search or open titles, the app sends title identifiers '
-          'and related requests to The Movie Database (TMDB) to retrieve '
-          'catalog, artwork and details. Subtitle searches send a title or '
-          'episode identifier to the OpenSubtitles v3 service. Opening the '
-          'plugin library downloads its catalog from the app’s GitHub '
-          'repository and loads provider logos from the addresses listed in '
-          'the catalog; those hosts can receive your IP address and request '
-          'data, but no title or account information is sent. If you install '
-          'an add-on, the app contacts the repository and service addresses '
-          'configured for it. Add-ons receive the title and episode identifiers '
-          'needed for your request and may send them to their own servers. '
-          'Direct streams, subtitle files and torrent/P2P playback connect to '
-          'the selected source or peers; those operators can receive your IP '
-          'address and request data. Android and Windows may contact GitHub '
-          'to check for app updates. When you choose an update, Android '
-          'downloads an APK and uses its package installer after you confirm; '
-          'Windows downloads a ZIP to your Downloads folder for you to install.',
+      'When you browse, search or open titles, the app sends title '
+          'identifiers and related requests to the Reelish API, which '
+          'retrieves catalog data and details from The Movie Database (TMDB) '
+          'for you; TMDB receives those requests from the service, not from '
+          'your device. Artwork loads directly from TMDB’s image servers. If '
+          'you turn on My list sync, the service reads and changes your Trakt '
+          'watchlist for you. If you turn on new-episode alerts, the app sends '
+          'the TMDB identifiers of series on My list or in progress to the '
+          'service to check for new episodes; they are not stored. In a watch '
+          'party, the title, the playback position and play or pause state, '
+          'and each participant’s display name, chosen preset avatar (never a '
+          'photo) and player status are shared through the service with the '
+          'people in that party. Subtitle searches send a title or episode '
+          'identifier to the OpenSubtitles v3 service. Opening the plugin '
+          'library downloads its catalog from the app’s GitHub repository and '
+          'loads provider logos from the addresses listed in it; those hosts '
+          'can receive your IP address and request data, but no title or '
+          'account information. If you install an add-on, the app contacts '
+          'the repository and service addresses configured for it. Add-ons '
+          'receive the title and episode identifiers needed for your request '
+          'and may send them to their own servers. Direct streams, subtitle '
+          'files and torrent/P2P playback connect to the selected source or '
+          'peers; those operators can receive your IP address and request '
+          'data. Video never passes through the Reelish API. Android and '
+          'Windows may contact GitHub to check for app updates. When you '
+          'choose an update, Android downloads an APK and uses its package '
+          'installer after you confirm; installed Windows copies download the '
+          'installer and run it after checking it, and portable copies '
+          'download a ZIP for you to extract.',
     ),
     (
       'Third-party services and add-ons',
-      'TMDB, OpenSubtitles, add-on publishers, media hosts, torrent peers, '
-          'GitHub, and your device platform operate independently. Their '
-          'privacy practices, logs, retention and locations are governed by '
-          'their own policies. The app cannot control what an add-on publisher '
+      'Trakt, TMDB, Cloudflare (which hosts the Reelish API), OpenSubtitles, '
+          'add-on publishers, media hosts, torrent peers, GitHub, and your '
+          'device platform operate independently. Their privacy practices, '
+          'logs, retention and locations are governed by their own policies. '
+          'Cloudflare processes your IP address and request data to deliver '
+          'the Reelish API. The app cannot control what an add-on publisher '
           'does with data it receives. Install only add-ons you trust. No '
-          'payment, account credentials, contacts, precise location or '
-          'advertising identifier is requested by the app’s own features.',
+          'payment, contacts, precise location or advertising identifier is '
+          'requested by the app’s own features.',
     ),
     (
       'Retention and choices',
-      'On-device library entries and preferences remain until you remove them '
-          'or erase app data. Catalog results may be cached in memory for the '
-          'current session. Third-party services may retain request '
-          'data under their own policies. Because the app has no account or '
-          'developer-operated profile database, it has no server-side account '
-          'data to delete. For data held by a third party, contact that service '
-          'or add-on publisher directly. Applicable privacy rights depend on '
-          'your location; contact the developer through the support contact '
-          'on the store listing for requests concerning the app.',
+      'Your account data stays on the Reelish API until you delete your '
+          'account. You can sign out of one device or of all devices, and '
+          'delete your account in Settings > Profile and account; deleting '
+          'it asks Trakt to revoke Reelish’s access and removes your account, '
+          'your encrypted Trakt tokens and your device sessions, including '
+          'those already signed out. A minimal security log, holding an '
+          'internal account number, the kind of event (such as a sign-in or '
+          'a sign-out) and its time, but no username, title or viewing '
+          'information, is kept for 12 months to detect misuse, including '
+          'after an account is deleted, and then erased. A watch party’s room is deleted when the party ends, '
+          'and after 12 hours at most. Operational logs of the service record '
+          'which address was requested and when, which can include a title '
+          'identifier but not your account name, and are kept by the hosting '
+          'provider for a limited period. On-device library entries and '
+          'preferences remain until you remove them or erase app data. Third-'
+          'party services may retain request data under their own policies; '
+          'for data they hold, contact that service or add-on publisher '
+          'directly. Applicable privacy rights depend on your location; '
+          'contact the developer through the support contact on the store '
+          'listing for requests concerning the app or the Reelish API.',
     ),
     (
       'Children and changes',
