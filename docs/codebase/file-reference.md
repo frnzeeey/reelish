@@ -17,9 +17,9 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/account/session_store.dart`](#libsrcaccountsession_storedart) | Shared | 140 | Keeps the Reelish session in the platform's secure storage (Android Keystore, Windows DPAPI), never in SharedPreferences. |
 | [`lib/src/account/watchlist_sync.dart`](#libsrcaccountwatchlist_syncdart) | Shared | 313 | Keeps My list and the Trakt watchlist in step, when the user turns it on. |
 | [`lib/src/app/app_services.dart`](#libsrcappapp_servicesdart) | Shared | 34 | The app's shared services, built in one place and handed to the screens and ViewModels that use them, rather than constructed inside widgets. |
-| [`lib/src/desktop/desktop_details_screen.dart`](#libsrcdesktopdesktop_details_screendart) | Windows | 1308 | A movie or series on Windows, full-bleed over the whole window: the backdrop with the title, details and actions, then cast and related titles. |
+| [`lib/src/desktop/desktop_details_screen.dart`](#libsrcdesktopdesktop_details_screendart) | Windows | 1328 | A movie or series on Windows, full-bleed over the whole window: the backdrop with the title, details and actions, then cast and related titles. |
 | [`lib/src/desktop/desktop_hero.dart`](#libsrcdesktopdesktop_herodart) | Windows | 1227 | The featured titles at the top of desktop Home: one full-bleed backdrop with the title, synopsis and actions on its left, and every Spotlight title in a rail along its foot, the one shown first and widest. |
-| [`lib/src/desktop/desktop_pages.dart`](#libsrcdesktopdesktop_pagesdart) | Windows | 677 | The Windows Home, Movies/Series catalog, Search and My library pages shown inside `DesktopShell`. |
+| [`lib/src/desktop/desktop_pages.dart`](#libsrcdesktopdesktop_pagesdart) | Windows | 1024 | The Windows Home, Movies/Series catalog, Search and My library pages shown inside `DesktopShell`. |
 | [`lib/src/desktop/desktop_plugins_page.dart`](#libsrcdesktopdesktop_plugins_pagedart) | Windows | 956 | Plugins on Windows: the installed repositories and their providers at a desktop width, with the same actions as the phone and TV screen (add from the library or a manifest URL, refresh, switch providers on and off, remove, allow changed provider code) through the same `ProviderPluginService`, so what is installed and enabled is shared. |
 | [`lib/src/desktop/desktop_provider_search.dart`](#libsrcdesktopdesktop_provider_searchdart) | Windows | 249 | "Searching providers…" over the Windows interface while a play request from Home looks for a stream: a frosted card on the dimmed page, with what is being looked for and a way to stop. |
 | [`lib/src/desktop/desktop_settings_page.dart`](#libsrcdesktopdesktop_settings_pagedart) | Windows | 450 | Settings on Windows: the categories of the phone and TV Settings list on the left, the chosen one beside them, so a change and its effect are on screen together. |
@@ -27,7 +27,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/desktop/desktop_top_ten.dart`](#libsrcdesktopdesktop_top_tendart) | Windows | 524 | Top 10 on Windows: the shared Top 10 feed (the same seeds, ranking and cache as Android and TV) drawn as ranked posters with the outlined numerals of the mobile and TV rows. |
 | [`lib/src/desktop/desktop_update_dialogs.dart`](#libsrcdesktopdesktop_update_dialogsdart) | Windows | 369 | Windows update dialogs: the "update available" offer with release notes, and download progress through to the installer handoff. |
 | [`lib/src/desktop/desktop_update_section.dart`](#libsrcdesktopdesktop_update_sectiondart) | Windows | 225 | Settings → About on Windows: version, update status, last check, the update action for the current state, and the automatic-check switch. |
-| [`lib/src/desktop/desktop_widgets.dart`](#libsrcdesktopdesktop_widgetsdart) | Windows | 1125 | Building blocks of the Windows interface: layout metrics, surfaces and motion, poster cards, scrolling media rows, grids, headers and messages. |
+| [`lib/src/desktop/desktop_widgets.dart`](#libsrcdesktopdesktop_widgetsdart) | Windows | 1291 | Building blocks of the Windows interface: layout metrics, surfaces and motion, poster cards, scrolling media rows, grids, headers and messages. |
 | [`lib/src/models/app_update.dart`](#libsrcmodelsapp_updatedart) | Shared | 257 | A newer GitHub release that has a downloadable APK. |
 | [`lib/src/models/episode_context.dart`](#libsrcmodelsepisode_contextdart) | Shared | 143 | The playing episode within its series: the single source of truth for episode navigation (the episode panel, Previous/Next, and auto-play). |
 | [`lib/src/models/episode_progress.dart`](#libsrcmodelsepisode_progressdart) | Shared | 69 | Where the viewer stopped in one episode. |
@@ -57,7 +57,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/screens/app_information_screens.dart`](#libsrcscreensapp_information_screensdart) | Shared | 222 | About and Support screens, and the Reelish name, icon and tagline used where the app identifies itself. |
 | [`lib/src/screens/credits_screen.dart`](#libsrcscreenscredits_screendart) | Shared | 264 | Credits for the data, services and software Reelish relies on. |
 | [`lib/src/screens/first_run_consent_screen.dart`](#libsrcscreensfirst_run_consent_screendart) | Shared | 254 | First-launch screen where the viewer reads and accepts the privacy policy and terms of use; remembers the acceptance. |
-| [`lib/src/screens/home_screen.dart`](#libsrcscreenshome_screendart) | Shared | 2613 | Home and the app's orchestration: phone tabs, and the TV and Windows shells; owns the catalog wiring, the play flow (`_openItem`: providers, source choice, player) and details navigation. |
+| [`lib/src/screens/home_screen.dart`](#libsrcscreenshome_screendart) | Shared | 2615 | Home and the app's orchestration: phone tabs, and the TV and Windows shells; owns the catalog wiring, the play flow (`_openItem`: providers, source choice, player) and details navigation. |
 | [`lib/src/screens/legal_information_screen.dart`](#libsrcscreenslegal_information_screendart) | Shared | 397 | Shows the privacy policy, terms of use and third-party notices. |
 | [`lib/src/screens/library_screen.dart`](#libsrcscreenslibrary_screendart) | Shared | 621 | The phone library tab: continue watching, My list and watch history from local storage. |
 | [`lib/src/screens/media_details_screen.dart`](#libsrcscreensmedia_details_screendart) | Shared | 839 | The phone details page for a movie or series, with seasons, episodes and playback. |
@@ -322,11 +322,13 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/desktop/desktop_details_screen.dart
 
-**Source:** [`lib/src/desktop/desktop_details_screen.dart`](../../lib/src/desktop/desktop_details_screen.dart) · **Platform:** Windows · **Lines:** 1308
+**Source:** [`lib/src/desktop/desktop_details_screen.dart`](../../lib/src/desktop/desktop_details_screen.dart) · **Platform:** Windows · **Lines:** 1328
 
 **Purpose:** A movie or series on Windows, full-bleed over the whole window: the backdrop with the title, details and actions, then cast and related titles.
 
 **Declares:** `_Chip` (Widget), `DesktopDetailsScreen` (Widget), `_DesktopDetailsScreenState` (Widget state), `_EpisodeList` (Widget), `_EpisodeListState` (Widget state), `_EpisodePanel` (Widget), `_EpisodeTile` (Widget), `_EpisodeTileState` (Widget state), `_Poster` (Widget), `_SeasonChip` (Widget), `_SeasonPicker` (Widget)
+
+**Top-level functions:** `_initials`
 
 **Imports (project):** `src/desktop/desktop_widgets.dart`, `src/models/episode_progress.dart`, `src/models/media_details.dart`, `src/models/media_item.dart`, `src/models/tv_season.dart`, `src/screens/watch_party/party_widgets.dart`, `src/services/tmdb_service.dart`, `src/theme/glass_theme.dart`, `src/viewmodels/details_view_model.dart`, `src/watch_party/party_models.dart`, `src/widgets/poster_image.dart`
 
@@ -354,11 +356,11 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/desktop/desktop_pages.dart
 
-**Source:** [`lib/src/desktop/desktop_pages.dart`](../../lib/src/desktop/desktop_pages.dart) · **Platform:** Windows · **Lines:** 677
+**Source:** [`lib/src/desktop/desktop_pages.dart`](../../lib/src/desktop/desktop_pages.dart) · **Platform:** Windows · **Lines:** 1024
 
 **Purpose:** The Windows Home, Movies/Series catalog, Search and My library pages shown inside `DesktopShell`.
 
-**Declares:** `_AddSourceBanner` (Widget), `DesktopCatalogPage` (Widget), `_DesktopCatalogPageState` (Widget state), `DesktopHomePage` (Widget), `_DesktopHomePageState` (Widget state), `DesktopLibraryPage` (Widget), `_DesktopLibraryPageState` (Widget state), `DesktopSearchPage` (Widget), `_DesktopSearchPageState` (Widget state)
+**Declares:** `_AddSourceBanner` (Widget), `DesktopCatalogPage` (Widget), `_DesktopCatalogPageState` (Widget state), `DesktopHomePage` (Widget), `_DesktopHomePageState` (Widget state), `DesktopLibraryPage` (Widget), `_DesktopLibraryPageState` (Widget state), `DesktopSearchPage` (Widget), `_DesktopSearchPageState` (Widget state), `_KeyHint` (Widget), `_LibraryHint` (Widget), `_LibraryStat` (Widget), `_RecentSearches` (Widget)
 
 **Imports (project):** `src/desktop/desktop_hero.dart`, `src/desktop/desktop_top_ten.dart`, `src/desktop/desktop_widgets.dart`, `src/models/media_item.dart`, `src/services/paged_feed_controller.dart`, `src/services/storage_service.dart`, `src/services/tmdb_service.dart`, `src/theme/glass_theme.dart`, `src/viewmodels/home_catalog.dart`, `src/viewmodels/library_view_model.dart`, `src/viewmodels/search_view_model.dart`, `src/widgets/settings/tmdb_attribution.dart`
 
@@ -486,11 +488,11 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/desktop/desktop_widgets.dart
 
-**Source:** [`lib/src/desktop/desktop_widgets.dart`](../../lib/src/desktop/desktop_widgets.dart) · **Platform:** Windows · **Lines:** 1125
+**Source:** [`lib/src/desktop/desktop_widgets.dart`](../../lib/src/desktop/desktop_widgets.dart) · **Platform:** Windows · **Lines:** 1291
 
 **Purpose:** Building blocks of the Windows interface: layout metrics, surfaces and motion, poster cards, scrolling media rows, grids, headers and messages.
 
-**Declares:** `_Badge` (Widget), `_CardAction` (Widget), `DesktopMediaRow` (Widget), `_DesktopMediaRowState` (Widget state), `DesktopMessage` (Widget), `DesktopMetrics` (Class), `DesktopPagedRow` (Widget), `DesktopPageHeader` (Widget), `DesktopPosterCard` (Widget), `_DesktopPosterCardState` (Widget state), `DesktopPosterGrid` (Widget), `DesktopRowArrow` (Widget), `DesktopRowNotice` (Widget), `DesktopSectionTitle` (Widget), `DesktopSurfaces` (Class), `_HoverShade` (Widget), `_RemoveIntent` (Class), `_ToggleFavoriteIntent` (Class)
+**Declares:** `_Badge` (Widget), `_CardAction` (Widget), `DesktopMediaRow` (Widget), `_DesktopMediaRowState` (Widget state), `DesktopMessage` (Widget), `DesktopMetrics` (Class), `DesktopPagedRow` (Widget), `DesktopPageHeader` (Widget), `DesktopPosterCard` (Widget), `_DesktopPosterCardState` (Widget state), `DesktopPosterGrid` (Widget), `DesktopRowArrow` (Widget), `DesktopRowNotice` (Widget), `DesktopSectionTitle` (Widget), `DesktopSurfaces` (Class), `_HoverShade` (Widget), `_RemoveIntent` (Class), `_ResumeOverlay` (Widget), `_ToggleFavoriteIntent` (Class)
 
 **Top-level functions:** `desktopMotion`, `Function`, `loadMoreIfShort`, `posterDecodeWidth`
 
@@ -948,7 +950,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/screens/home_screen.dart
 
-**Source:** [`lib/src/screens/home_screen.dart`](../../lib/src/screens/home_screen.dart) · **Platform:** Shared · **Lines:** 2613 · **Branches on:** isTv, isDesktop, TorrentSupport
+**Source:** [`lib/src/screens/home_screen.dart`](../../lib/src/screens/home_screen.dart) · **Platform:** Shared · **Lines:** 2615 · **Branches on:** isTv, isDesktop, TorrentSupport
 
 **Purpose:** Home and the app's orchestration: phone tabs, and the TV and Windows shells; owns the catalog wiring, the play flow (`_openItem`: providers, source choice, player) and details navigation.
 

@@ -265,7 +265,10 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
         runtime >= 60
             ? '${runtime ~/ 60} h ${runtime % 60} min'
             : '$runtime min',
-      if (details?.status.isNotEmpty == true) details!.status,
+      // "Released" says nothing for a film you can play; a series' status
+      // (Ended, Returning Series) does.
+      if (details?.status.isNotEmpty == true && details!.status != 'Released')
+        details.status,
     ];
     final overview = details?.overview.isNotEmpty == true
         ? details!.overview
@@ -627,9 +630,14 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
                             width: (80 * MediaQuery.devicePixelRatioOf(context))
                                 .round(),
                           ),
-                    child: const Icon(
-                      Symbols.person_rounded,
-                      color: GlassTheme.muted,
+                    // Initials while the photo loads, or when there is none.
+                    child: Text(
+                      _initials(member.name),
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        color: GlassTheme.muted,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -1305,4 +1313,16 @@ class _EpisodeTileState extends State<_EpisodeTile> {
       ),
     );
   }
+}
+
+/// Up to two initials of [name] ("Eric Trask" → "ET"), for a cast member
+/// without a photo.
+String _initials(String name) {
+  final words = name.trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty);
+  if (words.isEmpty) return '';
+  final letters = [
+    words.first,
+    if (words.length > 1) words.last,
+  ].map((word) => word.characters.first.toUpperCase());
+  return letters.join();
 }

@@ -2469,6 +2469,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               onOpen: _showDetails,
               isFavorite: catalog.isFavorite,
               onToggleFavorite: _toggleFavorite,
+              storage: _storage,
+              suggestions: catalog.spotlight,
             ),
             TvDestination.library => DesktopLibraryPage(
               storage: _storage,

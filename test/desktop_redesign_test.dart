@@ -700,5 +700,76 @@ void main() {
       expect(find.text('34 min left'), findsOneWidget);
       expect(find.text('2024 · Movie'), findsNothing);
     });
+
+    testWidgets('a landscape row draws wide cards with the name on the art', (
+      tester,
+    ) async {
+      await _setSize(tester, const Size(1600, 900));
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: GlassTheme.dark,
+          home: Scaffold(
+            body: DesktopMediaRow(
+              title: 'Continue watching',
+              landscape: true,
+              items: const [
+                MediaItem(id: '1', type: 'movie', name: 'Film', year: '2024'),
+                MediaItem(id: '2', type: 'movie', name: 'Other', year: '2023'),
+              ],
+              onOpen: (_) {},
+              progressOf: (_) => .4,
+              captionOf: (_) => '34 min left',
+            ),
+          ),
+        ),
+      );
+      final card = tester.getSize(find.byType(DesktopPosterCard).first);
+      expect(card.width, greaterThanOrEqualTo(260));
+      // 16:9 art and nothing under it.
+      final art = tester.getSize(
+        find
+            .descendant(
+              of: find.byType(DesktopPosterCard).first,
+              matching: find.byType(AnimatedContainer),
+            )
+            .first,
+      );
+      expect(art.height, closeTo(art.width * 9 / 16, .5));
+      expect(card.height, closeTo(art.height, .5));
+      expect(find.text('Film'), findsOneWidget);
+      expect(find.text('34 min left'), findsNWidgets(2));
+      expect(find.byType(LinearProgressIndicator), findsNWidgets(2));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('poster cards show the rating without hovering', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: GlassTheme.dark,
+          home: Scaffold(
+            body: Center(
+              child: DesktopPosterCard(
+                item: const MediaItem(
+                  id: '1',
+                  type: 'movie',
+                  name: 'Film',
+                  year: '2024',
+                  rating: '7.4',
+                ),
+                width: 180,
+                onOpen: (_) {},
+                showType: false,
+              ),
+            ),
+          ),
+        ),
+      );
+      expect(find.text('2024'), findsOneWidget);
+      // Under the poster only, so hovering does not repeat it.
+      expect(find.text('7.4'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
   });
 }

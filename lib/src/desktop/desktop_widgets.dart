@@ -35,6 +35,13 @@ abstract final class DesktopMetrics {
 
   static double cardHeight(double posterWidth) =>
       posterWidth * 1.5 + captionHeight;
+
+  /// Width of a 16:9 card (Continue watching) that fills [available] with
+  /// whole cards, 260–440 px: four on a laptop, five on a 1080p monitor.
+  static double landscapeWidth(double available) {
+    final count = (available / 340).floor().clamp(2, 7);
+    return ((available - gap * (count - 1)) / count).clamp(260.0, 440.0);
+  }
 }
 
 /// Decode width for a poster [pixels] wide, rounded up to 64 px steps so a
@@ -101,6 +108,7 @@ class DesktopPosterCard extends StatefulWidget {
     this.removeLabel = 'Remove from watch history',
     this.caption = '',
     this.showType = true,
+    this.landscape = false,
   });
 
   final MediaItem item;
@@ -135,6 +143,11 @@ class DesktopPosterCard extends StatefulWidget {
   /// Whether the line under the title says Movie or Series; a page of one
   /// kind leaves it out.
   final bool showType;
+
+  /// A wide 16:9 card on the title's backdrop, with its name, [caption] and
+  /// progress drawn on the art: Continue watching, where where you are
+  /// matters more than the poster.
+  final bool landscape;
 
   @override
   State<DesktopPosterCard> createState() => _DesktopPosterCardState();
@@ -198,6 +211,12 @@ class _DesktopPosterCardState extends State<DesktopPosterCard> {
       if (item.year.isNotEmpty) item.year,
       if (widget.showType) item.type == 'series' ? 'Series' : 'Movie',
     ].join(' · ');
+    final landscape = widget.landscape;
+    final artHeight = landscape ? width * 9 / 16 : width * 1.5;
+    final art = landscape && item.background.isNotEmpty
+        ? item.background
+        : item.poster;
+    final rated = item.rating.isNotEmpty && item.rating != '0.0';
     return SizedBox(
       width: width,
       child: FocusableActionDetector(
@@ -246,14 +265,14 @@ class _DesktopPosterCardState extends State<DesktopPosterCard> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 AnimatedScale(
-                  scale: lifted ? 1.04 : 1,
+                  scale: lifted ? (landscape ? 1.025 : 1.04) : 1,
                   duration: duration,
                   curve: Curves.easeOutCubic,
                   child: AnimatedContainer(
                     duration: duration,
                     curve: Curves.easeOutCubic,
                     width: width,
-                    height: width * 1.5,
+                    height: artHeight,
                     decoration: BoxDecoration(
                       borderRadius: radius,
                       boxShadow: lifted
@@ -283,9 +302,9 @@ class _DesktopPosterCardState extends State<DesktopPosterCard> {
                         fit: StackFit.expand,
                         children: [
                           const PosterPlaceholder(iconSize: 34),
-                          if (item.poster.isNotEmpty)
+                          if (art.isNotEmpty)
                             Image.network(
-                              item.poster,
+                              art,
                               fit: BoxFit.cover,
                               cacheWidth: posterDecodeWidth(
                                 width * MediaQuery.devicePixelRatioOf(context),
@@ -294,13 +313,24 @@ class _DesktopPosterCardState extends State<DesktopPosterCard> {
                               errorBuilder: (_, _, _) =>
                                   const SizedBox.shrink(),
                             ),
-                          // Hover: a quiet shade with the rating and a play
-                          // glyph, so the card reads as clickable.
-                          AnimatedOpacity(
-                            opacity: lifted ? 1 : 0,
-                            duration: duration,
-                            child: _HoverShade(item: item),
-                          ),
+                          if (landscape)
+                            _ResumeOverlay(
+                              item: item,
+                              caption: widget.caption.isNotEmpty
+                                  ? widget.caption
+                                  : meta,
+                              accentCaption: widget.caption.isNotEmpty,
+                              lifted: lifted,
+                              duration: duration,
+                            )
+                          else
+                            // Hover: a quiet shade with the rating and a play
+                            // glyph, so the card reads as clickable.
+                            AnimatedOpacity(
+                              opacity: lifted ? 1 : 0,
+                              duration: duration,
+                              child: const _HoverShade(),
+                            ),
                           if (widget.isFavorite)
                             const Positioned(
                               top: 8,
@@ -371,29 +401,55 @@ class _DesktopPosterCardState extends State<DesktopPosterCard> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 10),
-                Text(
-                  item.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: lifted ? Colors.white : GlassTheme.textPrimary,
+                if (!landscape) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    item.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: lifted ? Colors.white : GlassTheme.textPrimary,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  widget.caption.isNotEmpty ? widget.caption : meta,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: widget.caption.isNotEmpty
-                        ? GlassTheme.coralBright
-                        : GlassTheme.muted,
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          widget.caption.isNotEmpty ? widget.caption : meta,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: widget.caption.isNotEmpty
+                                ? GlassTheme.coralBright
+                                : GlassTheme.muted,
+                          ),
+                        ),
+                      ),
+                      // The rating at a glance, without hovering.
+                      if (rated && widget.caption.isEmpty) ...[
+                        Icon(
+                          Symbols.star_rounded,
+                          fill: 1,
+                          size: 13,
+                          color: GlassTheme.primary,
+                        ),
+                        const SizedBox(width: 3),
+                        Text(
+                          item.rating,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: GlassTheme.textPrimary,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
-                ),
+                ],
               ],
             ),
           ),
@@ -404,9 +460,7 @@ class _DesktopPosterCardState extends State<DesktopPosterCard> {
 }
 
 class _HoverShade extends StatelessWidget {
-  const _HoverShade({required this.item});
-
-  final MediaItem item;
+  const _HoverShade();
 
   @override
   Widget build(BuildContext context) => DecoratedBox(
@@ -423,19 +477,7 @@ class _HoverShade extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          if (item.rating.isNotEmpty && item.rating != '0.0') ...[
-            Icon(
-              Symbols.star_rounded,
-              fill: 1,
-              size: 15,
-              color: GlassTheme.primary,
-            ),
-            const SizedBox(width: 4),
-            Text(
-              item.rating,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-            ),
-          ],
+          // The rating is under the poster already.
           const Spacer(),
           DecoratedBox(
             decoration: BoxDecoration(
@@ -455,6 +497,107 @@ class _HoverShade extends StatelessWidget {
         ],
       ),
     ),
+  );
+}
+
+/// The name, where you are and a play glyph, drawn on a landscape card's
+/// backdrop. The shade is always there so the text stays readable; the
+/// play glyph comes with hover and focus.
+class _ResumeOverlay extends StatelessWidget {
+  const _ResumeOverlay({
+    required this.item,
+    required this.caption,
+    required this.accentCaption,
+    required this.lifted,
+    required this.duration,
+  });
+
+  final MediaItem item;
+  final String caption;
+  final bool accentCaption;
+  final bool lifted;
+  final Duration duration;
+
+  @override
+  Widget build(BuildContext context) => Stack(
+    fit: StackFit.expand,
+    children: [
+      const DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0x00000000), Color(0x33000000), Color(0xE6000000)],
+            stops: [.3, .55, 1],
+          ),
+        ),
+      ),
+      Center(
+        child: AnimatedOpacity(
+          opacity: lifted ? 1 : 0,
+          duration: duration,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: GlassTheme.primary,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: GlassTheme.primary.withValues(alpha: .45),
+                  blurRadius: 22,
+                ),
+              ],
+            ),
+            child: const Padding(
+              padding: EdgeInsets.all(12),
+              child: Icon(
+                Symbols.play_arrow_rounded,
+                fill: 1,
+                size: 26,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ),
+      ),
+      Positioned(
+        left: 14,
+        right: 14,
+        // Above the progress bar.
+        bottom: 14,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              item.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -.2,
+                color: Colors.white,
+              ),
+            ),
+            if (caption.isNotEmpty) ...[
+              const SizedBox(height: 3),
+              Text(
+                caption,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  color: accentCaption
+                      ? GlassTheme.coralBright
+                      : Colors.white.withValues(alpha: .72),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    ],
   );
 }
 
@@ -580,6 +723,7 @@ class DesktopMediaRow extends StatefulWidget {
     this.onRemove,
     this.onNearEnd,
     this.loadingMore = false,
+    this.landscape = false,
   });
 
   final String title;
@@ -598,6 +742,10 @@ class DesktopMediaRow extends StatefulWidget {
   final Future<void> Function(MediaItem item)? onRemove;
   final VoidCallback? onNearEnd;
   final bool loadingMore;
+
+  /// Wide 16:9 cards on each title's backdrop (see
+  /// [DesktopPosterCard.landscape]).
+  final bool landscape;
 
   @override
   State<DesktopMediaRow> createState() => _DesktopMediaRowState();
@@ -667,9 +815,18 @@ class _DesktopMediaRowState extends State<DesktopMediaRow> {
         builder: (context, constraints) {
           final available =
               constraints.maxWidth - DesktopMetrics.pagePadding * 2;
-          final posterWidth = DesktopMetrics.posterWidth(available);
+          final posterWidth = widget.landscape
+              ? DesktopMetrics.landscapeWidth(available)
+              : DesktopMetrics.posterWidth(available);
+          final artHeight = widget.landscape
+              ? posterWidth * 9 / 16
+              : posterWidth * 1.5;
           // Room above and below for the hover lift and focus ring.
-          final height = DesktopMetrics.cardHeight(posterWidth) + 24;
+          final height =
+              (widget.landscape
+                  ? artHeight
+                  : DesktopMetrics.cardHeight(posterWidth)) +
+              24;
           final count = widget.items.length + (widget.loadingMore ? 1 : 0);
           return MouseRegion(
             onEnter: (_) => setState(() => _hovered = true),
@@ -718,6 +875,7 @@ class _DesktopMediaRowState extends State<DesktopMediaRow> {
                             item,
                           ),
                           onRemove: bindItem(widget.onRemove, item),
+                          landscape: widget.landscape,
                         );
                       },
                     ),
@@ -728,7 +886,8 @@ class _DesktopMediaRowState extends State<DesktopMediaRow> {
                       icon: Symbols.chevron_left_rounded,
                       label: 'Scroll ${widget.title} back',
                       onPressed: () => _page(-1),
-                      height: posterWidth * 1.5,
+                      height: artHeight,
+                      captionGap: !widget.landscape,
                     ),
                   if (_hovered && _canForward)
                     DesktopRowArrow(
@@ -736,7 +895,8 @@ class _DesktopMediaRowState extends State<DesktopMediaRow> {
                       icon: Symbols.chevron_right_rounded,
                       label: 'Scroll ${widget.title} forward',
                       onPressed: () => _page(1),
-                      height: posterWidth * 1.5,
+                      height: artHeight,
+                      captionGap: !widget.landscape,
                     ),
                 ],
               ),
@@ -756,6 +916,7 @@ class DesktopRowArrow extends StatelessWidget {
     required this.label,
     required this.onPressed,
     required this.height,
+    this.captionGap = true,
   });
 
   final Alignment alignment;
@@ -764,11 +925,16 @@ class DesktopRowArrow extends StatelessWidget {
   final VoidCallback onPressed;
   final double height;
 
+  /// Whether the cards have text under the art to keep clear of.
+  final bool captionGap;
+
   @override
   Widget build(BuildContext context) => Align(
     alignment: alignment,
     child: Padding(
-      padding: const EdgeInsets.only(bottom: DesktopMetrics.captionHeight),
+      padding: EdgeInsets.only(
+        bottom: captionGap ? DesktopMetrics.captionHeight : 0,
+      ),
       // The page's edge fades over the cards, with a round button on it,
       // rather than a solid bar across the posters.
       child: DecoratedBox(

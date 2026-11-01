@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -13,6 +14,7 @@ import 'package:onfeed/src/services/tmdb_service.dart';
 import 'package:onfeed/src/theme/glass_theme.dart';
 import 'package:onfeed/src/widgets/media_card.dart';
 import 'package:onfeed/src/widgets/tv/tv_focus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Search and library pages as users see them, written against public
 /// constructors only, so they describe the pages before and after their
@@ -347,5 +349,72 @@ void main() {
         expect(storage.reads, 2);
       });
     }
+  });
+
+  group('Windows search start page', () {
+    setUp(() => SharedPreferences.setMockInitialValues({}));
+
+    Widget page() => DesktopSearchPage(
+      tmdb: tmdb,
+      onOpen: (_) {},
+      isFavorite: (_) => false,
+      storage: StorageService(),
+      suggestions: [_movie('popular')],
+    );
+
+    testWidgets('offers popular titles before anything is typed', (
+      tester,
+    ) async {
+      await _pump(tester, page());
+      await tester.pumpAndSettle();
+      expect(find.text('Popular right now'), findsOneWidget);
+      expect(find.text('Movie popular'), findsOneWidget);
+      expect(find.text('Recent searches'), findsNothing);
+      expect(find.text('Ctrl+F'), findsOneWidget);
+    });
+
+    testWidgets('remembers searches that found something, newest first, '
+        'and searches again from a chip', (tester) async {
+      await _pump(tester, page());
+      await tester.enterText(find.byType(TextField), 'dune');
+      await tester.testTextInput.receiveAction(TextInputAction.search);
+      await tester.pumpAndSettle();
+      expect(find.text('Results for “dune”'), findsOneWidget);
+      await tester.enterText(find.byType(TextField), 'alien');
+      await tester.testTextInput.receiveAction(TextInputAction.search);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Clear'));
+      await tester.pumpAndSettle();
+      expect(find.text('Recent searches'), findsOneWidget);
+      final saved = (await SharedPreferences.getInstance()).getString(
+        DesktopSearchPage.recentSearchesKey,
+      );
+      expect(jsonDecode(saved!), ['alien', 'dune']);
+
+      tmdb.requests.clear();
+      await tester.tap(find.text('dune'));
+      await tester.pumpAndSettle();
+      expect(tmdb.requests, ['dune#1']);
+      expect(find.text('Movie dune-1-0'), findsWidgets);
+    });
+
+    testWidgets('Clear forgets recent searches on this device', (tester) async {
+      SharedPreferences.setMockInitialValues({
+        DesktopSearchPage.recentSearchesKey: jsonEncode(['dune']),
+      });
+      await _pump(tester, page());
+      await tester.pumpAndSettle();
+      expect(find.text('dune'), findsOneWidget);
+      await tester.tap(find.widgetWithText(TextButton, 'Clear'));
+      await tester.pumpAndSettle();
+      expect(find.text('Recent searches'), findsNothing);
+      expect(
+        (await SharedPreferences.getInstance()).getString(
+          DesktopSearchPage.recentSearchesKey,
+        ),
+        '[]',
+      );
+    });
   });
 }

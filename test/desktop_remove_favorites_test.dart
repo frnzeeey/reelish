@@ -297,6 +297,26 @@ void main() {
       expect(_names(await storage.favorites()), ['Saved']);
     }, variant: _windows);
 
+    testWidgets('the header counts the library, and an empty My list says '
+        'how to fill it', (tester) async {
+      final empty = _MemoryStorage();
+      await empty.saveProgress(_film, 60000, durationMs: 120000);
+      await _pump(
+        tester,
+        DesktopLibraryPage(storage: empty, onOpen: (_) {}, refreshToken: 0),
+      );
+      expect(find.bySemanticsLabel('1 In progress'), findsOneWidget);
+      expect(find.bySemanticsLabel('0 On My list'), findsOneWidget);
+      expect(find.bySemanticsLabel('1 Watched'), findsOneWidget);
+      expect(find.text('My list'), findsOneWidget);
+      expect(find.textContaining('Nothing saved yet'), findsOneWidget);
+      expect(rowTitles(tester, 'My list'), isNull);
+      final continuing = tester
+          .widgetList<DesktopMediaRow>(find.byType(DesktopMediaRow))
+          .firstWhere((row) => row.title == 'Continue watching');
+      expect(continuing.landscape, isTrue);
+    }, variant: _windows);
+
     testWidgets('My list changes show at once', (tester) async {
       await pumpLibrary(tester);
       final mouse = _Mouse(tester);

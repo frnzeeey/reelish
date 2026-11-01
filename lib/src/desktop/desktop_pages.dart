@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -336,12 +337,25 @@ class DesktopSearchPage extends StatefulWidget {
     required this.onOpen,
     required this.isFavorite,
     this.onToggleFavorite,
+    this.storage,
+    this.suggestions = const [],
   });
 
   final TmdbService tmdb;
   final ValueChanged<MediaItem> onOpen;
   final bool Function(MediaItem item) isFavorite;
   final Future<void> Function(MediaItem item)? onToggleFavorite;
+
+  /// Keeps recent searches on this device; without it none are shown.
+  final StorageService? storage;
+
+  /// Shown as "Popular right now" before anything is typed (Home's
+  /// Spotlight, already loaded).
+  final List<MediaItem> suggestions;
+
+  /// Where recent searches are kept: a JSON list, newest first.
+  static const recentSearchesKey = 'onfeed.search.recent.v1';
+  static const maxRecentSearches = 8;
 
   @override
   State<DesktopSearchPage> createState() => _DesktopSearchPageState();
@@ -362,11 +376,15 @@ class _DesktopSearchPageState extends State<DesktopSearchPage> {
       ? 'Search failed. Check your connection and try again.'
       : null;
 
+  List<String> _recent = const [];
+  int _recordedVersion = 0;
+
   @override
   void initState() {
     super.initState();
     _model.addListener(_onModelChanged);
     _scroll.addListener(_onScroll);
+    unawaited(_loadRecent());
   }
 
   @override
@@ -380,7 +398,58 @@ class _DesktopSearchPageState extends State<DesktopSearchPage> {
   }
 
   void _onModelChanged() {
+    // A query that found something is worth offering again.
+    if (_model.firstPageVersion != _recordedVersion) {
+      _recordedVersion = _model.firstPageVersion;
+      if (_query.isNotEmpty && _results.isNotEmpty) {
+        unawaited(_remember(_query));
+      }
+    }
     if (mounted) setState(() {});
+  }
+
+  Future<void> _loadRecent() async {
+    final storage = widget.storage;
+    if (storage == null) return;
+    try {
+      final raw = await storage.readSetting(
+        DesktopSearchPage.recentSearchesKey,
+      );
+      final decoded = raw == null ? null : jsonDecode(raw);
+      if (decoded is List && mounted) {
+        setState(() => _recent = decoded.whereType<String>().toList());
+      }
+    } catch (_) {
+      // Unreadable history is simply not shown.
+    }
+  }
+
+  Future<void> _saveRecent(List<String> recent) async {
+    if (mounted) setState(() => _recent = recent);
+    try {
+      await widget.storage?.saveSetting(
+        DesktopSearchPage.recentSearchesKey,
+        jsonEncode(recent),
+      );
+    } catch (_) {}
+  }
+
+  Future<void> _remember(String query) {
+    if (widget.storage == null) return Future.value();
+    final lower = query.toLowerCase();
+    return _saveRecent(
+      [
+        query,
+        ..._recent.where((q) => q.toLowerCase() != lower),
+      ].take(DesktopSearchPage.maxRecentSearches).toList(),
+    );
+  }
+
+  void _searchFor(String query) {
+    _controller.text = query;
+    _controller.selection = TextSelection.collapsed(offset: query.length);
+    unawaited(_search(query));
+    _focus.requestFocus();
   }
 
   void _onChanged(String value) => _model.queryChanged(value);
@@ -414,14 +483,38 @@ class _DesktopSearchPageState extends State<DesktopSearchPage> {
         ),
       );
     } else if (_query.isEmpty) {
-      body = const SliverFillRemaining(
-        hasScrollBody: false,
-        child: DesktopMessage(
-          icon: Symbols.search_rounded,
-          title: 'Find a movie or series',
-          message: 'Type a title, then press Enter or pause to search.',
-        ),
-      );
+      body = _recent.isEmpty && widget.suggestions.isEmpty
+          ? const SliverFillRemaining(
+              hasScrollBody: false,
+              child: DesktopMessage(
+                icon: Symbols.search_rounded,
+                title: 'Find a movie or series',
+                message: 'Type a title, then press Enter or pause to search.',
+              ),
+            )
+          : SliverMainAxisGroup(
+              slivers: [
+                if (_recent.isNotEmpty)
+                  SliverToBoxAdapter(
+                    child: _RecentSearches(
+                      queries: _recent,
+                      onSelected: _searchFor,
+                      onClear: () => unawaited(_saveRecent(const [])),
+                    ),
+                  ),
+                if (widget.suggestions.isNotEmpty) ...[
+                  const SliverToBoxAdapter(
+                    child: DesktopSectionTitle('Popular right now'),
+                  ),
+                  DesktopPosterGrid(
+                    items: widget.suggestions,
+                    onOpen: widget.onOpen,
+                    isFavorite: widget.isFavorite,
+                    onToggleFavorite: widget.onToggleFavorite,
+                  ),
+                ],
+              ],
+            );
     } else if (_results.isEmpty) {
       body = SliverFillRemaining(
         hasScrollBody: false,
@@ -435,11 +528,18 @@ class _DesktopSearchPageState extends State<DesktopSearchPage> {
       if (!_loadingMore) {
         loadMoreIfShort(_scroll, () => unawaited(_model.loadMore()));
       }
-      body = DesktopPosterGrid(
-        items: _results,
-        onOpen: widget.onOpen,
-        isFavorite: widget.isFavorite,
-        onToggleFavorite: widget.onToggleFavorite,
+      body = SliverMainAxisGroup(
+        slivers: [
+          SliverToBoxAdapter(
+            child: DesktopSectionTitle('Results for “$_query”'),
+          ),
+          DesktopPosterGrid(
+            items: _results,
+            onOpen: widget.onOpen,
+            isFavorite: widget.isFavorite,
+            onToggleFavorite: widget.onToggleFavorite,
+          ),
+        ],
       );
     }
     return CustomScrollView(
@@ -448,7 +548,7 @@ class _DesktopSearchPageState extends State<DesktopSearchPage> {
         const SliverToBoxAdapter(
           child: DesktopPageHeader(
             title: 'Search',
-            subtitle: 'Movies and series from TMDB. Ctrl+F opens this page.',
+            subtitle: 'Movies and series from TMDB.',
           ),
         ),
         SliverToBoxAdapter(
@@ -462,7 +562,7 @@ class _DesktopSearchPageState extends State<DesktopSearchPage> {
             child: Align(
               alignment: Alignment.centerLeft,
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 720),
+                constraints: const BoxConstraints(maxWidth: 960),
                 child: TextField(
                   controller: _controller,
                   focusNode: _focus,
@@ -477,7 +577,8 @@ class _DesktopSearchPageState extends State<DesktopSearchPage> {
                     suffixIcon: ListenableBuilder(
                       listenable: _controller,
                       builder: (context, _) => _controller.text.isEmpty
-                          ? const SizedBox.shrink()
+                          // The shortcut, where it is used.
+                          ? const _KeyHint('Ctrl+F')
                           : IconButton(
                               tooltip: 'Clear',
                               icon: const Icon(Symbols.close_rounded),
@@ -618,6 +719,7 @@ class _DesktopLibraryPageState extends State<DesktopLibraryPage> {
         DesktopMediaRow(
           title: 'Continue watching',
           items: continuing,
+          landscape: true,
           onOpen: widget.onOpen,
           progressOf: _progress,
           captionOf: (item) => _model.resumeSummary(item).label,
@@ -632,6 +734,15 @@ class _DesktopLibraryPageState extends State<DesktopLibraryPage> {
           onOpen: widget.onOpen,
           isFavorite: isFavorite,
           onToggleFavorite: _toggleFavorite,
+        )
+      else if (_history.isNotEmpty)
+        // Say where saved titles go, rather than leaving the list out.
+        const _LibraryHint(
+          title: 'My list',
+          icon: Symbols.bookmark_add_rounded,
+          message:
+              'Nothing saved yet. Choose My list on any title, or press F '
+              'on a poster, to keep it here.',
         ),
       if (_history.isNotEmpty)
         DesktopMediaRow(
@@ -648,14 +759,31 @@ class _DesktopLibraryPageState extends State<DesktopLibraryPage> {
         SliverToBoxAdapter(
           child: DesktopPageHeader(
             title: 'My library',
-            subtitle: rows.isEmpty
-                ? 'Everything you are watching and saving.'
-                : [
-                    if (continuing.isNotEmpty)
-                      '${continuing.length} in progress',
-                    '${_favorites.length} on My list',
-                    '${_history.length} in history',
-                  ].join('  ·  '),
+            subtitle: 'Everything you are watching and saving.',
+            trailing: _history.isEmpty && _favorites.isEmpty
+                ? null
+                : Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _LibraryStat(
+                        count: continuing.length,
+                        label: 'In progress',
+                        icon: Symbols.play_circle_rounded,
+                      ),
+                      const SizedBox(width: 10),
+                      _LibraryStat(
+                        count: _favorites.length,
+                        label: 'On My list',
+                        icon: Symbols.bookmark_rounded,
+                      ),
+                      const SizedBox(width: 10),
+                      _LibraryStat(
+                        count: _history.length,
+                        label: 'Watched',
+                        icon: Symbols.history_rounded,
+                      ),
+                    ],
+                  ),
           ),
         ),
         if (rows.isEmpty)
@@ -674,4 +802,223 @@ class _DesktopLibraryPageState extends State<DesktopLibraryPage> {
       ],
     );
   }
+}
+
+/// A count in the library header: what is in progress, saved and watched.
+class _LibraryStat extends StatelessWidget {
+  const _LibraryStat({
+    required this.count,
+    required this.label,
+    required this.icon,
+  });
+
+  final int count;
+  final String label;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    label: '$count $label',
+    excludeSemantics: true,
+    child: DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: .04),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: DesktopSurfaces.hairline),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 10, 18, 10),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 20, fill: 1, color: GlassTheme.primary),
+            const SizedBox(width: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '$count',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    height: 1.1,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                Text(
+                  label,
+                  style: const TextStyle(fontSize: 12, color: GlassTheme.muted),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+/// A library section with nothing in it yet, saying how to fill it.
+class _LibraryHint extends StatelessWidget {
+  const _LibraryHint({
+    required this.title,
+    required this.icon,
+    required this.message,
+  });
+
+  final String title;
+  final IconData icon;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      DesktopSectionTitle(title),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(
+          DesktopMetrics.pagePadding,
+          12,
+          DesktopMetrics.pagePadding,
+          8,
+        ),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: .03),
+            borderRadius: BorderRadius.circular(DesktopSurfaces.radius),
+            border: Border.all(color: DesktopSurfaces.hairline),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+            child: Row(
+              children: [
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: GlassTheme.primary.withValues(alpha: .14),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: Icon(icon, size: 22, color: GlassTheme.primary),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    message,
+                    style: const TextStyle(
+                      color: GlassTheme.muted,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ],
+  );
+}
+
+/// Searches that found something before, newest first, as chips that
+/// search again; kept on this device only.
+class _RecentSearches extends StatelessWidget {
+  const _RecentSearches({
+    required this.queries,
+    required this.onSelected,
+    required this.onClear,
+  });
+
+  final List<String> queries;
+  final ValueChanged<String> onSelected;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      DesktopSectionTitle(
+        'Recent searches',
+        trailing: TextButton(onPressed: onClear, child: const Text('Clear')),
+      ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(
+          DesktopMetrics.pagePadding,
+          6,
+          DesktopMetrics.pagePadding,
+          8,
+        ),
+        child: Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            for (final query in queries)
+              Material(
+                color: Colors.white.withValues(alpha: .05),
+                shape: StadiumBorder(
+                  side: BorderSide(color: DesktopSurfaces.hairline),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: () => onSelected(query),
+                  hoverColor: GlassTheme.primary.withValues(alpha: .14),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 10, 18, 10),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Symbols.history_rounded,
+                          size: 18,
+                          color: GlassTheme.muted,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          query,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    ],
+  );
+}
+
+/// A keyboard shortcut drawn as a key cap, inside the search field.
+class _KeyHint extends StatelessWidget {
+  const _KeyHint(this.keys);
+
+  final String keys;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(right: 14),
+    child: Center(
+      widthFactor: 1,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: .06),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: DesktopSurfaces.hairline),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+          child: Text(
+            keys,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: GlassTheme.muted,
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
 }
