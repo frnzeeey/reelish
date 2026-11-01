@@ -20,6 +20,8 @@ import '../account/backend_config.dart';
 import '../platform/device_capabilities.dart';
 import '../services/storage_service.dart';
 import 'episode_check.dart';
+import '../analytics/analytics_events.dart';
+import '../analytics/analytics_service.dart';
 
 /// Where the session's episode-check token is kept: secure storage, with
 /// the account it belongs to.
@@ -295,6 +297,9 @@ class EpisodeAlerts extends ChangeNotifier {
     }
     await _save(_settings.copyWith(enabled: value));
     if (value) {
+      AnalyticsService.instance.log(
+        AnalyticsEvent.featureUsed(AnalyticsFeature.episodeAlertsOn),
+      );
       await _schedule();
       await checkNow();
     } else {

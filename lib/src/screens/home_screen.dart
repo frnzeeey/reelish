@@ -21,6 +21,8 @@ import '../desktop/desktop_shell.dart';
 import '../platform/device_capabilities.dart';
 import '../services/media_catalog_rules.dart';
 import '../services/paged_feed_controller.dart';
+import '../analytics/analytics_events.dart';
+import '../analytics/analytics_service.dart';
 import '../services/perf_timeline.dart';
 import '../services/storage_service.dart';
 import '../services/stream_discovery.dart';
@@ -34,6 +36,7 @@ import '../services/accent_settings_controller.dart';
 import '../theme/glass_theme.dart';
 import '../viewmodels/home_view_model.dart';
 import '../widgets/provider_installer_modal.dart';
+import '../widgets/analytics_consent_dialog.dart';
 import '../widgets/app_update_flow.dart';
 import '../widgets/category_chip.dart';
 import '../widgets/top_lit_edge.dart';
@@ -161,8 +164,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     unawaited(_loadFavorites());
     WidgetsBinding.instance.addPostFrameCallback((_) {
       PerfTimeline.markOnce('HOME_USABLE');
-      unawaited(_checkForUpdate());
+      unawaited(_startupPrompts());
     });
+  }
+
+  /// The one-time analytics question (Android, when configured) comes
+  /// first, so it never hides an update prompt; then the update check.
+  Future<void> _startupPrompts() async {
+    try {
+      await AnalyticsConsentDialog.maybeAsk(context);
+    } catch (_) {
+      // Optional; the update check runs regardless.
+    }
+    if (!mounted) return;
+    AnalyticsService.instance.setUserProperty(
+      'interface',
+      DeviceCapabilities.isTv ? 'tv' : 'phone',
+    );
+    await _checkForUpdate();
   }
 
   void _startSpotlightTimer() {
@@ -358,16 +377,30 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   /// A failed search clears its results, so an earlier query's titles never
   /// appear under a new query.
-  Future<void> _loadSearch(String query, {bool forceRefresh = false}) =>
-      _loadFeed(
-        _searchFeed,
-        (onRevalidated) => _tmdb.search(
-          query,
-          forceRefresh: forceRefresh,
-          onRevalidated: onRevalidated,
-        ),
-        clearOnError: true,
-      );
+  Future<void> _loadSearch(String query, {bool forceRefresh = false}) async {
+    await _loadFeed(
+      _searchFeed,
+      (onRevalidated) => _tmdb.search(
+        query,
+        forceRefresh: forceRefresh,
+        onRevalidated: onRevalidated,
+      ),
+      clearOnError: true,
+    );
+    // Only the outcome of a settled search, never what was typed.
+    if (!mounted || _search.text.trim() != query) return;
+    final results = _searchFeed.items.length;
+    AnalyticsService.instance.log(
+      AnalyticsEvent.search(
+        _searchFeed.error != null
+            ? SearchOutcome.failed
+            : results == 0
+            ? SearchOutcome.noResults
+            : SearchOutcome.results,
+        results: results,
+      ),
+    );
+  }
 
   /// Pull-to-refresh: reloads the visible list, and on For you also
   /// refreshes the deferred rows that have already been requested. Each
@@ -419,6 +452,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (_openingDetails) return;
     _openingDetails = true;
     PerfTimeline.begin('DETAIL_OPEN');
+    AnalyticsService.instance.log(
+      AnalyticsEvent.selectContent(contentType: item.type, itemId: item.id),
+    );
     _spotlightTimer?.cancel();
     try {
       await Navigator.push<void>(
@@ -495,8 +531,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _homeModel.resumeSummary(item);
   String _favoriteKey(MediaItem item) => HomeViewModel.keyOf(item);
   Future<void> _loadFavorites() => _homeModel.loadFavorites();
-  Future<bool> _toggleFavorite(MediaItem item) =>
-      _homeModel.toggleFavorite(item);
+  Future<bool> _toggleFavorite(MediaItem item) async {
+    final saved = await _homeModel.toggleFavorite(item);
+    AnalyticsService.instance.log(
+      AnalyticsEvent.featureUsed(
+        saved ? AnalyticsFeature.myListAdd : AnalyticsFeature.myListRemove,
+      ),
+    );
+    return saved;
+  }
 
   void _markContentVisible(List<MediaItem> items) {
     if (items.isEmpty) return;
@@ -2243,6 +2286,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _tab = value;
       if (value == 2) _libraryRefreshToken++;
     });
+    AnalyticsService.instance.logScreen(
+      const ['home', 'plugins', 'library', 'settings'][value.clamp(0, 3)],
+    );
     if (value == 2) {
       unawaited(_loadHistory());
     }
@@ -2280,6 +2326,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   /// The same refreshes the mobile dock runs when a tab opens.
   void _onTvDestinationChanged(TvDestination destination) {
+    AnalyticsService.instance.logScreen(destination.name);
     setState(() {
       _tvDestination = destination;
       if (destination == TvDestination.library ||

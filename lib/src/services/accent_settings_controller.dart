@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 
 import '../theme/glass_theme.dart';
 import 'storage_service.dart';
+import '../analytics/analytics_events.dart';
+import '../analytics/analytics_service.dart';
 
 class AccentSettingsController extends ChangeNotifier {
   AccentSettingsController({StorageService? storage})
@@ -24,6 +26,9 @@ class AccentSettingsController extends ChangeNotifier {
     _value = value;
     GlassTheme.setAccent(value);
     notifyListeners();
+    AnalyticsService.instance.log(
+      AnalyticsEvent.featureUsed(AnalyticsFeature.accentChange),
+    );
     await _storage.saveSetting(_key, value.id);
   }
 }

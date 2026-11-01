@@ -16,6 +16,8 @@ import '../account/backend_config.dart';
 import '../account/profile_controller.dart';
 import 'party_models.dart';
 import 'playback_sync.dart';
+import '../analytics/analytics_events.dart';
+import '../analytics/analytics_service.dart';
 
 /// One open connection to a room; dart:io's WebSocket in the app.
 abstract interface class PartySocket {
@@ -89,7 +91,7 @@ Future<String> createWatchParty({
 }) async {
   final session = account ?? AccountController.instance;
   final client = api ?? AccountApi(baseUrl: BackendConfig.apiUrl);
-  return _withToken(
+  final code = await _withToken(
     session,
     (token) => client.createParty(
       token,
@@ -98,6 +100,10 @@ Future<String> createWatchParty({
       profile: _profileJson(profile ?? ProfileController.instance, session),
     ),
   );
+  AnalyticsService.instance.log(
+    AnalyticsEvent.featureUsed(AnalyticsFeature.watchPartyCreate),
+  );
+  return code;
 }
 
 /// What [code] opens. Throws [AccountApiException] (`party_not_found`…).
@@ -116,6 +122,10 @@ Future<PartyPreview> previewWatchParty(
   if (preview == null) {
     throw const AccountApiException('unavailable', 'Unexpected response.');
   }
+  // A valid code entered: the step before joining.
+  AnalyticsService.instance.log(
+    AnalyticsEvent.featureUsed(AnalyticsFeature.watchPartyJoin),
+  );
   return preview;
 }
 

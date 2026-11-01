@@ -11,6 +11,8 @@ import '../platform/device_capabilities.dart';
 import '../services/github_update_service.dart';
 import '../services/windows_update_controller.dart';
 import 'update_dialog.dart';
+import '../analytics/analytics_events.dart';
+import '../analytics/analytics_service.dart';
 
 /// What the update flow is doing. One value, so states such as "checking"
 /// and "downloading" can never both be true.
@@ -232,6 +234,9 @@ abstract final class AppUpdateFlow {
       await windowsController.dismiss(update);
     }
     if (!accepted || !context.mounted) return;
+    AnalyticsService.instance.log(
+      AnalyticsEvent.featureUsed(AnalyticsFeature.updateAccepted),
+    );
     final apk = await showDialog<File>(
       context: context,
       barrierDismissible: false,

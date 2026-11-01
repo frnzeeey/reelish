@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
+import '../analytics/analytics_service.dart';
 import '../account/account_controller.dart';
 import '../account/profile_controller.dart';
 import '../models/playback_settings.dart';
@@ -180,6 +183,8 @@ class SettingsScreen extends StatelessWidget {
                   const LegalInformationScreen(document: LegalDocument.privacy),
             ),
           ),
+          // Android with analytics configured only; absent elsewhere.
+          const _UsageStatisticsTile(),
           SettingsTile(
             icon: Symbols.gavel_rounded,
             title: 'Terms of use',
@@ -1529,4 +1534,30 @@ class PlaybackSettingsScreen extends StatelessWidget {
   String _durationLabel(int hours) => hours >= 24
       ? '${hours ~/ 24} day${hours >= 48 ? 's' : ''}'
       : '$hours hours';
+}
+
+/// Turns opt-in usage statistics on or off. Shown only where they can be
+/// sent (Android builds with a Firebase configuration).
+class _UsageStatisticsTile extends StatelessWidget {
+  const _UsageStatisticsTile();
+
+  @override
+  Widget build(BuildContext context) {
+    final analytics = AnalyticsService.instance;
+    return ListenableBuilder(
+      listenable: Listenable.merge([analytics.available, analytics.consent]),
+      builder: (context, _) {
+        if (!analytics.available.value) return const SizedBox.shrink();
+        return SettingsSwitchTile(
+          icon: Symbols.insights_rounded,
+          title: 'Share usage statistics',
+          description:
+              'Pages, features and whether playback starts. Never your '
+              'account, searches or streaming sources.',
+          value: analytics.consent.value == AnalyticsConsent.granted,
+          onChanged: (value) => unawaited(analytics.setConsent(value)),
+        );
+      },
+    );
+  }
 }

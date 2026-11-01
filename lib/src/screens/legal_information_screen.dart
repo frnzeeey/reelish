@@ -23,7 +23,7 @@ class LegalInformationScreen extends StatefulWidget {
 
   /// The privacy policy's own date: it changed with accounts and the
   /// Reelish API, while the terms did not.
-  static const _privacyDate = 'October 31, 2026';
+  static const _privacyDate = 'November 2, 2026';
 
   /// What Reelish is and is not responsible for. Shown first in the Terms of
   /// use and on the Credits screen; keep the wording exact.
@@ -246,8 +246,8 @@ class _LegalInformationScreenState extends State<LegalInformationScreen> {
           'sources, and a copy of the plugin library catalog in the app’s '
           'private storage, and your sign-in session in the device’s secure '
           'storage. A profile photo you choose stays on the device and is '
-          'never uploaded. The app does not include its own advertising or '
-          'analytics service. You can remove favorites and history in '
+          'never uploaded. The app has no advertising. Usage statistics are '
+          'sent only if you agree (see Usage statistics). You can remove favorites and history in '
           'Library, remove add-ons in Plugins, clear the torrent cache in '
           'Playback settings, or erase app data by uninstalling the app. '
           'Device backups and operating-system behavior are controlled by '
@@ -286,8 +286,29 @@ class _LegalInformationScreenState extends State<LegalInformationScreen> {
           'download a ZIP for you to extract.',
     ),
     (
+      'Usage statistics (Android only, optional)',
+      'On Android phones, Android TV and Google TV, Reelish asks once '
+          'whether you want to share usage statistics, and sends none until '
+          'you agree. If you do, Google Analytics for Firebase receives which '
+          'pages and features you use, whether a search found results (not '
+          'what you searched for), and for each playback session the movie '
+          'or episode’s public TMDB number, how long it took to start, '
+          'buffering, the kind of error if it failed, and roughly how much '
+          'was watched. It never receives your account, Trakt name, display '
+          'name, search text, add-on or provider names, stream addresses or '
+          'tokens. Google also records standard app information such as '
+          'device model, operating-system version, app version, approximate '
+          'country and an app-instance identifier; the advertising '
+          'identifier, the Android ID and ad personalization are turned off. '
+          'Google keeps this data under its own policies and Reelish’s '
+          'retention setting. You can turn sharing off in Settings at any '
+          'time; doing so also clears the analytics data and identifier '
+          'stored on the device. Windows sends no usage statistics.',
+    ),
+    (
       'Third-party services and add-ons',
-      'Trakt, TMDB, Cloudflare (which hosts the Reelish API), OpenSubtitles, '
+      'Trakt, TMDB, Cloudflare (which hosts the Reelish API), Google '
+          '(usage statistics, only if you agree), OpenSubtitles, '
           'add-on publishers, media hosts, torrent peers, GitHub, and your '
           'device platform operate independently. Their privacy practices, '
           'logs, retention and locations are governed by their own policies. '

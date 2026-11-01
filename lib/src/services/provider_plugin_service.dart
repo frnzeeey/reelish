@@ -18,6 +18,8 @@ import 'torrent_source_preparer.dart';
 import 'provider_execution_scheduler.dart';
 import 'provider_runner.dart';
 import 'provider_script_cache.dart';
+import '../analytics/analytics_events.dart';
+import '../analytics/analytics_service.dart';
 
 class ProviderPluginService extends ChangeNotifier {
   static Future<String>? _cheerioBundle;
@@ -189,6 +191,9 @@ class ProviderPluginService extends ChangeNotifier {
       errors.remove(url);
       _scripts.clear();
       notifyListeners();
+      AnalyticsService.instance.log(
+        AnalyticsEvent.featureUsed(AnalyticsFeature.pluginRepositoryInstall),
+      );
       return repository;
     });
   }

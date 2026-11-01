@@ -1911,6 +1911,21 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
     });
   }
 
+  /// How much of the title was reached (0–1), as [_saveProgress] measures
+  /// it; null when the length is unknown (live streams, nothing played).
+  double? _watchedShare() {
+    final c = _controller;
+    final position = c != null && c.value.isInitialized && _ready
+        ? c.value.position
+        : _lastPosition;
+    final duration =
+        c != null && c.value.isInitialized && c.value.duration > Duration.zero
+        ? c.value.duration
+        : _lastDuration;
+    if (position == null || duration <= Duration.zero) return null;
+    return position.inMilliseconds / duration.inMilliseconds;
+  }
+
   Future<void> _saveProgress() {
     final c = _controller;
     // While a failed source is being replaced there is no controller; keep
@@ -2799,6 +2814,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
         unawaited(DesktopWindow.setFullscreen(false));
       }
     }
+    final inParty = _party != null;
     _party?.dispose();
     _party = null;
     // Detach first: nothing below may be notified after it is disposed.
@@ -2823,7 +2839,12 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
     // stopped listening to the settings it writes.
     _volumeApply?.cancel();
     if (_volumeSave != null) _saveVolume();
-    _metrics.report();
+    _metrics.report(
+      contentType: widget.item.type,
+      itemId: widget.item.id,
+      watched: _watchedShare(),
+      watchParty: inParty,
+    );
     _hide?.cancel();
     _save?.cancel();
     _hint?.cancel();

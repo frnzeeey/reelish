@@ -21,6 +21,20 @@ val isReleaseBuild = gradle.startParameter.taskNames.any {
     it.contains("release", ignoreCase = true)
 }
 
+// Firebase Analytics (opt-in, see AnalyticsChannel.kt). The Android app's
+// Firebase client settings: identifiers, not secrets, but kept out of the
+// repository so builds without them have no analytics at all.
+fun firebaseValue(name: String): String =
+    (providers.gradleProperty(name).orNull ?: System.getenv(name) ?: "").trim()
+
+val firebaseAppId = firebaseValue("REELISH_FIREBASE_APP_ID")
+val firebaseApiKey = firebaseValue("REELISH_FIREBASE_API_KEY")
+val firebaseProjectId = firebaseValue("REELISH_FIREBASE_PROJECT_ID")
+val firebaseSenderId = firebaseValue("REELISH_FIREBASE_SENDER_ID")
+
+fun buildConfigString(value: String) =
+    "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
+
 if (isReleaseBuild && !hasReleaseSigning) {
     throw GradleException(
         "Release builds require a private keystore. Configure ONFEED_RELEASE_STORE_FILE, " +
@@ -62,6 +76,27 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        buildConfigField("String", "FIREBASE_APP_ID", buildConfigString(firebaseAppId))
+        buildConfigField("String", "FIREBASE_API_KEY", buildConfigString(firebaseApiKey))
+        buildConfigField("String", "FIREBASE_PROJECT_ID", buildConfigString(firebaseProjectId))
+        buildConfigField("String", "FIREBASE_SENDER_ID", buildConfigString(firebaseSenderId))
+        // Firebase's measurement service reads the app id from resources,
+        // as the google-services plugin would generate them.
+        if (firebaseAppId.isNotEmpty()) {
+            resValue("string", "google_app_id", firebaseAppId)
+            resValue("string", "google_api_key", firebaseApiKey)
+            resValue("string", "project_id", firebaseProjectId)
+            if (firebaseSenderId.isNotEmpty()) {
+                resValue("string", "gcm_defaultSenderId", firebaseSenderId)
+            }
+        }
+    }
+
+    buildFeatures {
+        buildConfig = true
+        // For the Firebase resource values above.
+        resValues = true
     }
 
     buildTypes {
@@ -88,6 +123,9 @@ flutter {
 dependencies {
     // Java 8+ APIs on older Android, for flutter_local_notifications.
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    // Opt-in usage statistics (AnalyticsChannel.kt); Android only.
+    implementation(platform("com.google.firebase:firebase-bom:34.0.0"))
+    implementation("com.google.firebase:firebase-analytics")
 }
 
 // Release APKs ship ARM code only. x86_64 libraries (libmpv, the torrent

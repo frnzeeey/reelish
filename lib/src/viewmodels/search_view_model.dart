@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../analytics/analytics_events.dart';
+import '../analytics/analytics_service.dart';
 import '../models/media_item.dart';
 import '../services/media_catalog_rules.dart';
 import '../services/tmdb_service.dart';
@@ -90,6 +92,10 @@ class SearchViewModel extends ChangeNotifier {
         _loading = false;
         _firstPageVersion++;
       });
+      _logOutcome(
+        items.isEmpty ? SearchOutcome.noResults : SearchOutcome.results,
+        items.length,
+      );
     } catch (_) {
       if (_disposed || request != _request) return;
       _update(() {
@@ -97,8 +103,14 @@ class SearchViewModel extends ChangeNotifier {
         _loading = false;
         _failed = true;
       });
+      _logOutcome(SearchOutcome.failed, 0);
     }
   }
+
+  /// How a search settled, for usage statistics; never the query.
+  void _logOutcome(SearchOutcome outcome, int results) => AnalyticsService
+      .instance
+      .log(AnalyticsEvent.search(outcome, results: results));
 
   /// Back to an empty search; anything still loading is ignored.
   void clear() {

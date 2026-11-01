@@ -11,6 +11,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import 'device_capabilities.dart';
+import '../analytics/analytics_events.dart';
+import '../analytics/analytics_service.dart';
 
 /// One launcher icon. [id] is shared with AppIconSwitcher.kt.
 @immutable
@@ -102,6 +104,11 @@ class AppIconController extends ChangeNotifier {
     notifyListeners();
     try {
       _current = await _service.select(id);
+      if (_current == id) {
+        AnalyticsService.instance.log(
+          AnalyticsEvent.featureUsed(AnalyticsFeature.appIconChange),
+        );
+      }
       return _current == id;
     } catch (_) {
       try {

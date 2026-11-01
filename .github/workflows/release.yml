@@ -213,6 +213,13 @@ jobs:
           ONFEED_RELEASE_STORE_PASSWORD: ${{ secrets.ONFEED_RELEASE_STORE_PASSWORD }}
           ONFEED_RELEASE_KEY_ALIAS: ${{ secrets.ONFEED_RELEASE_KEY_ALIAS }}
           ONFEED_RELEASE_KEY_PASSWORD: ${{ secrets.ONFEED_RELEASE_KEY_PASSWORD }}
+          # Opt-in usage statistics (docs/analytics.md). Repository
+          # variables, not secrets: Firebase client identifiers. When unset,
+          # the APK has no analytics and never asks.
+          REELISH_FIREBASE_APP_ID: ${{ vars.REELISH_FIREBASE_APP_ID }}
+          REELISH_FIREBASE_API_KEY: ${{ vars.REELISH_FIREBASE_API_KEY }}
+          REELISH_FIREBASE_PROJECT_ID: ${{ vars.REELISH_FIREBASE_PROJECT_ID }}
+          REELISH_FIREBASE_SENDER_ID: ${{ vars.REELISH_FIREBASE_SENDER_ID }}
           TAG: ${{ github.ref_name }}
         run: |
           set -euo pipefail
