@@ -35,11 +35,11 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `_AddSourceBanner` | Widget | [`tv_pages.dart:183`](../../lib/src/screens/tv/tv_pages.dart#L183) | extends StatelessWidget | Android TV | its own file |  |
 | `AlertTokenStore` | Class | [`episode_alerts.dart:28`](../../lib/src/notifications/episode_alerts.dart#L28) |  | Shared | 1 test file | Where the session's episode-check token is kept: secure storage, with the account it belongs to. |
 | `_AmbientGlow` | Widget | [`sign_in_screen.dart:222`](../../lib/src/screens/sign_in_screen.dart#L222) | extends StatelessWidget | Shared | its own file | A soft accent light behind the brand, drawn once (no blur filter). |
-| `AnalyticsConsent` | Enum | [`analytics_service.dart:14`](../../lib/src/analytics/analytics_service.dart#L14) |  | Shared | 2 lib files, 1 test file | Whether the viewer agreed to share usage statistics. |
+| `AnalyticsConsent` | Enum | [`analytics_service.dart:14`](../../lib/src/analytics/analytics_service.dart#L14) |  | Shared | 2 lib files, 2 test files | Whether the viewer agreed to share usage statistics. |
 | `AnalyticsConsentDialog` | Widget | [`analytics_consent_dialog.dart:12`](../../lib/src/widgets/analytics_consent_dialog.dart#L12) | extends StatelessWidget | Shared | 1 lib file, 1 test file | Asks once whether to share anonymous usage statistics. |
-| `AnalyticsEvent` | Class | [`analytics_events.dart:36`](../../lib/src/analytics/analytics_events.dart#L36) |  | Shared | 10 lib files, 1 test file |  |
+| `AnalyticsEvent` | Class | [`analytics_events.dart:36`](../../lib/src/analytics/analytics_events.dart#L36) |  | Shared | 10 lib files, 2 test files |  |
 | `AnalyticsFeature` | Enum | [`analytics_events.dart:9`](../../lib/src/analytics/analytics_events.dart#L9) |  | Shared | 7 lib files, 1 test file | Features whose use is counted with `AnalyticsEvent.featureUsed`. |
-| `AnalyticsService` | Class | [`analytics_service.dart:22`](../../lib/src/analytics/analytics_service.dart#L22) |  | Shared | 11 lib files, 1 test file | Sends events to the native Firebase SDK, when it may. |
+| `AnalyticsService` | Class | [`analytics_service.dart:22`](../../lib/src/analytics/analytics_service.dart#L22) |  | Shared | 11 lib files, 2 test files | Sends events to the native Firebase SDK, when it may. |
 | `AppearanceSettingsScreen` | Widget | [`playback_settings_screen.dart:216`](../../lib/src/screens/playback_settings_screen.dart#L216) | extends StatelessWidget | Shared | 2 lib files, 2 test files |  |
 | `AppIcon` | Theme | [`design_tokens.dart:137`](../../lib/src/theme/design_tokens.dart#L137) |  | Shared | 5 lib files | Icon sizes. |
 | `AppIconController` | Notifier / controller | [`app_icon.dart:72`](../../lib/src/platform/app_icon.dart#L72) | extends ChangeNotifier | Shared | 1 lib file, 1 test file | The selection for the settings screen. |
@@ -414,7 +414,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `PlaybackFailureKind` | Enum | [`playback_coordinator.dart:13`](../../lib/src/services/playback_coordinator.dart#L13) |  | Shared | 2 lib files, 3 test files |  |
 | `PlaybackLog` | Service type | [`playback_coordinator.dart:377`](../../lib/src/services/playback_coordinator.dart#L377) |  | Shared | 2 lib files | Development-only playback diagnostics. |
 | `PlaybackMetrics` | Service type | [`playback_metrics.dart:15`](../../lib/src/services/playback_metrics.dart#L15) |  | Shared | 1 lib file, 2 test files | One player session's timings and failures. |
-| `PlaybackOutcome` | Enum | [`analytics_events.dart:25`](../../lib/src/analytics/analytics_events.dart#L25) |  | Shared | 1 lib file, 1 test file | How a player session ended, for `AnalyticsEvent.playbackSession`. |
+| `PlaybackOutcome` | Enum | [`analytics_events.dart:25`](../../lib/src/analytics/analytics_events.dart#L25) |  | Shared | 1 lib file, 2 test files | How a player session ended, for `AnalyticsEvent.playbackSession`. |
 | `PlaybackSettings` | Model | [`playback_settings.dart:5`](../../lib/src/models/playback_settings.dart#L5) |  | Shared | 5 lib files, 1 test file |  |
 | `PlaybackSettingsController` | Notifier / controller | [`playback_settings_controller.dart:8`](../../lib/src/services/playback_settings_controller.dart#L8) | extends ChangeNotifier | Shared | 6 lib files, 7 test files |  |
 | `PlaybackSettingsScreen` | Widget | [`playback_settings_screen.dart:709`](../../lib/src/screens/playback_settings_screen.dart#L709) | extends StatelessWidget | Shared | 2 lib files, 3 test files |  |

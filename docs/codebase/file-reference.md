@@ -322,7 +322,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Imported by:** `src/analytics/analytics_service.dart`, `src/notifications/episode_alerts.dart`, `src/platform/app_icon.dart`, `src/screens/home_screen.dart`, `src/services/accent_settings_controller.dart`, `src/services/playback_metrics.dart`, `src/services/provider_plugin_service.dart`, `src/viewmodels/search_view_model.dart`, `src/watch_party/watch_party_controller.dart`, `src/widgets/app_update_flow.dart`
 
-**Tests importing it:** `test/analytics_test.dart`
+**Tests importing it:** `integration_test/analytics_native_test.dart`, `test/analytics_test.dart`
 
 ## lib/src/analytics/analytics_service.dart
 
@@ -338,7 +338,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Imported by:** `src/notifications/episode_alerts.dart`, `src/platform/app_icon.dart`, `src/screens/home_screen.dart`, `src/screens/playback_settings_screen.dart`, `src/services/accent_settings_controller.dart`, `src/services/playback_metrics.dart`, `src/services/provider_plugin_service.dart`, `src/viewmodels/search_view_model.dart`, `src/watch_party/watch_party_controller.dart`, `src/widgets/analytics_consent_dialog.dart`, `src/widgets/app_update_flow.dart`
 
-**Tests importing it:** `test/analytics_test.dart`
+**Tests importing it:** `integration_test/analytics_native_test.dart`, `test/analytics_test.dart`
 
 ## lib/src/app/app_services.dart
 

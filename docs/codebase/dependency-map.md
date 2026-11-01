@@ -159,8 +159,8 @@ The files imported by the most other `lib/` files. A change to one of these reac
 | [`lib/src/watch_party/party_models.dart`](../../lib/src/watch_party/party_models.dart) | 14 | 2 |
 | [`lib/src/account/account_controller.dart`](../../lib/src/account/account_controller.dart) | 12 | 7 |
 | [`lib/src/services/tmdb_service.dart`](../../lib/src/services/tmdb_service.dart) | 12 | 15 |
-| [`lib/src/analytics/analytics_service.dart`](../../lib/src/analytics/analytics_service.dart) | 11 | 1 |
-| [`lib/src/analytics/analytics_events.dart`](../../lib/src/analytics/analytics_events.dart) | 10 | 1 |
+| [`lib/src/analytics/analytics_service.dart`](../../lib/src/analytics/analytics_service.dart) | 11 | 2 |
+| [`lib/src/analytics/analytics_events.dart`](../../lib/src/analytics/analytics_events.dart) | 10 | 2 |
 | [`lib/src/desktop/desktop_widgets.dart`](../../lib/src/desktop/desktop_widgets.dart) | 10 | 5 |
 | [`lib/src/models/media_details.dart`](../../lib/src/models/media_details.dart) | 9 | 5 |
 | [`lib/src/models/plugin_catalog.dart`](../../lib/src/models/plugin_catalog.dart) | 9 | 1 |
