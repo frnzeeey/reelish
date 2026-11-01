@@ -7,6 +7,7 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import '../desktop/desktop_update_dialogs.dart';
 import '../models/app_update.dart';
+import '../platform/device_capabilities.dart';
 import '../services/github_update_service.dart';
 import '../services/windows_update_controller.dart';
 import 'update_dialog.dart';
@@ -298,12 +299,12 @@ abstract final class AppUpdateFlow {
       if (!await GitHubUpdateService.openInstallPermissionSettings()) {
         returned.cancel();
         if (context.mounted) {
-          await _notice(
+          await _cannotInstall(
             context,
+            apk,
+            update,
             title: 'Allow Reelish to install updates',
-            message:
-                'Open Android Settings → Apps → Reelish → Install unknown '
-                'apps, allow it, then check for updates again from About.',
+            message: _permissionSteps,
           );
         }
         return;
@@ -311,7 +312,20 @@ abstract final class AppUpdateFlow {
       await returned.future;
       if (!context.mounted) return;
       if (!await GitHubUpdateService.canInstallPackages()) {
-        if (context.mounted) {
+        if (!context.mounted) return;
+        if (await GitHubUpdateService.canSaveToDownloads()) {
+          if (context.mounted) {
+            await _cannotInstall(
+              context,
+              apk,
+              update,
+              title: 'Allow Reelish to install updates',
+              message:
+                  'Reelish needs "Install unknown apps" permission to update. '
+                  'You can try again from About.',
+            );
+          }
+        } else if (context.mounted) {
           ScaffoldMessenger.maybeOf(context)?.showSnackBar(
             const SnackBar(
               content: Text(
@@ -328,11 +342,86 @@ abstract final class AppUpdateFlow {
       // Android shows its own confirmation. If the user cancels there, they
       // simply return to Reelish; the verified APK stays cached for a retry.
       await GitHubUpdateService.installApk(apk, update);
+    } on UpdateInstallerUnavailable catch (error) {
+      if (context.mounted) {
+        await _cannotInstall(
+          context,
+          apk,
+          update,
+          title: 'Unable to install the update',
+          message: error.message,
+        );
+      }
     } on UpdateException catch (error) {
       if (context.mounted) {
         await _notice(
           context,
           title: 'Unable to install the update',
+          message: error.message,
+        );
+      }
+    }
+  }
+
+  @visibleForTesting
+  static Future<void> debugInstall(
+    BuildContext context,
+    File apk,
+    AppUpdate update,
+  ) => _install(context, apk, update);
+
+  /// Where Android keeps the "Install unknown apps" switch. Android TV and
+  /// Google TV list it under Security & restrictions, not under the app.
+  static String get _permissionSteps => DeviceCapabilities.isTv
+      ? 'On your TV, open Settings → Apps → Security & restrictions → '
+            'Unknown sources (on older Android TV: Settings → Device '
+            'Preferences → Security & restrictions), turn on Reelish, then '
+            'check for updates again from About.'
+      : 'Open Android Settings → Apps → Reelish → Install unknown apps, '
+            'allow it, then check for updates again from About.';
+
+  /// The verified update cannot be installed from inside Reelish. The APK
+  /// only ever lives in Reelish's private cache, which no file manager or
+  /// Downloads app can see, so where Android allows it this offers a copy
+  /// in Downloads to install by hand.
+  static Future<void> _cannotInstall(
+    BuildContext context,
+    File apk,
+    AppUpdate update, {
+    required String title,
+    required String message,
+  }) async {
+    final canSave = await GitHubUpdateService.canSaveToDownloads();
+    if (!context.mounted) return;
+    final save = await showDialog<bool>(
+      context: context,
+      builder: (_) => UpdateNoticeDialog(
+        title: title,
+        message: canSave
+            ? '$message\n\nYou can also save the update to Downloads and '
+                  'install it from a file manager.'
+            : message,
+        secondaryLabel: canSave ? 'Save to Downloads' : null,
+      ),
+    );
+    if (save != true || !context.mounted) return;
+    try {
+      final name = await GitHubUpdateService.saveApkToDownloads(apk, update);
+      if (!context.mounted) return;
+      await _notice(
+        context,
+        title: 'Saved to Downloads',
+        message:
+            '$name is in your Downloads folder. Open it with a file manager '
+            'to install Reelish ${update.latestVersion}. Android still asks '
+            'you to allow installs from that app first.',
+        icon: Symbols.download_done_rounded,
+      );
+    } on UpdateException catch (error) {
+      if (context.mounted) {
+        await _notice(
+          context,
+          title: 'Unable to save the update',
           message: error.message,
         );
       }

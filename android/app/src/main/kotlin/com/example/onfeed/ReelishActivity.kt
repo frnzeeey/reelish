@@ -17,14 +17,17 @@ import android.content.res.Configuration
 import android.util.Rational
 import android.view.WindowManager
 import android.content.ActivityNotFoundException
+import android.content.ContentValues
 import android.content.Intent
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.content.pm.Signature
 import android.net.Uri
+import android.provider.MediaStore
 import android.provider.Settings
 import androidx.core.content.FileProvider
 import java.io.File
+import java.io.IOException
 import java.security.MessageDigest
 
 /**
@@ -35,6 +38,8 @@ import java.security.MessageDigest
 class ReelishActivity : FlutterActivity() {
     private val channelName = "onfeed/player"
     private val updateChannelName = "onfeed/app_update"
+    /** Names a Downloads copy may have: Reelish-<version>.apk, nothing else. */
+    private val downloadNamePattern = Regex("Reelish-[0-9A-Za-z._-]{1,40}\\.apk")
     private val deviceChannelName = "onfeed/device"
     private var originalBrightness: Float? = null
 
@@ -320,6 +325,28 @@ class ReelishActivity : FlutterActivity() {
                         result.error("invalid_apk", "The downloaded update could not be opened.", null)
                     }
                 }
+                "canSaveToDownloads" -> result.success(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
+                "saveApkToDownloads" -> {
+                    val apk = downloadedUpdateApk(call.argument<String>("path"))
+                    val name = call.argument<String>("name")
+                    if (apk == null) {
+                        result.error("missing_apk", "The downloaded update was not found.", null)
+                        return@setMethodCallHandler
+                    }
+                    if (name == null || !downloadNamePattern.matches(name)) {
+                        result.error("invalid_name", "The update could not be named.", null)
+                        return@setMethodCallHandler
+                    }
+                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+                        result.error("unsupported", "Saving to Downloads needs Android 10 or later.", null)
+                        return@setMethodCallHandler
+                    }
+                    try {
+                        result.success(saveToDownloads(apk, name))
+                    } catch (_: Exception) {
+                        result.error("save_failed", "The update could not be saved to Downloads.", null)
+                    }
+                }
                 else -> result.notImplemented()
             }
         }
@@ -378,6 +405,37 @@ class ReelishActivity : FlutterActivity() {
         val updatesDir = File(cacheDir, "updates").canonicalFile
         val apk = File(path).canonicalFile
         return if (apk.parentFile == updatesDir && apk.isFile && apk.name.endsWith(".apk")) apk else null
+    }
+
+    /**
+     * Copies a verified update APK into the shared Downloads collection, so
+     * it can be found in a file manager when the installer cannot be used.
+     * Returns the name the file was saved under (MediaStore may add a
+     * number when the name is taken). Installs still use the private copy.
+     */
+    @RequiresApi(Build.VERSION_CODES.Q)
+    private fun saveToDownloads(apk: File, name: String): String {
+        val values = ContentValues().apply {
+            put(MediaStore.Downloads.DISPLAY_NAME, name)
+            put(MediaStore.Downloads.MIME_TYPE, "application/vnd.android.package-archive")
+            put(MediaStore.Downloads.IS_PENDING, 1)
+        }
+        val uri = contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+            ?: throw IOException("No Downloads entry")
+        try {
+            val output = contentResolver.openOutputStream(uri) ?: throw IOException("No output stream")
+            output.use { out -> apk.inputStream().use { it.copyTo(out) } }
+            values.clear()
+            values.put(MediaStore.Downloads.IS_PENDING, 0)
+            contentResolver.update(uri, values, null, null)
+        } catch (error: Exception) {
+            contentResolver.delete(uri, null, null)
+            throw error
+        }
+        contentResolver.query(uri, arrayOf(MediaStore.Downloads.DISPLAY_NAME), null, null, null)?.use {
+            if (it.moveToFirst()) return it.getString(0) ?: name
+        }
+        return name
     }
 
     @Suppress("DEPRECATION")

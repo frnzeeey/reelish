@@ -186,6 +186,7 @@ class UpdateAvailableDialog extends StatelessWidget {
         UpdateDialogButton(
           label: 'Update now',
           primary: true,
+          autofocus: true,
           onPressed: () => Navigator.pop(context, true),
         ),
       ],
@@ -357,6 +358,7 @@ class _UpdateDownloadDialogState extends State<UpdateDownloadDialog> {
                 UpdateDialogButton(
                   label: 'Retry',
                   primary: true,
+                  autofocus: true,
                   onPressed: () => setState(_start),
                 ),
               ],
@@ -423,6 +425,7 @@ class InstallPermissionDialog extends StatelessWidget {
       UpdateDialogButton(
         label: 'Open settings',
         primary: true,
+        autofocus: true,
         onPressed: () => Navigator.pop(context, true),
       ),
     ],
@@ -437,27 +440,36 @@ class InstallPermissionDialog extends StatelessWidget {
   );
 }
 
-/// A single-button message about an update problem.
+/// A message about an update problem. With [secondaryLabel] it also offers
+/// a second choice, and pops `true` when that is chosen.
 class UpdateNoticeDialog extends StatelessWidget {
   const UpdateNoticeDialog({
     super.key,
     required this.title,
     required this.message,
     this.icon = Symbols.error_rounded,
+    this.secondaryLabel,
   });
 
   final String title;
   final String message;
   final IconData icon;
+  final String? secondaryLabel;
 
   @override
   Widget build(BuildContext context) => UpdateDialogFrame(
     icon: icon,
     title: title,
     actions: [
+      if (secondaryLabel case final label?)
+        UpdateDialogButton(
+          label: label,
+          onPressed: () => Navigator.pop(context, true),
+        ),
       UpdateDialogButton(
         label: 'OK',
         primary: true,
+        autofocus: true,
         onPressed: () => Navigator.pop(context),
       ),
     ],

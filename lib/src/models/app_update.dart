@@ -249,3 +249,9 @@ class UpdateException implements Exception {
   @override
   String toString() => message;
 }
+
+/// The APK is a valid update, but Android's installer could not be opened
+/// for it (no installer, or install permission withdrawn meanwhile).
+class UpdateInstallerUnavailable extends UpdateException {
+  const UpdateInstallerUnavailable(super.message);
+}

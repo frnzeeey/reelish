@@ -1010,12 +1010,65 @@ abstract final class GitHubUpdateService {
         'path': apk.path,
       });
     } on PlatformException catch (error) {
-      throw UpdateException(
-        error.message ?? "Could not open Android's package installer.",
-      );
+      final message =
+          error.message ?? "Could not open Android's package installer.";
+      throw switch (error.code) {
+        'installer_unavailable' ||
+        'permission_required' => UpdateInstallerUnavailable(message),
+        _ => UpdateException(message),
+      };
     } on MissingPluginException {
       throw const UpdateException(
         'Installing updates is not supported on this device.',
+      );
+    }
+  }
+
+  /// Whether a verified APK can be copied to the shared Downloads folder
+  /// (Android 10 and later, where no storage permission is needed).
+  static Future<bool> canSaveToDownloads() async {
+    if (defaultTargetPlatform != TargetPlatform.android) return false;
+    try {
+      return await _installerChannel.invokeMethod<bool>('canSaveToDownloads') ??
+          false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Android: copies the verified [apk] into Downloads as
+  /// `Reelish-<version>.apk`, for installing from a file manager when
+  /// Reelish cannot open the installer itself. The private copy is kept for
+  /// in-app installs. Returns the saved file name.
+  ///
+  /// Throws [UpdateException] when the file no longer matches the release or
+  /// cannot be saved.
+  static Future<String> saveApkToDownloads(File apk, AppUpdate update) async {
+    if (!await verifyDownload(apk, update)) {
+      throw const UpdateException(
+        'The downloaded update could not be verified. Download it again.',
+      );
+    }
+    try {
+      final name = await _installerChannel
+          .invokeMethod<String>('saveApkToDownloads', {
+            'path': apk.path,
+            'name': 'Reelish-${_safeName(update.latestVersion.toString())}.apk',
+          });
+      if (name == null) {
+        throw const UpdateException(
+          'The update could not be saved to Downloads.',
+        );
+      }
+      _log('Saved ${update.tagName} to Downloads as $name.');
+      return name;
+    } on PlatformException catch (error) {
+      throw UpdateException(
+        error.message ?? 'The update could not be saved to Downloads.',
+      );
+    } on MissingPluginException {
+      throw const UpdateException(
+        'Saving to Downloads is not supported on this device.',
       );
     }
   }

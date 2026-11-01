@@ -4,7 +4,7 @@
 
 Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensitive, leading `_` ignored). **Role** is derived from the declaration (its superclass) and folder. **Named in** counts the other files that mention the type by name: a measure of how far a change reaches. **Summary** is the first sentence of the type's own doc comment; a blank one means the type has none.
 
-673 types: 397 public, 276 private to their file.
+674 types: 398 public, 276 private to their file.
 
 [A](#a) · [B](#b) · [C](#c) · [D](#d) · [E](#e) · [F](#f) · [G](#g) · [H](#h) · [I](#i) · [J](#j) · [L](#l) · [M](#m) · [N](#n) · [P](#p) · [R](#r) · [S](#s) · [T](#t) · [U](#u) · [V](#v) · [W](#w)
 
@@ -50,9 +50,9 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `AppSpace` | Theme | [`design_tokens.dart:14`](../../lib/src/theme/design_tokens.dart#L14) |  | Shared | 17 lib files | Spacing on a 4 dp grid: padding, gaps and section spacing. |
 | `AppTextSize` | Theme | [`design_tokens.dart:53`](../../lib/src/theme/design_tokens.dart#L53) |  | Shared | 30 lib files | Font sizes of the type scale, for a `TextStyle` that needs its own weight or colour. |
 | `AppType` | Theme | [`design_tokens.dart:70`](../../lib/src/theme/design_tokens.dart#L70) |  | Shared | 1 lib file | The type scale. |
-| `AppUpdate` | Model | [`app_update.dart:79`](../../lib/src/models/app_update.dart#L79) |  | Shared | 5 lib files, 2 test files | A newer GitHub release that has a downloadable APK. |
-| `AppUpdateFlow` | Class | [`app_update_flow.dart:31`](../../lib/src/widgets/app_update_flow.dart#L31) |  | Shared | 3 lib files, 3 test files | Coordinates the update UI: prompt → download → install permission → Android installer. |
-| `AppVersion` | Model | [`app_update.dart:6`](../../lib/src/models/app_update.dart#L6) | implements Comparable<AppVersion> | Shared | 2 lib files, 3 test files | A semantic version such as `1.0.10` or `v2.0.0-beta.1`. |
+| `AppUpdate` | Model | [`app_update.dart:79`](../../lib/src/models/app_update.dart#L79) |  | Shared | 5 lib files, 3 test files | A newer GitHub release that has a downloadable APK. |
+| `AppUpdateFlow` | Class | [`app_update_flow.dart:32`](../../lib/src/widgets/app_update_flow.dart#L32) |  | Shared | 3 lib files, 3 test files | Coordinates the update UI: prompt → download → install permission → Android installer. |
+| `AppVersion` | Model | [`app_update.dart:6`](../../lib/src/models/app_update.dart#L6) | implements Comparable<AppVersion> | Shared | 2 lib files, 4 test files | A semantic version such as `1.0.10` or `v2.0.0-beta.1`. |
 | `_Artwork` | Widget | [`paused_overlay.dart:662`](../../lib/src/widgets/player/paused_overlay.dart#L662) | extends StatelessWidget | Shared | its own file | Artwork filling the screen without distortion. |
 | `_AsyncSemaphore` | Service type | [`provider_execution_scheduler.dart:23`](../../lib/src/services/provider_execution_scheduler.dart#L23) |  | Shared | its own file |  |
 | `_AtOpenWidth` | Widget | [`desktop_shell.dart:944`](../../lib/src/desktop/desktop_shell.dart#L944) | extends StatelessWidget | Windows | its own file | Lays `child` out at the open rail's width, clipped while the rail is still widening, so it never reflows or overflows mid-animation. |
@@ -69,8 +69,8 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 
 | Type | Role | Declared in | Relations | Platform | Named in | Summary |
 |---|---|---|---|---|---|---|
-| `_Backdrop` | Widget | [`tv_browse.dart:103`](../../lib/src/screens/tv/tv_browse.dart#L103) | extends StatelessWidget | Android TV | its own file |  |
 | `_Backdrop` | Widget | [`desktop_hero.dart:289`](../../lib/src/desktop/desktop_hero.dart#L289) | extends StatelessWidget | Windows | its own file |  |
+| `_Backdrop` | Widget | [`tv_browse.dart:103`](../../lib/src/screens/tv/tv_browse.dart#L103) | extends StatelessWidget | Android TV | its own file |  |
 | `BackendConfig` | Class | [`backend_config.dart:4`](../../lib/src/account/backend_config.dart#L4) |  | Shared | 5 lib files, 1 test file |  |
 | `_Badge` | Widget | [`desktop_widgets.dart:503`](../../lib/src/desktop/desktop_widgets.dart#L503) | extends StatelessWidget | Windows | its own file |  |
 | `_Badge` | Widget | [`plugin_badges.dart:55`](../../lib/src/widgets/plugin_library/plugin_badges.dart#L55) | extends StatelessWidget | Shared | its own file |  |
@@ -164,7 +164,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `DetailsViewModel` | View model | [`details_view_model.dart:27`](../../lib/src/viewmodels/details_view_model.dart#L27) | extends ChangeNotifier | Shared | 3 lib files, 1 test file | The state behind a title's details page, shared by the mobile, TV and Windows details screens: TMDB details, the seasons and the selected season's episodes, and (on Windows) related titles. |
 | `DeveloperCreditFooter` | Widget | [`developer_credit.dart:11`](../../lib/src/widgets/settings/developer_credit.dart#L11) | extends StatelessWidget | Shared | 1 lib file |  |
 | `DeviceAuthorized` | Class | [`account_api.dart:34`](../../lib/src/account/account_api.dart#L34) | extends DevicePollResult | Shared | 1 lib file |  |
-| `DeviceCapabilities` | Platform adapter | [`device_capabilities.dart:20`](../../lib/src/platform/device_capabilities.dart#L20) |  | Shared | 25 lib files, 9 test files | What kind of device Reelish is running on, read once during startup. |
+| `DeviceCapabilities` | Platform adapter | [`device_capabilities.dart:20`](../../lib/src/platform/device_capabilities.dart#L20) |  | Shared | 26 lib files, 10 test files | What kind of device Reelish is running on, read once during startup. |
 | `DeviceCodeStart` | Class | [`account_api.dart:40`](../../lib/src/account/account_api.dart#L40) |  | Shared | 1 lib file |  |
 | `DevicePending` | Class | [`account_api.dart:29`](../../lib/src/account/account_api.dart#L29) | extends DevicePollResult | Shared | 1 lib file |  |
 | `DevicePollResult` | Class | [`account_api.dart:27`](../../lib/src/account/account_api.dart#L27) |  | Shared | its own file only | The answer to one device-sign-in poll. |
@@ -236,7 +236,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `GamepadNavigator` | Platform adapter | [`desktop_gamepad.dart:19`](../../lib/src/platform/desktop_gamepad.dart#L19) |  | Windows | 1 test file | Turns raw controller state into navigation commands: the D-pad or left stick moves (once on press, then repeating while held), A activates, B goes back. |
 | `GestureTouchLayer` | Widget | [`gesture_touch_layer.dart:6`](../../lib/src/widgets/player/gesture_touch_layer.dart#L6) | extends StatefulWidget | Shared | 1 lib file, 1 test file | Touch handling for the video area. |
 | `_GestureTouchLayerState` | Widget state | [`gesture_touch_layer.dart:29`](../../lib/src/widgets/player/gesture_touch_layer.dart#L29) | extends State<GestureTouchLayer> | Shared | its own file |  |
-| `GitHubUpdateService` | Service type | [`github_update_service.dart:36`](../../lib/src/services/github_update_service.dart#L36) |  | Shared | 3 lib files, 2 test files | Checks GitHub Releases for a newer Reelish build, downloads its APK and hands it to Android's package installer. |
+| `GitHubUpdateService` | Service type | [`github_update_service.dart:36`](../../lib/src/services/github_update_service.dart#L36) |  | Shared | 3 lib files, 3 test files | Checks GitHub Releases for a newer Reelish build, downloads its APK and hands it to Android's package installer. |
 | `GlassBox` | Widget | [`glass_box.dart:9`](../../lib/src/widgets/glass_box.dart#L9) | extends StatelessWidget | Shared | 4 lib files | Lightweight glass panel for content in scrolling pages and dialogs. |
 | `_GlassShadowPainter` | Painter | [`liquid_glass.dart:170`](../../lib/src/widgets/liquid_glass.dart#L170) | extends CustomPainter | Shared | its own file | Paints shadows only outside the glass. |
 | `GlassTheme` | Theme | [`glass_theme.dart:3`](../../lib/src/theme/glass_theme.dart#L3) |  | Shared | 73 lib files, 26 test files |  |
@@ -273,7 +273,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `_InfoTable` | Widget | [`plugin_details_screen.dart:419`](../../lib/src/screens/plugin_details_screen.dart#L419) | extends StatelessWidget | Shared | its own file |  |
 | `_Initial` | Widget | [`profile_avatar.dart:148`](../../lib/src/widgets/profile_avatar.dart#L148) | extends StatelessWidget | Shared | its own file |  |
 | `InstallerInspection` | Platform adapter | [`windows_installation.dart:41`](../../lib/src/platform/windows_installation.dart#L41) |  | Windows | 1 lib file, 1 test file | The identity read from a downloaded installer's version resource and Authenticode signature by the Windows runner. |
-| `InstallPermissionDialog` | Widget | [`update_dialog.dart:411`](../../lib/src/widgets/update_dialog.dart#L411) | extends StatelessWidget | Shared | 1 lib file | Explains Android's "Install unknown apps" permission. |
+| `InstallPermissionDialog` | Widget | [`update_dialog.dart:413`](../../lib/src/widgets/update_dialog.dart#L413) | extends StatelessWidget | Shared | 1 lib file | Explains Android's "Install unknown apps" permission. |
 | `_IoPartySocket` | Class | [`watch_party_controller.dart:31`](../../lib/src/watch_party/watch_party_controller.dart#L31) | implements PartySocket | Shared | its own file |  |
 | `_Issue` | Widget | [`desktop_plugins_page.dart:523`](../../lib/src/desktop/desktop_plugins_page.dart#L523) | extends StatelessWidget | Windows | its own file |  |
 
@@ -291,7 +291,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `_LanguageMenu` | Widget | [`plugin_filter_bar.dart:231`](../../lib/src/widgets/plugin_library/plugin_filter_bar.dart#L231) | extends StatelessWidget | Shared | its own file |  |
 | `LegalDocument` | Enum | [`legal_information_screen.dart:10`](../../lib/src/screens/legal_information_screen.dart#L10) |  | Shared | 4 lib files, 2 test files |  |
 | `LegalInformationScreen` | Widget | [`legal_information_screen.dart:12`](../../lib/src/screens/legal_information_screen.dart#L12) | extends StatefulWidget | Shared | 5 lib files, 2 test files |  |
-| `_LegalInformationScreenState` | Widget state | [`legal_information_screen.dart:89`](../../lib/src/screens/legal_information_screen.dart#L89) | extends State<LegalInformationScreen> | Shared | its own file |  |
+| `_LegalInformationScreenState` | Widget state | [`legal_information_screen.dart:93`](../../lib/src/screens/legal_information_screen.dart#L93) | extends State<LegalInformationScreen> | Shared | its own file |  |
 | `_LibraryEmptyState` | Widget | [`library_screen.dart:563`](../../lib/src/screens/library_screen.dart#L563) | extends StatelessWidget | Shared | its own file |  |
 | `_LibraryEntry` | Widget | [`plugins_screen.dart:391`](../../lib/src/screens/plugins_screen.dart#L391) | extends StatelessWidget | Shared | its own file | Opens the community Plugin Library. |
 | `_LibraryFilter` | Enum | [`library_screen.dart:13`](../../lib/src/screens/library_screen.dart#L13) |  | Shared | its own file |  |
@@ -341,8 +341,8 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `NextEpisodeCard` | Widget | [`player_controls.dart:1301`](../../lib/src/widgets/player/player_controls.dart#L1301) | extends StatelessWidget | Shared | 1 lib file, 1 test file | Near the end of an episode: offers the next one, with a cancellable countdown when auto-play is enabled. |
 | `NormalizedStreamSource` | Service type | [`stream_normalizer.dart:4`](../../lib/src/services/stream_normalizer.dart#L4) |  | Shared | its own file only |  |
 | `_Note` | Widget | [`plugin_details_screen.dart:520`](../../lib/src/screens/plugin_details_screen.dart#L520) | extends StatelessWidget | Shared | its own file | An inline warning note. |
-| `_Notice` | Widget | [`desktop_plugins_page.dart:509`](../../lib/src/desktop/desktop_plugins_page.dart#L509) | extends StatelessWidget | Windows | its own file |  |
 | `_Notice` | Widget | [`sign_in_screen.dart:772`](../../lib/src/screens/sign_in_screen.dart#L772) | extends StatelessWidget | Shared | its own file |  |
+| `_Notice` | Widget | [`desktop_plugins_page.dart:509`](../../lib/src/desktop/desktop_plugins_page.dart#L509) | extends StatelessWidget | Windows | its own file |  |
 | `_NoticeCard` | Widget | [`plugins_screen.dart:759`](../../lib/src/screens/plugins_screen.dart#L759) | extends StatelessWidget | Shared | its own file |  |
 | `NotificationSettingsScreen` | Widget | [`notification_settings_screen.dart:12`](../../lib/src/screens/notification_settings_screen.dart#L12) | extends StatelessWidget | Shared | 2 lib files, 1 test file |  |
 | `_Numeral` | Widget | [`desktop_top_ten.dart:377`](../../lib/src/desktop/desktop_top_ten.dart#L377) | extends StatelessWidget | Windows | its own file |  |
@@ -519,8 +519,8 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | Type | Role | Declared in | Relations | Platform | Named in | Summary |
 |---|---|---|---|---|---|---|
 | `_RailContents` | Widget | [`desktop_shell.dart:375`](../../lib/src/desktop/desktop_shell.dart#L375) | extends StatelessWidget | Windows | its own file |  |
-| `_RailItem` | Widget | [`tv_home_shell.dart:342`](../../lib/src/screens/tv/tv_home_shell.dart#L342) | extends StatefulWidget | Android TV | its own file |  |
 | `_RailItem` | Widget | [`desktop_settings_page.dart:307`](../../lib/src/desktop/desktop_settings_page.dart#L307) | extends StatefulWidget | Windows | its own file | A category in the rail; Enter or a click shows it. |
+| `_RailItem` | Widget | [`tv_home_shell.dart:342`](../../lib/src/screens/tv/tv_home_shell.dart#L342) | extends StatefulWidget | Android TV | its own file |  |
 | `_RailItemState` | Widget state | [`tv_home_shell.dart:363`](../../lib/src/screens/tv/tv_home_shell.dart#L363) | extends State<_RailItem> | Android TV | its own file |  |
 | `_RailItemState` | Widget state | [`desktop_settings_page.dart:338`](../../lib/src/desktop/desktop_settings_page.dart#L338) | extends State<_RailItem> | Windows | its own file |  |
 | `_RailTitle` | Widget | [`desktop_settings_page.dart:252`](../../lib/src/desktop/desktop_settings_page.dart#L252) | extends StatelessWidget | Windows | its own file |  |
@@ -619,8 +619,8 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `_StartupProgress` | Widget | [`splash_screen.dart:224`](../../lib/src/screens/splash_screen.dart#L224) | extends StatelessWidget | Shared | its own file |  |
 | `_StartupScreen` | Widget | [`main.dart:85`](../../lib/main.dart#L85) | extends StatefulWidget | Shared | its own file |  |
 | `_StartupScreenState` | Widget state | [`main.dart:94`](../../lib/main.dart#L94) | extends State<_StartupScreen> | Shared | its own file |  |
-| `_Stat` | Widget | [`profile_screen.dart:542`](../../lib/src/screens/profile_screen.dart#L542) | extends StatelessWidget | Shared | its own file |  |
 | `_Stat` | Widget | [`desktop_plugins_page.dart:338`](../../lib/src/desktop/desktop_plugins_page.dart#L338) | extends StatelessWidget | Windows | its own file |  |
+| `_Stat` | Widget | [`profile_screen.dart:542`](../../lib/src/screens/profile_screen.dart#L542) | extends StatelessWidget | Shared | its own file |  |
 | `_Status` | Widget | [`sign_in_screen.dart:706`](../../lib/src/screens/sign_in_screen.dart#L706) | extends StatelessWidget | Shared | its own file |  |
 | `_StatusBarScrim` | Widget | [`media_details_screen.dart:813`](../../lib/src/screens/media_details_screen.dart#L813) | extends StatelessWidget | Shared | its own file | Shades the status bar once content scrolls beneath it, so the clock and icons never sit on top of text. |
 | `_Step` | Widget | [`sign_in_screen.dart:526`](../../lib/src/screens/sign_in_screen.dart#L526) | extends StatelessWidget | Shared | its own file |  |
@@ -751,12 +751,13 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `UpdateDialogFrame` | Widget | [`update_dialog.dart:50`](../../lib/src/widgets/update_dialog.dart#L50) | extends StatelessWidget | Shared | 1 lib file | Card-style dialog frame matching Reelish's surfaces. |
 | `UpdateDownloadCancellation` | Service type | [`github_update_service.dart:17`](../../lib/src/services/github_update_service.dart#L17) |  | Shared | 2 lib files | Lets the user stop an APK download that is in progress. |
 | `UpdateDownloadCancelled` | Service type | [`github_update_service.dart:30`](../../lib/src/services/github_update_service.dart#L30) | extends UpdateException | Shared | 2 lib files, 1 test file |  |
-| `UpdateDownloadDialog` | Widget | [`update_dialog.dart:246`](../../lib/src/widgets/update_dialog.dart#L246) | extends StatefulWidget | Shared | 1 lib file, 1 test file | Downloads the update with progress, cancel and retry. |
-| `_UpdateDownloadDialogState` | Widget state | [`update_dialog.dart:262`](../../lib/src/widgets/update_dialog.dart#L262) | extends State<UpdateDownloadDialog> | Shared | its own file |  |
+| `UpdateDownloadDialog` | Widget | [`update_dialog.dart:247`](../../lib/src/widgets/update_dialog.dart#L247) | extends StatefulWidget | Shared | 1 lib file, 1 test file | Downloads the update with progress, cancel and retry. |
+| `_UpdateDownloadDialogState` | Widget state | [`update_dialog.dart:263`](../../lib/src/widgets/update_dialog.dart#L263) | extends State<UpdateDownloadDialog> | Shared | its own file |  |
 | `UpdateDownloader` | Typedef | [`windows_update_controller.dart:30`](../../lib/src/services/windows_update_controller.dart#L30) | = Future<( | Windows | its own file only |  |
-| `UpdateException` | Exception | [`app_update.dart:244`](../../lib/src/models/app_update.dart#L244) | implements Exception | Shared | 4 lib files, 2 test files | A download or installation step failed with a message safe to show. |
-| `UpdateFlowPhase` | Enum | [`app_update_flow.dart:16`](../../lib/src/widgets/app_update_flow.dart#L16) |  | Shared | 1 test file | What the update flow is doing. |
-| `UpdateNoticeDialog` | Widget | [`update_dialog.dart:441`](../../lib/src/widgets/update_dialog.dart#L441) | extends StatelessWidget | Shared | 1 lib file | A single-button message about an update problem. |
+| `UpdateException` | Exception | [`app_update.dart:244`](../../lib/src/models/app_update.dart#L244) | implements Exception | Shared | 4 lib files, 3 test files | A download or installation step failed with a message safe to show. |
+| `UpdateFlowPhase` | Enum | [`app_update_flow.dart:17`](../../lib/src/widgets/app_update_flow.dart#L17) |  | Shared | 1 test file | What the update flow is doing. |
+| `UpdateInstallerUnavailable` | Model | [`app_update.dart:255`](../../lib/src/models/app_update.dart#L255) | extends UpdateException | Shared | 2 lib files | The APK is a valid update, but Android's installer could not be opened for it (no installer, or install permission withdrawn meanwhile). |
+| `UpdateNoticeDialog` | Widget | [`update_dialog.dart:445`](../../lib/src/widgets/update_dialog.dart#L445) | extends StatelessWidget | Shared | 1 lib file | A message about an update problem. |
 
 ## V
 

@@ -85,7 +85,7 @@ graph LR
   widgets["widgets"] -->|2| account["account"]
   widgets["widgets"] -->|1| desktop["desktop"]
   widgets["widgets"] -->|3| models["models"]
-  widgets["widgets"] -->|2| platform["platform"]
+  widgets["widgets"] -->|3| platform["platform"]
   widgets["widgets"] -->|4| services["services"]
   widgets["widgets"] -->|11| theme["theme"]
   widgets["widgets"] -->|1| widgets_tv["widgets/tv"]
@@ -128,7 +128,7 @@ graph LR
 | `theme` | nothing outside itself |
 | `viewmodels` | `models` (11), `services` (13) |
 | `watch_party` | `account` (4), `models` (1) |
-| `widgets` | `account` (2), `desktop` (1), `models` (3), `platform` (2), `services` (4), `theme` (11), `widgets/tv` (1) |
+| `widgets` | `account` (2), `desktop` (1), `models` (3), `platform` (3), `services` (4), `theme` (11), `widgets/tv` (1) |
 | `widgets/player` | `account` (1), `models` (17), `platform` (7), `services` (15), `theme` (10), `watch_party` (3), `widgets` (3), `widgets/tv` (1) |
 | `widgets/plugin_library` | `models` (4), `platform` (1), `services` (5), `theme` (22), `widgets` (1) |
 | `widgets/settings` | `theme` (6), `widgets` (1), `widgets/tv` (1) |
@@ -143,7 +143,7 @@ The files imported by the most other `lib/` files. A change to one of these reac
 | [`lib/src/theme/glass_theme.dart`](../../lib/src/theme/glass_theme.dart) | 72 | 26 |
 | [`lib/src/theme/design_tokens.dart`](../../lib/src/theme/design_tokens.dart) | 35 | 0 |
 | [`lib/src/models/media_item.dart`](../../lib/src/models/media_item.dart) | 32 | 35 |
-| [`lib/src/platform/device_capabilities.dart`](../../lib/src/platform/device_capabilities.dart) | 25 | 9 |
+| [`lib/src/platform/device_capabilities.dart`](../../lib/src/platform/device_capabilities.dart) | 26 | 10 |
 | [`lib/src/services/storage_service.dart`](../../lib/src/services/storage_service.dart) | 20 | 21 |
 | [`lib/src/models/stream_source.dart`](../../lib/src/models/stream_source.dart) | 18 | 14 |
 | [`lib/src/widgets/settings/settings_components.dart`](../../lib/src/widgets/settings/settings_components.dart) | 15 | 1 |

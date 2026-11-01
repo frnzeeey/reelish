@@ -5,11 +5,13 @@ import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:onfeed/src/models/app_update.dart';
+import 'package:onfeed/src/platform/device_capabilities.dart';
 import 'package:onfeed/src/services/github_update_service.dart';
 import 'package:onfeed/src/widgets/app_update_flow.dart';
 import 'package:onfeed/src/widgets/update_dialog.dart';
@@ -955,6 +957,178 @@ void main() {
       expect(find.text('78%'), findsOneWidget);
       expect(find.text('78.0 MB / 100.0 MB'), findsOneWidget);
       expect(attempts, 2);
+    });
+
+    testWidgets('the update prompt answers the remote select key', (
+      tester,
+    ) async {
+      bool? result;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) => TextButton(
+              onPressed: () async => result = await showDialog<bool>(
+                context: context,
+                builder: (_) => UpdateAvailableDialog(update: _update()),
+              ),
+              child: const Text('open'),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      // TV: OK on the remote must act without moving focus first.
+      await tester.sendKeyEvent(LogicalKeyboardKey.select);
+      await tester.pumpAndSettle();
+      expect(result, isTrue);
+    });
+  });
+
+  group('Android install fallback', () {
+    const channel = MethodChannel('onfeed/app_update');
+    late List<MethodCall> calls;
+    late File apk;
+    late AppUpdate update;
+    late Map<String, Object? Function(MethodCall)> answers;
+    late BuildContext home;
+
+    setUp(() {
+      calls = [];
+      final dir = Directory.systemTemp.createTempSync('reelish_update_');
+      final bytes = utf8.encode('verified apk bytes');
+      apk = File('${dir.path}${Platform.pathSeparator}reelish-1.0.1.apk')
+        ..writeAsBytesSync(bytes);
+      update = _update(
+        size: bytes.length,
+        sha: sha256.convert(bytes).toString(),
+      );
+      answers = {
+        'canRequestPackageInstalls': (_) => true,
+        'canSaveToDownloads': (_) => true,
+        'inspectApk': (_) => {
+          'packageName': 'com.example.onfeed',
+          'installedPackageName': 'com.example.onfeed',
+          'versionName': '1.0.1',
+          'versionCode': 2,
+          'installedVersionCode': 1,
+          'sameSigner': true,
+        },
+        'installApk': (_) => throw PlatformException(
+          code: 'installer_unavailable',
+          message: "Android's package installer is not available.",
+        ),
+        'saveApkToDownloads': (_) => 'Reelish-1.0.1 (1).apk',
+      };
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+            calls.add(call);
+            return answers[call.method]!(call);
+          });
+      addTearDown(() {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(channel, null);
+        DeviceCapabilities.debugOverride = const DeviceCapabilities();
+        dir.deleteSync(recursive: true);
+      });
+    });
+
+    Future<void> pumpHome(WidgetTester tester) => tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) {
+              home = context;
+              return const SizedBox();
+            },
+          ),
+        ),
+      ),
+    );
+
+    /// Lets real file reads (the checksum check) finish.
+    Future<void> settleWithIo(WidgetTester tester) async {
+      // Each I/O step resumes in the test zone, so alternate real time and
+      // pumps until the chain of reads has run.
+      for (var i = 0; i < 20; i++) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 20)),
+        );
+        await tester.pump();
+      }
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('without an installer the verified APK can be saved to '
+        'Downloads', (tester) async {
+      await pumpHome(tester);
+      unawaited(AppUpdateFlow.debugInstall(home, apk, update));
+      await tester.pumpAndSettle();
+      expect(find.text('Unable to install the update'), findsOneWidget);
+      expect(
+        find.textContaining("package installer is not available"),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('Save to Downloads'));
+      await settleWithIo(tester);
+      final save = calls.singleWhere((c) => c.method == 'saveApkToDownloads');
+      expect(save.arguments, {'path': apk.path, 'name': 'Reelish-1.0.1.apk'});
+      expect(find.text('Saved to Downloads'), findsOneWidget);
+      expect(
+        find.textContaining('Reelish-1.0.1 (1).apk is in your Downloads'),
+        findsOneWidget,
+      );
+      expect(apk.existsSync(), isTrue, reason: 'the private copy stays');
+    });
+
+    testWidgets('on a TV the permission steps name the TV settings path', (
+      tester,
+    ) async {
+      DeviceCapabilities.debugOverride = const DeviceCapabilities(
+        isTelevision: true,
+        hasTouchscreen: false,
+      );
+      answers['canRequestPackageInstalls'] = (_) => false;
+      answers['openInstallPermissionSettings'] = (_) => false;
+      // Android 9: no shared Downloads without a storage permission.
+      answers['canSaveToDownloads'] = (_) => false;
+      await pumpHome(tester);
+      unawaited(AppUpdateFlow.debugInstall(home, apk, update));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Open settings'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Security & restrictions'), findsOneWidget);
+      expect(find.textContaining('Install unknown apps,'), findsNothing);
+      expect(find.text('Save to Downloads'), findsNothing);
+      expect(calls.where((c) => c.method == 'installApk'), isEmpty);
+    });
+
+    testWidgets('a bad APK is reported, not offered for saving', (
+      tester,
+    ) async {
+      answers['inspectApk'] = (_) => {
+        'packageName': 'com.other.app',
+        'installedPackageName': 'com.example.onfeed',
+        'versionName': '1.0.1',
+      };
+      await pumpHome(tester);
+      unawaited(AppUpdateFlow.debugInstall(home, apk, update));
+      await settleWithIo(tester);
+      expect(
+        find.text('The downloaded file is not a Reelish update.'),
+        findsOneWidget,
+      );
+      expect(find.text('Save to Downloads'), findsNothing);
+    });
+
+    test('a file that no longer matches the release is never saved', () async {
+      apk.writeAsStringSync('tampered');
+      await expectLater(
+        GitHubUpdateService.saveApkToDownloads(apk, update),
+        throwsA(isA<UpdateException>()),
+      );
+      expect(calls.where((c) => c.method == 'saveApkToDownloads'), isEmpty);
     });
   });
 

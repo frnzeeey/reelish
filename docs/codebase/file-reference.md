@@ -28,7 +28,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/desktop/desktop_update_dialogs.dart`](#libsrcdesktopdesktop_update_dialogsdart) | Windows | 369 | Windows update dialogs: the "update available" offer with release notes, and download progress through to the installer handoff. |
 | [`lib/src/desktop/desktop_update_section.dart`](#libsrcdesktopdesktop_update_sectiondart) | Windows | 225 | Settings → About on Windows: version, update status, last check, the update action for the current state, and the automatic-check switch. |
 | [`lib/src/desktop/desktop_widgets.dart`](#libsrcdesktopdesktop_widgetsdart) | Windows | 1125 | Building blocks of the Windows interface: layout metrics, surfaces and motion, poster cards, scrolling media rows, grids, headers and messages. |
-| [`lib/src/models/app_update.dart`](#libsrcmodelsapp_updatedart) | Shared | 251 | A newer GitHub release that has a downloadable APK. |
+| [`lib/src/models/app_update.dart`](#libsrcmodelsapp_updatedart) | Shared | 257 | A newer GitHub release that has a downloadable APK. |
 | [`lib/src/models/episode_context.dart`](#libsrcmodelsepisode_contextdart) | Shared | 143 | The playing episode within its series: the single source of truth for episode navigation (the episode panel, Previous/Next, and auto-play). |
 | [`lib/src/models/episode_progress.dart`](#libsrcmodelsepisode_progressdart) | Shared | 69 | Where the viewer stopped in one episode. |
 | [`lib/src/models/media_details.dart`](#libsrcmodelsmedia_detailsdart) | Shared | 79 | TMDB details for one title (overview, genres, runtime, cast) as shown on details pages and the pause screen. |
@@ -58,7 +58,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/screens/credits_screen.dart`](#libsrcscreenscredits_screendart) | Shared | 264 | Credits for the data, services and software Reelish relies on. |
 | [`lib/src/screens/first_run_consent_screen.dart`](#libsrcscreensfirst_run_consent_screendart) | Shared | 254 | First-launch screen where the viewer reads and accepts the privacy policy and terms of use; remembers the acceptance. |
 | [`lib/src/screens/home_screen.dart`](#libsrcscreenshome_screendart) | Shared | 2613 | Home and the app's orchestration: phone tabs, and the TV and Windows shells; owns the catalog wiring, the play flow (`_openItem`: providers, source choice, player) and details navigation. |
-| [`lib/src/screens/legal_information_screen.dart`](#libsrcscreenslegal_information_screendart) | Shared | 349 | Shows the privacy policy, terms of use and third-party notices. |
+| [`lib/src/screens/legal_information_screen.dart`](#libsrcscreenslegal_information_screendart) | Shared | 397 | Shows the privacy policy, terms of use and third-party notices. |
 | [`lib/src/screens/library_screen.dart`](#libsrcscreenslibrary_screendart) | Shared | 621 | The phone library tab: continue watching, My list and watch history from local storage. |
 | [`lib/src/screens/media_details_screen.dart`](#libsrcscreensmedia_details_screendart) | Shared | 839 | The phone details page for a movie or series, with seasons, episodes and playback. |
 | [`lib/src/screens/notification_settings_screen.dart`](#libsrcscreensnotification_settings_screendart) | Shared | 120 | Settings → Notifications: new-episode alerts for series on My list, series being watched, and popular series. |
@@ -83,7 +83,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/screens/watch_party/waiting_room_screen.dart`](#libsrcscreenswatch_partywaiting_room_screendart) | Shared | 660 | The party's waiting room: the code to share, the title, who has joined and what their players are doing, and the host's controls. |
 | [`lib/src/services/accent_settings_controller.dart`](#libsrcservicesaccent_settings_controllerdart) | Shared | 29 | Loads, applies and saves the accent colour. |
 | [`lib/src/services/app_metadata.dart`](#libsrcservicesapp_metadatadart) | Shared | 19 | Version and build details for the running app. |
-| [`lib/src/services/github_update_service.dart`](#libsrcservicesgithub_update_servicedart) | Shared | 1026 | Update checks against GitHub Releases (throttled across launches) and verified downloads of the release asset: the APK, handed to Android's package installer, or the Windows installer or ZIP, checked against its SHA-256. |
+| [`lib/src/services/github_update_service.dart`](#libsrcservicesgithub_update_servicedart) | Shared | 1079 | Update checks against GitHub Releases (throttled across launches) and verified downloads of the release asset: the APK, handed to Android's package installer, or the Windows installer or ZIP, checked against its SHA-256. |
 | [`lib/src/services/media_catalog_rules.dart`](#libsrcservicesmedia_catalog_rulesdart) | Shared | 166 | Genre ids and the filtering and freshness rules shared by every Home row. |
 | [`lib/src/services/media_discovery_ranking.dart`](#libsrcservicesmedia_discovery_rankingdart) | Shared | 337 | Shared quality and recency rules for discovery collections. |
 | [`lib/src/services/network_target_policy.dart`](#libsrcservicesnetwork_target_policydart) | Shared | 332 | The network destination policy for provider requests and streams: public addresses only, header checks, and connections pinned to the validated address. |
@@ -126,7 +126,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/watch_party/party_player_sync.dart`](#libsrcwatch_partyparty_player_syncdart) | Shared | 439 | Keeps one player in step with its watch party. |
 | [`lib/src/watch_party/playback_sync.dart`](#libsrcwatch_partyplayback_syncdart) | Shared | 92 | The arithmetic of watch party sync, kept free of Flutter and sockets so it can be tested exactly: the server clock as seen from this device, where the room's timeline is now, and what a player should do about a gap. |
 | [`lib/src/watch_party/watch_party_controller.dart`](#libsrcwatch_partywatch_party_controllerdart) | Shared | 611 | This device's place in a watch party: the room's WebSocket (reconnected with backoff and a fresh session token), the clock offset to the server, and the room as last described. |
-| [`lib/src/widgets/app_update_flow.dart`](#libsrcwidgetsapp_update_flowdart) | Shared | 403 | Coordinates the update UI: prompt → download → install permission → Android installer. |
+| [`lib/src/widgets/app_update_flow.dart`](#libsrcwidgetsapp_update_flowdart) | Shared | 492 | Coordinates the update UI: prompt → download → install permission → Android installer. |
 | [`lib/src/widgets/brand_logo.dart`](#libsrcwidgetsbrand_logodart) | Shared | 225 | Reelish's brand images: their asset paths, and the wordmark and mark drawn without their canvases' transparent margins. |
 | [`lib/src/widgets/category_chip.dart`](#libsrcwidgetscategory_chipdart) | Shared | 36 | A selectable category chip for the phone Home. |
 | [`lib/src/widgets/glass_box.dart`](#libsrcwidgetsglass_boxdart) | Shared | 28 | Lightweight glass panel for content in scrolling pages and dialogs. |
@@ -174,7 +174,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/widgets/top_lit_edge.dart`](#libsrcwidgetstop_lit_edgedart) | Shared | 61 | A rounded hairline edge lit from above, for artwork tiles that would otherwise sit flat on the dark page. |
 | [`lib/src/widgets/tv/tv_focus.dart`](#libsrcwidgetstvtv_focusdart) | Android TV | 543 | TV focus and remote helpers: overscan-safe margins, the focus ring, dialog focus, key scrolling and the on-screen text entry dialog. |
 | [`lib/src/widgets/tv/tv_poster_card.dart`](#libsrcwidgetstvtv_poster_carddart) | Android TV | 184 | A poster on the TV catalog. |
-| [`lib/src/widgets/update_dialog.dart`](#libsrcwidgetsupdate_dialogdart) | Shared | 466 | Update dialogs: the offer with release notes, APK download progress, the install-permission prompt and notices, and the frame, buttons and formatting the Windows update dialogs reuse. |
+| [`lib/src/widgets/update_dialog.dart`](#libsrcwidgetsupdate_dialogdart) | Shared | 478 | Update dialogs: the offer with release notes, APK download progress, the install-permission prompt and notices, and the frame, buttons and formatting the Windows update dialogs reuse. |
 
 ## lib/main.dart
 
@@ -504,17 +504,17 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/models/app_update.dart
 
-**Source:** [`lib/src/models/app_update.dart`](../../lib/src/models/app_update.dart) · **Platform:** Shared · **Lines:** 251
+**Source:** [`lib/src/models/app_update.dart`](../../lib/src/models/app_update.dart) · **Platform:** Shared · **Lines:** 257
 
 **Purpose:** A newer GitHub release that has a downloadable APK.
 
-**Declares:** `AppUpdate` (Model), `AppVersion` (Model), `UpdateCheckResult` (Model), `UpdateCheckStatus` (Enum), `UpdateException` (Exception)
+**Declares:** `AppUpdate` (Model), `AppVersion` (Model), `UpdateCheckResult` (Model), `UpdateCheckStatus` (Enum), `UpdateException` (Exception), `UpdateInstallerUnavailable` (Model)
 
 **Imports (project):** none
 
 **Imported by:** `src/desktop/desktop_update_dialogs.dart`, `src/screens/home_screen.dart`, `src/services/github_update_service.dart`, `src/services/windows_update_controller.dart`, `src/widgets/app_update_flow.dart`, `src/widgets/update_dialog.dart`
 
-**Tests importing it:** `integration_test/windows_update_channel_test.dart`, `test/desktop_home_top_ten_test.dart`, `test/github_update_check_test.dart`, `test/home_startup_budget_test.dart`, `test/tmdb_scalability_test.dart`, `test/tv_home_test.dart`, `test/windows_update_test.dart`
+**Tests importing it:** `integration_test/update_downloads_test.dart`, `integration_test/windows_update_channel_test.dart`, `test/desktop_home_top_ten_test.dart`, `test/github_update_check_test.dart`, `test/home_startup_budget_test.dart`, `test/tmdb_scalability_test.dart`, `test/tv_home_test.dart`, `test/windows_update_test.dart`
 
 ## lib/src/models/episode_context.dart
 
@@ -844,9 +844,9 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Packages:** `flutter`
 
-**Imported by:** `main.dart`, `src/account/account_controller.dart`, `src/notifications/episode_alerts.dart`, `src/platform/app_icon.dart`, `src/platform/desktop_gamepad.dart`, `src/platform/desktop_window.dart`, `src/screens/account_settings_screen.dart`, `src/screens/first_run_consent_screen.dart`, `src/screens/home_screen.dart`, `src/screens/legal_information_screen.dart`, `src/screens/plugin_details_screen.dart`, `src/screens/plugin_library_screen.dart`, `src/screens/sign_in_screen.dart`, `src/screens/watch_party/create_party_screen.dart`, `src/screens/watch_party/join_party_screen.dart`, `src/screens/watch_party/waiting_room_screen.dart`, `src/widgets/player/custom_video_player.dart`, `src/widgets/player/episode_panel.dart`, `src/widgets/player/paused_overlay.dart`, `src/widgets/player/player_controls.dart`, `src/widgets/player/player_progress_bar.dart`, `src/widgets/player/player_sheet.dart`, `src/widgets/plugin_library/plugin_filter_bar.dart`, `src/widgets/provider_installer_modal.dart`, `src/widgets/tv/tv_focus.dart`
+**Imported by:** `main.dart`, `src/account/account_controller.dart`, `src/notifications/episode_alerts.dart`, `src/platform/app_icon.dart`, `src/platform/desktop_gamepad.dart`, `src/platform/desktop_window.dart`, `src/screens/account_settings_screen.dart`, `src/screens/first_run_consent_screen.dart`, `src/screens/home_screen.dart`, `src/screens/legal_information_screen.dart`, `src/screens/plugin_details_screen.dart`, `src/screens/plugin_library_screen.dart`, `src/screens/sign_in_screen.dart`, `src/screens/watch_party/create_party_screen.dart`, `src/screens/watch_party/join_party_screen.dart`, `src/screens/watch_party/waiting_room_screen.dart`, `src/widgets/app_update_flow.dart`, `src/widgets/player/custom_video_player.dart`, `src/widgets/player/episode_panel.dart`, `src/widgets/player/paused_overlay.dart`, `src/widgets/player/player_controls.dart`, `src/widgets/player/player_progress_bar.dart`, `src/widgets/player/player_sheet.dart`, `src/widgets/plugin_library/plugin_filter_bar.dart`, `src/widgets/provider_installer_modal.dart`, `src/widgets/tv/tv_focus.dart`
 
-**Tests importing it:** `integration_test/windows_player_ui_test.dart`, `integration_test/windows_torrent_test.dart`, `test/account_test.dart`, `test/paused_overlay_test.dart`, `test/plugin_library_test.dart`, `test/profile_test.dart`, `test/tv_home_test.dart`, `test/tv_support_test.dart`, `test/watch_party_test.dart`
+**Tests importing it:** `integration_test/windows_player_ui_test.dart`, `integration_test/windows_torrent_test.dart`, `test/account_test.dart`, `test/github_update_check_test.dart`, `test/paused_overlay_test.dart`, `test/plugin_library_test.dart`, `test/profile_test.dart`, `test/tv_home_test.dart`, `test/tv_support_test.dart`, `test/watch_party_test.dart`
 
 ## lib/src/platform/windows_installation.dart
 
@@ -964,7 +964,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/screens/legal_information_screen.dart
 
-**Source:** [`lib/src/screens/legal_information_screen.dart`](../../lib/src/screens/legal_information_screen.dart) · **Platform:** Shared · **Lines:** 349 · **Branches on:** isTv
+**Source:** [`lib/src/screens/legal_information_screen.dart`](../../lib/src/screens/legal_information_screen.dart) · **Platform:** Shared · **Lines:** 397 · **Branches on:** isTv
 
 **Purpose:** Shows the privacy policy, terms of use and third-party notices.
 
@@ -1368,7 +1368,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/services/github_update_service.dart
 
-**Source:** [`lib/src/services/github_update_service.dart`](../../lib/src/services/github_update_service.dart) · **Platform:** Shared · **Lines:** 1026 · **Branches on:** TargetPlatform.windows
+**Source:** [`lib/src/services/github_update_service.dart`](../../lib/src/services/github_update_service.dart) · **Platform:** Shared · **Lines:** 1079 · **Branches on:** TargetPlatform.windows, TargetPlatform.android
 
 **Purpose:** Update checks against GitHub Releases (throttled across launches) and verified downloads of the release asset: the APK, handed to Android's package installer, or the Windows installer or ZIP, checked against its SHA-256.
 
@@ -1380,7 +1380,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Imported by:** `src/services/windows_update_controller.dart`, `src/widgets/app_update_flow.dart`, `src/widgets/update_dialog.dart`
 
-**Tests importing it:** `test/github_update_check_test.dart`, `test/windows_update_test.dart`
+**Tests importing it:** `integration_test/update_downloads_test.dart`, `test/github_update_check_test.dart`, `test/windows_update_test.dart`
 
 ## lib/src/services/media_catalog_rules.dart
 
@@ -2042,13 +2042,13 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/widgets/app_update_flow.dart
 
-**Source:** [`lib/src/widgets/app_update_flow.dart`](../../lib/src/widgets/app_update_flow.dart) · **Platform:** Shared · **Lines:** 403 · **Branches on:** TargetPlatform.windows, TargetPlatform.android
+**Source:** [`lib/src/widgets/app_update_flow.dart`](../../lib/src/widgets/app_update_flow.dart) · **Platform:** Shared · **Lines:** 492 · **Branches on:** isTv, TargetPlatform.windows, TargetPlatform.android
 
 **Purpose:** Coordinates the update UI: prompt → download → install permission → Android installer.
 
 **Declares:** `AppUpdateFlow` (Class), `UpdateFlowPhase` (Enum)
 
-**Imports (project):** `src/desktop/desktop_update_dialogs.dart`, `src/models/app_update.dart`, `src/services/github_update_service.dart`, `src/services/windows_update_controller.dart`, `src/widgets/update_dialog.dart`
+**Imports (project):** `src/desktop/desktop_update_dialogs.dart`, `src/models/app_update.dart`, `src/platform/device_capabilities.dart`, `src/services/github_update_service.dart`, `src/services/windows_update_controller.dart`, `src/widgets/update_dialog.dart`
 
 **Packages:** `flutter`, `material_symbols_icons`
 
@@ -2820,7 +2820,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/widgets/update_dialog.dart
 
-**Source:** [`lib/src/widgets/update_dialog.dart`](../../lib/src/widgets/update_dialog.dart) · **Platform:** Shared · **Lines:** 466
+**Source:** [`lib/src/widgets/update_dialog.dart`](../../lib/src/widgets/update_dialog.dart) · **Platform:** Shared · **Lines:** 478
 
 **Purpose:** Update dialogs: the offer with release notes, APK download progress, the install-permission prompt and notices, and the frame, buttons and formatting the Windows update dialogs reuse.
 
