@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-10-06T04:06:49.986879Z",
+  "updatedAt": "2026-11-01T17:54:10.476958Z",
   "source": {
     "name": "Community Plugin Library",
     "url": "https://nuvio-plugin-library.vercel.app/",
@@ -1764,19 +1764,18 @@
       "manifestUrl": "https://codeberg.org/api/v1/repos/eclipsia/nuvio-plugin/raw/manifest.json",
       "repositoryUrl": "https://codeberg.org/eclipsia/nuvio-plugin",
       "repositoryName": "Eclipsia",
-      "manifestVersion": "11.5.0",
+      "manifestVersion": "11.9.0",
       "description": null,
       "iconUrl": null,
       "verified": false,
       "featured": false,
       "available": true,
-      "lastUpdated": "2026-10-05T17:45:44.000Z",
+      "lastUpdated": "2026-10-26T12:21:18.000Z",
       "scrapers": [
         {
           "id": "brellor",
           "name": "Brellor.",
           "description": "Internet Archive • Classic/Vintage",
-          "logo": "https://gitea.com/eclipsia-404/404/raw/branch/main/misc./monochrome.png",
           "supportedTypes": [
             "movie",
             "tv"
@@ -1789,10 +1788,47 @@
           ]
         },
         {
+          "id": "bdix-cf",
+          "name": "Circle FTP.",
+          "description": "Circle • 1080p • Mainstream • Regional",
+          "supportedTypes": [
+            "movie",
+            "tv"
+          ],
+          "contentLanguage": [
+            "en",
+            "hi",
+            "bn"
+          ],
+          "formats": [
+            "mp4",
+            "m3u8",
+            "mkv"
+          ]
+        },
+        {
+          "id": "bdix-df",
+          "name": "DhakaFlix FTP.",
+          "description": "DhakaFlix • Up-to 2160p • Mainstream • Regional",
+          "supportedTypes": [
+            "movie",
+            "tv"
+          ],
+          "contentLanguage": [
+            "en",
+            "hi",
+            "bn"
+          ],
+          "formats": [
+            "mp4",
+            "m3u8",
+            "mkv"
+          ]
+        },
+        {
           "id": "durnel",
           "name": "Durnel.",
           "description": "CTGMovies • 1080p • Mainstream • Regional",
-          "logo": "https://gitea.com/eclipsia-404/404/raw/branch/main/misc./amber.png",
           "supportedTypes": [
             "movie",
             "tv"
@@ -1811,10 +1847,9 @@
           ]
         },
         {
-          "id": "evyrith",
-          "name": "Evyrith.",
-          "description": "Vidrock • 1080p • Mainstream",
-          "logo": "https://gitea.com/eclipsia-404/404/raw/branch/main/misc./lavender.png",
+          "id": "esvyl",
+          "name": "Esvyl.",
+          "description": "VidBolt • 1080p • Mainstream • Anime",
           "supportedTypes": [
             "movie",
             "tv"
@@ -1828,10 +1863,42 @@
           ]
         },
         {
+          "id": "evyrith",
+          "name": "Evyrith.",
+          "description": "Vidrock • 1080p • Mainstream",
+          "supportedTypes": [
+            "movie",
+            "tv"
+          ],
+          "contentLanguage": [
+            "en"
+          ],
+          "formats": [
+            "mp4",
+            "m3u8"
+          ]
+        },
+        {
+          "id": "fastrion",
+          "name": "Fastrion.",
+          "description": "MultiMovies • 1080p • Mainstream",
+          "supportedTypes": [
+            "movie",
+            "tv"
+          ],
+          "contentLanguage": [
+            "en"
+          ],
+          "formats": [
+            "mp4",
+            "m3u8",
+            "mkv"
+          ]
+        },
+        {
           "id": "fendrix",
           "name": "Fendrix.",
           "description": "Cinejoy • 1080p • Mainstream",
-          "logo": "https://gitea.com/eclipsia-404/404/raw/branch/main/misc./lava.png",
           "supportedTypes": [
             "movie",
             "tv"
@@ -1841,6 +1908,25 @@
           ],
           "formats": [
             "m3u8"
+          ]
+        },
+        {
+          "id": "bdix-fh",
+          "name": "FlixHub FTP.",
+          "description": "FlixHub • 1080p • Mainstream • Regional",
+          "supportedTypes": [
+            "movie",
+            "tv"
+          ],
+          "contentLanguage": [
+            "en",
+            "hi",
+            "bn"
+          ],
+          "formats": [
+            "mp4",
+            "m3u8",
+            "mkv"
           ]
         },
         {
@@ -1862,9 +1948,28 @@
           ]
         },
         {
+          "id": "fyron",
+          "name": "Fyron.",
+          "description": "KissKH • K-Drama • Anime",
+          "supportedTypes": [
+            "movie",
+            "tv"
+          ],
+          "contentLanguage": [
+            "en",
+            "hi",
+            "zh",
+            "ko"
+          ],
+          "formats": [
+            "m3u8",
+            "mp4"
+          ]
+        },
+        {
           "id": "gravix",
           "name": "Gravix.",
-          "description": "AnimeDekho • Multi Dub • Anime",
+          "description": "AnimeWorld • Multi Dub • Anime",
           "supportedTypes": [
             "movie",
             "tv"
@@ -1912,6 +2017,45 @@
             "mkv",
             "m3u8",
             "mp4"
+          ]
+        },
+        {
+          "id": "ilvyrel",
+          "name": "Ilvyrel.",
+          "description": "ToonWorld4All • Multi Dub • Anime",
+          "supportedTypes": [
+            "movie",
+            "tv"
+          ],
+          "contentLanguage": [
+            "en",
+            "ja",
+            "hi",
+            "te",
+            "ta"
+          ],
+          "formats": [
+            "mkv",
+            "m3u8",
+            "mp4"
+          ]
+        },
+        {
+          "id": "jhaeros",
+          "name": "Jhaeros.",
+          "description": "MovieLinkBD • Up-to 2160p • Mainstream • Regional",
+          "supportedTypes": [
+            "movie"
+          ],
+          "contentLanguage": [
+            "en",
+            "hi",
+            "ta",
+            "te"
+          ],
+          "formats": [
+            "mp4",
+            "m3u8"
           ]
         },
         {
@@ -2013,6 +2157,22 @@
           ]
         },
         {
+          "id": "maelith",
+          "name": "Maelith.",
+          "description": "Mapple • Up-to 2160p • Mainstream",
+          "supportedTypes": [
+            "movie",
+            "tv"
+          ],
+          "contentLanguage": [
+            "en"
+          ],
+          "formats": [
+            "mp4",
+            "m3u8"
+          ]
+        },
+        {
           "id": "mavonyx",
           "name": "Mavonyx.",
           "description": "MovieBox • Up-to 4k • Multi Dub",
@@ -2032,16 +2192,32 @@
           ]
         },
         {
-          "id": "novus",
-          "name": "Novus.",
-          "description": "CineFreak • Up-to 4k • Mainstream • Regional",
+          "id": "noctyx",
+          "name": "Noctyx.",
+          "description": "PlusHD • 1080p • Latino",
           "supportedTypes": [
             "movie",
             "tv"
           ],
           "contentLanguage": [
-            "bn",
-            "hi",
+            "en",
+            "es"
+          ],
+          "formats": [
+            "mp4",
+            "m3u8",
+            "mkv"
+          ]
+        },
+        {
+          "id": "novus",
+          "name": "Novus.",
+          "description": "Dulo • Up-to 4k • Mainstream",
+          "supportedTypes": [
+            "movie",
+            "tv"
+          ],
+          "contentLanguage": [
             "en"
           ],
           "formats": [
@@ -2071,7 +2247,7 @@
         {
           "id": "onyxia",
           "name": "Onyxia.",
-          "description": "Animo • Sub/Dub • Anime",
+          "description": "Ani.Pm • Sub/Dub/HardSub • Anime",
           "supportedTypes": [
             "movie",
             "tv"
@@ -2082,6 +2258,40 @@
           ],
           "formats": [
             "m3u8"
+          ]
+        },
+        {
+          "id": "ozeris",
+          "name": "Ozeris.",
+          "description": "Anv • Sub/Dub • Anime",
+          "supportedTypes": [
+            "movie",
+            "tv"
+          ],
+          "contentLanguage": [
+            "en",
+            "ja"
+          ],
+          "formats": [
+            "m3u8"
+          ]
+        },
+        {
+          "id": "phraxis",
+          "name": "Phraxis.",
+          "description": "HackStore • 1080p • Latino",
+          "supportedTypes": [
+            "movie",
+            "tv"
+          ],
+          "contentLanguage": [
+            "en",
+            "es"
+          ],
+          "formats": [
+            "mp4",
+            "m3u8",
+            "mkv"
           ]
         },
         {
@@ -2125,13 +2335,15 @@
         {
           "id": "qorva",
           "name": "Qorva.",
-          "description": "VidUp • 1080p • Mainstream",
+          "description": "KatWorld • 1080p • K-Drama",
           "supportedTypes": [
             "movie",
             "tv"
           ],
           "contentLanguage": [
-            "en"
+            "en",
+            "hi",
+            "kr"
           ],
           "formats": [
             "mp4",
@@ -2170,6 +2382,38 @@
             "mkv",
             "m3u8",
             "mp4"
+          ]
+        },
+        {
+          "id": "rylvane",
+          "name": "Rylvane.",
+          "description": "WcoFlix • HardSub/Dub • Anime",
+          "supportedTypes": [
+            "movie",
+            "tv"
+          ],
+          "contentLanguage": [
+            "en",
+            "ja"
+          ],
+          "formats": [
+            "m3u8"
+          ]
+        },
+        {
+          "id": "rynara",
+          "name": "Rynara",
+          "description": "Vidy • Up-to 4k • Mainstream",
+          "supportedTypes": [
+            "movie",
+            "tv"
+          ],
+          "contentLanguage": [
+            "en"
+          ],
+          "formats": [
+            "mp4",
+            "m3u8"
           ]
         },
         {
@@ -2238,7 +2482,7 @@
         },
         {
           "id": "sylphera",
-          "name": "Sylphera",
+          "name": "Sylphera.",
           "description": "Dexter • Up-to 4K • Mainstream",
           "supportedTypes": [
             "movie",
@@ -2250,6 +2494,41 @@
           "formats": [
             "m3u8",
             "mp4",
+            "mkv"
+          ]
+        },
+        {
+          "id": "tyvrel",
+          "name": "Tyvrel.",
+          "description": "Nxsha • 1080p • Mainstream",
+          "supportedTypes": [
+            "movie",
+            "tv"
+          ],
+          "contentLanguage": [
+            "en",
+            "hi"
+          ],
+          "formats": [
+            "m3u8",
+            "mp4"
+          ]
+        },
+        {
+          "id": "vitrix",
+          "name": "Vitrix.",
+          "description": "CineCalidad • 1080p • Latino",
+          "supportedTypes": [
+            "movie",
+            "tv"
+          ],
+          "contentLanguage": [
+            "en",
+            "es"
+          ],
+          "formats": [
+            "mp4",
+            "m3u8",
             "mkv"
           ]
         },
@@ -2397,24 +2676,6 @@
           "formats": [
             "m3u8",
             "mp4"
-          ]
-        },
-        {
-          "id": "noctyx",
-          "name": "Noctyx",
-          "description": "PlusHD • 1080p • Latino",
-          "supportedTypes": [
-            "movie",
-            "tv"
-          ],
-          "contentLanguage": [
-            "en",
-            "es"
-          ],
-          "formats": [
-            "mp4",
-            "m3u8",
-            "mkv"
           ]
         }
       ]
@@ -3578,897 +3839,15 @@
       ],
       "manifestUrl": "https://raw.githubusercontent.com/phisher98/phisher-nuvio-providers/refs/heads/main/manifest.json",
       "repositoryUrl": "https://github.com/phisher98/phisher-nuvio-providers",
-      "repositoryName": "Phisher's Repo",
-      "manifestVersion": "1.0.0",
+      "repositoryName": null,
+      "manifestVersion": null,
       "description": null,
       "iconUrl": null,
       "verified": false,
       "featured": false,
-      "available": true,
-      "lastUpdated": "2026-09-03T04:17:53.000Z",
-      "scrapers": [
-        {
-          "id": "MoviesDrive",
-          "name": "MoviesDrive",
-          "description": "MoviesDrive streaming with multiple quality options and versions",
-          "logo": "https://i.imgur.com/9bGkGMi.png",
-          "supportedTypes": [
-            "movie",
-            "tv"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        },
-        {
-          "id": "AllWish",
-          "name": "AllWish",
-          "description": "AllWish Anime Streaming",
-          "logo": "https://all-wish.me/assets/logo.png",
-          "supportedTypes": [
-            "movie",
-            "tv",
-            "anime"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        },
-        {
-          "id": "Allwish",
-          "name": "Allwish",
-          "description": "Allwish streaming provider",
-          "logo": "https://i.imgur.com/9bGkGMi.png",
-          "supportedTypes": [
-            "movie",
-            "tv"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        },
-        {
-          "id": "Anichi",
-          "name": "Anichi",
-          "description": "Anichi streaming provider",
-          "logo": "https://i.imgur.com/9bGkGMi.png",
-          "supportedTypes": [
-            "movie",
-            "tv"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        },
-        {
-          "id": "Animedekho",
-          "name": "Anime-dekho",
-          "description": "Anime-dekho streaming provider",
-          "logo": "https://i.imgur.com/9bGkGMi.png",
-          "supportedTypes": [
-            "movie",
-            "tv",
-            "anime"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        },
-        {
-          "id": "Animecloud",
-          "name": "Animecloud",
-          "description": "Animecloud streaming provider",
-          "logo": "https://i.imgur.com/9bGkGMi.png",
-          "supportedTypes": [
-            "movie",
-            "tv",
-            "anime"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        },
-        {
-          "id": "Animedubhindi",
-          "name": "Animedubhindi",
-          "description": "Animedubhindi streaming provider",
-          "logo": "https://i.imgur.com/9bGkGMi.png",
-          "supportedTypes": [
-            "movie",
-            "tv",
-            "anime"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        },
-        {
-          "id": "Animekhor",
-          "name": "Animekhor",
-          "description": "Animekhor streaming provider",
-          "logo": "https://i.imgur.com/9bGkGMi.png",
-          "supportedTypes": [
-            "movie",
-            "tv",
-            "anime"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        },
-        {
-          "id": "Animepahe",
-          "name": "Animepahe",
-          "description": "Animepahe streaming provider",
-          "logo": "https://i.imgur.com/9bGkGMi.png",
-          "supportedTypes": [
-            "movie",
-            "tv",
-            "anime"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        },
-        {
-          "id": "Cinefreak",
-          "name": "Cinefreak",
-          "description": "Cinefreak streaming provider",
-          "logo": "https://i.imgur.com/9bGkGMi.png",
-          "supportedTypes": [
-            "movie",
-            "tv"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        },
-        {
-          "id": "Coflix",
-          "name": "Coflix",
-          "description": "Coflix streaming provider",
-          "logo": "https://i.imgur.com/9bGkGMi.png",
-          "supportedTypes": [
-            "movie",
-            "tv"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        },
-        {
-          "id": "Desicinemas",
-          "name": "Desicinemas",
-          "description": "Desicinemas streaming provider",
-          "logo": "https://i.imgur.com/9bGkGMi.png",
-          "supportedTypes": [
-            "movie",
-            "tv"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        },
-        {
-          "id": "Donghuastream",
-          "name": "Donghuastream",
-          "description": "Donghuastream streaming provider",
-          "logo": "https://i.imgur.com/9bGkGMi.png",
-          "supportedTypes": [
-            "movie",
-            "tv",
-            "anime"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        },
-        {
-          "id": "Dorabash",
-          "name": "Dorabash",
-          "description": "Dorabash streaming provider",
-          "logo": "https://i.imgur.com/9bGkGMi.png",
-          "supportedTypes": [
-            "movie",
-            "tv"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        },
-        {
-          "id": "Dudefilms",
-          "name": "Dudefilms",
-          "description": "Dudefilms streaming provider",
-          "logo": "https://i.imgur.com/9bGkGMi.png",
-          "supportedTypes": [
-            "movie",
-            "tv"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        },
-        {
-          "id": "Fibwatch",
-          "name": "Fibwatch",
-          "description": "Fibwatch streaming provider",
-          "logo": "https://i.imgur.com/9bGkGMi.png",
-          "supportedTypes": [
-            "movie",
-            "tv"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        },
-        {
-          "id": "Fivemovierulz",
-          "name": "Fivemovierulz",
-          "description": "Fivemovierulz streaming provider",
-          "logo": "https://i.imgur.com/9bGkGMi.png",
-          "supportedTypes": [
-            "movie",
-            "tv"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        },
-        {
-          "id": "FourkHDhub",
-          "name": "FourkHDhub",
-          "description": "FourkHDhub streaming provider",
-          "logo": "https://i.imgur.com/9bGkGMi.png",
-          "supportedTypes": [
-            "movie",
-            "tv"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        },
-        {
-          "id": "Goojara",
-          "name": "Goojara",
-          "description": "Goojara streaming provider",
-          "logo": "https://i.imgur.com/9bGkGMi.png",
-          "supportedTypes": [
-            "movie",
-            "tv"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        },
-        {
-          "id": "Hianime",
-          "name": "Hianime",
-          "description": "Hianime streaming provider",
-          "logo": "https://i.imgur.com/9bGkGMi.png",
-          "supportedTypes": [
-            "movie",
-            "tv",
-            "anime"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        },
-        {
-          "id": "Hindmoviez",
-          "name": "Hindmoviez",
-          "description": "Hindmoviez streaming provider",
-          "logo": "https://i.imgur.com/9bGkGMi.png",
-          "supportedTypes": [
-            "movie",
-            "tv"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        },
-        {
-          "id": "Idlix",
-          "name": "Idlix",
-          "description": "Idlix streaming provider",
-          "logo": "https://i.imgur.com/9bGkGMi.png",
-          "supportedTypes": [
-            "movie",
-            "tv"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        },
-        {
-          "id": "Istreamflare",
-          "name": "Istreamflare",
-          "description": "Istreamflare streaming provider",
-          "logo": "https://i.imgur.com/9bGkGMi.png",
-          "supportedTypes": [
-            "movie",
-            "tv"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        },
-        {
-          "id": "Kickassanime",
-          "name": "Kickassanime",
-          "description": "Kickassanime streaming provider",
-          "logo": "https://i.imgur.com/9bGkGMi.png",
-          "supportedTypes": [
-            "movie",
-            "tv",
-            "anime"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        },
-        {
-          "id": "Kisskh",
-          "name": "Kisskh",
-          "description": "Kisskh streaming provider",
-          "logo": "https://i.imgur.com/9bGkGMi.png",
-          "supportedTypes": [
-            "movie",
-            "tv"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        },
-        {
-          "id": "Latanime",
-          "name": "Latanime",
-          "description": "Latanime streaming provider",
-          "logo": "https://i.imgur.com/9bGkGMi.png",
-          "supportedTypes": [
-            "movie",
-            "tv",
-            "anime"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        },
-        {
-          "id": "Layarkaca",
-          "name": "Layarkaca",
-          "description": "Layarkaca streaming provider",
-          "logo": "https://i.imgur.com/9bGkGMi.png",
-          "supportedTypes": [
-            "movie",
-            "tv"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        },
-        {
-          "id": "Masstamilan",
-          "name": "Masstamilan",
-          "description": "Masstamilan streaming provider",
-          "logo": "https://i.imgur.com/9bGkGMi.png",
-          "supportedTypes": [
-            "movie",
-            "tv"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        },
-        {
-          "id": "Megakino",
-          "name": "Megakino",
-          "description": "Megakino streaming provider",
-          "logo": "https://i.imgur.com/9bGkGMi.png",
-          "supportedTypes": [
-            "movie",
-            "tv"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        },
-        {
-          "id": "Movierulzhd",
-          "name": "Movierulzhd",
-          "description": "Movierulzhd streaming provider",
-          "logo": "https://i.imgur.com/9bGkGMi.png",
-          "supportedTypes": [
-            "movie",
-            "tv"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        },
-        {
-          "id": "Movies4u",
-          "name": "Movies4u",
-          "description": "Movies4u streaming provider",
-          "logo": "https://i.imgur.com/9bGkGMi.png",
-          "supportedTypes": [
-            "movie",
-            "tv"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        },
-        {
-          "id": "Moviesdrive",
-          "name": "Moviesdrive",
-          "description": "Moviesdrive streaming provider",
-          "logo": "https://i.imgur.com/9bGkGMi.png",
-          "supportedTypes": [
-            "movie",
-            "tv"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        },
-        {
-          "id": "Mplayer",
-          "name": "Mplayer",
-          "description": "Mplayer streaming provider",
-          "logo": "https://i.imgur.com/9bGkGMi.png",
-          "supportedTypes": [
-            "movie",
-            "tv"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        },
-        {
-          "id": "Multimovies",
-          "name": "Multimovies",
-          "description": "Multimovies streaming provider",
-          "logo": "https://i.imgur.com/9bGkGMi.png",
-          "supportedTypes": [
-            "movie",
-            "tv"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        },
-        {
-          "id": "Netcinez",
-          "name": "Netcinez",
-          "description": "Netcinez streaming provider",
-          "logo": "https://i.imgur.com/9bGkGMi.png",
-          "supportedTypes": [
-            "movie",
-            "tv"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        },
-        {
-          "id": "Onepace",
-          "name": "Onepace",
-          "description": "Onepace streaming provider",
-          "logo": "https://i.imgur.com/9bGkGMi.png",
-          "supportedTypes": [
-            "movie",
-            "tv"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        },
-        {
-          "id": "Pelisplushd",
-          "name": "Pelisplushd",
-          "description": "Pelisplushd streaming provider",
-          "logo": "https://i.imgur.com/9bGkGMi.png",
-          "supportedTypes": [
-            "movie",
-            "tv"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        },
-        {
-          "id": "Pencurimovie",
-          "name": "Pencurimovie",
-          "description": "Pencurimovie streaming provider",
-          "logo": "https://i.imgur.com/9bGkGMi.png",
-          "supportedTypes": [
-            "movie",
-            "tv"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        },
-        {
-          "id": "Pinoymoviepedia",
-          "name": "Pinoymoviepedia",
-          "description": "Pinoymoviepedia streaming provider",
-          "logo": "https://i.imgur.com/9bGkGMi.png",
-          "supportedTypes": [
-            "movie",
-            "tv"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        },
-        {
-          "id": "Piratexplay",
-          "name": "Piratexplay",
-          "description": "Piratexplay streaming provider",
-          "logo": "https://i.imgur.com/9bGkGMi.png",
-          "supportedTypes": [
-            "movie",
-            "tv"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        },
-        {
-          "id": "Pmsm",
-          "name": "Pmsm",
-          "description": "Pmsm streaming provider",
-          "logo": "https://i.imgur.com/9bGkGMi.png",
-          "supportedTypes": [
-            "movie",
-            "tv"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        },
-        {
-          "id": "Ringz",
-          "name": "Ringz",
-          "description": "Ringz streaming provider",
-          "logo": "https://i.imgur.com/9bGkGMi.png",
-          "supportedTypes": [
-            "movie",
-            "tv"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        },
-        {
-          "id": "Tokusatsu",
-          "name": "Tokusatsu",
-          "description": "Tokusatsu streaming provider",
-          "logo": "https://i.imgur.com/9bGkGMi.png",
-          "supportedTypes": [
-            "movie",
-            "tv"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        },
-        {
-          "id": "Tokuzilla",
-          "name": "Tokuzilla",
-          "description": "Tokuzilla streaming provider",
-          "logo": "https://i.imgur.com/9bGkGMi.png",
-          "supportedTypes": [
-            "movie",
-            "tv"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        },
-        {
-          "id": "Toonhub",
-          "name": "Toonhub",
-          "description": "Toonhub streaming provider",
-          "logo": "https://i.imgur.com/9bGkGMi.png",
-          "supportedTypes": [
-            "movie",
-            "tv",
-            "anime"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        },
-        {
-          "id": "Toonstream",
-          "name": "Toonstream",
-          "description": "Toonstream streaming provider",
-          "logo": "https://i.imgur.com/9bGkGMi.png",
-          "supportedTypes": [
-            "movie",
-            "tv",
-            "anime"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        },
-        {
-          "id": "Toontales",
-          "name": "Toontales",
-          "description": "Toontales streaming provider",
-          "logo": "https://i.imgur.com/9bGkGMi.png",
-          "supportedTypes": [
-            "movie",
-            "tv",
-            "anime"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        },
-        {
-          "id": "Topcartoons",
-          "name": "Topcartoons",
-          "description": "Topcartoons streaming provider",
-          "logo": "https://i.imgur.com/9bGkGMi.png",
-          "supportedTypes": [
-            "movie",
-            "tv",
-            "anime"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        },
-        {
-          "id": "Topstreamfilm",
-          "name": "Topstreamfilm",
-          "description": "Topstreamfilm streaming provider",
-          "logo": "https://i.imgur.com/9bGkGMi.png",
-          "supportedTypes": [
-            "movie",
-            "tv"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        },
-        {
-          "id": "Torrastream",
-          "name": "Torrastream",
-          "description": "Torrastream streaming provider",
-          "logo": "https://i.imgur.com/9bGkGMi.png",
-          "supportedTypes": [
-            "movie",
-            "tv"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        },
-        {
-          "id": "Xdmovies",
-          "name": "Xdmovies",
-          "description": "Xdmovies streaming provider",
-          "logo": "https://i.imgur.com/9bGkGMi.png",
-          "supportedTypes": [
-            "movie",
-            "tv"
-          ],
-          "contentLanguage": [
-            "en"
-          ],
-          "formats": [
-            "mp4",
-            "mkv"
-          ]
-        }
-      ]
+      "available": false,
+      "lastUpdated": null,
+      "scrapers": []
     },
     {
       "id": "spidey",
@@ -4786,13 +4165,13 @@
       "manifestUrl": "https://raw.githubusercontent.com/Gowaru/gowaru-nuvio-providers/refs/heads/main/manifest.json",
       "repositoryUrl": "https://github.com/Gowaru/gowaru-nuvio-providers",
       "repositoryName": "Gowaru's Repo",
-      "manifestVersion": "1.2.0",
+      "manifestVersion": "1.2.4",
       "description": null,
       "iconUrl": null,
       "verified": false,
       "featured": false,
       "available": true,
-      "lastUpdated": "2026-09-21T23:53:58.000Z",
+      "lastUpdated": "2026-10-14T23:23:16.000Z",
       "scrapers": [
         {
           "id": "anime-ultime",
@@ -5105,12 +4484,14 @@
         {
           "id": "voiranime-be",
           "name": "VoiranimeBE",
-          "description": "Simulcast anime VOSTFR ultra-frais sur voiranime.be (One Piece, Bleach TYBW, Mushoku S3) — catalogue piloté par sitemap, lecteurs m3u8.",
+          "description": "Simulcast anime VOSTFR ultra-frais sur voiranime.be (One Piece, Bleach TYBW, Mushoku S3) — catalogue piloté par sitemap, lecteurs m3u8, repli VF, films.",
           "logo": "https://voiranime.be/wp-content/uploads/2024/01/favicon.png",
           "supportedTypes": [
+            "movie",
             "tv"
           ],
           "contentLanguage": [
+            "fr",
             "ja"
           ],
           "formats": []
@@ -5325,23 +4706,6 @@
           ]
         },
         {
-          "id": "fluneo",
-          "name": "Fluneo",
-          "description": "Anime VF et VOSTFR en streaming sur myfluneo.eu (lecteurs VidMoly, VOE, Streamtape).",
-          "logo": "https://myfluneo.eu/favicon.ico",
-          "supportedTypes": [
-            "movie",
-            "tv"
-          ],
-          "contentLanguage": [
-            "fr"
-          ],
-          "formats": [
-            "mp4",
-            "m3u8"
-          ]
-        },
-        {
           "id": "voirdrama",
           "name": "Voirdrama",
           "description": "Dramas VF et VOSTFR en streaming sur voirdrama.to (lecteurs VidMoly, mail.ru, VOE).",
@@ -5376,11 +4740,45 @@
           ]
         },
         {
+          "id": "aniverse",
+          "name": "Aniverse",
+          "description": "Animes VF et VOSTFR sur aniverse.fr (Next.js, HLS AES-128 CDN onefy avec JWT Bearer obligatoire, sous-titres FR VTT, anti-décalage épisodes : validation numérique + mapping par titres TMDB pour specials/OVA S0 et numérotations absolues type One Piece).",
+          "logo": "https://aniverse.fr/assets/icons/logo.png",
+          "supportedTypes": [
+            "movie",
+            "tv"
+          ],
+          "contentLanguage": [
+            "fr",
+            "ja"
+          ],
+          "formats": [
+            "m3u8"
+          ]
+        },
+        {
           "id": "animevost-fr",
           "name": "AnimeVOST.fr",
           "description": "Anime VOSTFR en streaming via animevost.fr (HLS gupload, catalogue en croissance).",
           "logo": "https://animevost.fr/favicon.ico",
           "supportedTypes": [
+            "tv"
+          ],
+          "contentLanguage": [
+            "fr"
+          ],
+          "formats": [
+            "mp4",
+            "m3u8"
+          ]
+        },
+        {
+          "id": "webflix",
+          "name": "Webflix",
+          "description": "Films et séries VF/VOSTFR via webflix.art (MP4 directs FastFlux + lecteurs Frembed/Zenix).",
+          "logo": "https://webflix.art/favicon.ico",
+          "supportedTypes": [
+            "movie",
             "tv"
           ],
           "contentLanguage": [

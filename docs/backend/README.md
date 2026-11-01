@@ -230,6 +230,8 @@ as before.
 | Background task reusing a rotated refresh token (which revokes the session) | Background checks never refresh: they carry a per-session alert token (`rnt_…`, stored hashed) that opens only `/notifications/episodes` | The token reads public TMDB data until its session is revoked or expires |
 | Callback page injection | Fixed pages, nothing from the request echoed; CSP `default-src 'none'`, no scripts, `no-referrer` | — |
 | SSRF through the gateway | Fixed upstream host and HTTPS; regex-allowlisted paths; manual redirects | — |
+| A token sent over plain HTTP (workers.dev answers HTTP too) | The app only builds `https://` addresses; the Worker refuses every non-HTTPS request with 403 `https_required` before routing, without a redirect | A token already sent in clear text should be treated as exposed: sign out that device |
+| Two app copies sharing one sign-in on Windows (installed + portable, or a dev build) | — | Both rotate the same refresh token; the second use reads as reuse and revokes the session (by design) |
 | Cross-account access | Every account route filters by the token's user id; foreign ids answer 404 | — |
 | Secrets in logs | Logs carry paths, statuses and ids only; no query strings, tokens or codes | — |
 | Supply chain | Zero runtime dependencies in the Worker; pinned dev tools; lockfile; CI audit | Advisories in local dev tooling (miniflare, wrangler) |

@@ -134,6 +134,12 @@ export default {
     const started = Date.now();
     let response: Response;
     try {
+      // workers.dev also answers plain HTTP. Nothing is processed over it,
+      // so a token sent there by mistake never works; no redirect either,
+      // so the client sees the failure instead of retrying silently.
+      if (new URL(request.url).protocol !== 'https:') {
+        throw new ApiError(403, 'https_required', 'Use HTTPS.');
+      }
       assertConfigured(env);
       response = await route(request, env, requestId);
     } catch (error) {

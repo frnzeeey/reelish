@@ -99,8 +99,9 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/services/plugin_library_service.dart`](#libsrcservicesplugin_library_servicedart) | Shared | 161 | Reads the catalog from the network, the on-device cache and the app bundle. |
 | [`lib/src/services/provider_execution_scheduler.dart`](#libsrcservicesprovider_execution_schedulerdart) | Shared | 47 | Bounds parallel provider work separately from native QuickJS heap use. |
 | [`lib/src/services/provider_fetch_bridge.dart`](#libsrcservicesprovider_fetch_bridgedart) | Shared | 1205 | Supplies provider scripts with fetch and XMLHttpRequest backed by Dart's HTTP client. |
+| [`lib/src/services/provider_node_compat.dart`](#libsrcservicesprovider_node_compatdart) | Shared | 222 | Node-style globals and modules that community provider scripts expect, written in JavaScript on top of the sandbox's own fetch bridge. |
 | [`lib/src/services/provider_plugin_service.dart`](#libsrcservicesprovider_plugin_servicedart) | Shared | 908 | Provider repositories and plugins: install, update, enable, script caching and approval, and stream discovery for a title. |
-| [`lib/src/services/provider_runner.dart`](#libsrcservicesprovider_runnerdart) | Shared | 273 | Runs provider scripts on a background isolate. |
+| [`lib/src/services/provider_runner.dart`](#libsrcservicesprovider_runnerdart) | Shared | 281 | Runs provider scripts on a background isolate. |
 | [`lib/src/services/provider_script_cache.dart`](#libsrcservicesprovider_script_cachedart) | Shared | 55 | In-memory cache of provider scripts for this app session. |
 | [`lib/src/services/source_preparer.dart`](#libsrcservicessource_preparerdart) | Shared | 70 | Validates a source, its headers and its destination before an engine opens it. |
 | [`lib/src/services/storage_service.dart`](#libsrcservicesstorage_servicedart) | Shared | 714 | Local storage on SharedPreferences: watch history and per-episode progress, My list, provider repositories, cached manifests, settings and remembered subtitles. |
@@ -572,7 +573,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Imported by:** `src/account/watchlist_sync.dart`, `src/desktop/desktop_details_screen.dart`, `src/desktop/desktop_hero.dart`, `src/desktop/desktop_pages.dart`, `src/desktop/desktop_shell.dart`, `src/desktop/desktop_top_ten.dart`, `src/desktop/desktop_widgets.dart`, `src/models/resume_summary.dart`, `src/screens/home_screen.dart`, `src/screens/library_screen.dart`, `src/screens/media_details_screen.dart`, `src/screens/player_screen.dart`, `src/screens/profile_screen.dart`, `src/screens/tv/tv_browse.dart`, `src/screens/tv/tv_details_screen.dart`, `src/screens/tv/tv_pages.dart`, `src/services/media_catalog_rules.dart`, `src/services/media_discovery_ranking.dart`, `src/services/paged_feed_controller.dart`, `src/services/provider_plugin_service.dart`, `src/services/storage_service.dart`, `src/services/tmdb_service.dart`, `src/viewmodels/details_view_model.dart`, `src/viewmodels/home_catalog.dart`, `src/viewmodels/home_view_model.dart`, `src/viewmodels/library_view_model.dart`, `src/viewmodels/search_view_model.dart`, `src/watch_party/party_models.dart`, `src/widgets/media_card.dart`, `src/widgets/player/custom_video_player.dart`, `src/widgets/player/paused_overlay.dart`, `src/widgets/tv/tv_poster_card.dart`
 
-**Tests importing it:** `integration_test/player_long_session_test.dart`, `integration_test/windows_player_ui_test.dart`, `integration_test/windows_soak_test.dart`, `integration_test/windows_torrent_test.dart`, `test/app_reliability_test.dart`, `test/app_transitions_test.dart`, `test/continue_watching_test.dart`, `test/desktop_home_top_ten_test.dart`, `test/desktop_redesign_test.dart`, `test/desktop_remove_favorites_test.dart`, `test/desktop_top_ten_test.dart`, `test/desktop_ui_test.dart`, `test/details_screens_test.dart`, `test/details_view_model_test.dart`, `test/episode_alerts_test.dart`, `test/episode_selection_test.dart`, `test/home_startup_budget_test.dart`, `test/home_view_model_test.dart`, `test/media_card_test.dart`, `test/media_catalog_rules_test.dart`, `test/media_discovery_ranking_test.dart`, `test/paged_feed_controller_test.dart`, `test/paused_overlay_test.dart`, `test/playback_settings_test.dart`, `test/profile_screen_test.dart`, `test/provider_repository_state_test.dart`, `test/search_library_screens_test.dart`, `test/search_library_view_models_test.dart`, `test/tmdb_catalog_service_test.dart`, `test/tmdb_logo_test.dart`, `test/tmdb_scalability_test.dart`, `test/tv_layout_test.dart`, `test/tv_support_test.dart`, `test/watch_party_test.dart`, `test/watchlist_sync_test.dart`
+**Tests importing it:** `integration_test/player_long_session_test.dart`, `integration_test/windows_player_ui_test.dart`, `integration_test/windows_soak_test.dart`, `integration_test/windows_torrent_test.dart`, `test/app_reliability_test.dart`, `test/app_transitions_test.dart`, `test/continue_watching_test.dart`, `test/desktop_home_top_ten_test.dart`, `test/desktop_redesign_test.dart`, `test/desktop_remove_favorites_test.dart`, `test/desktop_top_ten_test.dart`, `test/desktop_ui_test.dart`, `test/details_screens_test.dart`, `test/details_view_model_test.dart`, `test/episode_alerts_test.dart`, `test/episode_selection_test.dart`, `test/home_startup_budget_test.dart`, `test/home_view_model_test.dart`, `test/media_card_test.dart`, `test/media_catalog_rules_test.dart`, `test/media_discovery_ranking_test.dart`, `test/paged_feed_controller_test.dart`, `test/paused_overlay_test.dart`, `test/playback_settings_test.dart`, `test/profile_screen_test.dart`, `test/provider_compat/provider_compat_test.dart`, `test/provider_repository_state_test.dart`, `test/search_library_screens_test.dart`, `test/search_library_view_models_test.dart`, `test/tmdb_catalog_service_test.dart`, `test/tmdb_logo_test.dart`, `test/tmdb_scalability_test.dart`, `test/tv_layout_test.dart`, `test/tv_support_test.dart`, `test/watch_party_test.dart`, `test/watchlist_sync_test.dart`
 
 ## lib/src/models/playable_source.dart
 
@@ -1616,6 +1617,18 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Tests importing it:** `test/playback_reliability_test.dart`, `test/provider_fetch_bridge_test.dart`
 
+## lib/src/services/provider_node_compat.dart
+
+**Source:** [`lib/src/services/provider_node_compat.dart`](../../lib/src/services/provider_node_compat.dart) · **Platform:** Shared · **Lines:** 222
+
+**Purpose:** Node-style globals and modules that community provider scripts expect, written in JavaScript on top of the sandbox's own fetch bridge.
+
+**Imports (project):** none
+
+**Imported by:** `src/services/provider_runner.dart`
+
+**Tests importing it:** `test/provider_fetch_bridge_test.dart`
+
 ## lib/src/services/provider_plugin_service.dart
 
 **Source:** [`lib/src/services/provider_plugin_service.dart`](../../lib/src/services/provider_plugin_service.dart) · **Platform:** Shared · **Lines:** 908 · **Branches on:** TargetPlatform.android, TorrentSupport
@@ -1630,23 +1643,23 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Imported by:** `src/app/app_services.dart`, `src/desktop/desktop_plugins_page.dart`, `src/screens/home_screen.dart`, `src/screens/plugin_details_screen.dart`, `src/screens/plugin_library_screen.dart`, `src/screens/plugins_screen.dart`, `src/widgets/plugin_library/plugin_install_button.dart`, `src/widgets/provider_installer_modal.dart`
 
-**Tests importing it:** `test/desktop_settings_plugins_test.dart`, `test/plugin_library_test.dart`, `test/provider_repository_state_test.dart`
+**Tests importing it:** `test/desktop_settings_plugins_test.dart`, `test/plugin_library_test.dart`, `test/provider_compat/provider_compat_test.dart`, `test/provider_repository_state_test.dart`
 
 ## lib/src/services/provider_runner.dart
 
-**Source:** [`lib/src/services/provider_runner.dart`](../../lib/src/services/provider_runner.dart) · **Platform:** Shared · **Lines:** 273
+**Source:** [`lib/src/services/provider_runner.dart`](../../lib/src/services/provider_runner.dart) · **Platform:** Shared · **Lines:** 281
 
 **Purpose:** Runs provider scripts on a background isolate.
 
 **Declares:** `ProviderRunException` (Exception), `ProviderRunner` (Service type), `ProviderRunRequest` (Service type)
 
-**Imports (project):** `src/services/provider_fetch_bridge.dart`
+**Imports (project):** `src/services/provider_fetch_bridge.dart`, `src/services/provider_node_compat.dart`
 
 **Packages:** `flutter`, `flutter_js`
 
 **Imported by:** `src/services/provider_plugin_service.dart`
 
-**Tests importing it:** `integration_test/provider_runtime_test.dart`, `integration_test/windows_soak_test.dart`, `test/provider_runner_test.dart`, `test/quickjs_windows_limits_test.dart`
+**Tests importing it:** `integration_test/provider_runtime_test.dart`, `integration_test/windows_soak_test.dart`, `test/provider_compat/provider_compat_test.dart`, `test/provider_runner_test.dart`, `test/quickjs_windows_limits_test.dart`
 
 ## lib/src/services/provider_script_cache.dart
 

@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:onfeed/src/services/provider_fetch_bridge.dart';
+import 'package:onfeed/src/services/provider_node_compat.dart';
 import 'package:onfeed/src/services/network_target_policy.dart';
 
 void main() {
@@ -426,4 +427,154 @@ void main() {
       }
     },
   );
+  group('Node compatibility (axios, process, crypto)', () {
+    Future<Map<String, dynamic>> runScript(
+      String body,
+      Future<http.Response> Function(http.Request request) handler, {
+      String address = '93.184.216.34',
+    }) async {
+      final runtime = QuickJsRuntime2()..enableHandlePromises();
+      final client = MockClient(handler);
+      final validator = NetworkDestinationValidator(
+        lookup: (_) async => [InternetAddress(address)],
+      );
+      final bridge = ProviderFetchBridge(runtime, client, validator);
+      try {
+        final compat = runtime.evaluate(providerNodeCompatScript);
+        expect(compat.isError, isFalse, reason: compat.stringResult);
+        final pending = runtime.evaluateAsync(
+          '(async function() { const axios = globalThis.__onfeedAxios; '
+          '$body })().then(JSON.stringify)',
+        );
+        final value = await runtime
+            .handlePromise(await pending)
+            .timeout(const Duration(seconds: 5));
+        return jsonDecode(value.stringResult) as Map<String, dynamic>;
+      } finally {
+        bridge.dispose();
+        client.close();
+        final runtimeId = runtime.getEngineInstanceId();
+        runtime.dispose();
+        JavascriptRuntime.channelFunctionsRegistered.remove(runtimeId);
+      }
+    }
+
+    test('axios.get parses JSON, sends params and headers, and lists '
+        'cookies as axios does', () async {
+      final result = await runScript(
+        '''
+        const response = await axios.get('https://provider.example.org/api', {
+          params: { q: 'fight club', page: 2 },
+          headers: { Referer: 'https://provider.example.org/' },
+          timeout: 4000,
+        });
+        return {
+          status: response.status,
+          title: response.data.title,
+          cookies: response.headers['set-cookie'],
+          type: response.headers['content-type'],
+        };
+      ''',
+        (request) async {
+          expect(request.url.queryParameters, {'q': 'fight club', 'page': '2'});
+          expect(request.headers['Referer'], 'https://provider.example.org/');
+          return http.Response(
+            '{"title":"Fight Club"}',
+            200,
+            headers: {
+              'content-type': 'text/plain',
+              'set-cookie':
+                  'a=1; Path=/, b=2; Expires=Wed, 21 Oct 2026 07:28:00 GMT',
+            },
+            request: request,
+          );
+        },
+      );
+      expect(result['status'], 200);
+      // Parsed although the server called it text, as axios does.
+      expect(result['title'], 'Fight Club');
+      expect(result['type'], 'text/plain');
+      expect(result['cookies'], [
+        'a=1; Path=/',
+        'b=2; Expires=Wed, 21 Oct 2026 07:28:00 GMT',
+      ]);
+    });
+
+    test(
+      'axios.post sends objects as JSON, and errors carry the response',
+      () async {
+        final result = await runScript(
+          '''
+        const ok = await axios.post('https://provider.example.org/api', { id: 550 });
+        let failure;
+        try {
+          await axios.get('https://provider.example.org/missing');
+        } catch (error) {
+          failure = { status: error.response.status, code: error.code, axios: axios.isAxiosError(error) };
+        }
+        const allowed = await axios.get('https://provider.example.org/missing', {
+          validateStatus: () => true,
+        });
+        return { echoed: ok.data, failure, allowed: allowed.status };
+      ''',
+          (request) async {
+            if (request.url.path == '/missing') {
+              return http.Response('nope', 404, request: request);
+            }
+            expect(
+              request.headers['Content-Type'],
+              startsWith('application/json'),
+            );
+            return http.Response(request.body, 200, request: request);
+          },
+        );
+        expect(result['echoed'], {'id': 550});
+        expect(result['failure'], {
+          'status': 404,
+          'code': 'ERR_BAD_REQUEST',
+          'axios': true,
+        });
+        expect(result['allowed'], 404);
+      },
+    );
+
+    test('axios goes through the destination policy like fetch', () async {
+      final result = await runScript(
+        '''
+        try {
+          await axios.get('https://provider.example.org/');
+          return { reached: true };
+        } catch (error) {
+          return { reached: false, code: error.code };
+        }
+      ''',
+        (request) async =>
+            fail('a private destination reached the HTTP client'),
+        address: '192.168.1.10',
+      );
+      expect(result, {'reached': false, 'code': 'ERR_NETWORK'});
+    });
+
+    test(
+      'process has an empty environment and crypto fills random bytes',
+      () async {
+        final result = await runScript('''
+        const bytes = crypto.getRandomValues(new Uint8Array(32));
+        return {
+          env: Object.keys(process.env).length,
+          filled: bytes.some(byte => byte !== 0),
+          uuid: /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\$/.test(crypto.randomUUID()),
+          subtle: typeof crypto.subtle,
+        };
+      ''', (request) async => fail('no request expected'));
+        expect(result, {
+          'env': 0,
+          'filled': true,
+          'uuid': true,
+          // No pretend Web Crypto beyond random values.
+          'subtle': 'undefined',
+        });
+      },
+    );
+  });
 }

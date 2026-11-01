@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { call, fakeUpstream, jsonResponse, signIn, testEnv } from './helpers';
 import { readJsonBody } from '../src/http';
+import worker from '../src/index';
 
 type ErrorBody = { error: { code: string } };
 const codeOf = async (response: Response) => ((await response.json()) as ErrorBody).error.code;
@@ -239,5 +240,26 @@ describe('Request bodies', () => {
       }),
     });
     expect(await readJsonBody(small)).toEqual({ name: 'é' });
+  });
+});
+
+describe('Transport', () => {
+  it('refuses plain HTTP before looking at any token', async () => {
+    const { session } = await signIn();
+    for (const path of ['/health', '/api/v1/me']) {
+      const response = await worker.fetch(
+        new Request(`http://api.reelish.test${path}`, {
+          headers: { Authorization: `Bearer ${session.accessToken}`, 'CF-Connecting-IP': '203.0.113.9' },
+        }),
+        testEnv,
+      );
+      expect(response.status).toBe(403);
+      expect(response.headers.get('Location')).toBeNull();
+      const body = (await response.json()) as { error: { code: string } };
+      expect(body.error.code).toBe('https_required');
+      expect(JSON.stringify(body)).not.toContain(session.accessToken);
+    }
+    // The same token works over HTTPS.
+    expect((await call('/api/v1/me', { token: session.accessToken })).status).toBe(200);
   });
 });

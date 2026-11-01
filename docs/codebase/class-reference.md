@@ -328,7 +328,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `_MediaDetailsScreenState` | Widget state | [`media_details_screen.dart:45`](../../lib/src/screens/media_details_screen.dart#L45) | extends State<MediaDetailsScreen> | Shared | its own file |  |
 | `MediaDiscoveryRanking` | Service type | [`media_discovery_ranking.dart:7`](../../lib/src/services/media_discovery_ranking.dart#L7) |  | Shared | 2 lib files, 3 test files | Shared quality and recency rules for discovery collections. |
 | `MediaFreshnessRules` | Service type | [`media_catalog_rules.dart:99`](../../lib/src/services/media_catalog_rules.dart#L99) |  | Shared | 2 lib files, 6 test files | Date rules for discovery rows. |
-| `MediaItem` | Model | [`media_item.dart:1`](../../lib/src/models/media_item.dart#L1) |  | Shared | 32 lib files, 35 test files |  |
+| `MediaItem` | Model | [`media_item.dart:1`](../../lib/src/models/media_item.dart#L1) |  | Shared | 32 lib files, 36 test files |  |
 | `_MediaSection` | Widget | [`library_screen.dart:401`](../../lib/src/screens/library_screen.dart#L401) | extends StatelessWidget | Shared | its own file |  |
 | `MemorySessionStore` | Class | [`session_store.dart:127`](../../lib/src/account/session_store.dart#L127) | implements SessionStore | Shared | 7 test files |  |
 | `_MenuPill` | Widget | [`plugin_filter_bar.dart:152`](../../lib/src/widgets/plugin_library/plugin_filter_bar.dart#L152) | extends StatelessWidget | Shared | its own file | A pill that opens a menu: 40 px drawn, inside a 48 dp hit area on touch and TV so it is as easy to reach as the chips beside it. |
@@ -344,7 +344,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `_NameDialog` | Widget | [`account_settings_screen.dart:756`](../../lib/src/screens/account_settings_screen.dart#L756) | extends StatefulWidget | Shared | its own file | Edits the display name on phone and Windows; TV uses `TvTextEntryDialog`. |
 | `_NameDialogState` | Widget state | [`account_settings_screen.dart:766`](../../lib/src/screens/account_settings_screen.dart#L766) | extends State<_NameDialog> | Shared | its own file |  |
 | `_NavigationButton` | Widget | [`episode_panel.dart:419`](../../lib/src/widgets/player/episode_panel.dart#L419) | extends StatelessWidget | Shared | its own file |  |
-| `NetworkDestinationValidator` | Service type | [`network_target_policy.dart:15`](../../lib/src/services/network_target_policy.dart#L15) |  | Shared | 9 lib files, 14 test files | Resolves untrusted destinations, rejects non-public addresses, and pins Dart HTTP connections to the addresses that passed validation. |
+| `NetworkDestinationValidator` | Service type | [`network_target_policy.dart:15`](../../lib/src/services/network_target_policy.dart#L15) |  | Shared | 10 lib files, 15 test files | Resolves untrusted destinations, rejects non-public addresses, and pins Dart HTTP connections to the addresses that passed validation. |
 | `NewEpisode` | Class | [`episode_check.dart:43`](../../lib/src/notifications/episode_check.dart#L43) |  | Shared | 1 lib file, 1 test file | One episode to tell the user about. |
 | `NextEpisodeCard` | Widget | [`player_controls.dart:1301`](../../lib/src/widgets/player/player_controls.dart#L1301) | extends StatelessWidget | Shared | 1 lib file, 1 test file | Near the end of an episode: offers the next one, with a cancellable countdown when auto-play is enabled. |
 | `NormalizedStreamSource` | Service type | [`stream_normalizer.dart:4`](../../lib/src/services/stream_normalizer.dart#L4) |  | Shared | its own file only |  |
@@ -512,11 +512,11 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `ProviderInstallerModal` | Widget | [`provider_installer_modal.dart:10`](../../lib/src/widgets/provider_installer_modal.dart#L10) | extends StatefulWidget | Shared | 4 lib files |  |
 | `_ProviderInstallerModalState` | Widget state | [`provider_installer_modal.dart:29`](../../lib/src/widgets/provider_installer_modal.dart#L29) | extends State<ProviderInstallerModal> | Shared | its own file |  |
 | `ProviderPlugin` | Model | [`provider_plugin.dart:1`](../../lib/src/models/provider_plugin.dart#L1) |  | Shared | 3 lib files, 2 test files |  |
-| `ProviderPluginService` | Notifier / controller | [`provider_plugin_service.dart:22`](../../lib/src/services/provider_plugin_service.dart#L22) | extends ChangeNotifier | Shared | 9 lib files, 3 test files |  |
+| `ProviderPluginService` | Notifier / controller | [`provider_plugin_service.dart:22`](../../lib/src/services/provider_plugin_service.dart#L22) | extends ChangeNotifier | Shared | 9 lib files, 4 test files |  |
 | `ProviderRepository` | Model | [`provider_plugin.dart:40`](../../lib/src/models/provider_plugin.dart#L40) |  | Shared | 3 lib files, 3 test files |  |
-| `ProviderRunException` | Exception | [`provider_runner.dart:53`](../../lib/src/services/provider_runner.dart#L53) | implements Exception | Shared | 2 test files | Thrown on the calling isolate when a provider run fails. |
-| `ProviderRunner` | Service type | [`provider_runner.dart:69`](../../lib/src/services/provider_runner.dart#L69) |  | Shared | 1 lib file, 4 test files | Runs provider scripts on a background isolate. |
-| `ProviderRunRequest` | Service type | [`provider_runner.dart:12`](../../lib/src/services/provider_runner.dart#L12) |  | Shared | 1 lib file, 4 test files | Everything one provider run needs. |
+| `ProviderRunException` | Exception | [`provider_runner.dart:54`](../../lib/src/services/provider_runner.dart#L54) | implements Exception | Shared | 2 test files | Thrown on the calling isolate when a provider run fails. |
+| `ProviderRunner` | Service type | [`provider_runner.dart:70`](../../lib/src/services/provider_runner.dart#L70) |  | Shared | 1 lib file, 5 test files | Runs provider scripts on a background isolate. |
+| `ProviderRunRequest` | Service type | [`provider_runner.dart:13`](../../lib/src/services/provider_runner.dart#L13) |  | Shared | 1 lib file, 4 test files | Everything one provider run needs. |
 | `ProviderScriptCache` | Service type | [`provider_script_cache.dart:9`](../../lib/src/services/provider_script_cache.dart#L9) |  | Shared | 1 lib file, 1 test file | In-memory cache of provider scripts for this app session. |
 | `ProviderSearchDialog` | Widget | [`provider_search_dialog.dart:8`](../../lib/src/widgets/provider_search_dialog.dart#L8) | extends StatelessWidget | Shared | 1 lib file | "Searching providers…" while a play request looks for a stream. |
 | `_ProviderTile` | Widget | [`plugins_screen.dart:684`](../../lib/src/screens/plugins_screen.dart#L684) | extends StatelessWidget | Shared | its own file |  |

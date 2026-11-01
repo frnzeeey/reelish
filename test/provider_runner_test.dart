@@ -44,6 +44,24 @@ void main() {
     expect(streams.single['headers'], {'Referer': 'https://site.example/'});
   });
 
+  test(
+    'scripts can require axios, read process.env and make random ids',
+    () async {
+      final streams = await ProviderRunner.run(
+        _request('''
+        const axios = require('axios');
+        const esm = require('node:axios').default;
+        module.exports.getStreams = async () => [{
+          name: [typeof axios.get, typeof esm.create, typeof process.env.VIDSRC,
+            crypto.randomUUID().length].join('/'),
+          url: 'https://cdn.example/video.m3u8'
+        }];
+      '''),
+      );
+      expect(streams.single['name'], 'function/function/undefined/36');
+    },
+  );
+
   test('the calling isolate keeps running while a provider computes', () async {
     var ticks = 0;
     final timer = Timer.periodic(
@@ -99,18 +117,21 @@ void main() {
     );
   });
 
-  test('a provider stuck in synchronous code still returns a timeout', () async {
-    // The run's own 2 s ceiling ends the wait long before the interrupt
-    // deadline, so the caller (and its runtime slot) never waits on a build
-    // whose engine cannot stop the loop.
-    final watch = Stopwatch()..start();
-    await expectLater(
-      ProviderRunner.run(
-        _request('while (true) {}'),
-        timeout: const Duration(seconds: 2),
-      ),
-      throwsA(isA<TimeoutException>()),
-    );
-    expect(watch.elapsed, lessThan(const Duration(seconds: 10)));
-  });
+  test(
+    'a provider stuck in synchronous code still returns a timeout',
+    () async {
+      // The run's own 2 s ceiling ends the wait long before the interrupt
+      // deadline, so the caller (and its runtime slot) never waits on a build
+      // whose engine cannot stop the loop.
+      final watch = Stopwatch()..start();
+      await expectLater(
+        ProviderRunner.run(
+          _request('while (true) {}'),
+          timeout: const Duration(seconds: 2),
+        ),
+        throwsA(isA<TimeoutException>()),
+      );
+      expect(watch.elapsed, lessThan(const Duration(seconds: 10)));
+    },
+  );
 }

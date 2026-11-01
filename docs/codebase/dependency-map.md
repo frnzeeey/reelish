@@ -142,7 +142,7 @@ The files imported by the most other `lib/` files. A change to one of these reac
 |---|---|---|
 | [`lib/src/theme/glass_theme.dart`](../../lib/src/theme/glass_theme.dart) | 72 | 26 |
 | [`lib/src/theme/design_tokens.dart`](../../lib/src/theme/design_tokens.dart) | 35 | 0 |
-| [`lib/src/models/media_item.dart`](../../lib/src/models/media_item.dart) | 32 | 35 |
+| [`lib/src/models/media_item.dart`](../../lib/src/models/media_item.dart) | 32 | 36 |
 | [`lib/src/platform/device_capabilities.dart`](../../lib/src/platform/device_capabilities.dart) | 26 | 10 |
 | [`lib/src/services/storage_service.dart`](../../lib/src/services/storage_service.dart) | 20 | 21 |
 | [`lib/src/models/stream_source.dart`](../../lib/src/models/stream_source.dart) | 18 | 14 |
@@ -160,7 +160,7 @@ The files imported by the most other `lib/` files. A change to one of these reac
 | [`lib/src/account/profile_controller.dart`](../../lib/src/account/profile_controller.dart) | 8 | 3 |
 | [`lib/src/models/episode_progress.dart`](../../lib/src/models/episode_progress.dart) | 8 | 7 |
 | [`lib/src/navigation/app_transitions.dart`](../../lib/src/navigation/app_transitions.dart) | 8 | 1 |
-| [`lib/src/services/provider_plugin_service.dart`](../../lib/src/services/provider_plugin_service.dart) | 8 | 3 |
+| [`lib/src/services/provider_plugin_service.dart`](../../lib/src/services/provider_plugin_service.dart) | 8 | 4 |
 | [`lib/src/account/account_api.dart`](../../lib/src/account/account_api.dart) | 7 | 5 |
 | [`lib/src/services/media_catalog_rules.dart`](../../lib/src/services/media_catalog_rules.dart) | 7 | 7 |
 | [`lib/src/services/plugin_library_query.dart`](../../lib/src/services/plugin_library_query.dart) | 7 | 1 |

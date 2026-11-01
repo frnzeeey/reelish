@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_js/flutter_js.dart';
 
 import 'provider_fetch_bridge.dart';
+import 'provider_node_compat.dart';
 
 /// Everything one provider run needs. All fields can cross an isolate
 /// boundary.
@@ -173,6 +174,9 @@ abstract final class ProviderRunner {
           if (requestedModule === 'crypto-js' && globalThis.__onfeedCryptoJs) {
             return globalThis.__onfeedCryptoJs;
           }
+          if (requestedModule === 'axios' && globalThis.__onfeedAxios) {
+            return globalThis.__onfeedAxios;
+          }
           throw new Error('Unsupported provider module: ' + requestedModule);
         };
         globalThis.global = globalThis;
@@ -190,6 +194,10 @@ abstract final class ProviderRunner {
         };
       ''');
       if (setup.isError) throw ProviderRunException(setup.stringResult);
+      // axios, process and crypto.getRandomValues, built on the fetch
+      // bridge above (see provider_node_compat.dart).
+      final compat = activeRuntime.evaluate(providerNodeCompatScript);
+      if (compat.isError) throw ProviderRunException(compat.stringResult);
       final loaded = activeRuntime.evaluate(
         '(function() {\n${request.code}\n})();',
         sourceUrl: request.codeUrl,
