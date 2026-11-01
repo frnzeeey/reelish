@@ -40,6 +40,8 @@ async function guarded<T>(work: () => Promise<T>): Promise<T> {
 
 /** POST /party: a new room hosted by the caller, ending their previous one. */
 export async function createParty(env: Env, principal: Principal, request: Request, requestId: string) {
+  // As for joining: a signed-out or deleted account cannot host either.
+  await requireLiveSession(env, principal);
   const body = await readJsonBody(request);
   const content = cleanContent(body.content);
   if (!content) throw new ApiError(400, 'invalid_content', 'Choose a movie or an episode.');

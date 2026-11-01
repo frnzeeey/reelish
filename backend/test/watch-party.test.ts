@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { runDurableObjectAlarm, runInDurableObject } from 'cloudflare:test';
 import { call, signIn, testEnv } from './helpers';
 import { newCode } from '../src/watch-party';
@@ -397,5 +397,27 @@ describe('Watch party rooms', () => {
       headers: { Upgrade: 'websocket' },
     });
     expect(response.status).toBe(401);
+  });
+
+  it('a signed-out session cannot host with its still-valid token', async () => {
+    const { session } = await signIn();
+    await call('/api/v1/auth/logout', { method: 'POST', token: session.accessToken });
+    const response = await create(session.accessToken, { content: movie });
+    expect(response.status).toBe(401);
+    expect(await codeOf(response)).toBe('session_revoked');
+  });
+
+  it('request logs never carry the party code', async () => {
+    const { code, token } = await host();
+    const lines: string[] = [];
+    const spy = vi.spyOn(console, 'log').mockImplementation((line: string) => lines.push(line));
+    try {
+      await call(`/api/v1/party/${code}`, { token });
+    } finally {
+      spy.mockRestore();
+    }
+    const logged = lines.join('\n');
+    expect(logged).toContain('/api/v1/party/:code');
+    expect(logged).not.toContain(code);
   });
 });

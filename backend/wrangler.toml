@@ -57,6 +57,10 @@ class_name = "WatchPartyRoom"
 tag = "v1"
 new_sqlite_classes = ["WatchPartyRoom"]
 
+# Daily at 03:17 UTC: erase security log rows past retention (src/retention.ts).
+[triggers]
+crons = ["17 3 * * *"]
+
 [observability]
 enabled = true
 
@@ -77,6 +81,7 @@ ratelimits = [
 ]
 durable_objects = { bindings = [{ name = "PARTY_ROOMS", class_name = "WatchPartyRoom" }] }
 observability = { enabled = true }
+triggers = { crons = ["17 3 * * *"] }
 
 [env.production]
 name = "reelish-api"
@@ -95,3 +100,4 @@ ratelimits = [
 ]
 durable_objects = { bindings = [{ name = "PARTY_ROOMS", class_name = "WatchPartyRoom" }] }
 observability = { enabled = true }
+triggers = { crons = ["17 3 * * *"] }

@@ -11,6 +11,7 @@ import * as web from './web-auth';
 import * as sync from './trakt-sync';
 import * as alerts from './episode-alerts';
 import * as party from './watch-party';
+import { pruneAuditEvents } from './retention';
 
 export { WatchPartyRoom } from './party-room';
 
@@ -146,14 +147,20 @@ export default {
         response = errorResponse(new ApiError(500, 'internal', 'Something went wrong.'), requestId);
       }
     }
-    // Path only: query strings can carry search terms.
+    // Path only: query strings can carry search terms. A party code is an
+    // invitation, so it is masked too.
     log('info', 'request', {
       requestId,
       method: request.method,
-      path: new URL(request.url).pathname,
+      path: new URL(request.url).pathname.replace(/^(\/api\/v1\/party\/)[^/]+/, '$1:code'),
       status: response.status,
       ms: Date.now() - started,
     });
     return response;
+  },
+
+  /** The daily cron in wrangler.toml: erases expired security log rows. */
+  async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    ctx.waitUntil(pruneAuditEvents(env).then(() => undefined));
   },
 } satisfies ExportedHandler<Env>;

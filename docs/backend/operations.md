@@ -133,9 +133,10 @@ destination):
 - `request.failed`: unexpected errors (also covers missing secrets).
 - A rise in 429s (`rate_limited`, `upstream_busy`) or 5xx.
 - `session.refresh_reuse` audit events: possible stolen refresh tokens.
+- `retention.audit_pruned` once a day (03:17 UTC): security log rows past 12 months erased. Its absence means the cron trigger is missing.
 
 Never log tokens, authorization codes, device codes or query strings;
-the code logs paths and ids only.
+the code logs paths and ids only (party codes are masked as `:code`).
 
 ## Incidents
 

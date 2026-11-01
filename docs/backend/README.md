@@ -207,7 +207,7 @@ which needs no credential.
 | `sessions` | Hashed refresh token, previous hash, platform, generic device label, timestamps | Reelish |
 | `device_authorizations` | Pending sign-ins: hashed poll token, encrypted Trakt device code | Reelish (minutes) |
 | `web_authorizations` | Pending browser sign-ins: hashed state and poll token, encrypted PKCE verifier, outcome | Reelish (minutes) |
-| `audit_events` | Security events by id (sign-in, logout, reuse, deletion) | Reelish |
+| `audit_events` | Security events by id (sign-in, logout, reuse, deletion); erased after 12 months by the daily cron (`src/retention.ts`) | Reelish |
 
 Trakt owns the user's profile, history and lists; Reelish stores none of
 it. Watch history, My list and plugins stay in the app's local storage,

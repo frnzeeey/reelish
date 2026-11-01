@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { call, fakeUpstream, jsonResponse, signIn, testEnv } from './helpers';
+import { readJsonBody } from '../src/http';
 
 type ErrorBody = { error: { code: string } };
 const codeOf = async (response: Response) => ((await response.json()) as ErrorBody).error.code;
@@ -200,5 +201,43 @@ describe('Reelish sessions', () => {
     expect(response.status).toBe(401);
     expect(response.headers.get('X-Content-Type-Options')).toBe('nosniff');
     expect(response.headers.get('X-Request-Id')).toBeTruthy();
+  });
+});
+
+describe('Request bodies', () => {
+  const streamed = (bytes: number) =>
+    new Request('https://api.reelish.test/x', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      // A stream has no Content-Length, like a chunked upload.
+      body: new ReadableStream({
+        start(controller) {
+          const chunk = new TextEncoder().encode(' '.repeat(1024));
+          for (let sent = 0; sent < bytes; sent += chunk.byteLength) controller.enqueue(chunk);
+          controller.close();
+        },
+      }),
+    });
+
+  it('stops reading a body without a length once it is too large', async () => {
+    await expect(readJsonBody(streamed(64 * 1024))).rejects.toMatchObject({
+      status: 413,
+      code: 'payload_too_large',
+    });
+  });
+
+  it('still reads a small streamed body', async () => {
+    const small = new Request('https://api.reelish.test/x', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: new ReadableStream({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode('{"name":'));
+          controller.enqueue(new TextEncoder().encode('"é"}'));
+          controller.close();
+        },
+      }),
+    });
+    expect(await readJsonBody(small)).toEqual({ name: 'é' });
   });
 });
