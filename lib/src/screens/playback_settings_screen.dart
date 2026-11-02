@@ -23,6 +23,7 @@ import '../widgets/tv/tv_focus.dart';
 import 'account_settings_screen.dart';
 import 'app_icon_settings_screen.dart';
 import 'app_information_screens.dart';
+import 'help_support_screen.dart';
 import 'credits_screen.dart';
 import 'legal_information_screen.dart';
 import 'notification_settings_screen.dart';
@@ -200,6 +201,12 @@ class SettingsScreen extends StatelessWidget {
       SettingsSection(
         label: 'SUPPORT',
         children: [
+          SettingsTile(
+            icon: Symbols.support_rounded,
+            title: 'Help & Support',
+            description: 'Get help, report problems, and learn about Reelish',
+            onTap: () => _open(context, (_) => const HelpSupportScreen()),
+          ),
           SettingsTile(
             icon: Symbols.favorite_rounded,
             title: 'Support development',

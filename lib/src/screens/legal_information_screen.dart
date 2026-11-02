@@ -286,6 +286,19 @@ class _LegalInformationScreenState extends State<LegalInformationScreen> {
           'download a ZIP for you to extract.',
     ),
     (
+      'Problem reports and feedback',
+      'When you send a report or feedback from Help & Support, the Reelish '
+          'API stores what you wrote (title, category, details and optional '
+          'steps), the device type you chose, and, unless you turn it off, '
+          'the app version, build, operating system and version, interface, '
+          'language and time. You see all of it before sending. It does not '
+          'include your account name, history, providers or logs; the report '
+          'is linked to a one-way code derived from your account so a person '
+          'can send a limited number per day and so deleting your account '
+          'deletes your reports. Reports are deleted after 180 days. Do not '
+          'include personal information you do not want stored.',
+    ),
+    (
       'Usage statistics (Android only, optional)',
       'On Android phones, Android TV and Google TV, Reelish asks once '
           'whether you want to share usage statistics, and sends none until '

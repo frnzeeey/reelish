@@ -6,6 +6,7 @@ import '../navigation/app_transitions.dart';
 import '../screens/account_settings_screen.dart';
 import '../screens/notification_settings_screen.dart';
 import '../screens/app_information_screens.dart';
+import '../screens/help_support_screen.dart';
 import '../screens/credits_screen.dart';
 import '../screens/legal_information_screen.dart';
 import '../screens/playback_settings_screen.dart';
@@ -60,6 +61,11 @@ enum DesktopSettingsSection {
     'Terms of use',
     'Rules for using the app, add-ons and media sources',
     Symbols.gavel_rounded,
+  ),
+  help(
+    'Help & Support',
+    'Get help, report problems, and learn about Reelish',
+    Symbols.support_rounded,
   ),
   support(
     'Support development',
@@ -118,7 +124,7 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
       [DesktopSettingsSection.about, DesktopSettingsSection.credits],
     ),
     ('LEGAL', [DesktopSettingsSection.privacy, DesktopSettingsSection.terms]),
-    ('SUPPORT', [DesktopSettingsSection.support]),
+    ('SUPPORT', [DesktopSettingsSection.help, DesktopSettingsSection.support]),
   ];
 
   Widget _page(DesktopSettingsSection section) => switch (section) {
@@ -148,6 +154,7 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
     DesktopSettingsSection.terms => const LegalInformationScreen(
       document: LegalDocument.terms,
     ),
+    DesktopSettingsSection.help => const HelpSupportScreen(),
     DesktopSettingsSection.support => const SupportDevelopmentScreen(),
   };
 

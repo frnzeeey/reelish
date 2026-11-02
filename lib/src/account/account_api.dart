@@ -271,6 +271,25 @@ class AccountApi {
     );
   }
 
+  /// Sends a bug report or feedback from Help & Support; returns its id.
+  /// A repeat of the same report within minutes returns the first id.
+  Future<String> submitSupportReport(
+    String accessToken,
+    Map<String, Object> report,
+  ) async {
+    final body = await _send(
+      'POST',
+      '/support/reports',
+      token: accessToken,
+      body: report,
+    );
+    final id = body['id'];
+    if (id is! String || id.isEmpty) {
+      throw const AccountApiException('unavailable', 'Unexpected response.');
+    }
+    return id;
+  }
+
   Future<void> logout(String accessToken) =>
       _send('POST', '/auth/logout', token: accessToken);
 
