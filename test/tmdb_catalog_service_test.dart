@@ -98,8 +98,9 @@ void main() {
       var requests = 0;
       final client = MockClient((request) async {
         requests++;
+        // The refresh brings a new movie, so the page really changed.
         return request.url.path.endsWith('/discover/movie')
-            ? results([recentMovie(1)])
+            ? results([recentMovie(requests > 3 ? 11 : 1)])
             : results([recentSeries(2)]);
       });
       final cache = staleCache();
@@ -119,6 +120,34 @@ void main() {
       client.close();
     },
   );
+
+  test('a refresh that brings the same data updates nothing', () async {
+    var requests = 0;
+    final client = MockClient((request) async {
+      requests++;
+      return request.url.path.endsWith('/discover/movie')
+          ? results([recentMovie(1)])
+          : results([recentSeries(2)]);
+    });
+    final cache = staleCache();
+    final tmdb = service(client, cache: cache);
+    await tmdb.newReleases();
+    await tmdb.popular('movie');
+
+    var updates = 0;
+    await tmdb.newReleases(onRevalidated: (_) => updates++);
+    await tmdb.popular('movie', onRevalidated: (_) => updates++);
+    await _until(() => requests == 8);
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    expect(updates, 0, reason: 'identical refreshes must not rebuild rows');
+    final stats = tmdb.cacheStats;
+    expect(stats.unchangedRefreshes, 2);
+    expect(stats.staleHits, 4);
+    expect(stats.networkRequests, 8);
+
+    await cache.flush();
+    client.close();
+  });
 
   test('a stale value during the failure cooldown starts no refresh and '
       'keeps no callback', () async {
@@ -292,7 +321,8 @@ void main() {
     var requests = 0;
     final client = MockClient((_) async {
       requests++;
-      return pageOf([recentMovie(1)], total: 5);
+      // The fourth answer differs, so the background refresh is an update.
+      return pageOf([recentMovie(requests >= 4 ? 2 : 1)], total: 5);
     });
     final cache = TmdbResponseCache(
       directory: cacheRoot,

@@ -81,6 +81,10 @@ class TmdbService {
   final _TmdbRequestLimiter _limiter;
   final Map<String, Future<Map<String, dynamic>>> _inFlight = {};
   final Map<String, DateTime> _failureCooldowns = {};
+  final TmdbCacheStats _stats = TmdbCacheStats();
+
+  /// How requests were answered this session (counts only).
+  TmdbCacheStats get cacheStats => _stats;
 
   Future<List<MediaItem>> popular(
     String type, {
@@ -189,6 +193,7 @@ class TmdbService {
     _notifyRevalidated(
       result.revalidation,
       onRevalidated == null ? null : (value) => onRevalidated(build(value)),
+      shown: result.value,
     );
     return build(result.value, fromCache: result.fromCache);
   }
@@ -267,7 +272,16 @@ class TmdbService {
                     onError: (Object _) => null,
                   ),
         ]);
-        if (fresh.every((value) => value == null)) return;
+        // Nothing new (failed, or the same as already shown): no update.
+        var changed = false;
+        for (var slot = 0; slot < initial.length; slot++) {
+          final value = fresh[slot];
+          if (value != null && !sameJson(value, initial[slot])) changed = true;
+        }
+        if (!changed) {
+          _stats.unchangedRefreshes++;
+          return;
+        }
         try {
           onRevalidated(
             build([
@@ -791,19 +805,27 @@ class TmdbService {
       ttl: ttl,
       priority: priority,
     );
-    _notifyRevalidated(result.revalidation, onRevalidated);
+    _notifyRevalidated(result.revalidation, onRevalidated, shown: result.value);
     return result.value;
   }
 
-  /// Hands a background refresh's value to [onRevalidated] when it lands.
-  static void _notifyRevalidated(
+  /// Hands a background refresh's value to [onRevalidated] when it lands,
+  /// unless it is the same as the stale value already [shown]: the gateway
+  /// often answers a refresh from its own cache, byte for byte the same, and
+  /// rebuilding rows for that only costs frames.
+  void _notifyRevalidated(
     Future<Map<String, dynamic>>? revalidation,
-    void Function(Map<String, dynamic>)? onRevalidated,
-  ) {
+    void Function(Map<String, dynamic>)? onRevalidated, {
+    required Map<String, dynamic> shown,
+  }) {
     if (onRevalidated == null || revalidation == null) return;
     unawaited(
       revalidation.then(
         (value) {
+          if (sameJson(value, shown)) {
+            _stats.unchangedRefreshes++;
+            return;
+          }
           try {
             onRevalidated(value);
           } catch (_) {
@@ -863,6 +885,11 @@ class TmdbService {
         // A corrupt or unavailable local cache must not stop network access.
       }
       if (cached != null && cached.entry.isFresh(DateTime.now())) {
+        if (cached.fromMemory) {
+          _stats.memoryHits++;
+        } else {
+          _stats.diskHits++;
+        }
         _log(
           '[TMDB] ${cached.fromMemory ? 'MEMORY_CACHE_HIT' : 'PERSISTENT_CACHE_HIT'} $requestLabel',
         );
@@ -870,6 +897,7 @@ class TmdbService {
       }
       if (cached != null) {
         _log('[TMDB] STALE_CACHE_HIT $requestLabel');
+        _stats.staleHits++;
         Future<Map<String, dynamic>>? revalidation;
         final coolingDown = _failureCooldowns[requestKey];
         if (coolingDown == null ||
@@ -877,6 +905,7 @@ class TmdbService {
                 const Duration(seconds: 30)) {
           revalidation = _inFlight[requestKey];
           if (revalidation != null) {
+            _stats.deduplicated++;
             _log('[TMDB] DEDUP $requestLabel');
           } else {
             revalidation = _startNetworkRequest(
@@ -898,6 +927,7 @@ class TmdbService {
 
     final existing = _inFlight[requestKey];
     if (existing != null) {
+      _stats.deduplicated++;
       _log('[TMDB] DEDUP $requestLabel');
       return (value: await existing, revalidation: null, fromCache: false);
     }
@@ -921,6 +951,9 @@ class TmdbService {
     final existing = _inFlight[requestKey];
     if (existing != null) return existing;
     _log('[TMDB] NETWORK $label');
+    _stats.networkRequests++;
+    // Debug builds only (_log): a running summary of how the cache helps.
+    if (_stats.networkRequests % 25 == 0) _log('[TMDB][Cache] $_stats');
     final request = _fetchAndCache(requestKey, label, uri, ttl, priority);
     _inFlight[requestKey] = request;
     request

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
 /// Central freshness policy for TMDB response types.
@@ -12,6 +13,57 @@ abstract final class TmdbCacheTtl {
   static const metadata = Duration(hours: 24);
   static const identifiers = Duration(days: 7);
   static const fallback = Duration(minutes: 15);
+}
+
+/// Whether two decoded JSON values are equal (maps, lists, numbers,
+/// strings, booleans and null, compared all the way down).
+bool sameJson(Object? a, Object? b) {
+  if (identical(a, b)) return true;
+  if (a is Map && b is Map) {
+    if (a.length != b.length) return false;
+    for (final MapEntry(:key, :value) in a.entries) {
+      if (!b.containsKey(key) || !sameJson(value, b[key])) return false;
+    }
+    return true;
+  }
+  if (a is List && b is List) {
+    if (a.length != b.length) return false;
+    for (var index = 0; index < a.length; index++) {
+      if (!sameJson(a[index], b[index])) return false;
+    }
+    return true;
+  }
+  return a == b;
+}
+
+/// Counts of how TMDB requests were answered in this app session, for
+/// diagnosing the cache in debug builds. Counts only: no keys or titles.
+class TmdbCacheStats {
+  int memoryHits = 0;
+  int diskHits = 0;
+
+  /// Stale values shown at once while a refresh runs.
+  int staleHits = 0;
+  int networkRequests = 0;
+
+  /// Requests that joined one already in flight instead of sending another.
+  int deduplicated = 0;
+
+  /// Background refreshes that brought nothing new, so no rebuild.
+  int unchangedRefreshes = 0;
+
+  int get requests => memoryHits + diskHits + staleHits + networkRequests;
+
+  /// Share answered without waiting on the network (fresh or stale hits).
+  double get hitRatio =>
+      requests == 0 ? 0 : (memoryHits + diskHits + staleHits) / requests;
+
+  @override
+  String toString() =>
+      'requests=$requests hit=${(hitRatio * 100).toStringAsFixed(0)}% '
+      'memory=$memoryHits disk=$diskHits stale=$staleHits '
+      'network=$networkRequests dedup=$deduplicated '
+      'unchangedRefresh=$unchangedRefreshes';
 }
 
 class TmdbCacheEntry {
@@ -207,6 +259,10 @@ class TmdbResponseCache {
     return directory;
   }
 
+  /// Runs the disk cleanup now, for measuring it.
+  @visibleForTesting
+  Future<void> debugCleanup() => _cleanup();
+
   void _scheduleCleanup() {
     final now = _clock();
     if (_lastCleanup != null &&
@@ -231,11 +287,7 @@ class TmdbResponseCache {
       for (final file in files) {
         try {
           final stat = await file.stat();
-          final raw = jsonDecode(await file.readAsString());
-          final storedAt = raw is Map
-              ? DateTime.tryParse('${raw['storedAt'] ?? ''}')
-              : null;
-          final ttlMs = raw is Map ? raw['ttlMs'] : null;
+          final (storedAt, ttlMs) = await _readHeader(file);
           if (storedAt == null ||
               ttlMs is! int ||
               now.difference(storedAt) >=
@@ -277,6 +329,33 @@ class TmdbResponseCache {
     } on FileSystemException {
       // Cache pruning is best effort.
     }
+  }
+
+  @visibleForTesting
+  static Future<(DateTime?, Object?)> debugReadHeader(File file) =>
+      _readHeader(file);
+
+  static final _header = RegExp(r'"storedAt":"([^"]+)","ttlMs":(\d+),');
+
+  /// A cache file's `storedAt` and `ttlMs`, read from its first 4 KB:
+  /// [_write] puts them before the value, so pruning does not decode whole
+  /// responses on the UI isolate. Files in another layout are decoded fully.
+  static Future<(DateTime?, Object?)> _readHeader(File file) async {
+    final handle = await file.open();
+    String head;
+    try {
+      head = utf8.decode(await handle.read(4096), allowMalformed: true);
+    } finally {
+      await handle.close();
+    }
+    final match = _header.firstMatch(head);
+    if (match != null) {
+      return (DateTime.tryParse(match[1]!), int.tryParse(match[2]!));
+    }
+    final raw = jsonDecode(await file.readAsString());
+    return raw is Map
+        ? (DateTime.tryParse('${raw['storedAt'] ?? ''}'), raw['ttlMs'])
+        : (null, null);
   }
 
   static String _fileKey(String value) {
