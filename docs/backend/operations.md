@@ -138,6 +138,21 @@ destination):
 Never log tokens, authorization codes, device codes or query strings;
 the code logs paths and ids only (party codes are masked as `:code`).
 
+## Reading support reports
+
+Help & Support in the app sends bug reports and feedback to the
+`support_reports` table (D1). They are stored with a hash of the account id
+(never the id), deleted after 180 days by the daily cron, and deleted with
+the account. Read the latest with:
+
+```sh
+cd backend
+npx wrangler d1 execute reelish-production --remote --env production --command "SELECT datetime(created_at, 'unixepoch') AS at, kind, category, platform, title, description, steps, diagnostics FROM support_reports ORDER BY created_at DESC LIMIT 20"
+```
+
+Treat report text as untrusted user input. Reports can contain personal
+details people chose to type; don't copy them into public issues unredacted.
+
 ## Incidents
 
 | Symptom | Check | Action |

@@ -1,6 +1,7 @@
 // Account routes: Trakt device sign-in, session refresh and logout, the
 // signed-in user's sessions, and account deletion.
 
+import { deleteReportsOf } from './support';
 import { decrypt, encrypt, randomToken, sha256 } from './crypto';
 import type { Env } from './env';
 import { ApiError, json, readJsonBody, shortText } from './http';
@@ -233,6 +234,7 @@ export async function deleteSession(env: Env, principal: Principal, sessionId: s
 export async function deleteAccount(env: Env, principal: Principal, requestId: string, deps: TraktDeps = {}) {
   await requireLiveSession(env, principal);
   await forgetTraktTokens(env, principal.userId, deps);
+  await deleteReportsOf(env, principal.userId);
   await env.DB.prepare(`DELETE FROM users WHERE id = ?`).bind(principal.userId).run();
   await audit(env, 'account.deleted', { userId: principal.userId });
   return json({ ok: true }, requestId);

@@ -12,6 +12,7 @@ import * as sync from './trakt-sync';
 import * as alerts from './episode-alerts';
 import * as party from './watch-party';
 import { pruneAuditEvents } from './retention';
+import * as support from './support';
 
 export { WatchPartyRoom } from './party-room';
 
@@ -105,6 +106,10 @@ async function route(request: Request, env: Env, requestId: string): Promise<Res
       ? sync.getWatchlist(env, principal, requestId)
       : sync.updateWatchlist(env, principal, request, requestId);
   }
+  if (post('/support/reports')) {
+    await limit(env.SYNC_LIMITER, `support:${principal.userId}`);
+    return support.submitReport(env, principal, request, requestId);
+  }
   if (post('/party')) {
     await limit(env.PARTY_LIMITER, `create:${principal.userId}`);
     return party.createParty(env, principal, request, requestId);
@@ -167,6 +172,8 @@ export default {
 
   /** The daily cron in wrangler.toml: erases expired security log rows. */
   async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
-    ctx.waitUntil(pruneAuditEvents(env).then(() => undefined));
+    ctx.waitUntil(
+      Promise.all([pruneAuditEvents(env), support.pruneSupportReports(env)]).then(() => undefined),
+    );
   },
 } satisfies ExportedHandler<Env>;

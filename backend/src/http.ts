@@ -52,19 +52,20 @@ export function requestIdFor(request: Request): string {
 
 const maxBodyBytes = 4 * 1024;
 
-/** Parses a small JSON object body, rejecting anything else. */
+/** Parses a small JSON object body (at most [maxBytes]), rejecting anything else. */
 export async function readJsonBody(
   request: Request,
+  maxBytes = maxBodyBytes,
 ): Promise<Record<string, unknown>> {
   const type = request.headers.get('Content-Type') ?? '';
   if (!type.toLowerCase().startsWith('application/json')) {
     throw new ApiError(415, 'unsupported_media_type', 'Expected JSON.');
   }
   const declared = Number(request.headers.get('Content-Length') ?? '0');
-  if (declared > maxBodyBytes) {
+  if (declared > maxBytes) {
     throw new ApiError(413, 'payload_too_large', 'Request body too large.');
   }
-  const text = await readLimited(request);
+  const text = await readLimited(request, maxBytes);
   let value: unknown;
   try {
     value = JSON.parse(text || '{}');
@@ -78,10 +79,10 @@ export async function readJsonBody(
 }
 
 /**
- * The body as text, stopping at [maxBodyBytes] bytes: a body sent without
+ * The body as text, stopping at [maxBytes] bytes: a body sent without
  * a Content-Length (chunked) is never read into memory in full.
  */
-async function readLimited(request: Request): Promise<string> {
+async function readLimited(request: Request, maxBytes: number): Promise<string> {
   if (!request.body) return '';
   const reader = request.body.getReader();
   const chunks: Uint8Array[] = [];
@@ -90,7 +91,7 @@ async function readLimited(request: Request): Promise<string> {
     const { done, value } = await reader.read();
     if (done) break;
     size += value.byteLength;
-    if (size > maxBodyBytes) {
+    if (size > maxBytes) {
       await reader.cancel().catch(() => {});
       throw new ApiError(413, 'payload_too_large', 'Request body too large.');
     }

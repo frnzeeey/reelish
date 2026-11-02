@@ -125,6 +125,7 @@ its own).
 | `POST /api/v1/party` | Bearer | `{content, settings?, profile?}` → `201 {code, expiresAt, settings}`; ends the caller's previous party |
 | `GET /api/v1/party/{code}` | Bearer | `{code, phase, content, host, participants, capacity}`; 404 `party_not_found` |
 | `GET /api/v1/party/{code}/socket` | Bearer | WebSocket upgrade into the room (below); 409 `party_full`, 403 `party_removed` |
+| `POST /api/v1/support/reports` | Bearer | `{kind, category, platform, title, description, steps?, diagnostics?}` (16 KB; `kind` is `bug` or `feedback`) → `201 {id, createdAt}`; a repeat within 10 minutes → `200 {id, duplicate: true}`; 429 `report_limit` after 5 a day per account (`backend/src/support.ts`) |
 
 `session` is `{sessionId, accessToken, accessExpiresAt, refreshToken,
 refreshExpiresAt}` (Unix seconds). `platform` is `android`, `android_tv`
