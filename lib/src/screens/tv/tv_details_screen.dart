@@ -14,6 +14,7 @@ import '../../watch_party/party_models.dart';
 import '../../widgets/tv/tv_focus.dart';
 import '../watch_party/party_widgets.dart';
 import 'tv_browse.dart' show TvMetaLine, TvRating;
+import '../../widgets/artwork_image.dart';
 
 /// A movie or series on TV: the backdrop fills the screen behind the title,
 /// details and actions, with Play focused; a series lists its seasons and
@@ -135,7 +136,7 @@ class _TvMediaDetailsScreenState extends State<TvMediaDetailsScreen> {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  Image.network(
+                  ArtworkImage.network(
                     item.background,
                     fit: BoxFit.cover,
                     alignment: Alignment.topCenter,
@@ -530,7 +531,7 @@ class _EpisodeCard extends StatelessWidget {
                             Symbols.movie_rounded,
                             color: GlassTheme.muted,
                           )
-                        : Image.network(
+                        : ArtworkImage.network(
                             'https://image.tmdb.org/t/p/w300$still',
                             fit: BoxFit.cover,
                             cacheWidth:

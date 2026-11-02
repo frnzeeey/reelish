@@ -36,6 +36,7 @@ search the generated references below: every file, class and function in
 | Page | What it covers |
 |---|---|
 | [Feature index](features/feature-index.md) | Every feature mapped to its code, data and tests |
+| [Caching](features/caching.md) | TMDB response and artwork caches: policies, decision, measurements |
 | [Usage statistics](features/analytics.md) | Opt-in Firebase Analytics on Android: events, privacy, setup, DebugView, cost |
 
 ## Playback

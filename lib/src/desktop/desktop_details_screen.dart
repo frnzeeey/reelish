@@ -15,6 +15,7 @@ import '../viewmodels/details_view_model.dart';
 import '../watch_party/party_models.dart';
 import '../widgets/poster_image.dart';
 import 'desktop_widgets.dart';
+import '../widgets/artwork_image.dart';
 
 /// A movie or series on Windows, full-bleed over the whole window: the
 /// backdrop with the title, details and actions, then cast and related
@@ -288,7 +289,7 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
         children: [
           const ColoredBox(color: GlassTheme.surface),
           if (backdrop.isNotEmpty)
-            Image.network(
+            ArtworkImage.network(
               backdrop,
               fit: BoxFit.cover,
               alignment: const Alignment(0, -.4),
@@ -625,10 +626,11 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
                     backgroundColor: GlassTheme.elevatedSurface,
                     foregroundImage: member.profile.isEmpty
                         ? null
-                        : ResizeImage(
-                            NetworkImage(member.profile),
-                            width: (80 * MediaQuery.devicePixelRatioOf(context))
-                                .round(),
+                        : artworkProvider(
+                            member.profile,
+                            cacheWidth:
+                                (80 * MediaQuery.devicePixelRatioOf(context))
+                                    .round(),
                           ),
                     // Initials while the photo loads, or when there is none.
                     child: Text(
@@ -1019,7 +1021,7 @@ class _Poster extends StatelessWidget {
         children: [
           const PosterPlaceholder(),
           if (item.poster.isNotEmpty)
-            Image.network(
+            ArtworkImage.network(
               item.poster,
               fit: BoxFit.cover,
               cacheWidth: (220 * MediaQuery.devicePixelRatioOf(context))
@@ -1202,7 +1204,7 @@ class _EpisodeTileState extends State<_EpisodeTile> {
                         children: [
                           const PosterPlaceholder(iconSize: 26),
                           if (still.isNotEmpty)
-                            Image.network(
+                            ArtworkImage.network(
                               'https://image.tmdb.org/t/p/w300$still',
                               fit: BoxFit.cover,
                               cacheWidth: posterDecodeWidth(

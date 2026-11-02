@@ -16,6 +16,7 @@ import '../widgets/poster_image.dart';
 import 'desktop_widgets.dart';
 import '../widgets/brand_logo.dart';
 import '../widgets/profile_avatar.dart';
+import '../widgets/artwork_image.dart';
 
 /// The Windows interface's frame: a compact icon rail on the left and the
 /// selected page beside it.
@@ -1187,7 +1188,7 @@ class _ResumeTileState extends State<_ResumeTile> {
                 scale: active ? 1.06 : 1,
                 duration: duration,
                 curve: DesktopSurfaces.curve,
-                child: Image.network(
+                child: ArtworkImage.network(
                   item.poster,
                   fit: BoxFit.cover,
                   // Above the middle: the key art, not the billing block.

@@ -9,6 +9,7 @@ import '../theme/glass_theme.dart';
 import '../widgets/poster_image.dart';
 import 'desktop_widgets.dart';
 import '../widgets/brand_logo.dart';
+import '../widgets/artwork_image.dart';
 
 /// The featured titles at the top of desktop Home: one full-bleed backdrop
 /// with the title, synopsis and actions on its left, and every Spotlight
@@ -318,7 +319,7 @@ class _Backdrop extends StatelessWidget {
             children: [
               const ColoredBox(color: GlassTheme.surface),
               if (image.isNotEmpty)
-                Image.network(
+                ArtworkImage.network(
                   image,
                   fit: BoxFit.cover,
                   alignment: const Alignment(0, -.3),
@@ -699,7 +700,7 @@ extension on _HeroText {
     label: item.name,
     child: ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 460, maxHeight: 128),
-      child: Image.network(
+      child: ArtworkImage.network(
         logo,
         fit: BoxFit.contain,
         alignment: Alignment.centerLeft,
@@ -1031,7 +1032,7 @@ class _SpotlightCardState extends State<_SpotlightCard> {
                         duration: duration,
                         child: image.isEmpty
                             ? const SizedBox.shrink()
-                            : Image.network(
+                            : ArtworkImage.network(
                                 image,
                                 key: ValueKey(image),
                                 fit: BoxFit.cover,

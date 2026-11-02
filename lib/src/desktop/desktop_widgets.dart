@@ -10,6 +10,7 @@ import '../services/paged_feed_controller.dart';
 import '../theme/design_tokens.dart';
 import '../theme/glass_theme.dart';
 import '../widgets/poster_image.dart';
+import '../widgets/artwork_image.dart';
 
 /// Sizes for the Windows interface, derived from the space available rather
 /// than the screen, so every window size from 960 px to 4K fills cleanly.
@@ -303,7 +304,7 @@ class _DesktopPosterCardState extends State<DesktopPosterCard> {
                         children: [
                           const PosterPlaceholder(iconSize: 34),
                           if (art.isNotEmpty)
-                            Image.network(
+                            ArtworkImage.network(
                               art,
                               fit: BoxFit.cover,
                               cacheWidth: posterDecodeWidth(

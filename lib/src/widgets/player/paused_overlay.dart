@@ -10,6 +10,7 @@ import '../../models/media_item.dart';
 import '../../platform/device_capabilities.dart';
 import '../../theme/glass_theme.dart';
 import 'player_controls.dart';
+import '../artwork_image.dart';
 
 /// What the pause screen shows for the playing title. Everything comes from
 /// data the player already has; a missing value is left out, never invented.
@@ -130,7 +131,7 @@ class PauseCardContent {
 /// The decoded artwork image. Precaching and the overlay share it, so they
 /// share one image cache entry and the artwork is downloaded once.
 ImageProvider pauseArtworkImage(String url, int decodeWidth) =>
-    ResizeImage(NetworkImage(url), width: decodeWidth);
+    artworkProvider(url, cacheWidth: decodeWidth);
 
 /// Reelish's pause screen: the paused title's artwork, a large play button,
 /// and the title, details and synopsis. It sits between the video and the

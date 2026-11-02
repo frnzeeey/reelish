@@ -10,6 +10,7 @@ import '../../desktop/desktop_widgets.dart';
 import '../../theme/design_tokens.dart';
 import '../../theme/glass_theme.dart';
 import '../../watch_party/party_models.dart';
+import '../../widgets/artwork_image.dart';
 
 /// A Windows party page: Back and the title over a centred column no wider
 /// than [maxWidth], on the page background with a soft accent glow.
@@ -145,7 +146,7 @@ class PartyDesktopPoster extends StatelessWidget {
       ),
       child: url.isEmpty
           ? const Icon(Symbols.movie_rounded, size: 48, color: GlassTheme.muted)
-          : Image.network(
+          : ArtworkImage.network(
               url,
               fit: BoxFit.cover,
               cacheWidth: posterDecodeWidth(width * dpr),

@@ -47,6 +47,18 @@ and checks certificates against the original hostname while connecting to the
 pinned address. This covers provider fetches and plugin metadata, TMDB,
 OpenSubtitles, and subtitle downloads.
 
+Images are outside that validator. TMDB artwork is loaded only from
+`https://image.tmdb.org` and kept in a disk cache (`ArtworkCache`,
+`lib/src/widgets/artwork_image.dart`); its downloader (`ArtworkFileService`)
+follows at most three redirects and only to that host, caps a file at 8 MiB,
+and names cached files with a random id plus an image extension from a fixed
+list, never from the response (the stock downloader derived the extension
+from the Content-Type subtype, which can contain `../`). Add-on logos from
+catalog and manifest data load through Flutter's image loader, uncached, and
+only from HTTPS hostnames (no IP literals or local names,
+`PluginLogo.isLoadableLogo`); a hostname that resolves to a private address
+is not caught there, which allows at most a blind GET with no data returned.
+
 Provider results pass through `StreamNormalizer`, `StreamValidator`, and
 `SourcePreparer` before native playback. Provider-supplied media headers are
 preserved in the canonical source and passed through `VideoPlayerController`

@@ -11,6 +11,7 @@ import '../../services/paged_feed_controller.dart';
 import '../../theme/glass_theme.dart';
 import '../../widgets/tv/tv_focus.dart';
 import '../../widgets/tv/tv_poster_card.dart';
+import '../../widgets/artwork_image.dart';
 
 /// The title the browse hero describes: the focused poster, a moment after
 /// focus settles, so a held D-pad does not decode a backdrop per poster.
@@ -130,7 +131,7 @@ class _Backdrop extends StatelessWidget {
               ),
               child: url.isEmpty
                   ? const SizedBox.expand(key: ValueKey(''))
-                  : Image.network(
+                  : ArtworkImage.network(
                       url,
                       key: ValueKey(url),
                       fit: BoxFit.cover,

@@ -12,6 +12,7 @@ import '../../theme/design_tokens.dart';
 import '../../theme/glass_theme.dart';
 import '../../watch_party/party_models.dart';
 import '../../widgets/profile_avatar.dart';
+import '../../widgets/artwork_image.dart';
 
 /// The title a party plays: poster, name, episode, and an optional line.
 class PartyContentCard extends StatelessWidget {
@@ -35,7 +36,7 @@ class PartyContentCard extends StatelessWidget {
               height: 96,
               child: poster.isEmpty
                   ? const _PosterFallback()
-                  : Image.network(
+                  : ArtworkImage.network(
                       poster,
                       fit: BoxFit.cover,
                       cacheWidth: (64 * dpr).ceil(),

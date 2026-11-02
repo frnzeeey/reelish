@@ -2,9 +2,15 @@ import 'dart:async';
 import 'dart:ffi';
 import 'dart:io';
 
+import 'package:onfeed/src/widgets/artwork_image.dart';
+
 /// Runs before every test file in this folder.
 Future<void> testExecutable(FutureOr<void> Function() testMain) async {
   _loadQuickJs();
+  // Widget tests have no file-system plugin for the artwork disk cache, so
+  // artwork loads as plain network images, as before. artwork_image_test
+  // covers the cache with its own manager.
+  ArtworkCache.debugDisabled = true;
   await testMain();
 }
 

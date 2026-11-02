@@ -5,6 +5,7 @@ import '../../models/media_item.dart';
 import '../../theme/glass_theme.dart';
 import '../poster_image.dart';
 import 'tv_focus.dart';
+import '../artwork_image.dart';
 
 /// Poster sizes for the TV catalog. At 1080p a TV reports 960 × 540 dp, so a
 /// row shows about six posters beside the navigation rail.
@@ -67,7 +68,7 @@ class TvPosterCard extends StatelessWidget {
               color: GlassTheme.elevatedSurface,
               child: item.poster.isEmpty
                   ? _TitleFallback(item: item)
-                  : Image.network(
+                  : ArtworkImage.network(
                       item.poster,
                       fit: BoxFit.cover,
                       cacheWidth: cacheWidth,

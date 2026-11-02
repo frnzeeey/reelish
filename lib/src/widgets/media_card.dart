@@ -6,6 +6,7 @@ import '../theme/design_tokens.dart';
 import '../theme/glass_theme.dart';
 import 'poster_image.dart';
 import 'top_lit_edge.dart';
+import 'artwork_image.dart';
 
 /// A movie or series poster on the phone and tablet interface: the artwork
 /// at its true 2:3 shape, with the title and one line of details beneath
@@ -207,7 +208,7 @@ class _MediaCardState extends State<MediaCard> {
           // none, so a card is never an empty slab or a broken image.
           const PosterPlaceholder(iconSize: 30),
           if (item.poster.isNotEmpty)
-            Image.network(
+            ArtworkImage.network(
               item.poster,
               fit: BoxFit.cover,
               cacheWidth: (width * MediaQuery.devicePixelRatioOf(context))

@@ -65,6 +65,7 @@ import 'watch_party/party_launcher.dart';
 import '../watch_party/party_models.dart';
 import '../widgets/brand_logo.dart';
 import '../widgets/profile_avatar.dart';
+import '../widgets/artwork_image.dart';
 
 /// One independently loaded single-request list (Trending, search). Its
 /// fields change only inside the home screen's setState. The catalog rows
@@ -2084,7 +2085,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       fit: StackFit.expand,
       children: [
         if (item.background.isNotEmpty)
-          Image.network(
+          ArtworkImage.network(
             item.background,
             fit: BoxFit.cover,
             cacheHeight: imageCacheHeight,

@@ -7,6 +7,7 @@ import '../services/tmdb_service.dart';
 import '../theme/glass_theme.dart';
 import '../viewmodels/details_view_model.dart';
 import '../watch_party/party_models.dart';
+import '../widgets/artwork_image.dart';
 
 class MediaDetailsScreen extends StatefulWidget {
   const MediaDetailsScreen({
@@ -187,7 +188,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                               color: GlassTheme.muted,
                             ),
                           )
-                        : Image.network(
+                        : ArtworkImage.network(
                             image,
                             fit: BoxFit.cover,
                             cacheWidth: 224,
@@ -283,7 +284,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
         fit: StackFit.expand,
         children: [
           if (item.background.isNotEmpty)
-            Image.network(
+            ArtworkImage.network(
               item.background,
               fit: BoxFit.cover,
               cacheWidth: (size.width * pixelRatio).round(),
@@ -524,7 +525,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                     color: GlassTheme.surface,
                     child: Icon(Symbols.person_rounded, size: 32),
                   )
-                : Image.network(
+                : ArtworkImage.network(
                     member.profile,
                     fit: BoxFit.cover,
                     cacheWidth: 144,

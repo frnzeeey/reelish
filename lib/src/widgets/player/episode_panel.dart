@@ -9,6 +9,7 @@ import '../../platform/device_capabilities.dart';
 import '../../theme/glass_theme.dart';
 import '../category_chip.dart';
 import 'paused_overlay.dart';
+import '../artwork_image.dart';
 
 /// Lists a series' episodes by season, with thumbnails, runtimes, synopses
 /// and the viewer's progress. A side panel in landscape and on large
@@ -788,7 +789,7 @@ class _Thumbnail extends StatelessWidget {
             if (url.isEmpty)
               placeholder
             else
-              Image.network(
+              ArtworkImage.network(
                 url,
                 fit: BoxFit.cover,
                 // A 300 px still, decoded at the size it is shown.
