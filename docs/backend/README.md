@@ -172,6 +172,32 @@ grows with every change. Close codes: 4000 ended, 4001 replaced by another
 connection of the same account, 4003 removed, 4004 not found, 4029 too
 many messages.
 
+Clients follow the room in `PartyPlayerSync`, with the arithmetic in
+`playback_sync.dart`. The room's timeline gives the expected position
+(`positionMs + (serverNow - at) × rate`, using the clock offset from `time`
+round trips), and each player compares itself with that:
+
+| Gap to the room | What the player does |
+|---|---|
+| Up to 500 ms | Nothing |
+| 500 ms to 3 s | Plays at 1.05x or 0.95x until within 150 ms |
+| Behind by more than 3 s | Seeks, at most as often as `seekBackoffMs` allows (2 s doubling to 30 s), and nudges in between |
+| Ahead by up to 15 s | Holds the frame until the room arrives |
+| Ahead by more than 15 s | Seeks back |
+
+A seek aims ahead of the room by `SeekCost`, the measured time seeks take on
+that device and stream: aiming at where the room is now arrives that much
+late, which on a slow stream repeats forever. A buffering player is never
+sought unless the room has changed, because Media3 reports "not playing"
+while it buffers and a second seek discards the buffer. A change from the room
+overrides waiting and resets the back-off. While reconnecting nothing is
+corrected, because the room as last seen may be out of date; the viewer's last
+action is kept and sent on reconnecting. A player opens at the room's position
+at that moment and does not start if the room is paused. Parties always play
+at 1x, whatever the viewer's default speed. `[PartySync]` lines in debug and
+profile logs summarize seeks, holds, drift, reconnects and delivery time. A
+playing room silent for 35 seconds counts as a dead socket and reconnects.
+
 ### TMDB gateway
 
 The app's `TmdbService` keeps its own cache, deduplication, concurrency

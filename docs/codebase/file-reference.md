@@ -16,7 +16,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/account/profile_controller.dart`](#libsrcaccountprofile_controllerdart) | Shared | 294 | The user's Reelish profile on this device: a display name and an avatar (initials, a preset, or their own photo). |
 | [`lib/src/account/session_store.dart`](#libsrcaccountsession_storedart) | Shared | 140 | Keeps the Reelish session in the platform's secure storage (Android Keystore, Windows DPAPI), never in SharedPreferences. |
 | [`lib/src/account/watchlist_sync.dart`](#libsrcaccountwatchlist_syncdart) | Shared | 313 | Keeps My list and the Trakt watchlist in step, when the user turns it on. |
-| [`lib/src/analytics/analytics_events.dart`](#libsrcanalyticsanalytics_eventsdart) | Shared | 133 | The complete list of analytics events Reelish sends, in one place. |
+| [`lib/src/analytics/analytics_events.dart`](#libsrcanalyticsanalytics_eventsdart) | Shared | 144 | The complete list of analytics events Reelish sends, in one place. |
 | [`lib/src/analytics/analytics_service.dart`](#libsrcanalyticsanalytics_servicedart) | Shared | 142 | Product analytics through Firebase Analytics on Android (phones, Android TV, Google TV), opt-in only. |
 | [`lib/src/app/app_services.dart`](#libsrcappapp_servicesdart) | Shared | 34 | The app's shared services, built in one place and handed to the screens and ViewModels that use them, rather than constructed inside widgets. |
 | [`lib/src/desktop/desktop_details_screen.dart`](#libsrcdesktopdesktop_details_screendart) | Windows | 1330 | A movie or series on Windows, full-bleed over the whole window: the backdrop with the title, details and actions, then cast and related titles. |
@@ -92,8 +92,8 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/services/network_target_policy.dart`](#libsrcservicesnetwork_target_policydart) | Shared | 332 | The network destination policy for provider requests and streams: public addresses only, header checks, and connections pinned to the validated address. |
 | [`lib/src/services/paged_feed_controller.dart`](#libsrcservicespaged_feed_controllerdart) | Shared | 497 | The pages of one home row: what is loaded, whether more exist, and the guards that keep requests for it from piling up. |
 | [`lib/src/services/perf_timeline.dart`](#libsrcservicesperf_timelinedart) | Shared | 37 | Development-only milestones measured from process start, for spotting regressions in startup, browsing and playback. |
-| [`lib/src/services/playback_coordinator.dart`](#libsrcservicesplayback_coordinatordart) | Shared | 393 | Owns candidate identity, ranking and the bounded source-attempt policy independently of widget rendering. |
-| [`lib/src/services/playback_metrics.dart`](#libsrcservicesplayback_metricsdart) | Shared | 132 | One player session's timings and failures. |
+| [`lib/src/services/playback_coordinator.dart`](#libsrcservicesplayback_coordinatordart) | Shared | 437 | Owns candidate identity, ranking and the bounded source-attempt policy independently of widget rendering. |
+| [`lib/src/services/playback_metrics.dart`](#libsrcservicesplayback_metricsdart) | Shared | 227 | One player session's timings and failures. |
 | [`lib/src/services/playback_settings_controller.dart`](#libsrcservicesplayback_settings_controllerdart) | Shared | 43 | Loads, holds and saves the playback settings. |
 | [`lib/src/services/playback_source_policy.dart`](#libsrcservicesplayback_source_policydart) | Shared | 11 | Applies provider and torrent playback preferences to a returned source. |
 | [`lib/src/services/player_engine.dart`](#libsrcservicesplayer_enginedart) | Shared | 274 | Common controller boundary. |
@@ -129,9 +129,9 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/viewmodels/library_view_model.dart`](#libsrcviewmodelslibrary_view_modeldart) | Shared | 92 | The viewer's library for the mobile, TV and Windows library pages: watch history, My list, and where each series in the history was left. |
 | [`lib/src/viewmodels/search_view_model.dart`](#libsrcviewmodelssearch_view_modeldart) | Shared | 169 | TMDB search for the TV and Windows search pages: debounced typing, page 1 then more pages on demand (each title once), and a stale answer for an older query never replaces a newer one. |
 | [`lib/src/watch_party/party_models.dart`](#libsrcwatch_partyparty_modelsdart) | Shared | 351 | What a watch party room shares, as the Reelish API sends it: the title, the room's settings, the playback timeline and who is in the room. |
-| [`lib/src/watch_party/party_player_sync.dart`](#libsrcwatch_partyparty_player_syncdart) | Shared | 439 | Keeps one player in step with its watch party. |
-| [`lib/src/watch_party/playback_sync.dart`](#libsrcwatch_partyplayback_syncdart) | Shared | 92 | The arithmetic of watch party sync, kept free of Flutter and sockets so it can be tested exactly: the server clock as seen from this device, where the room's timeline is now, and what a player should do about a gap. |
-| [`lib/src/watch_party/watch_party_controller.dart`](#libsrcwatch_partywatch_party_controllerdart) | Shared | 621 | This device's place in a watch party: the room's WebSocket (reconnected with backoff and a fresh session token), the clock offset to the server, and the room as last described. |
+| [`lib/src/watch_party/party_player_sync.dart`](#libsrcwatch_partyparty_player_syncdart) | Shared | 667 | Keeps one player in step with its watch party. |
+| [`lib/src/watch_party/playback_sync.dart`](#libsrcwatch_partyplayback_syncdart) | Shared | 156 | The arithmetic of watch party sync, kept free of Flutter and sockets so it can be tested exactly: the server clock as seen from this device, where the room's timeline is now, and what a player should do about a gap. |
+| [`lib/src/watch_party/watch_party_controller.dart`](#libsrcwatch_partywatch_party_controllerdart) | Shared | 741 | This device's place in a watch party: the room's WebSocket (reconnected with backoff and a fresh session token), the clock offset to the server, and the room as last described. |
 | [`lib/src/widgets/analytics_consent_dialog.dart`](#libsrcwidgetsanalytics_consent_dialogdart) | Shared | 67 | The one-time question about sharing usage statistics (Android phones, Android TV and Google TV, when the build has analytics configured). |
 | [`lib/src/widgets/app_update_flow.dart`](#libsrcwidgetsapp_update_flowdart) | Shared | 497 | Coordinates the update UI: prompt → download → install permission → Android installer. |
 | [`lib/src/widgets/artwork_image.dart`](#libsrcwidgetsartwork_imagedart) | Shared | 295 | Movie and series artwork from TMDB's image CDN, kept on disk so a launch does not download every poster again. |
@@ -141,7 +141,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/widgets/liquid_glass.dart`](#libsrcwidgetsliquid_glassdart) | Shared | 568 | A bounded, reusable glass surface. |
 | [`lib/src/widgets/media_card.dart`](#libsrcwidgetsmedia_carddart) | Shared | 473 | A movie or series poster on the phone and tablet interface: the artwork at its true 2:3 shape, with the title and one line of details beneath it, so nothing covers the poster but the My list heart and, on Continue watching, a thin progress line along its foot. |
 | [`lib/src/widgets/player/audio_track_sheet.dart`](#libsrcwidgetsplayeraudio_track_sheetdart) | Shared | 53 | Picks an audio track. |
-| [`lib/src/widgets/player/custom_video_player.dart`](#libsrcwidgetsplayercustom_video_playerdart) | Shared | 3571 | The player session for every platform: engine and source attempts, controls, subtitles, audio and video tracks, resume and progress saving, and episode switching. |
+| [`lib/src/widgets/player/custom_video_player.dart`](#libsrcwidgetsplayercustom_video_playerdart) | Shared | 3625 | The player session for every platform: engine and source attempts, controls, subtitles, audio and video tracks, resume and progress saving, and episode switching. |
 | [`lib/src/widgets/player/episode_panel.dart`](#libsrcwidgetsplayerepisode_paneldart) | Shared | 841 | Lists a series' episodes by season, with thumbnails, runtimes, synopses and the viewer's progress. |
 | [`lib/src/widgets/player/external_cue_clock.dart`](#libsrcwidgetsplayerexternal_cue_clockdart) | Shared | 199 | The text of the downloaded subtitle cue that should be on screen, kept in step with the player's own clock. |
 | [`lib/src/widgets/player/gesture_touch_layer.dart`](#libsrcwidgetsplayergesture_touch_layerdart) | Shared | 100 | Touch handling for the video area. |
@@ -316,7 +316,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/analytics/analytics_events.dart
 
-**Source:** [`lib/src/analytics/analytics_events.dart`](../../lib/src/analytics/analytics_events.dart) · **Platform:** Shared · **Lines:** 133
+**Source:** [`lib/src/analytics/analytics_events.dart`](../../lib/src/analytics/analytics_events.dart) · **Platform:** Shared · **Lines:** 144
 
 **Purpose:** The complete list of analytics events Reelish sends, in one place.
 
@@ -1518,11 +1518,11 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/services/playback_coordinator.dart
 
-**Source:** [`lib/src/services/playback_coordinator.dart`](../../lib/src/services/playback_coordinator.dart) · **Platform:** Shared · **Lines:** 393
+**Source:** [`lib/src/services/playback_coordinator.dart`](../../lib/src/services/playback_coordinator.dart) · **Platform:** Shared · **Lines:** 437
 
 **Purpose:** Owns candidate identity, ranking and the bounded source-attempt policy independently of widget rendering.
 
-**Declares:** `EnginePreference` (Service type), `EngineStartTimeout` (Exception), `PlaybackCoordinator` (Service type), `PlaybackFailure` (Service type), `PlaybackFailureKind` (Enum), `PlaybackLog` (Service type), `SourcePreparationException` (Exception)
+**Declares:** `EnginePreference` (Service type), `EngineStartTimeout` (Exception), `LinkRefreshBudget` (Service type), `PlaybackCoordinator` (Service type), `PlaybackFailure` (Service type), `PlaybackFailureKind` (Enum), `PlaybackLog` (Service type), `SourcePreparationException` (Exception)
 
 **Imports (project):** `src/models/playable_source.dart`, `src/models/stream_source.dart`, `src/models/stream_type.dart`, `src/services/player_engine.dart`, `src/services/source_preparer.dart`
 
@@ -1534,7 +1534,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/services/playback_metrics.dart
 
-**Source:** [`lib/src/services/playback_metrics.dart`](../../lib/src/services/playback_metrics.dart) · **Platform:** Shared · **Lines:** 132
+**Source:** [`lib/src/services/playback_metrics.dart`](../../lib/src/services/playback_metrics.dart) · **Platform:** Shared · **Lines:** 227
 
 **Purpose:** One player session's timings and failures.
 
@@ -2092,7 +2092,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/watch_party/party_player_sync.dart
 
-**Source:** [`lib/src/watch_party/party_player_sync.dart`](../../lib/src/watch_party/party_player_sync.dart) · **Platform:** Shared · **Lines:** 439
+**Source:** [`lib/src/watch_party/party_player_sync.dart`](../../lib/src/watch_party/party_player_sync.dart) · **Platform:** Shared · **Lines:** 667
 
 **Purpose:** Keeps one player in step with its watch party.
 
@@ -2110,13 +2110,13 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/watch_party/playback_sync.dart
 
-**Source:** [`lib/src/watch_party/playback_sync.dart`](../../lib/src/watch_party/playback_sync.dart) · **Platform:** Shared · **Lines:** 92
+**Source:** [`lib/src/watch_party/playback_sync.dart`](../../lib/src/watch_party/playback_sync.dart) · **Platform:** Shared · **Lines:** 156
 
 **Purpose:** The arithmetic of watch party sync, kept free of Flutter and sockets so it can be tested exactly: the server clock as seen from this device, where the room's timeline is now, and what a player should do about a gap.
 
-**Declares:** `ClockSync` (Class), `SyncAction` (Enum), `SyncThresholds` (Class)
+**Declares:** `ClockSync` (Class), `PartySyncStats` (Class), `SeekCost` (Class), `SyncAction` (Enum), `SyncThresholds` (Class)
 
-**Top-level functions:** `decideSync`, `expectedPositionMs`
+**Top-level functions:** `decideSync`, `expectedPositionMs`, `seekBackoffMs`
 
 **Imports (project):** `src/watch_party/party_models.dart`
 
@@ -2126,11 +2126,11 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/watch_party/watch_party_controller.dart
 
-**Source:** [`lib/src/watch_party/watch_party_controller.dart`](../../lib/src/watch_party/watch_party_controller.dart) · **Platform:** Shared · **Lines:** 621
+**Source:** [`lib/src/watch_party/watch_party_controller.dart`](../../lib/src/watch_party/watch_party_controller.dart) · **Platform:** Shared · **Lines:** 741
 
 **Purpose:** This device's place in a watch party: the room's WebSocket (reconnected with backoff and a fresh session token), the clock offset to the server, and the room as last described.
 
-**Declares:** `_IoPartySocket` (Class), `PartyConnection` (Enum), `PartyEndReason` (Enum), `PartySocket` (Class), `PartySocketConnector` (Typedef), `WatchPartyController` (Notifier / controller)
+**Declares:** `_IoPartySocket` (Class), `PartyConnection` (Enum), `PartyConnectionStats` (Typedef), `PartyConnectionStatsSummary` (Extension), `PartyEndReason` (Enum), `PartySocket` (Class), `PartySocketConnector` (Typedef), `WatchPartyController` (Notifier / controller)
 
 **Top-level functions:** `createWatchParty`, `partyEndMessage`, `previewWatchParty`
 
@@ -2292,7 +2292,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/widgets/player/custom_video_player.dart
 
-**Source:** [`lib/src/widgets/player/custom_video_player.dart`](../../lib/src/widgets/player/custom_video_player.dart) · **Platform:** Shared · **Lines:** 3571 · **Branches on:** isTv, isDesktop, usesTvLayout, TargetPlatform.windows, TargetPlatform.android, TorrentSupport
+**Source:** [`lib/src/widgets/player/custom_video_player.dart`](../../lib/src/widgets/player/custom_video_player.dart) · **Platform:** Shared · **Lines:** 3625 · **Branches on:** isTv, isDesktop, usesTvLayout, TargetPlatform.windows, TargetPlatform.android, TorrentSupport
 
 **Purpose:** The player session for every platform: engine and source attempts, controls, subtitles, audio and video tracks, resume and progress saving, and episode switching.
 

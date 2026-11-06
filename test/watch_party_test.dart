@@ -208,6 +208,16 @@ void main() {
   });
 
   group('playback sync', () {
+    test('a new connection takes its own round trips', () {
+      final clock = ClockSync()..add(0, 1000, 20);
+      expect(clock.offsetMs, 990);
+      // Slower, but on the connection in use now.
+      clock.restart();
+      expect(clock.offsetMs, 990, reason: 'stands until a sample arrives');
+      clock.add(10_000, 12_000, 10_200);
+      expect(clock.offsetMs, 1900);
+    });
+
     test('the clock keeps the shortest round trip', () {
       final clock = ClockSync()..seed(10_000, 9_000);
       expect(clock.offsetMs, 1000);
@@ -1107,7 +1117,11 @@ void main() {
           'by': 'host-pid',
         });
         await _settle();
-        expect(player.commands, ['pause', 'seek 61000', 'play']);
+        expect(player.commands, [
+          'pause',
+          'seek ${61000 + SeekCost().leadMs}',
+          'play',
+        ]);
         expect(
           socket.ofType('control'),
           isEmpty,
@@ -1193,9 +1207,456 @@ void main() {
       expect(await at(99_800), isEmpty, reason: 'nudging until settled');
       expect(await at(99_950), ['speed 1.0']);
       expect(await at(101_200), ['speed 0.95']);
-      expect(await at(96_000), ['speed 1.0', 'seek 100000']);
+      // Aimed ahead of the room by the time a seek is expected to take.
+      expect(await at(96_000), [
+        'speed 1.0',
+        'seek ${100_000 + SeekCost().leadMs}',
+      ]);
       expect(sync.state, PartySyncState.catchingUp);
       sync.dispose();
+      controller.dispose();
+    });
+
+    group('after a seek', () {
+      const seq = 2;
+      Map<String, Object?> timeline({
+        int positionMs = 100_000,
+        int s = seq,
+        int? at,
+      }) => {
+        'status': 'playing',
+        'positionMs': positionMs,
+        'at': at ?? now,
+        'seq': s,
+        'by': 'host-pid',
+      };
+
+      Future<(WatchPartyController, FakeSocket, PartyPlayerSync, FakePlayer)>
+      playing() async {
+        final (controller, socket) = await party(
+          you: 'guest-pid',
+          room: {'playback': timeline()},
+        );
+        final sync = syncFor(controller);
+        final player = FakePlayer()
+          ..ready = true
+          ..playing = true
+          ..position = const Duration(milliseconds: 100_000);
+        sync.attach(player);
+        return (controller, socket, sync, player);
+      }
+
+      Future<void> check(
+        FakeSocket socket, [
+        Map<String, Object?>? playback,
+      ]) async {
+        state(socket, playback ?? timeline());
+        await _settle();
+      }
+
+      test('a buffering player is left to arrive, even when the engine says '
+          'it is not playing', () async {
+        final (controller, socket, sync, player) = await playing();
+        await check(socket);
+        player
+          ..position = const Duration(milliseconds: 90_000)
+          ..buffering = true
+          ..playing = false
+          ..commands.clear();
+        await check(socket);
+        expect(player.commands.where((c) => c.startsWith('seek')), isEmpty);
+        expect(sync.state, PartySyncState.catchingUp);
+        sync.dispose();
+        controller.dispose();
+      });
+
+      test(
+        'a new command from the room still moves a buffering player',
+        () async {
+          final (controller, socket, sync, player) = await playing();
+          await check(socket);
+          player
+            ..buffering = true
+            ..commands.clear();
+          await check(socket, timeline(positionMs: 200_000, s: seq + 1));
+          expect(
+            player.commands,
+            contains('seek ${200_000 + SeekCost().leadMs}'),
+          );
+          sync.dispose();
+          controller.dispose();
+        },
+      );
+
+      test('landing ahead of the room waits for it instead of playing slowly '
+          'or seeking', () async {
+        final (controller, socket, sync, player) = await playing();
+        await check(socket);
+        player
+          ..position = const Duration(milliseconds: 90_000)
+          ..commands.clear();
+        await check(socket);
+        expect(player.commands.single, startsWith('seek '));
+        final target = int.parse(player.commands.single.split(' ').last);
+        now += 1000;
+        player
+          ..position = Duration(milliseconds: target + 100)
+          ..commands.clear();
+        sync.playerChanged();
+        await _settle();
+        expect(player.commands, ['pause']);
+        expect(sync.stats.holds, 1);
+        sync.dispose();
+        controller.dispose();
+      });
+
+      test(
+        'a player well ahead of the room waits rather than seeking back',
+        () async {
+          final (controller, socket, sync, player) = await playing();
+          await check(socket);
+          player
+            ..position = const Duration(milliseconds: 108_000)
+            ..commands.clear();
+          await check(socket);
+          expect(player.commands, ['pause']);
+          sync.dispose();
+          controller.dispose();
+        },
+      );
+
+      test('a stopped player is not sought over and over', () async {
+        final (controller, socket, sync, player) = await playing();
+        await check(socket);
+        var seeks = 0;
+        for (var second = 0; second < 60; second++) {
+          now += 1000;
+          player
+            ..position = const Duration(milliseconds: 90_000)
+            ..playing = false
+            ..commands.clear();
+          await check(socket);
+          seeks += player.commands.where((c) => c.startsWith('seek')).length;
+        }
+        expect(seeks, lessThanOrEqualTo(7));
+        sync.dispose();
+        controller.dispose();
+      });
+
+      test(
+        'correcting seeks back off, with gentle correction between them',
+        () async {
+          final (controller, socket, sync, player) = await playing();
+          final startedAt = now;
+          await check(socket, timeline(at: startedAt));
+          final seeks = <int>[];
+          // A stream that always lands 10 s late, for two minutes.
+          for (var second = 0; second < 120; second++) {
+            now += 1000;
+            player
+              ..position = Duration(
+                milliseconds: 100_000 + second * 1000 - 10_000,
+              )
+              ..commands.clear();
+            await check(socket, timeline(at: startedAt));
+            if (player.commands.any((c) => c.startsWith('seek'))) {
+              seeks.add(second);
+            }
+          }
+          expect(seeks.length, greaterThanOrEqualTo(2), reason: '$seeks');
+          expect(seeks.length, lessThanOrEqualTo(10), reason: '$seeks');
+          // Settled at the longest wait, not a seek every few seconds.
+          expect(seeks.last - seeks[seeks.length - 2], greaterThan(25));
+          sync.dispose();
+          controller.dispose();
+        },
+      );
+
+      test('the seek cost follows what seeks really take', () {
+        final cost = SeekCost(estimateMs: 2000);
+        cost.add(8000);
+        expect(cost.estimateMs, 8000, reason: 'landing late costs a seek');
+        expect(cost.leadMs, greaterThan(8000));
+        cost.add(2000);
+        expect(cost.estimateMs, 5000, reason: 'comes down gradually');
+        cost.add(1 << 30);
+        expect(cost.estimateMs, lessThanOrEqualTo(12000));
+      });
+
+      test('the end of a shorter copy is not sought past', () async {
+        final (controller, socket, sync, player) = await playing();
+        await check(socket);
+        player
+          ..completed = true
+          ..playing = false
+          ..commands.clear();
+        now += 8000;
+        await check(socket);
+        expect(player.commands, isEmpty);
+        sync.dispose();
+        controller.dispose();
+      });
+    });
+
+    test('the host says when the title ended, once', () async {
+      final (controller, socket) = await party(
+        you: 'host-pid',
+        room: {
+          'playback': {
+            'status': 'playing',
+            'positionMs': 5000,
+            'at': now,
+            'seq': 2,
+            'by': 'host-pid',
+          },
+        },
+      );
+      final sync = syncFor(controller);
+      sync
+        ..attach(FakePlayer()..ready = true)
+        ..playerCompleted(const Duration(minutes: 90))
+        ..playerCompleted(const Duration(minutes: 90));
+      expect(
+        socket.ofType('control').where((m) => m['action'] == 'ended'),
+        hasLength(1),
+      );
+      sync.dispose();
+      controller.dispose();
+    });
+
+    test('a player opening starts from the room as it is by then', () async {
+      final (controller, socket) = await party(
+        you: 'guest-pid',
+        room: {
+          'playback': {
+            'status': 'playing',
+            'positionMs': 60_000,
+            'at': now,
+            'seq': 2,
+            'by': 'host-pid',
+          },
+        },
+      );
+      final sync = syncFor(controller);
+      expect(sync.holdOpening, isFalse);
+      now += 5000;
+      expect(
+        sync.takeOpeningPosition(),
+        Duration(milliseconds: 65_000 + SeekCost().leadMs),
+      );
+      // The host pauses while the source is being found.
+      state(socket, {
+        'status': 'paused',
+        'positionMs': 66_000,
+        'at': now,
+        'seq': 3,
+        'by': 'host-pid',
+      });
+      await _settle();
+      expect(sync.holdOpening, isTrue);
+      expect(sync.takeOpeningPosition(), const Duration(milliseconds: 66_000));
+      sync.dispose();
+      controller.dispose();
+    });
+
+    test('nothing is corrected against the room while disconnected, and an '
+        'action made then reaches the room on reconnecting', () async {
+      final sockets = <FakeSocket>[FakeSocket(), FakeSocket()];
+      var connects = 0;
+      final api = AccountApi(
+        baseUrl: Uri.parse('https://api.reelish.test'),
+        client: MockClient((_) async => _json({})),
+      );
+      final account = AccountController(
+        api: api,
+        store: MemorySessionStore(_session()),
+      );
+      await account.restore();
+      final controller = WatchPartyController(
+        code: '12345678',
+        account: account,
+        api: api,
+        profile: ProfileController(directory: () async => Directory.systemTemp),
+        backoff: (_) => Duration.zero,
+        connector: (_, _) async => sockets[connects++],
+      );
+      await controller.start();
+      Map<String, Object?> welcome() => {
+        't': 'welcome',
+        'you': {'pid': 'host-pid'},
+        'room': {
+          ..._roomJson(hostPid: 'host-pid'),
+          'phase': 'watching',
+          'playback': {
+            'status': 'playing',
+            'positionMs': 100_000,
+            'at': now,
+            'seq': 2,
+            'by': 'host-pid',
+          },
+        },
+        'serverTime': now,
+      };
+      sockets[0].receive(welcome());
+      await _settle();
+      controller.clock.add(now, now, now);
+      final sync = syncFor(controller);
+      final player = FakePlayer()
+        ..ready = true
+        ..playing = true
+        ..position = const Duration(milliseconds: 100_000);
+      sync.attach(player);
+      await _settle();
+
+      await sockets[0].drop();
+      await _settle();
+      expect(controller.connection, PartyConnection.reconnecting);
+      player
+        ..playing = false
+        ..commands.clear();
+      sync.localPause(const Duration(milliseconds: 100_500));
+      now += 8000;
+      sync.playerChanged();
+      controller.notifyListeners();
+      await _settle();
+      expect(player.commands, isEmpty, reason: 'the viewer paused');
+
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      sockets[1].receive(welcome());
+      await _settle();
+      final sent = sockets[1].ofType('control').toList();
+      expect(sent, hasLength(1));
+      expect(sent.single['action'], 'pause');
+      expect(sent.single['positionMs'], 100_500);
+      expect(player.commands, isEmpty, reason: 'the old room must not undo it');
+      sync.dispose();
+      controller.dispose();
+    });
+
+    test(
+      'a play made offline is sent from where playback has reached',
+      () async {
+        final sockets = <FakeSocket>[FakeSocket(), FakeSocket()];
+        var connects = 0;
+        final api = AccountApi(
+          baseUrl: Uri.parse('https://api.reelish.test'),
+          client: MockClient((_) async => _json({})),
+        );
+        final account = AccountController(
+          api: api,
+          store: MemorySessionStore(_session()),
+        );
+        await account.restore();
+        final controller = WatchPartyController(
+          code: '12345678',
+          account: account,
+          api: api,
+          profile: ProfileController(
+            directory: () async => Directory.systemTemp,
+          ),
+          backoff: (_) => const Duration(milliseconds: 60),
+          connector: (_, _) async => sockets[connects++],
+        );
+        await controller.start();
+        Map<String, Object?> welcome() => {
+          't': 'welcome',
+          'you': {'pid': 'host-pid'},
+          'room': {..._roomJson(hostPid: 'host-pid'), 'phase': 'watching'},
+          'serverTime': now,
+        };
+        sockets[0].receive(welcome());
+        await _settle();
+        await sockets[0].drop();
+        await _settle();
+        controller.control('play', 5000);
+        await Future<void>.delayed(const Duration(milliseconds: 80));
+        sockets[1].receive(welcome());
+        await _settle();
+        final sent = sockets[1].ofType('control').single;
+        expect(sent['action'], 'play');
+        expect(sent['positionMs'] as int, greaterThanOrEqualTo(5060));
+        controller.dispose();
+      },
+    );
+
+    test('a playing room that goes silent is reconnected', () async {
+      final sockets = <FakeSocket>[FakeSocket(), FakeSocket()];
+      var connects = 0;
+      final api = AccountApi(
+        baseUrl: Uri.parse('https://api.reelish.test'),
+        client: MockClient((_) async => _json({})),
+      );
+      final account = AccountController(
+        api: api,
+        store: MemorySessionStore(_session()),
+      );
+      await account.restore();
+      final controller = WatchPartyController(
+        code: '12345678',
+        account: account,
+        api: api,
+        profile: ProfileController(directory: () async => Directory.systemTemp),
+        backoff: (_) => Duration.zero,
+        silenceLimit: const Duration(milliseconds: 60),
+        connector: (_, _) async => sockets[connects++],
+      );
+      await controller.start();
+      sockets[0].receive({
+        't': 'welcome',
+        'you': {'pid': 'guest-pid'},
+        'room': {
+          ..._roomJson(hostPid: 'host-pid'),
+          'phase': 'watching',
+          'playback': {
+            'status': 'playing',
+            'positionMs': 1000,
+            'at': now,
+            'seq': 2,
+            'by': 'host-pid',
+          },
+        },
+        'serverTime': now,
+      });
+      await _settle();
+      expect(connects, 1);
+      await Future<void>.delayed(const Duration(milliseconds: 150));
+      expect(connects, 2);
+      controller.dispose();
+    });
+
+    test('a paused room stays connected through silence', () async {
+      final socket = FakeSocket();
+      var connects = 0;
+      final api = AccountApi(
+        baseUrl: Uri.parse('https://api.reelish.test'),
+        client: MockClient((_) async => _json({})),
+      );
+      final account = AccountController(
+        api: api,
+        store: MemorySessionStore(_session()),
+      );
+      await account.restore();
+      final controller = WatchPartyController(
+        code: '12345678',
+        account: account,
+        api: api,
+        profile: ProfileController(directory: () async => Directory.systemTemp),
+        silenceLimit: const Duration(milliseconds: 30),
+        connector: (_, _) async {
+          connects++;
+          return socket;
+        },
+      );
+      await controller.start();
+      socket.receive({
+        't': 'welcome',
+        'you': {'pid': 'guest-pid'},
+        'room': _roomJson(hostPid: 'host-pid'),
+        'serverTime': now,
+      });
+      await _settle();
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+      expect(connects, 1);
       controller.dispose();
     });
 
@@ -1387,6 +1848,9 @@ void main() {
 
 /// A player for sync tests: records the remote commands it receives.
 class FakePlayer implements PartyPlayerHandle {
+  @override
+  bool completed = false;
+
   @override
   bool ready = false;
   @override

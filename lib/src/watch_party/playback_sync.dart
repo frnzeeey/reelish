@@ -25,6 +25,10 @@ class ClockSync {
     _offsetMs = serverMs - (sentMs + roundTrip ~/ 2);
   }
 
+  /// A new connection: its round trips replace the old ones, which may have
+  /// taken another network path. The estimate stands until one arrives.
+  void restart() => _bestRoundTripMs = 1 << 30;
+
   /// A rough estimate from a server timestamp alone, until samples arrive.
   void seed(int serverMs, int localMs) {
     _offsetMs ??= serverMs - localMs;
@@ -61,6 +65,7 @@ class SyncThresholds {
     this.settleMs = 150,
     this.seekMs = 3000,
     this.nudgeRate = 0.05,
+    this.holdMs = 15000,
   });
 
   /// Gaps up to this are left alone.
@@ -74,6 +79,65 @@ class SyncThresholds {
 
   /// How much faster or slower a nudge plays (0.05 = 5 %).
   final double nudgeRate;
+
+  /// A player ahead of the room by up to this waits for it. What it needs
+  /// next is already buffered, so that is exact and costs only the wait; a
+  /// seek back would buffer again and land late.
+  final int holdMs;
+}
+
+/// How long a seek takes on this device and stream, from asking to the picture
+/// moving again.
+///
+/// A player that seeks to where the room is now arrives that much behind it,
+/// and on a stream that buffers for longer than [SyncThresholds.seekMs] would
+/// then seek again, forever. Seeks aim ahead by this estimate instead; landing
+/// a little early is cheap, because the player can wait for the room there.
+class SeekCost {
+  SeekCost({this.estimateMs = 2500});
+
+  static const _minMs = 300;
+  static const _maxMs = 12000;
+
+  /// Smoothed cost of recent seeks.
+  int estimateMs;
+
+  /// How far ahead of the room a seek should aim: the estimate with a margin,
+  /// since landing early costs less than landing late.
+  int get leadMs => (estimateMs * 1.15).round();
+
+  void add(int measuredMs) {
+    final sample = measuredMs.clamp(_minMs, _maxMs);
+    // Landing late is what costs another seek, so a slower sample counts in
+    // full; a quicker one only brings the estimate down gradually.
+    estimateMs = sample > estimateMs
+        ? sample
+        : ((estimateMs + sample) / 2).round();
+  }
+}
+
+/// How long to wait before another correcting seek after [streak] of them
+/// (from 1), on top of the seek itself. Doubles from 2 s up to 30 s, so a
+/// stream that cannot keep up is not sought over and over.
+int seekBackoffMs(int streak) =>
+    (1000 << streak.clamp(1, 5)).clamp(2000, 30000);
+
+/// One player's sync over a session, for debug and profile builds.
+class PartySyncStats {
+  /// Seeks that followed a change the room made.
+  int commandedSeeks = 0;
+
+  /// Seeks that corrected drift.
+  int correctingSeeks = 0;
+  int nudges = 0;
+  int holds = 0;
+
+  /// Largest gap to the room measured during steady playback.
+  int worstDriftMs = 0;
+
+  String summary() =>
+      'commandedSeeks=$commandedSeeks correctingSeeks=$correctingSeeks '
+      'nudges=$nudges holds=$holds worstDrift=${worstDriftMs}ms';
 }
 
 /// What to do about a gap of [driftMs] (local minus room; positive means

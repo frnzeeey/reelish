@@ -73,7 +73,9 @@ the interface once per launch:
   the Workers Free plan: write storage only on state changes, no per-second
   traffic). The room is the playback authority (sequence-numbered timeline);
   clients (`lib/src/watch_party/`) sync with clock offset and drift rules in
-  pure Dart. The player hook is one optional `PartyPlayerSync` created in
+  pure Dart. A seek leads the room by its measured cost, and a buffering
+  player is left alone unless the room changed: seeking to where the room is
+  now, or again while buffering, loops forever on a slow stream. The player hook is one optional `PartyPlayerSync` created in
   `CustomVideoPlayer` only when the active party plays that title: it is
   null otherwise, and room commands go through `_PartyHandle` (the remote
   path), never `_togglePlay`/`_seekTo`, so they are not echoed back. Home

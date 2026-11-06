@@ -413,6 +413,9 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
       season: widget.season,
       episode: widget.episode,
     )?..attach(_PartyHandle(this));
+    // A party plays at the room's pace, not the viewer's usual speed: a host
+    // at 1.25x would leave everyone behind for as long as the party lasts.
+    if (_party != null) _speed = 1;
     _source = widget.source;
     final discovery = widget.discovery;
     if (discovery != null) _listenForSources(discovery);
@@ -639,7 +642,11 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
           // The engine keeps full volume if it refuses; playback continues.
         }
       }
-      final resume = _lastPosition ?? await _startPosition;
+      // A party decides where to start, from its state at this moment.
+      final resume =
+          _party?.takeOpeningPosition() ??
+          _lastPosition ??
+          await _startPosition;
       if (resume > Duration.zero) {
         final duration = c.value.duration;
         final safeResume =
@@ -656,11 +663,14 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
       // A play request the engine never answers would leave the viewer on
       // the loading screen. It fails as an engine problem, so the other
       // engine gets the same source before another source is tried.
-      _metrics.playRequested();
-      await c.play().timeout(
-        const Duration(seconds: 10),
-        onTimeout: () => throw const EngineStartTimeout(),
-      );
+      // A paused party, or one yet to start, leaves this player waiting.
+      if (_party?.holdOpening != true) {
+        _metrics.playRequested();
+        await c.play().timeout(
+          const Duration(seconds: 10),
+          onTimeout: () => throw const EngineStartTimeout(),
+        );
+      }
       if (mounted && generation == _initializationGeneration) {
         PlaybackLog.log(
           'Player',
@@ -676,6 +686,8 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
         // moment later, when the codec opens.
         if (engineFallback) _enginePreference.fallbackStarted(attemptEngine);
         setState(() => _ready = true);
+        // Nothing else reports readiness to a player that is waiting.
+        _party?.playerChanged();
         // Pause artwork downloads once, after startup has had the network,
         // so the first pause shows it from memory.
         _artworkTimer ??= Timer(
@@ -2977,6 +2989,9 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
       );
       return;
     }
+    if (_ready && c.value.isCompleted) {
+      _party?.playerCompleted(c.value.position);
+    }
     _metrics.buffering(_ready && c.value.isPlaying && c.value.isBuffering);
     _metrics.playing(_ready && c.value.isPlaying && !c.value.isBuffering);
     // Playing (not paused, not being scrubbed) yet buffering in place.
@@ -3537,6 +3552,9 @@ class _PartyHandle implements PartyPlayerHandle {
 
   @override
   bool get buffering => _engine?.value.isBuffering ?? false;
+
+  @override
+  bool get completed => _engine?.value.isCompleted ?? false;
 
   @override
   bool get failed => _state._error;
