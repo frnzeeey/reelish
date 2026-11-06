@@ -129,6 +129,8 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
           isFavorite: catalog.isFavorite,
           onToggleFavorite: widget.onToggleFavorite,
         ),
+      if (widget.onJoinParty case final onJoin?)
+        _WatchTogetherRow(key: const ValueKey('join-party'), onJoin: onJoin),
       DesktopPagedRow(
         key: const ValueKey('row:movies'),
         title: 'New movies',
@@ -145,8 +147,6 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
         isFavorite: catalog.isFavorite,
         onToggleFavorite: widget.onToggleFavorite,
       ),
-      if (widget.onJoinParty case final onJoin?)
-        _WatchTogetherRow(key: const ValueKey('join-party'), onJoin: onJoin),
       DesktopPagedRow(
         key: const ValueKey('row:releases'),
         title: 'New releases',

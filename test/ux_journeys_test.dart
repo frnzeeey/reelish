@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:onfeed/src/account/account_api.dart';
 import 'package:onfeed/src/models/app_update.dart';
 import 'package:onfeed/src/models/media_details.dart';
 import 'package:onfeed/src/models/media_item.dart';
@@ -258,6 +259,24 @@ void main() {
         requests.where((url) => url.queryParameters['page'] == '2').length,
         greaterThan(before),
       );
+      expect(tester.takeException(), isNull);
+      await disposeHome(tester);
+    });
+
+    testWidgets('Trending is a row, loaded only as it nears the screen', (
+      tester,
+    ) async {
+      await pumpHome(tester);
+      bool trending(Uri url) => url.path.contains('/trending/');
+      expect(requests.where(trending), isEmpty);
+      for (var i = 0; i < 6; i++) {
+        await tester.drag(
+          find.byType(CustomScrollView).first,
+          const Offset(0, -500),
+        );
+        await settle(tester, rounds: 12);
+      }
+      expect(requests.where(trending), hasLength(1));
       expect(tester.takeException(), isNull);
       await disposeHome(tester);
     });
@@ -526,6 +545,37 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.textContaining('Host your own'), findsNothing);
       expect(find.textContaining('Hosted by Sam'), findsOneWidget);
+    });
+
+    testWidgets('a failed join says why and can be tried again', (
+      tester,
+    ) async {
+      var attempts = 0;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: GlassTheme.dark,
+          home: JoinPartyScreen(
+            preview: (_) async => preview,
+            start: (_) async {
+              attempts++;
+              throw const AccountApiException('network', 'x', status: 0);
+            },
+          ),
+        ),
+      );
+      await tester.enterText(find.byType(TextField), '12345678');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Join party'));
+      await tester.pumpAndSettle();
+      expect(attempts, 1);
+      expect(
+        find.text('No connection. Check your network and try again.'),
+        findsOneWidget,
+      );
+      // The button works again; it was left dead before.
+      await tester.tap(find.text('Join party'));
+      await tester.pumpAndSettle();
+      expect(attempts, 2);
     });
 
     testWidgets('TV: the remote lands on Join once the party is found', (

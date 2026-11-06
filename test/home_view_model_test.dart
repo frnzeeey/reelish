@@ -148,6 +148,29 @@ void main() {
     model.dispose();
   });
 
+  group('New releases and the rows beside it', () {
+    MediaItem item(int id) =>
+        MediaItem(id: '$id', type: 'movie', name: 'Title $id');
+
+    test('leaves out titles those rows show, and stays whole if nearly '
+        'everything overlaps', () {
+      List<MediaItem> filter(List<MediaItem> shown, List<MediaItem> all) =>
+          HomeViewModel.distinctReleases(shown, all);
+
+      final all = [for (var id = 0; id < 10; id++) item(id)];
+      expect(filter(all.take(3).toList(), all).map((e) => e.id), [
+        '3',
+        '4',
+        '5',
+        '6',
+        '7',
+        '8',
+        '9',
+      ]);
+      expect(filter(all.take(8).toList(), all), all);
+    });
+  });
+
   test('Continue watching holds started titles only', () async {
     storage.history_.addAll([
       const MediaItem(id: '1', type: 'movie', name: 'Started', resumeMs: 5),

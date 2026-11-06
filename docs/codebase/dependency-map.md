@@ -175,7 +175,7 @@ The files imported by the most other `lib/` files. A change to one of these reac
 | [`lib/src/services/network_target_policy.dart`](../../lib/src/services/network_target_policy.dart) | 9 | 16 |
 | [`lib/src/services/paged_feed_controller.dart`](../../lib/src/services/paged_feed_controller.dart) | 9 | 5 |
 | [`lib/src/widgets/brand_logo.dart`](../../lib/src/widgets/brand_logo.dart) | 9 | 1 |
-| [`lib/src/account/account_api.dart`](../../lib/src/account/account_api.dart) | 8 | 6 |
+| [`lib/src/account/account_api.dart`](../../lib/src/account/account_api.dart) | 8 | 7 |
 | [`lib/src/account/profile_controller.dart`](../../lib/src/account/profile_controller.dart) | 8 | 3 |
 | [`lib/src/models/episode_progress.dart`](../../lib/src/models/episode_progress.dart) | 8 | 7 |
 | [`lib/src/services/provider_plugin_service.dart`](../../lib/src/services/provider_plugin_service.dart) | 8 | 4 |

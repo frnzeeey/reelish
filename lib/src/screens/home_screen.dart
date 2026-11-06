@@ -1930,6 +1930,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 reserveSpace: _catalogSettled,
               ),
             ),
+          if (_category == 'For you' && !isSearch) _trendingRow(),
           if ((_category == 'Movies' && isSearch || _category == 'Trending') &&
               _shown.isNotEmpty)
             ..._resultGrid(
@@ -2037,6 +2038,35 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         });
       }
       return SliverToBoxAdapter(child: child);
+    },
+  );
+
+  /// Trending on For you, as on TV and Windows Home. It loads as it nears
+  /// the screen, so a cold start asks for nothing more. A failed load leaves
+  /// no row; the Trending chip has its own Retry.
+  Widget _trendingRow() => SliverLayoutBuilder(
+    builder: (context, constraints) {
+      final feed = _trending;
+      if (_catalogSettled &&
+          feed.items.isEmpty &&
+          !feed.loading &&
+          feed.error == null &&
+          _isApproaching(context, constraints)) {
+        SchedulerBinding.instance.addPostFrameCallback((_) {
+          if (mounted && feed.items.isEmpty && !feed.loading) {
+            unawaited(_loadTrending());
+          }
+        });
+      }
+      return SliverToBoxAdapter(
+        child: feed.items.isEmpty
+            ? const SizedBox.shrink()
+            : _section(
+                'Trending now',
+                feed.items,
+                storageKey: 'row:Trending now',
+              ),
+      );
     },
   );
 

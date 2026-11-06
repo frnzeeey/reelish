@@ -60,9 +60,9 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/screens/credits_screen.dart`](#libsrcscreenscredits_screendart) | Shared | 264 | Credits for the data, services and software Reelish relies on. |
 | [`lib/src/screens/first_run_consent_screen.dart`](#libsrcscreensfirst_run_consent_screendart) | Shared | 268 | First-launch screen where the viewer reads and accepts the privacy policy and terms of use; remembers the acceptance. |
 | [`lib/src/screens/help_support_screen.dart`](#libsrcscreenshelp_support_screendart) | Shared | 745 | Help & Support in Settings: answers (FAQ, troubleshooting), a bug report and feedback form that sends to the Reelish API, and links to app information. |
-| [`lib/src/screens/home_screen.dart`](#libsrcscreenshome_screendart) | Shared | 2844 | Home and the app's orchestration: phone tabs, and the TV and Windows shells; owns the catalog wiring, the play flow (`_openItem`: providers, source choice, player) and details navigation. |
+| [`lib/src/screens/home_screen.dart`](#libsrcscreenshome_screendart) | Shared | 2874 | Home and the app's orchestration: phone tabs, and the TV and Windows shells; owns the catalog wiring, the play flow (`_openItem`: providers, source choice, player) and details navigation. |
 | [`lib/src/screens/legal_information_screen.dart`](#libsrcscreenslegal_information_screendart) | Shared | 431 | Shows the privacy policy, terms of use and third-party notices. |
-| [`lib/src/screens/library_screen.dart`](#libsrcscreenslibrary_screendart) | Shared | 677 | The phone library tab: continue watching, My list and watch history from local storage. |
+| [`lib/src/screens/library_screen.dart`](#libsrcscreenslibrary_screendart) | Shared | 613 | The phone library tab: continue watching, My list and watch history from local storage. |
 | [`lib/src/screens/media_details_screen.dart`](#libsrcscreensmedia_details_screendart) | Shared | 843 | The phone details page for a movie or series, with seasons, episodes and playback. |
 | [`lib/src/screens/notification_settings_screen.dart`](#libsrcscreensnotification_settings_screendart) | Shared | 120 | Settings → Notifications: new-episode alerts for series on My list, series being watched, and popular series. |
 | [`lib/src/screens/playback_settings_screen.dart`](#libsrcscreensplayback_settings_screendart) | Shared | 1571 | Settings, Appearance and Playback settings screens for phone and TV; Windows reuses their sub-pages. |
@@ -79,7 +79,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/screens/tv/tv_home_shell.dart`](#libsrcscreenstvtv_home_shelldart) | Android TV | 464 | The TV interface's frame: a navigation rail on the left and the selected page beside it. |
 | [`lib/src/screens/tv/tv_pages.dart`](#libsrcscreenstvtv_pagesdart) | Android TV | 683 | The TV Home, Movies/Series catalog, Search and My library pages. |
 | [`lib/src/screens/watch_party/create_party_screen.dart`](#libsrcscreenswatch_partycreate_party_screendart) | Shared | 312 | Starts a watch party for a movie or episode: the room's settings, then the waiting room with the code to share. |
-| [`lib/src/screens/watch_party/join_party_screen.dart`](#libsrcscreenswatch_partyjoin_party_screendart) | Shared | 439 | Joins a watch party by its 8-digit code: typed or pasted, previewed (title, host, how full), then the waiting room. |
+| [`lib/src/screens/watch_party/join_party_screen.dart`](#libsrcscreenswatch_partyjoin_party_screendart) | Shared | 445 | Joins a watch party by its 8-digit code: typed or pasted, previewed (title, host, how full), then the waiting room. |
 | [`lib/src/screens/watch_party/party_desktop.dart`](#libsrcscreenswatch_partyparty_desktopdart) | Shared | 225 | The watch party screens' Windows layout pieces: a page frame centred in the window with the action beside the content (not a bar across the whole width), the poster, a short "how it works" strip, and the room code as eight boxes. |
 | [`lib/src/screens/watch_party/party_launcher.dart`](#libsrcscreenswatch_partyparty_launcherdart) | Shared | 14 | How the waiting room opens the player. |
 | [`lib/src/screens/watch_party/party_widgets.dart`](#libsrcscreenswatch_partyparty_widgetsdart) | Shared | 538 | Pieces the watch party screens share: the title card, a participant's avatar and row, the room code, and plain words for errors and statuses. |
@@ -125,7 +125,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/theme/glass_theme.dart`](#libsrcthemeglass_themedart) | Shared | 287 | Colours, accent palettes, typography and the Material themes for phone and TV/Windows. |
 | [`lib/src/viewmodels/details_view_model.dart`](#libsrcviewmodelsdetails_view_modeldart) | Shared | 171 | The state behind a title's details page, shared by the mobile, TV and Windows details screens: TMDB details, the seasons and the selected season's episodes, and (on Windows) related titles. |
 | [`lib/src/viewmodels/home_catalog.dart`](#libsrcviewmodelshome_catalogdart) | Shared | 49 | What Home's catalog holds, for the TV pages. |
-| [`lib/src/viewmodels/home_view_model.dart`](#libsrcviewmodelshome_view_modeldart) | Shared | 221 | Home's data, shared by the phone, TV and Windows layouts: the catalog rows, Top 10 and how it is seeded, the Continue watching row, and My list. |
+| [`lib/src/viewmodels/home_view_model.dart`](#libsrcviewmodelshome_view_modeldart) | Shared | 248 | Home's data, shared by the phone, TV and Windows layouts: the catalog rows, Top 10 and how it is seeded, the Continue watching row, and My list. |
 | [`lib/src/viewmodels/library_view_model.dart`](#libsrcviewmodelslibrary_view_modeldart) | Shared | 92 | The viewer's library for the mobile, TV and Windows library pages: watch history, My list, and where each series in the history was left. |
 | [`lib/src/viewmodels/search_view_model.dart`](#libsrcviewmodelssearch_view_modeldart) | Shared | 169 | TMDB search for the TV and Windows search pages: debounced typing, page 1 then more pages on demand (each title once), and a stale answer for an older query never replaces a newer one. |
 | [`lib/src/watch_party/party_models.dart`](#libsrcwatch_partyparty_modelsdart) | Shared | 351 | What a watch party room shares, as the Reelish API sends it: the title, the room's settings, the playback timeline and who is in the room. |
@@ -218,7 +218,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Imported by:** `src/account/account_controller.dart`, `src/account/watchlist_sync.dart`, `src/notifications/episode_alerts.dart`, `src/notifications/episode_check.dart`, `src/screens/account_settings_screen.dart`, `src/screens/watch_party/party_widgets.dart`, `src/support/support_service.dart`, `src/watch_party/watch_party_controller.dart`
 
-**Tests importing it:** `test/account_test.dart`, `test/episode_alerts_test.dart`, `test/help_support_test.dart`, `test/profile_screen_test.dart`, `test/watch_party_test.dart`, `test/watchlist_sync_test.dart`
+**Tests importing it:** `test/account_test.dart`, `test/episode_alerts_test.dart`, `test/help_support_test.dart`, `test/profile_screen_test.dart`, `test/ux_journeys_test.dart`, `test/watch_party_test.dart`, `test/watchlist_sync_test.dart`
 
 ## lib/src/account/account_controller.dart
 
@@ -1006,7 +1006,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/screens/home_screen.dart
 
-**Source:** [`lib/src/screens/home_screen.dart`](../../lib/src/screens/home_screen.dart) · **Platform:** Shared · **Lines:** 2844 · **Branches on:** isTv, isDesktop, TorrentSupport
+**Source:** [`lib/src/screens/home_screen.dart`](../../lib/src/screens/home_screen.dart) · **Platform:** Shared · **Lines:** 2874 · **Branches on:** isTv, isDesktop, TorrentSupport
 
 **Purpose:** Home and the app's orchestration: phone tabs, and the TV and Windows shells; owns the catalog wiring, the play flow (`_openItem`: providers, source choice, player) and details navigation.
 
@@ -1038,11 +1038,11 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/screens/library_screen.dart
 
-**Source:** [`lib/src/screens/library_screen.dart`](../../lib/src/screens/library_screen.dart) · **Platform:** Shared · **Lines:** 677
+**Source:** [`lib/src/screens/library_screen.dart`](../../lib/src/screens/library_screen.dart) · **Platform:** Shared · **Lines:** 613
 
 **Purpose:** The phone library tab: continue watching, My list and watch history from local storage.
 
-**Declares:** `_FilterChip` (Widget), `_LibraryEmptyState` (Widget), `_LibraryFilter` (Enum), `_LibraryHeader` (Widget), `LibraryScreen` (Widget), `_LibraryScreenState` (Widget state), `_LibraryStat` (Widget), `_MediaSection` (Widget)
+**Declares:** `_FilterChip` (Widget), `_LibraryEmptyState` (Widget), `_LibraryFilter` (Enum), `_LibraryHeader` (Widget), `LibraryScreen` (Widget), `_LibraryScreenState` (Widget state), `_MediaSection` (Widget)
 
 **Imports (project):** `src/models/media_item.dart`, `src/models/resume_summary.dart`, `src/services/storage_service.dart`, `src/theme/design_tokens.dart`, `src/theme/glass_theme.dart`, `src/viewmodels/library_view_model.dart`, `src/widgets/media_card.dart`, `src/widgets/soft_glass_dock.dart`
 
@@ -1312,7 +1312,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/screens/watch_party/join_party_screen.dart
 
-**Source:** [`lib/src/screens/watch_party/join_party_screen.dart`](../../lib/src/screens/watch_party/join_party_screen.dart) · **Platform:** Shared · **Lines:** 439 · **Branches on:** isTv, isDesktop
+**Source:** [`lib/src/screens/watch_party/join_party_screen.dart`](../../lib/src/screens/watch_party/join_party_screen.dart) · **Platform:** Shared · **Lines:** 445 · **Branches on:** isTv, isDesktop
 
 **Purpose:** Joins a watch party by its 8-digit code: typed or pasted, previewed (title, host, how full), then the waiting room.
 
@@ -2028,7 +2028,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/viewmodels/home_view_model.dart
 
-**Source:** [`lib/src/viewmodels/home_view_model.dart`](../../lib/src/viewmodels/home_view_model.dart) · **Platform:** Shared · **Lines:** 221
+**Source:** [`lib/src/viewmodels/home_view_model.dart`](../../lib/src/viewmodels/home_view_model.dart) · **Platform:** Shared · **Lines:** 248
 
 **Purpose:** Home's data, shared by the phone, TV and Windows layouts: the catalog rows, Top 10 and how it is seeded, the Continue watching row, and My list.
 

@@ -157,11 +157,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   SliverPadding(
                     padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
                     sliver: SliverToBoxAdapter(
-                      child: _LibraryHeader(
-                        historyCount: _history.length,
-                        favoriteCount: _favorites.length,
-                        onRefresh: _load,
-                      ),
+                      child: _LibraryHeader(onRefresh: _load),
                     ),
                   ),
                   SliverToBoxAdapter(
@@ -258,14 +254,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
 }
 
 class _LibraryHeader extends StatelessWidget {
-  const _LibraryHeader({
-    required this.historyCount,
-    required this.favoriteCount,
-    required this.onRefresh,
-  });
+  const _LibraryHeader({required this.onRefresh});
 
-  final int historyCount;
-  final int favoriteCount;
   final Future<void> Function() onRefresh;
 
   @override
@@ -316,61 +306,7 @@ class _LibraryHeader extends StatelessWidget {
         'Everything you are watching and saving, all in one place.',
         style: TextStyle(color: GlassTheme.muted, fontSize: 12, height: 1.4),
       ),
-      const SizedBox(height: 17),
-      Row(
-        children: [
-          _LibraryStat(
-            icon: Symbols.play_circle_rounded,
-            value: '$historyCount',
-            label: 'watched',
-          ),
-          const SizedBox(width: 9),
-          _LibraryStat(
-            icon: Symbols.favorite_rounded,
-            value: '$favoriteCount',
-            label: 'saved',
-          ),
-        ],
-      ),
     ],
-  );
-}
-
-class _LibraryStat extends StatelessWidget {
-  const _LibraryStat({
-    required this.icon,
-    required this.value,
-    required this.label,
-  });
-
-  final IconData icon;
-  final String value;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-    decoration: BoxDecoration(
-      color: GlassTheme.surface,
-      borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: GlassTheme.border),
-    ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 15, color: GlassTheme.primary),
-        const SizedBox(width: 7),
-        Text(
-          value,
-          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
-        ),
-        const SizedBox(width: 5),
-        Text(
-          label,
-          style: const TextStyle(fontSize: 11, color: GlassTheme.muted),
-        ),
-      ],
-    ),
   );
 }
 

@@ -47,6 +47,7 @@ class HomeViewModel extends ChangeNotifier {
     releases = PagedFeedController(
       label: 'NewReleases',
       staleAfter: TmdbCacheTtl.newReleases,
+      select: _releasesNotShownElsewhere,
       fetch: (page, {previous, required forceRefresh, onRevalidated}) =>
           _tmdb.newReleasesPage(
             page: page,
@@ -65,6 +66,32 @@ class HomeViewModel extends ChangeNotifier {
       ),
       fetch: _fetchTop10Page,
     );
+  }
+
+  /// New releases keeps the titles New movies and Series do not already
+  /// show, as long as that leaves at least this many.
+  static const _minDistinctReleases = 6;
+
+  /// New releases loads after those two rows, so what they show is known.
+  /// When nearly everything overlaps the row stays whole, not nearly empty.
+  List<MediaItem> _releasesNotShownElsewhere(List<MediaItem> candidates) =>
+      distinctReleases([
+        ...movies.state.items,
+        ...series.state.items,
+      ], candidates);
+
+  /// [candidates] without [shown], or all of them if too few would remain.
+  @visibleForTesting
+  static List<MediaItem> distinctReleases(
+    List<MediaItem> shown,
+    List<MediaItem> candidates,
+  ) {
+    final keys = shown.map(MediaCatalogFilter.key).toSet();
+    final distinct = [
+      for (final item in candidates)
+        if (!keys.contains(MediaCatalogFilter.key(item))) item,
+    ];
+    return distinct.length >= _minDistinctReleases ? distinct : candidates;
   }
 
   final TmdbService _tmdb;

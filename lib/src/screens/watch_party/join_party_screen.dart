@@ -23,6 +23,7 @@ class JoinPartyScreen extends StatefulWidget {
     super.key,
     this.preview = previewWatchParty,
     this.open,
+    this.start = _startParty,
   });
 
   /// Looks a code up (replaced in tests).
@@ -30,6 +31,11 @@ class JoinPartyScreen extends StatefulWidget {
 
   /// Opens the waiting room for a code; by default a connected controller.
   final void Function(BuildContext context, String code)? open;
+
+  /// Connects to the room (replaced in tests).
+  final Future<void> Function(WatchPartyController party) start;
+
+  static Future<void> _startParty(WatchPartyController party) => party.start();
 
   @override
   State<JoinPartyScreen> createState() => _JoinPartyScreenState();
@@ -121,7 +127,7 @@ class _JoinPartyScreenState extends State<JoinPartyScreen> {
     });
     final party = WatchPartyController(code: found.code);
     try {
-      await party.start();
+      await widget.start(party);
     } catch (error) {
       party.dispose();
       if (mounted) {
