@@ -9,9 +9,7 @@ when done. Never screen-capture the user's desktop instead.
 
 1. **Real fonts.** Before rendering, load Montserrat from
    `assets/fonts/Montserrat-*.ttf` with `FontLoader('Montserrat')`, and the
-   icon font `MaterialSymbolsRounded.ttf` from the `material_symbols_icons`
-   package (`.dart_tool/package_config.json` gives its path) under the
-   family `packages/material_symbols_icons/MaterialSymbolsRounded`.
+   icon font `assets/fonts/ReelishIcons.otf` under the family `ReelishIcons`.
 2. **The real Home.** Pump `HomeScreen` with `GlassTheme.dark`, a
    `TmdbService(testClient: MockClient(...), network:
    NetworkDestinationValidator(lookup: (_) async => [InternetAddress('8.8.8.8')]),
