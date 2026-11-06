@@ -115,6 +115,14 @@ class CreditsScreen extends StatelessWidget {
         SettingsSection(
           label: 'THIRD-PARTY SERVICES',
           children: [
+            const _TraktAttributionBlock(),
+            SettingsTile(
+              icon: Symbols.open_in_new_rounded,
+              title: 'Trakt',
+              description: 'trakt.tv',
+              onTap: () =>
+                  _openExternal(context, Uri.https('trakt.tv', '/'), 'Trakt'),
+            ),
             const SettingsTile(
               icon: Symbols.closed_caption_rounded,
               title: 'OpenSubtitles v3',
@@ -216,6 +224,67 @@ class CreditsScreen extends StatelessWidget {
 /// Laid out as a plain credit, not a promotion: the logo sits at a modest
 /// size beneath Reelish's own branding, unmodified and on the dark surface
 /// TMDB's gradient artwork is designed for.
+/// Trakt's Full Logo for dark backgrounds, with what Reelish uses it for, per
+/// https://app.trakt.tv/branding: an approved logo, unaltered, identifies the
+/// app as powered by Trakt without implying sponsorship, endorsement or
+/// affiliation, with clear space around it equal to the height of the "T" in
+/// Trakt.
+class _TraktAttributionBlock extends StatelessWidget {
+  const _TraktAttributionBlock();
+
+  /// Rasterized unmodified from the SVG on the branding page (kept beside
+  /// it for reference). Trakt forbids altering, recoloring or recreating it.
+  static const _logoAsset = 'assets/images/trakt/trakt_logo_dark.png';
+
+  /// Width / height of the source artwork (121.6 × 29.4).
+  static const _logoAspectRatio = 121.6 / 29.4;
+
+  /// No taller than the 16 dp the block leaves around it, so the clear space
+  /// always covers the height of the "T", which is nearly the logo's own.
+  static const _logoHeight = 16.0;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(16, 20, 16, 18),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          height: _logoHeight,
+          width: _logoHeight * _logoAspectRatio,
+          child: Image.asset(
+            _logoAsset,
+            fit: BoxFit.contain,
+            filterQuality: FilterQuality.medium,
+            semanticLabel: 'Trakt logo',
+          ),
+        ),
+        const SizedBox(height: 16),
+        const Text(
+          'Powered by Trakt',
+          style: TextStyle(
+            color: GlassTheme.textPrimary,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            height: 1.45,
+          ),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Sign-in, My list sync and new episode checks use Trakt. Reelish '
+          'is independent and is not sponsored by, endorsed by or affiliated '
+          'with Trakt.',
+          style: TextStyle(
+            color: GlassTheme.muted,
+            fontSize: 12.5,
+            height: 1.5,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
 class _TmdbAttributionBlock extends StatelessWidget {
   const _TmdbAttributionBlock();
 

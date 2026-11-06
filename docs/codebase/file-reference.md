@@ -57,7 +57,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/screens/account_settings_screen.dart`](#libsrcscreensaccount_settings_screendart) | Shared | 803 | The signed-in Trakt account in Settings: the profile (display name and avatar, kept on this device), sign out here or everywhere, and delete the Reelish account. |
 | [`lib/src/screens/app_icon_settings_screen.dart`](#libsrcscreensapp_icon_settings_screendart) | Shared | 319 | Settings → Appearance → App icon: the launcher icon presets in a grid. |
 | [`lib/src/screens/app_information_screens.dart`](#libsrcscreensapp_information_screensdart) | Shared | 222 | About and Support screens, and the Reelish name, icon and tagline used where the app identifies itself. |
-| [`lib/src/screens/credits_screen.dart`](#libsrcscreenscredits_screendart) | Shared | 264 | Credits for the data, services and software Reelish relies on. |
+| [`lib/src/screens/credits_screen.dart`](#libsrcscreenscredits_screendart) | Shared | 333 | Credits for the data, services and software Reelish relies on. |
 | [`lib/src/screens/first_run_consent_screen.dart`](#libsrcscreensfirst_run_consent_screendart) | Shared | 268 | First-launch screen where the viewer reads and accepts the privacy policy and terms of use; remembers the acceptance. |
 | [`lib/src/screens/help_support_screen.dart`](#libsrcscreenshelp_support_screendart) | Shared | 761 | Help & Support in Settings: answers (FAQ, troubleshooting), a bug report and feedback form that sends to the Reelish API, and links to app information. |
 | [`lib/src/screens/home_screen.dart`](#libsrcscreenshome_screendart) | Shared | 2874 | Home and the app's orchestration: phone tabs, and the TV and Windows shells; owns the catalog wiring, the play flow (`_openItem`: providers, source choice, player) and details navigation. |
@@ -954,11 +954,11 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/screens/credits_screen.dart
 
-**Source:** [`lib/src/screens/credits_screen.dart`](../../lib/src/screens/credits_screen.dart) · **Platform:** Shared · **Lines:** 264
+**Source:** [`lib/src/screens/credits_screen.dart`](../../lib/src/screens/credits_screen.dart) · **Platform:** Shared · **Lines:** 333
 
 **Purpose:** Credits for the data, services and software Reelish relies on.
 
-**Declares:** `CreditsScreen` (Widget), `_TmdbAttributionBlock` (Widget)
+**Declares:** `CreditsScreen` (Widget), `_TmdbAttributionBlock` (Widget), `_TraktAttributionBlock` (Widget)
 
 **Top-level functions:** `registerBundledLicenses`, `showAppLicenses`
 

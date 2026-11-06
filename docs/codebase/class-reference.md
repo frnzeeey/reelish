@@ -4,7 +4,7 @@
 
 Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensitive, leading `_` ignored). **Role** is derived from the declaration (its superclass) and folder. **Named in** counts the other files that mention the type by name: a measure of how far a change reaches. **Summary** is the first sentence of the type's own doc comment; a blank one means the type has none.
 
-712 types: 424 public, 288 private to their file.
+713 types: 424 public, 289 private to their file.
 
 [A](#a) · [B](#b) · [C](#c) · [D](#d) · [E](#e) · [F](#f) · [G](#g) · [H](#h) · [I](#i) · [J](#j) · [K](#k) · [L](#l) · [M](#m) · [N](#n) · [P](#p) · [R](#r) · [S](#s) · [T](#t) · [U](#u) · [V](#v) · [W](#w)
 
@@ -31,8 +31,8 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `_ActivityRow` | Widget | [`profile_screen.dart:394`](../../lib/src/screens/profile_screen.dart#L394) | extends StatelessWidget | Shared | its own file | My list, watched and in progress, counted from this device; each opens the library. |
 | `_AddonSearchStatus` | Widget | [`subtitle_picker_sheet.dart:210`](../../lib/src/widgets/player/subtitle_picker_sheet.dart#L210) | extends StatelessWidget | Shared | its own file |  |
 | `_AddonTile` | Widget | [`subtitle_addons_screen.dart:206`](../../lib/src/screens/subtitle_addons_screen.dart#L206) | extends StatelessWidget | Shared | its own file |  |
-| `_AddSourceBanner` | Widget | [`tv_pages.dart:189`](../../lib/src/screens/tv/tv_pages.dart#L189) | extends StatelessWidget | Android TV | its own file |  |
 | `_AddSourceBanner` | Widget | [`desktop_pages.dart:183`](../../lib/src/desktop/desktop_pages.dart#L183) | extends StatelessWidget | Windows | its own file |  |
+| `_AddSourceBanner` | Widget | [`tv_pages.dart:189`](../../lib/src/screens/tv/tv_pages.dart#L189) | extends StatelessWidget | Android TV | its own file |  |
 | `AlertTokenStore` | Class | [`episode_alerts.dart:28`](../../lib/src/notifications/episode_alerts.dart#L28) |  | Shared | 1 test file | Where the session's episode-check token is kept: secure storage, with the account it belongs to. |
 | `_AmbientGlow` | Widget | [`sign_in_screen.dart:222`](../../lib/src/screens/sign_in_screen.dart#L222) | extends StatelessWidget | Shared | its own file | A soft accent light behind the brand, drawn once (no blur filter). |
 | `AnalyticsConsent` | Enum | [`analytics_service.dart:14`](../../lib/src/analytics/analytics_service.dart#L14) |  | Shared | 2 lib files, 2 test files | Whether the viewer agreed to share usage statistics. |
@@ -78,11 +78,11 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 
 | Type | Role | Declared in | Relations | Platform | Named in | Summary |
 |---|---|---|---|---|---|---|
-| `_Backdrop` | Widget | [`desktop_hero.dart:290`](../../lib/src/desktop/desktop_hero.dart#L290) | extends StatelessWidget | Windows | its own file |  |
 | `_Backdrop` | Widget | [`tv_browse.dart:104`](../../lib/src/screens/tv/tv_browse.dart#L104) | extends StatelessWidget | Android TV | its own file |  |
+| `_Backdrop` | Widget | [`desktop_hero.dart:290`](../../lib/src/desktop/desktop_hero.dart#L290) | extends StatelessWidget | Windows | its own file |  |
 | `BackendConfig` | Class | [`backend_config.dart:4`](../../lib/src/account/backend_config.dart#L4) |  | Shared | 6 lib files, 1 test file |  |
-| `_Badge` | Widget | [`plugin_badges.dart:55`](../../lib/src/widgets/plugin_library/plugin_badges.dart#L55) | extends StatelessWidget | Shared | its own file |  |
 | `_Badge` | Widget | [`desktop_widgets.dart:647`](../../lib/src/desktop/desktop_widgets.dart#L647) | extends StatelessWidget | Windows | its own file |  |
+| `_Badge` | Widget | [`plugin_badges.dart:55`](../../lib/src/widgets/plugin_library/plugin_badges.dart#L55) | extends StatelessWidget | Shared | its own file |  |
 | `_Banner` | Widget | [`waiting_room_screen.dart:586`](../../lib/src/screens/watch_party/waiting_room_screen.dart#L586) | extends StatelessWidget | Shared | its own file |  |
 | `_Batch` | Service type | [`paged_feed_controller.dart:483`](../../lib/src/services/paged_feed_controller.dart#L483) |  | Shared | its own file |  |
 | `_Block` | Widget | [`plugin_skeleton.dart:131`](../../lib/src/widgets/plugin_library/plugin_skeleton.dart#L131) | extends StatelessWidget | Shared | its own file |  |
@@ -364,8 +364,8 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `NextEpisodeCard` | Widget | [`player_controls.dart:1301`](../../lib/src/widgets/player/player_controls.dart#L1301) | extends StatelessWidget | Shared | 1 lib file, 1 test file | Near the end of an episode: offers the next one, with a cancellable countdown when auto-play is enabled. |
 | `NormalizedStreamSource` | Service type | [`stream_normalizer.dart:4`](../../lib/src/services/stream_normalizer.dart#L4) |  | Shared | its own file only |  |
 | `_Note` | Widget | [`plugin_details_screen.dart:520`](../../lib/src/screens/plugin_details_screen.dart#L520) | extends StatelessWidget | Shared | its own file | An inline warning note. |
-| `_Notice` | Widget | [`desktop_plugins_page.dart:512`](../../lib/src/desktop/desktop_plugins_page.dart#L512) | extends StatelessWidget | Windows | its own file |  |
 | `_Notice` | Widget | [`sign_in_screen.dart:772`](../../lib/src/screens/sign_in_screen.dart#L772) | extends StatelessWidget | Shared | its own file |  |
+| `_Notice` | Widget | [`desktop_plugins_page.dart:512`](../../lib/src/desktop/desktop_plugins_page.dart#L512) | extends StatelessWidget | Windows | its own file |  |
 | `_NoticeCard` | Widget | [`plugins_screen.dart:760`](../../lib/src/screens/plugins_screen.dart#L760) | extends StatelessWidget | Shared | its own file |  |
 | `NotificationSettingsScreen` | Widget | [`notification_settings_screen.dart:12`](../../lib/src/screens/notification_settings_screen.dart#L12) | extends StatelessWidget | Shared | 2 lib files, 1 test file |  |
 | `_Numeral` | Widget | [`desktop_top_ten.dart:377`](../../lib/src/desktop/desktop_top_ten.dart#L377) | extends StatelessWidget | Windows | its own file |  |
@@ -543,10 +543,10 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | Type | Role | Declared in | Relations | Platform | Named in | Summary |
 |---|---|---|---|---|---|---|
 | `_RailContents` | Widget | [`desktop_shell.dart:376`](../../lib/src/desktop/desktop_shell.dart#L376) | extends StatelessWidget | Windows | its own file |  |
-| `_RailItem` | Widget | [`desktop_settings_page.dart:268`](../../lib/src/desktop/desktop_settings_page.dart#L268) | extends StatefulWidget | Windows | its own file | A category in the rail; Enter or a click shows it. |
 | `_RailItem` | Widget | [`tv_home_shell.dart:342`](../../lib/src/screens/tv/tv_home_shell.dart#L342) | extends StatefulWidget | Android TV | its own file |  |
-| `_RailItemState` | Widget state | [`desktop_settings_page.dart:299`](../../lib/src/desktop/desktop_settings_page.dart#L299) | extends State<_RailItem> | Windows | its own file |  |
+| `_RailItem` | Widget | [`desktop_settings_page.dart:268`](../../lib/src/desktop/desktop_settings_page.dart#L268) | extends StatefulWidget | Windows | its own file | A category in the rail; Enter or a click shows it. |
 | `_RailItemState` | Widget state | [`tv_home_shell.dart:363`](../../lib/src/screens/tv/tv_home_shell.dart#L363) | extends State<_RailItem> | Android TV | its own file |  |
+| `_RailItemState` | Widget state | [`desktop_settings_page.dart:299`](../../lib/src/desktop/desktop_settings_page.dart#L299) | extends State<_RailItem> | Windows | its own file |  |
 | `_RailTitle` | Widget | [`desktop_settings_page.dart:213`](../../lib/src/desktop/desktop_settings_page.dart#L213) | extends StatelessWidget | Windows | its own file |  |
 | `_RankedCard` | Widget | [`desktop_top_ten.dart:304`](../../lib/src/desktop/desktop_top_ten.dart#L304) | extends StatefulWidget | Windows | its own file | One ranked title: the outlined numeral, with the poster card over its right edge. |
 | `_RankedCardState` | Widget state | [`desktop_top_ten.dart:328`](../../lib/src/desktop/desktop_top_ten.dart#L328) | extends State<_RankedCard> | Windows | its own file |  |
@@ -572,10 +572,10 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `ReportKind` | Enum | [`support_service.dart:30`](../../lib/src/support/support_service.dart#L30) |  | Shared | 1 lib file, 2 test files |  |
 | `ReportScreen` | Widget | [`help_support_screen.dart:442`](../../lib/src/screens/help_support_screen.dart#L442) | extends StatefulWidget | Shared | 2 test files | The bug report and feedback form: fill in, review exactly what will be sent, then send once. |
 | `_ReportScreenState` | Widget state | [`help_support_screen.dart:464`](../../lib/src/screens/help_support_screen.dart#L464) | extends State<ReportScreen> | Shared | its own file |  |
-| `_RepositoryCard` | Widget | [`desktop_plugins_page.dart:613`](../../lib/src/desktop/desktop_plugins_page.dart#L613) | extends StatefulWidget | Windows | its own file |  |
 | `_RepositoryCard` | Widget | [`plugins_screen.dart:526`](../../lib/src/screens/plugins_screen.dart#L526) | extends StatefulWidget | Shared | its own file |  |
-| `_RepositoryCardState` | Widget state | [`plugins_screen.dart:540`](../../lib/src/screens/plugins_screen.dart#L540) | extends State<_RepositoryCard> | Shared | its own file |  |
+| `_RepositoryCard` | Widget | [`desktop_plugins_page.dart:613`](../../lib/src/desktop/desktop_plugins_page.dart#L613) | extends StatefulWidget | Windows | its own file |  |
 | `_RepositoryCardState` | Widget state | [`desktop_plugins_page.dart:629`](../../lib/src/desktop/desktop_plugins_page.dart#L629) | extends State<_RepositoryCard> | Windows | its own file |  |
+| `_RepositoryCardState` | Widget state | [`plugins_screen.dart:540`](../../lib/src/screens/plugins_screen.dart#L540) | extends State<_RepositoryCard> | Shared | its own file |  |
 | `_RepositoryError` | Widget | [`plugins_screen.dart:844`](../../lib/src/screens/plugins_screen.dart#L844) | extends StatelessWidget | Shared | its own file | A repository that did not load (`onRetry` and `onRemove`), provider code waiting for approval (`onApprove`) or a provider lookup error (`onDismiss`). |
 | `_ResumeOverlay` | Widget | [`desktop_widgets.dart:507`](../../lib/src/desktop/desktop_widgets.dart#L507) | extends StatelessWidget | Windows | its own file | The name, where you are and a play glyph, drawn on a landscape card's backdrop. |
 | `_ResumeSection` | Widget | [`desktop_shell.dart:773`](../../lib/src/desktop/desktop_shell.dart#L773) | extends StatelessWidget | Windows | its own file | Continue watching in the rail: a heading, then the most recent titles, scrolling within the room between browsing and Plugins. |
@@ -702,7 +702,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `_TimeLabelState` | Widget state | [`player_controls.dart:696`](../../lib/src/widgets/player/player_controls.dart#L696) | extends State<_TimeLabel> | Shared | its own file |  |
 | `_TitleFallback` | Widget | [`tv_poster_card.dart:118`](../../lib/src/widgets/tv/tv_poster_card.dart#L118) | extends StatelessWidget | Android TV | its own file |  |
 | `TmdbAttribution` | Class | [`tmdb_attribution.dart:9`](../../lib/src/widgets/settings/tmdb_attribution.dart#L9) |  | Shared | 1 lib file, 1 test file | TMDB attribution wording and assets, per https://developer.themoviedb.org/docs/faq and https://www.themoviedb.org/about/logos-attribution. |
-| `_TmdbAttributionBlock` | Widget | [`credits_screen.dart:219`](../../lib/src/screens/credits_screen.dart#L219) | extends StatelessWidget | Shared | its own file | TMDB's logo, required notice and a description of what TMDB supplies. |
+| `_TmdbAttributionBlock` | Widget | [`credits_screen.dart:288`](../../lib/src/screens/credits_screen.dart#L288) | extends StatelessWidget | Shared | its own file |  |
 | `TmdbAttributionFooter` | Widget | [`tmdb_attribution.dart:49`](../../lib/src/widgets/settings/tmdb_attribution.dart#L49) | extends StatelessWidget | Shared | 6 lib files, 1 test file | The TMDB notice at the end of every settings page. |
 | `TmdbCachedResponse` | Service type | [`tmdb_response_cache.dart:87`](../../lib/src/services/tmdb_response_cache.dart#L87) |  | Shared | 1 lib file |  |
 | `TmdbCacheEntry` | Service type | [`tmdb_response_cache.dart:69`](../../lib/src/services/tmdb_response_cache.dart#L69) |  | Shared | its own file only |  |
@@ -728,6 +728,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `TorrentSupport` | Service type | [`torrent_source_preparer.dart:24`](../../lib/src/services/torrent_source_preparer.dart#L24) |  | Shared | 4 lib files, 2 test files | Whether torrent playback can work in this app process. |
 | `_TrailingProgress` | Widget | [`tv_browse.dart:604`](../../lib/src/screens/tv/tv_browse.dart#L604) | extends StatelessWidget | Android TV | its own file |  |
 | `_TrailingRetry` | Widget | [`tv_browse.dart:622`](../../lib/src/screens/tv/tv_browse.dart#L622) | extends StatelessWidget | Android TV | its own file |  |
+| `_TraktAttributionBlock` | Widget | [`credits_screen.dart:232`](../../lib/src/screens/credits_screen.dart#L232) | extends StatelessWidget | Shared | its own file | TMDB's logo, required notice and a description of what TMDB supplies. |
 | `_TraktBadge` | Widget | [`profile_screen.dart:354`](../../lib/src/screens/profile_screen.dart#L354) | extends StatelessWidget | Shared | its own file | The account behind the profile: signed in with Trakt. |
 | `TroubleshootingArticle` | Class | [`help_content.dart:43`](../../lib/src/support/help_content.dart#L43) |  | Shared | 1 lib file | A problem, why it happens, and what to try, ending in a report. |
 | `TroubleshootingArticleScreen` | Widget | [`help_support_screen.dart:372`](../../lib/src/screens/help_support_screen.dart#L372) | extends StatelessWidget | Shared | its own file only |  |

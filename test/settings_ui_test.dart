@@ -169,6 +169,13 @@ void main() {
     expect(_logo, findsOneWidget);
     expect(find.text('The Movie Database (TMDB)'), findsOneWidget);
     expect(find.text(_disclaimer), findsOneWidget);
+    await _scrollTo(tester, find.text('Powered by Trakt'));
+    expect(find.bySemanticsLabel('Trakt logo'), findsOneWidget);
+    expect(
+      find.textContaining('not sponsored by, endorsed by or affiliated with'),
+      findsOneWidget,
+    );
+    await _scrollTo(tester, find.text('trakt.tv'));
     await _scrollTo(tester, find.text('REELISH INFORMATION'));
     await _scrollTo(tester, find.text('1.7.0 (build 1007000)'));
     await _scrollTo(tester, find.text('Reporting and support'));

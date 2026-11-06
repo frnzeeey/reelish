@@ -104,6 +104,7 @@ flutter:
     - assets/icons/word_logo.png
     - assets/data/plugins.json
     - assets/images/tmdb/tmdb_logo_alt_short.png
+    - assets/images/trakt/trakt_logo_dark.png
     - assets/images/app_icons/
     - assets/avatars/avatar_1.png
     - assets/avatars/avatar_2.png
