@@ -81,7 +81,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/screens/sign_in_screen.dart`](#libsrcscreenssign_in_screendart) | Shared | 805 | Trakt sign-in, shown before Home whenever no session is stored. |
 | [`lib/src/screens/splash_screen.dart`](#libsrcscreenssplash_screendart) | Shared | 383 | The launch splash and `SplashGate`, which runs startup work before the first screen. |
 | [`lib/src/screens/subtitle_addons_screen.dart`](#libsrcscreenssubtitle_addons_screendart) | Shared | 236 | Stremio subtitle addons the player searches while you watch. |
-| [`lib/src/screens/supporters_screen.dart`](#libsrcscreenssupporters_screendart) | Shared | 660 | Reelish Supporters: a place to thank the people who fund Reelish, and to support it. |
+| [`lib/src/screens/supporters_screen.dart`](#libsrcscreenssupporters_screendart) | Shared | 715 | Reelish Supporters: a place to thank the people who fund Reelish, and to support it. |
 | [`lib/src/screens/tv/tv_browse.dart`](#libsrcscreenstvtv_browsedart) | Android TV | 864 | TV browsing building blocks: the featured-title frame, focusable poster rows and grids, and their messages. |
 | [`lib/src/screens/tv/tv_details_screen.dart`](#libsrcscreenstvtv_details_screendart) | Android TV | 639 | A movie or series on TV: the backdrop fills the screen behind the title, details and actions, with Play focused; a series lists its seasons and episodes below. |
 | [`lib/src/screens/tv/tv_home_shell.dart`](#libsrcscreenstvtv_home_shelldart) | Android TV | 466 | The TV interface's frame: a navigation rail on the left and the selected page beside it. |
@@ -1010,7 +1010,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Imported by:** `main.dart`, `src/account/account_controller.dart`, `src/notifications/episode_alerts.dart`, `src/platform/app_icon.dart`, `src/platform/desktop_gamepad.dart`, `src/platform/desktop_window.dart`, `src/screens/account_settings_screen.dart`, `src/screens/first_run_consent_screen.dart`, `src/screens/home_screen.dart`, `src/screens/legal_information_screen.dart`, `src/screens/plugin_details_screen.dart`, `src/screens/plugin_library_screen.dart`, `src/screens/profile_screen.dart`, `src/screens/sign_in_screen.dart`, `src/screens/supporters_screen.dart`, `src/screens/watch_party/create_party_screen.dart`, `src/screens/watch_party/join_party_screen.dart`, `src/screens/watch_party/waiting_room_screen.dart`, `src/support/support_service.dart`, `src/widgets/app_update_flow.dart`, `src/widgets/player/custom_video_player.dart`, `src/widgets/player/episode_panel.dart`, `src/widgets/player/paused_overlay.dart`, `src/widgets/player/player_controls.dart`, `src/widgets/player/player_progress_bar.dart`, `src/widgets/player/player_sheet.dart`, `src/widgets/plugin_library/plugin_filter_bar.dart`, `src/widgets/provider_installer_modal.dart`, `src/widgets/tv/tv_focus.dart`
 
-**Tests importing it:** `integration_test/windows_player_ui_test.dart`, `integration_test/windows_torrent_test.dart`, `test/account_test.dart`, `test/github_update_check_test.dart`, `test/help_support_test.dart`, `test/paused_overlay_test.dart`, `test/plugin_library_test.dart`, `test/profile_test.dart`, `test/tv_home_test.dart`, `test/tv_support_test.dart`, `test/ux_journeys_test.dart`, `test/watch_party_test.dart`
+**Tests importing it:** `integration_test/windows_player_ui_test.dart`, `integration_test/windows_torrent_test.dart`, `test/account_test.dart`, `test/github_update_check_test.dart`, `test/help_support_test.dart`, `test/paused_overlay_test.dart`, `test/plugin_library_test.dart`, `test/profile_test.dart`, `test/supporters_test.dart`, `test/tv_home_test.dart`, `test/tv_support_test.dart`, `test/ux_journeys_test.dart`, `test/watch_party_test.dart`
 
 ## lib/src/platform/windows_installation.dart
 
@@ -1356,11 +1356,11 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/screens/supporters_screen.dart
 
-**Source:** [`lib/src/screens/supporters_screen.dart`](../../lib/src/screens/supporters_screen.dart) · **Platform:** Shared · **Lines:** 660 · **Branches on:** isTv
+**Source:** [`lib/src/screens/supporters_screen.dart`](../../lib/src/screens/supporters_screen.dart) · **Platform:** Shared · **Lines:** 715 · **Branches on:** isTv
 
 **Purpose:** Reelish Supporters: a place to thank the people who fund Reelish, and to support it.
 
-**Declares:** `_Benefit` (Widget), `_EmailDetail` (Widget), `_Hero` (Widget), `_HowItWorks` (Widget), `_PublicNameDialog` (Widget), `_PublicNameDialogState` (Widget state), `_ReviewEmailDialog` (Widget), `_ReviewEmailDialogState` (Widget state), `_SupportersList` (Widget), `SupportersScreen` (Widget), `_SupportersScreenState` (Widget state)
+**Declares:** `_Benefit` (Widget), `_EmailDetail` (Widget), `_Hero` (Widget), `_HowItWorks` (Widget), `_PublicNameDialog` (Widget), `_PublicNameDialogState` (Widget state), `_ReviewEmailDialog` (Widget), `_ReviewEmailDialogState` (Widget state), `_SupportersList` (Widget), `SupportersScreen` (Widget), `_SupportersScreenState` (Widget state), `_SupportFromPhone` (Widget)
 
 **Top-level functions:** `supporterSinceLabel`
 

@@ -815,7 +815,7 @@ Top-level functions and methods in `lib/`, A–Z by name, then by declaring type
 | `summary` | `PartySyncStats` | [`playback_sync.dart:138`](../../lib/src/watch_party/playback_sync.dart#L138) |  | `String summary()` |  |
 | `summary` | `PlaybackMetrics` | [`playback_metrics.dart:159`](../../lib/src/services/playback_metrics.dart#L159) |  | `String summary()` | The session so far, as one line. |
 | `_support` | `_SupportersScreenState` | [`supporters_screen.dart:72`](../../lib/src/screens/supporters_screen.dart#L72) | yes | `Future<void> _support(SupporterStatus? status) async` | Copies the code first, since Buy Me a Coffee cannot be told it. |
-| `supporterSinceLabel` | top level | [`supporters_screen.dart:325`](../../lib/src/screens/supporters_screen.dart#L325) |  | `String supporterSinceLabel(DateTime since)` | Month and year, as a reader says it. |
+| `supporterSinceLabel` | top level | [`supporters_screen.dart:378`](../../lib/src/screens/supporters_screen.dart#L378) |  | `String supporterSinceLabel(DateTime since)` | Month and year, as a reader says it. |
 | `supporterStatus` | `AccountApi` | [`account_api.dart:293`](../../lib/src/account/account_api.dart#L293) | yes | `Future<Map<String, dynamic>> supporterStatus(String accessToken)` |  |
 | `SupportReport` | `_ReportScreenState` | [`help_support_screen.dart:505`](../../lib/src/screens/help_support_screen.dart#L505) | yes | `Future<SupportReport> _report() async` |  |
 | `supports` | `SubtitleAddon` | [`subtitle_addon.dart:53`](../../lib/src/models/subtitle_addon.dart#L53) |  | `bool supports(String type, String videoId)` | Whether this addon serves subtitles for `type` and `videoId`. |

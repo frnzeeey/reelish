@@ -10,6 +10,7 @@ import 'package:onfeed/src/account/account_api.dart';
 import 'package:onfeed/src/account/account_controller.dart';
 import 'package:onfeed/src/account/session_store.dart';
 import 'package:onfeed/src/account/supporter_controller.dart';
+import 'package:onfeed/src/platform/device_capabilities.dart';
 import 'package:onfeed/src/screens/supporters_screen.dart';
 import 'package:onfeed/src/support/support_service.dart';
 import 'package:onfeed/src/theme/glass_theme.dart';
@@ -202,6 +203,57 @@ void main() {
       expect(find.byType(SupporterBadge), findsNothing);
       expect(find.textContaining('Review requested'), findsOneWidget);
       expect(find.text('I forgot to add my code'), findsNothing);
+    });
+
+    testWidgets('the main button matches the app\'s other primary buttons', (
+      tester,
+    ) async {
+      await _show(tester, await _controller(_api(_body())));
+      final label = tester.widget<Text>(find.text('Support Reelish'));
+      final style = DefaultTextStyle.of(
+        tester.element(find.byWidget(label)),
+      ).style;
+      expect(style.fontWeight, FontWeight.w700);
+    });
+
+    group('on TV', () {
+      setUp(() {
+        DeviceCapabilities.debugOverride = const DeviceCapabilities(
+          isTelevision: true,
+          hasTouchscreen: false,
+        );
+      });
+      tearDown(
+        () => DeviceCapabilities.debugOverride = const DeviceCapabilities(),
+      );
+
+      testWidgets('says what to do elsewhere, with no button or copying', (
+        tester,
+      ) async {
+        await _show(tester, await _controller(_api(_body())));
+        expect(find.text('Support Reelish'), findsNothing);
+        expect(find.text(SupportConfig.donationPageLabel), findsOneWidget);
+        expect(find.text(_code), findsOneWidget);
+        expect(find.textContaining('Select to copy'), findsNothing);
+      });
+
+      testWidgets('a supporter is not shown a code they no longer need', (
+        tester,
+      ) async {
+        await _show(tester, await _controller(_api(_body(status: 'verified'))));
+        expect(find.text('Support again'), findsNothing);
+        expect(find.text(_code), findsNothing);
+        expect(find.text(SupportConfig.donationPageLabel), findsOneWidget);
+      });
+
+      testWidgets('the remote can reach something on the page', (tester) async {
+        await _show(tester, await _controller(_api(_body())));
+        expect(
+          find.text('I donated: check again'),
+          findsOneWidget,
+          reason: 'with no button, this is the first control',
+        );
+      });
     });
 
     group('the review email', () {

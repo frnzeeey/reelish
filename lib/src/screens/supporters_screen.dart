@@ -299,26 +299,79 @@ class _Hero extends StatelessWidget {
               style: TextStyle(color: GlassTheme.muted, height: 1.45),
             ),
           const SizedBox(height: AppSpace.md),
-          SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: FilledButton.icon(
-              onPressed: onSupport,
-              icon: const Icon(ReelishIcons.coffee),
-              label: Text(verified ? 'Support again' : 'Support Reelish'),
+          if (DeviceCapabilities.isTv)
+            _SupportFromPhone(code: verified ? null : status?.code)
+          else ...[
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: FilledButton.icon(
+                onPressed: onSupport,
+                icon: const Icon(ReelishIcons.coffee),
+                label: Text(verified ? 'Support again' : 'Support Reelish'),
+                style: FilledButton.styleFrom(
+                  textStyle: const TextStyle(
+                    fontFamily: GlassTheme.fontFamily,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
             ),
-          ),
-          const SizedBox(height: AppSpace.xs),
-          Text(
-            DeviceCapabilities.isTv
-                ? 'On your phone, open ${SupportConfig.donationPageLabel}'
-                : 'Opens ${SupportConfig.donationPageLabel} in your browser.',
-            style: const TextStyle(color: GlassTheme.muted, fontSize: 12),
-          ),
+            const SizedBox(height: AppSpace.xs),
+            Text(
+              'Opens ${SupportConfig.donationPageLabel} in your browser.',
+              style: const TextStyle(color: GlassTheme.muted, fontSize: 12),
+            ),
+          ],
         ],
       ),
     );
   }
+}
+
+/// Most TVs have no browser, so a TV gives what to do on a phone or computer
+/// instead of a button that cannot work.
+class _SupportFromPhone extends StatelessWidget {
+  const _SupportFromPhone({required this.code});
+
+  /// Null once the code is not needed, or before it has loaded.
+  final String? code;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Text(
+        'On your phone or computer, open',
+        style: TextStyle(color: GlassTheme.muted, fontSize: AppTextSize.body),
+      ),
+      const SizedBox(height: AppSpace.xxs),
+      Text(
+        SupportConfig.donationPageLabel,
+        style: const TextStyle(
+          fontSize: AppTextSize.titleLarge,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      if (code != null) ...[
+        const SizedBox(height: AppSpace.sm),
+        const Text(
+          'and add this code to your message',
+          style: TextStyle(color: GlassTheme.muted, fontSize: AppTextSize.body),
+        ),
+        const SizedBox(height: AppSpace.xxs),
+        Text(
+          code!,
+          style: const TextStyle(
+            color: Color(0xFFFFD98A),
+            fontSize: AppTextSize.headline,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 1.5,
+          ),
+        ),
+      ],
+    ],
+  );
 }
 
 /// Month and year, as a reader says it.
@@ -367,12 +420,14 @@ class _HowItWorks extends StatelessWidget {
               'you donate, and your badge arrives on its own, on all your '
               'devices.',
         ),
-        SettingsTile(
-          icon: ReelishIcons.copy,
-          title: status.code,
-          description: 'Your supporter code. Select to copy.',
-          onTap: onCopy,
-        ),
+        // On TV the code is above, and there is nowhere to paste it.
+        if (!DeviceCapabilities.isTv)
+          SettingsTile(
+            icon: ReelishIcons.copy,
+            title: status.code,
+            description: 'Your supporter code. Select to copy.',
+            onTap: onCopy,
+          ),
         SettingsTile(
           icon: ReelishIcons.refresh,
           title: 'I donated: check again',

@@ -17,7 +17,7 @@ if (target !== 'staging' && target !== 'production') {
   console.error('--env must be staging or production');
   process.exit(1);
 }
-const database = target === 'production' ? 'reelish' : 'reelish-staging';
+const database = target === 'production' ? 'reelish-production' : 'reelish-staging';
 
 function run(sql) {
   execFileSync(
