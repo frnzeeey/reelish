@@ -97,8 +97,8 @@ There is no admin endpoint: a grant needs the owner's Cloudflare login. Without
 
 A leaked code is harmless: its only use is letting someone else pay to give you
 a badge. Messages can be public on Buy Me a Coffee, so donors can mark theirs
-private, which the webhook is expected to still deliver; confirm this with a
-real donation.
+private: the webhook still delivers a private message, confirmed with a real
+donation in November 2026.
 
 ## Public list
 

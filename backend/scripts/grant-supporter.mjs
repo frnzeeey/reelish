@@ -20,10 +20,16 @@ if (target !== 'staging' && target !== 'production') {
 const database = target === 'production' ? 'reelish-production' : 'reelish-staging';
 
 function run(sql) {
+  const windows = process.platform === 'win32';
   execFileSync(
     'npx',
-    ['wrangler', 'd1', 'execute', database, '--remote', '--env', target, '--command', sql],
-    { stdio: 'inherit', shell: process.platform === 'win32' },
+    [
+      'wrangler', 'd1', 'execute', database, '--remote', '--env', target, '--command',
+      // npx needs a shell on Windows, which would split the SQL at its spaces.
+      // The SQL holds no double quotes: everything in it is checked or generated.
+      windows ? `"${sql}"` : sql,
+    ],
+    { stdio: 'inherit', shell: windows },
   );
 }
 
