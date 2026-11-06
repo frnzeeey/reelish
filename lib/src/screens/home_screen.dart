@@ -33,6 +33,7 @@ import '../services/provider_plugin_service.dart';
 import '../services/playback_settings_controller.dart';
 import '../app/app_services.dart';
 import '../services/accent_settings_controller.dart';
+import '../theme/design_tokens.dart';
 import '../theme/glass_theme.dart';
 import '../viewmodels/home_view_model.dart';
 import '../widgets/provider_installer_modal.dart';
@@ -139,6 +140,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _searchVisible = false;
   String _category = 'For you';
   int _tab = 0;
+
+  /// Dock positions; [SoftGlassDock] lists its tabs in this order.
+  static const _libraryTab = 1;
+  static const _pluginsTab = 2;
   bool _openingDetails = false;
   int _spotlightPage = 0;
   int _libraryRefreshToken = 0;
@@ -488,6 +493,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   tmdb: _tmdb,
                   isFavorite: _favoriteKeys.contains(_favoriteKey(item)),
                   onToggleFavorite: () => _toggleFavorite(item),
+                  // History entries carry their position; catalog ones not.
+                  onRemoveFromHistory: item.resumeMs > 0 || item.durationMs > 0
+                      ? () => _removeFromHistory(item)
+                      : null,
                   onPlay: (detailsContext) =>
                       _openItem(item, presentationContext: detailsContext),
                   onPlayEpisode: (detailsContext, season, episode) => _openItem(
@@ -524,6 +533,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         _revalidateStaleFeeds();
       }
     }
+  }
+
+  /// The TV details page's Remove from history. The Library and Home both
+  /// re-read what is saved.
+  Future<void> _removeFromHistory(MediaItem item) async {
+    await _storage.removeHistory(item);
+    if (!mounted) return;
+    setState(() => _libraryRefreshToken++);
+    await _loadHistory();
   }
 
   // History and My list live in the shared HomeViewModel.
@@ -862,27 +880,41 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       }
       if (source == null) {
         discovery?.cancel();
+        final message =
+            (discovery == null
+                ? _providerPlugins.lastLookupMessage
+                : discovery.message) ??
+            'No source was returned for this title.';
+        void openPlugins() {
+          setState(() {
+            _tab = _pluginsTab;
+            _tvDestination = TvDestination.plugins;
+          });
+          if (presentationContext?.mounted == true) {
+            Navigator.of(presentationContext!).pop();
+          }
+        }
+
+        final noPlugins = _providerPlugins.repositories.isEmpty;
+        // A first Play with nothing installed explains itself, and a remote
+        // cannot count on reaching a passing notice's action.
+        if (noPlugins || DeviceCapabilities.isTv) {
+          await _showNoSourceDialog(
+            presentationContext ?? context,
+            title: noPlugins ? 'Add a source to watch' : 'No source found',
+            message: noPlugins
+                ? 'Reelish plays titles through plugins you choose. Add one '
+                      'in Plugins, then press Play again.'
+                : message,
+            onOpenPlugins: openPlugins,
+          );
+          return;
+        }
         ScaffoldMessenger.of(presentationContext ?? context).showSnackBar(
           SnackBar(
             duration: const Duration(seconds: 10),
-            content: Text(
-              (discovery == null
-                      ? _providerPlugins.lastLookupMessage
-                      : discovery.message) ??
-                  'No source was returned for this title.',
-            ),
-            action: SnackBarAction(
-              label: 'PLUGINS',
-              onPressed: () {
-                setState(() {
-                  _tab = 1;
-                  _tvDestination = TvDestination.plugins;
-                });
-                if (presentationContext?.mounted == true) {
-                  Navigator.of(presentationContext!).pop();
-                }
-              },
-            ),
+            content: Text(message),
+            action: SnackBarAction(label: 'Plugins', onPressed: openPlugins),
           ),
         );
         return;
@@ -980,6 +1012,45 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
+  /// Why nothing can play, with the way to Plugins beside it. Not now comes
+  /// first, so a remote's Select never leaves the page by accident.
+  Future<void> _showNoSourceDialog(
+    BuildContext context, {
+    required String title,
+    required String message,
+    required VoidCallback onOpenPlugins,
+  }) async {
+    final open = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            autofocus: true,
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Not now'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Open Plugins'),
+          ),
+        ],
+      ),
+    );
+    if (open == true && mounted) onOpenPlugins();
+  }
+
+  void _openJoinParty() => unawaited(
+    Navigator.push(
+      context,
+      AppPageRoute<void>(
+        context: context,
+        builder: (_) => const JoinPartyScreen(),
+      ),
+    ),
+  );
+
   Future<void> _openPlaybackSettings(
     List<({String id, String name, String repository})> plugins,
   ) async {
@@ -1040,7 +1111,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (_category == 'Series') {
       return items.where(MediaCatalogFilter.isSeries).toList();
     }
-    if (_category == 'Continue watching') return _continueWatching;
     return items;
   }
 
@@ -1170,25 +1240,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       children: [
         Padding(
           padding: const EdgeInsets.only(right: 18),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 19,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -.35,
-                  ),
-                ),
-              ),
-              const Icon(
-                Symbols.chevron_right_rounded,
-                size: 14,
-                color: GlassTheme.muted,
-              ),
-            ],
-          ),
+          child: _RowHeading(title),
         ),
         const SizedBox(height: 13),
         SizedBox(
@@ -1256,6 +1308,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
+          // Home's dock is on screen unless Details has opened over it,
+          // whose Play bar a notice already clears on its own.
+          behavior: SnackBarBehavior.floating,
+          margin: ModalRoute.of(context)?.isCurrent == true
+              ? snackBarMarginOverDock(context)
+              : null,
           content: Text(
             isFavorite
                 ? '${item.name} saved to your list'
@@ -1267,22 +1325,71 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     return isFavorite;
   }
 
-  /// Search results fill the screen in columns instead of one sideways row.
-  List<Widget> _resultGrid(String title, List<MediaItem> items) {
+  /// A whole catalog as a grid that pages as it nears its end. Before its
+  /// first titles arrive it shows the row placeholder.
+  Widget _pagedGrid(
+    String title,
+    PagedFeedController feed, {
+    required bool showPlaceholder,
+  }) => ListenableBuilder(
+    listenable: feed,
+    builder: (context, _) {
+      final state = feed.state;
+      if (state.items.isEmpty) {
+        return SliverToBoxAdapter(
+          child: showPlaceholder
+              ? _deferredSectionPlaceholder(title, state.status, feed.retry)
+              : const SizedBox.shrink(),
+        );
+      }
+      return SliverMainAxisGroup(
+        slivers: [
+          ..._resultGrid(
+            title,
+            state.items,
+            onNearEnd: state.hasMore ? feed.loadMore : null,
+          ),
+          if (state.isLoadingMore)
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.only(bottom: 22),
+                child: Center(
+                  child: SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+              ),
+            )
+          else if (state.error != null)
+            SliverToBoxAdapter(
+              child: Center(
+                child: IconButton(
+                  tooltip: 'Retry loading $title',
+                  onPressed: () => unawaited(feed.retry()),
+                  icon: const Icon(Symbols.refresh_rounded),
+                ),
+              ),
+            ),
+        ],
+      );
+    },
+  );
+
+  /// Titles in columns that fill the screen, rather than one sideways row.
+  /// [onNearEnd] asks for more as the last few are built.
+  List<Widget> _resultGrid(
+    String title,
+    List<MediaItem> items, {
+    VoidCallback? onNearEnd,
+  }) {
     const gutter = 18.0;
     const spacing = 13.0;
     return [
       SliverToBoxAdapter(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(gutter, 8, gutter, 13),
-          child: Text(
-            title,
-            style: const TextStyle(
-              fontSize: 19,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -.35,
-            ),
-          ),
+          child: _RowHeading(title),
         ),
       ),
       SliverPadding(
@@ -1307,10 +1414,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   // A 2:3 poster and the caption, at the text size in use.
                   mainAxisExtent: MediaCard.heightFor(context, width),
                 ),
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) => _mediaCard(items[index], width: width),
-                  childCount: items.length,
-                ),
+                delegate: SliverChildBuilderDelegate((context, index) {
+                  if (onNearEnd != null && index >= items.length - 6) {
+                    // Built during layout; a row must not rebuild then.
+                    SchedulerBinding.instance.addPostFrameCallback((_) {
+                      if (mounted) onNearEnd();
+                    });
+                  }
+                  return _mediaCard(items[index], width: width);
+                }, childCount: items.length),
               );
             },
           ),
@@ -1469,20 +1581,29 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 children: [
                   // Over the Spotlight the icon stands alone, leaving the
                   // artwork room; it is still read out as Reelish.
-                  if (spotlight)
+                  if (spotlight) ...[
                     Semantics(
                       label: 'Reelish',
                       image: true,
                       child: _brandMark(),
-                    )
-                  else ...[
+                    ),
+                    const Spacer(),
+                  ] else ...[
                     _brandMark(),
                     const SizedBox(width: 10),
                     // Letters about a third of the icon's height, so neither
-                    // outweighs the other.
-                    const ReelishWordmark(height: 16, lifted: true),
+                    // outweighs the other. On a narrow phone the wordmark
+                    // shrinks, so the buttons beside it keep their full size.
+                    const Expanded(
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: ReelishWordmark(height: 16, lifted: true),
+                        ),
+                      ),
+                    ),
                   ],
-                  const Spacer(),
                   IconButton(
                     tooltip: 'Join a watch party',
                     onPressed: () => Navigator.push(
@@ -1562,7 +1683,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   'Movies',
                   'Series',
                   'Trending',
-                  'Continue watching',
                 ])
                   CategoryChip(
                     label: category,
@@ -1648,11 +1768,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               duration: sectionCollapseDuration,
               curve: Curves.easeInOutCubic,
               alignment: Alignment.topCenter,
-              child:
-                  !searchActive &&
-                      continueWatching.isNotEmpty &&
-                      _category != 'Continue watching'
-                  ? _section('Pick up where you left off', continueWatching)
+              child: !searchActive && continueWatching.isNotEmpty
+                  ? _section('Continue watching', continueWatching)
                   : const SizedBox.shrink(),
             ),
           ),
@@ -1682,12 +1799,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Make it yours',
+                              'Add a source to start watching',
                               style: TextStyle(fontWeight: FontWeight.w800),
                             ),
                             SizedBox(height: 3),
                             Text(
-                              'Add a source to start watching.',
+                              'Titles play through plugins you choose.',
                               style: TextStyle(
                                 color: GlassTheme.muted,
                                 fontSize: 12,
@@ -1710,13 +1827,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 ),
               ),
             ),
-          if (feedLoading)
-            const SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.all(28),
-                child: Center(child: CircularProgressIndicator()),
-              ),
-            ),
+          if (feedLoading) SliverToBoxAdapter(child: _firstLoadSkeleton()),
           if (!feedLoading && feedError != null && feedHasItems)
             SliverToBoxAdapter(
               child: Padding(
@@ -1798,16 +1909,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 ),
               ),
             ),
-          if (_category == 'Continue watching' && continueWatching.isNotEmpty)
-            SliverToBoxAdapter(
-              child: _section('Continue watching', continueWatching),
-            ),
           if (_category == 'For you' && !isSearch)
             _deferredSectionGate(
               enabled: _catalogSettled,
               feed: _top10,
               child: _pagedRow(
-                'Recommendations: A Few Worth Your Time',
+                'Top 10 recommendations',
                 _top10,
                 showRanks: true,
                 reserveSpace: _catalogSettled,
@@ -1818,44 +1925,33 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               enabled: _catalogSettled,
               feed: _releases,
               child: _pagedRow(
-                'New releases: Just Dropped',
+                'New releases',
                 _releases,
                 reserveSpace: _catalogSettled,
               ),
             ),
-          if (_category == 'Trending' && !isSearch && _shown.isNotEmpty)
-            SliverToBoxAdapter(child: _section('Trending now', _shown)),
-          if ((_category == 'Movies' || _category == 'Trending') &&
-              isSearch &&
+          if ((_category == 'Movies' && isSearch || _category == 'Trending') &&
               _shown.isNotEmpty)
             ..._resultGrid(
               _category == 'Trending' ? 'Trending now' : 'Movies',
               _shown,
             ),
           if (_category == 'Movies' && !isSearch)
-            SliverToBoxAdapter(
-              child: _pagedRow(
-                'Movies: Movies Unbound',
-                _movies,
-                showPlaceholder: rowPlaceholders,
-              ),
-            ),
+            _pagedGrid('New movies', _movies, showPlaceholder: rowPlaceholders),
           if (_category == 'Series' && isSearch && _shown.isNotEmpty)
-            ..._resultGrid('Series to get into', _shown),
+            ..._resultGrid('Series', _shown),
           if (_category == 'Series' && !isSearch)
-            SliverToBoxAdapter(
-              child: _pagedRow(
-                'Series to get into',
-                _series,
-                showPlaceholder: rowPlaceholders,
-              ),
+            _pagedGrid(
+              'Series worth the queue',
+              _series,
+              showPlaceholder: rowPlaceholders,
             ),
           if (_category == 'For you' && isSearch && _shown.isNotEmpty)
             ..._resultGrid('Search results', _shown),
           if (_category == 'For you' && !isSearch)
             SliverToBoxAdapter(
               child: _pagedRow(
-                'Movies: Fresh on the Reel',
+                'New movies',
                 _movies,
                 showPlaceholder: rowPlaceholders,
               ),
@@ -1863,7 +1959,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           if (_category == 'For you' && !isSearch)
             SliverToBoxAdapter(
               child: _pagedRow(
-                'Series: Worth Losing Sleep Over',
+                'Series worth the queue',
                 _series,
                 showPlaceholder: rowPlaceholders,
               ),
@@ -1881,6 +1977,28 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             sliver: const SliverToBoxAdapter(child: TmdbAttributionFooter()),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Poster-shaped stand-ins at a row's real size while the first titles
+  /// load, so the page does not jump when they arrive.
+  Widget _firstLoadSkeleton() {
+    final width = MediaCard.rowWidthFor(context);
+    return Semantics(
+      label: 'Loading titles',
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 8, 0, 22),
+        child: SizedBox(
+          height: MediaCard.heightFor(context, width),
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: 6,
+            separatorBuilder: (_, _) => const SizedBox(width: 13),
+            itemBuilder: (_, _) => MediaCardSkeleton(width: width),
+          ),
+        ),
       ),
     );
   }
@@ -1953,14 +2071,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 19,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -.35,
-              ),
-            ),
+            _RowHeading(title),
             const SizedBox(height: 13),
             SizedBox(
               height: MediaCard.heightFor(
@@ -2020,65 +2131,77 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  Widget _featuredCarousel(List<MediaItem> items) => Stack(
-    children: [
-      Padding(
-        padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
-        child: Column(
-          children: [
-            SizedBox(
-              height: 483,
-              child: PageView.builder(
-                controller: _spotlightController,
-                itemCount: items.length > 1 ? null : items.length,
-                onPageChanged: _onSpotlightPageChanged,
-                itemBuilder: (context, page) => _featured(
-                  items[page % items.length],
-                  imageCacheHeight:
-                      (483 * MediaQuery.devicePixelRatioOf(context)).round(),
+  /// The Spotlight's height: its full size on a tall phone, and short enough
+  /// on a small or landscape screen to leave room for what is below it.
+  double _spotlightHeight(BuildContext context) =>
+      (MediaQuery.sizeOf(context).height * .6).clamp(300.0, 483.0);
+
+  Widget _featuredCarousel(List<MediaItem> items) {
+    final height = _spotlightHeight(context);
+    return Stack(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+          child: Column(
+            children: [
+              SizedBox(
+                height: height,
+                child: PageView.builder(
+                  controller: _spotlightController,
+                  itemCount: items.length > 1 ? null : items.length,
+                  onPageChanged: _onSpotlightPageChanged,
+                  itemBuilder: (context, page) => _featured(
+                    items[page % items.length],
+                    imageCacheHeight:
+                        (height * MediaQuery.devicePixelRatioOf(context))
+                            .round(),
+                    // At its shortest the title and actions take the space.
+                    showDescription: height >= 340,
+                  ),
                 ),
               ),
-            ),
-            if (items.length > 1) ...[
-              const SizedBox(height: 12),
-              ValueListenableBuilder<int>(
-                valueListenable: _spotlightPageValue,
-                builder: (context, page, _) => Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    for (var index = 0; index < items.length; index++)
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 180),
-                        curve: Curves.easeOutCubic,
-                        width: index == page % items.length ? 16 : 5,
-                        height: 5,
-                        margin: const EdgeInsets.symmetric(horizontal: 3),
-                        decoration: BoxDecoration(
-                          color: index == page % items.length
-                              ? GlassTheme.primary
-                              : Colors.white.withValues(alpha: .35),
-                          borderRadius: BorderRadius.circular(10),
+              if (items.length > 1) ...[
+                const SizedBox(height: 12),
+                ValueListenableBuilder<int>(
+                  valueListenable: _spotlightPageValue,
+                  builder: (context, page, _) => Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      for (var index = 0; index < items.length; index++)
+                        AnimatedContainer(
+                          duration: AppMotion.resolve(context, AppMotion.hover),
+                          curve: AppMotion.enter,
+                          width: index == page % items.length ? 16 : 5,
+                          height: 5,
+                          margin: const EdgeInsets.symmetric(horizontal: 3),
+                          decoration: BoxDecoration(
+                            color: index == page % items.length
+                                ? GlassTheme.primary
+                                : Colors.white.withValues(alpha: .35),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
+              ],
             ],
-          ],
+          ),
         ),
-      ),
-      Positioned(
-        top: 0,
-        left: 0,
-        right: 0,
-        child: _brandHeader(spotlight: true),
-      ),
-    ],
-  );
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          child: _brandHeader(spotlight: true),
+        ),
+      ],
+    );
+  }
 
   Widget _featured(
     MediaItem item, {
     required int imageCacheHeight,
+    bool showDescription = true,
   }) => ClipRRect(
     borderRadius: BorderRadius.circular(24),
     child: Stack(
@@ -2122,17 +2245,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   horizontal: 10,
                   vertical: 6,
                 ),
+                // Dark glass with the brighter accent, as on the details page,
+                // so the label keeps its contrast on any artwork.
                 decoration: BoxDecoration(
-                  color: GlassTheme.primary.withValues(alpha: .15),
+                  color: Colors.black.withValues(alpha: .38),
                   borderRadius: BorderRadius.circular(30),
                   border: Border.all(
-                    color: GlassTheme.primary.withValues(alpha: .35),
+                    color: GlassTheme.primary.withValues(alpha: .45),
                   ),
                 ),
                 child: Text(
                   'SPOTLIGHT',
                   style: TextStyle(
-                    color: GlassTheme.primary,
+                    color: GlassTheme.coralBright,
                     fontSize: 10,
                     letterSpacing: 1.5,
                     fontWeight: FontWeight.w800,
@@ -2184,7 +2309,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              if (item.description.isNotEmpty) ...[
+              if (showDescription && item.description.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Text(
                   item.description,
@@ -2251,7 +2376,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                             saved ? Symbols.check_rounded : Symbols.add_rounded,
                             size: 19,
                           ),
-                          label: Text(saved ? 'In My list' : 'My list'),
+                          label: Text(saved ? 'On My list' : 'My list'),
                         );
                       },
                     ),
@@ -2281,16 +2406,35 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     return error == null ? null : _catalogFailureMessage(error);
   }
 
-  /// Phone: opens a dock tab, refreshing what it shows.
+  /// Back to the Spotlight and chips, in one step when motion is reduced.
+  void _scrollHomeToTop() {
+    if (!_homeScrollController.hasClients) return;
+    final duration = AppMotion.resolve(context, AppMotion.emphasized);
+    if (duration == Duration.zero) {
+      _homeScrollController.jumpTo(0);
+    } else {
+      unawaited(
+        _homeScrollController.animateTo(
+          0,
+          duration: duration,
+          curve: AppMotion.move,
+        ),
+      );
+    }
+  }
+
+  /// Phone: opens a dock tab, refreshing what it shows. Home, tapped while
+  /// on Home, returns to its top.
   void _selectTab(int value) {
+    if (value == 0 && _tab == 0) _scrollHomeToTop();
     setState(() {
       _tab = value;
-      if (value == 2) _libraryRefreshToken++;
+      if (value == _libraryTab) _libraryRefreshToken++;
     });
     AnalyticsService.instance.logScreen(
-      const ['home', 'plugins', 'library', 'settings'][value.clamp(0, 3)],
+      const ['home', 'library', 'plugins', 'settings'][value.clamp(0, 3)],
     );
-    if (value == 2) {
+    if (value == _libraryTab) {
       unawaited(_loadHistory());
     }
     if (value == 0) {
@@ -2299,8 +2443,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  /// Phone: the Profile page, over Home; its shortcuts close it and open
-  /// the tab they name.
+  /// Phone: the Profile page, over Home; its counts close it and open the
+  /// Library tab.
   void _openProfile(BuildContext from) => unawaited(
     Navigator.push(
       from,
@@ -2313,11 +2457,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             onBack: () => Navigator.of(pageContext).pop(),
             onOpenLibrary: () {
               Navigator.of(pageContext).pop();
-              _selectTab(2);
-            },
-            onOpenSettings: () {
-              Navigator.of(pageContext).pop();
-              _selectTab(3);
+              _selectTab(_libraryTab);
             },
           ),
         ),
@@ -2374,6 +2514,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               onRetry: () => unawaited(_reloadActiveFeed()),
               onAddSource: () =>
                   ProviderInstallerModal.show(context, _providerPlugins),
+              onJoinParty: _openJoinParty,
             ),
             TvDestination.movies => TvCatalogPage(
               title: 'Movies',
@@ -2417,8 +2558,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 refreshToken: _libraryRefreshToken,
                 onOpenLibrary: () =>
                     _onTvDestinationChanged(TvDestination.library),
-                onOpenSettings: () =>
-                    _onTvDestinationChanged(TvDestination.settings),
               ),
             ),
           },
@@ -2495,6 +2634,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               onRetry: () => unawaited(_reloadActiveFeed()),
               onAddSource: () =>
                   ProviderInstallerModal.show(context, _providerPlugins),
+              onJoinParty: _openJoinParty,
             ),
             TvDestination.movies => DesktopCatalogPage(
               title: 'Movies',
@@ -2545,8 +2685,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   refreshToken: _libraryRefreshToken,
                   onOpenLibrary: () =>
                       _onTvDestinationChanged(TvDestination.library),
-                  onOpenSettings: () =>
-                      _onTvDestinationChanged(TvDestination.settings),
                 ),
               ),
             ),
@@ -2587,9 +2725,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 6),
-            const Text(
+            Text(
               'This can take a moment while sources are checked.',
-              style: TextStyle(color: GlassTheme.muted, fontSize: 12),
+              style: TextStyle(
+                color: GlassTheme.muted,
+                fontSize: DeviceCapabilities.isTv
+                    ? AppTextSize.body
+                    : AppTextSize.label,
+              ),
             ),
           ],
         ),
@@ -2613,20 +2756,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final pages = [
       TabPageTransition(active: _tab == 0, child: _home()),
       TabPageTransition(
-        active: _tab == 1,
-        child: PluginsScreen(
-          pluginService: _providerPlugins,
-          pluginLibrary: _pluginLibrary,
-        ),
-      ),
-      TabPageTransition(
-        active: _tab == 2,
+        active: _tab == _libraryTab,
         child: LibraryScreen(
           storage: _storage,
           onPlay: _showDetails,
           refreshToken: _libraryRefreshToken,
+          onBrowse: () => _selectTab(0),
           onHistoryChanged: () => unawaited(_loadHistory()),
           onFavoritesChanged: () => unawaited(_loadFavorites()),
+        ),
+      ),
+      TabPageTransition(
+        active: _tab == _pluginsTab,
+        child: PluginsScreen(
+          pluginService: _providerPlugins,
+          pluginLibrary: _pluginLibrary,
         ),
       ),
       TabPageTransition(
@@ -2639,25 +2783,62 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ),
       ),
     ];
-    return Scaffold(
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          SafeArea(
-            bottom: false,
-            child: IndexedStack(index: _tab, children: pages),
-          ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: RepaintBoundary(
-              child: SoftGlassDock(selectedIndex: _tab, onSelected: _selectTab),
+    final searching = _searchVisible || _search.text.trim().isNotEmpty;
+    return PopScope(
+      // Back leaves another tab for Home, closes a search and returns from
+      // Movies, Series or Trending to For you before it leaves the app.
+      canPop: _tab == 0 && !searching && _category == 'For you',
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        if (_tab != 0) {
+          _selectTab(0);
+        } else if (searching) {
+          _closeSearch();
+        } else {
+          setState(() => _category = 'For you');
+          _scrollHomeToTop();
+        }
+      },
+      child: Scaffold(
+        body: Stack(
+          fit: StackFit.expand,
+          children: [
+            SafeArea(
+              bottom: false,
+              child: IndexedStack(index: _tab, children: pages),
             ),
-          ),
-          if (_resolvingStreams) _resolvingOverlay(),
-        ],
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: RepaintBoundary(
+                child: SoftGlassDock(
+                  selectedIndex: _tab,
+                  onSelected: _selectTab,
+                ),
+              ),
+            ),
+            if (_resolvingStreams) _resolvingOverlay(),
+          ],
+        ),
       ),
     );
   }
+}
+
+/// A Home row's title.
+class _RowHeading extends StatelessWidget {
+  const _RowHeading(this.title);
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) => Text(
+    title,
+    style: const TextStyle(
+      fontSize: 19,
+      fontWeight: FontWeight.w800,
+      letterSpacing: -.35,
+    ),
+  );
 }

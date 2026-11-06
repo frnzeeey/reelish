@@ -30,6 +30,7 @@ class DesktopHomePage extends StatefulWidget {
     required this.onToggleFavorite,
     required this.onRetry,
     required this.onAddSource,
+    this.onJoinParty,
   });
 
   final TvCatalog catalog;
@@ -38,6 +39,9 @@ class DesktopHomePage extends StatefulWidget {
   final Future<bool> Function(MediaItem item) onToggleFavorite;
   final VoidCallback onRetry;
   final VoidCallback onAddSource;
+
+  /// Opens Join a party; without it Home has no Watch together row.
+  final VoidCallback? onJoinParty;
 
   @override
   State<DesktopHomePage> createState() => _DesktopHomePageState();
@@ -97,6 +101,13 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
         )
       else
         const SizedBox(key: ValueKey('hero-space'), height: 32),
+      // With no source yet, how to get one comes first: under Top 10 it was
+      // below the fold of a 1280 × 720 window.
+      if (!catalog.hasSources)
+        _AddSourceBanner(
+          key: const ValueKey('add-source'),
+          onAddSource: widget.onAddSource,
+        ),
       // Windows shows Top 10 right under the Spotlight; phone and TV Home
       // keep it further down. It still loads only once Movies and Series
       // (its seeds) have, showing its placeholders until then.
@@ -108,11 +119,6 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
         onToggleFavorite: widget.onToggleFavorite,
         loadWhenShown: catalog.catalogSettled,
       ),
-      if (!catalog.hasSources)
-        _AddSourceBanner(
-          key: const ValueKey('add-source'),
-          onAddSource: widget.onAddSource,
-        ),
       // Continue watching is in the sidebar on Windows, not a row here.
       if (_trending.isNotEmpty)
         DesktopMediaRow(
@@ -139,6 +145,8 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
         isFavorite: catalog.isFavorite,
         onToggleFavorite: widget.onToggleFavorite,
       ),
+      if (widget.onJoinParty case final onJoin?)
+        _WatchTogetherRow(key: const ValueKey('join-party'), onJoin: onJoin),
       DesktopPagedRow(
         key: const ValueKey('row:releases'),
         title: 'New releases',
@@ -207,8 +215,8 @@ class _AddSourceBanner extends StatelessWidget {
                   ),
                   SizedBox(height: 2),
                   Text(
-                    'Install a provider repository from Plugins; browsing works '
-                    'without one.',
+                    'Reelish plays titles through plugins you choose. Browsing '
+                    'works without one.',
                     style: TextStyle(color: GlassTheme.muted),
                   ),
                 ],
@@ -218,6 +226,63 @@ class _AddSourceBanner extends StatelessWidget {
               onPressed: onAddSource,
               icon: const Icon(Symbols.add_rounded),
               label: const Text('Add a source'),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+/// Watch Party on Home: what it is, how to start one, and the way in with a
+/// code, which otherwise only Profile and Settings offer.
+class _WatchTogetherRow extends StatelessWidget {
+  const _WatchTogetherRow({super.key, required this.onJoin});
+
+  final VoidCallback onJoin;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(
+      DesktopMetrics.pagePadding,
+      12,
+      DesktopMetrics.pagePadding,
+      0,
+    ),
+    child: DecoratedBox(
+      decoration: BoxDecoration(
+        color: GlassTheme.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: DesktopSurfaces.hairline),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
+        child: Row(
+          children: [
+            Icon(Symbols.groups_rounded, color: GlassTheme.primary),
+            const SizedBox(width: 16),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Watch together',
+                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Have a code? Join a friend’s party. To host, open a title '
+                    'and choose Watch together.',
+                    style: TextStyle(color: GlassTheme.muted),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 16),
+            OutlinedButton.icon(
+              onPressed: onJoin,
+              icon: const Icon(Symbols.dialpad_rounded),
+              label: const Text('Join with a code'),
             ),
           ],
         ),
@@ -701,8 +766,39 @@ class _DesktopLibraryPageState extends State<DesktopLibraryPage> {
   /// Removes [item]'s watch history (and so its resume point), as the phone
   /// library's Remove does. My list is not touched.
   Future<void> _removeFromHistory(MediaItem item) async {
-    await _model.removeFromHistory(item);
+    final index = _model.historyIndexOf(item);
+    try {
+      await _model.removeFromHistory(item);
+    } catch (_) {
+      _say('Could not remove it. Try again.');
+      return;
+    }
     widget.onHistoryChanged?.call();
+    // Delete on a poster removes a resume point, so it can be taken back.
+    _say(
+      '${item.name} removed from your history',
+      action: SnackBarAction(
+        label: 'Undo',
+        onPressed: () => unawaited(_restoreToHistory(item, index)),
+      ),
+    );
+  }
+
+  Future<void> _restoreToHistory(MediaItem item, int index) async {
+    try {
+      await _model.restoreToHistory(item, index);
+    } catch (_) {
+      _say('Could not put it back. Try again.');
+      return;
+    }
+    widget.onHistoryChanged?.call();
+  }
+
+  void _say(String message, {SnackBarAction? action}) {
+    if (!mounted) return;
+    ScaffoldMessenger.maybeOf(context)
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message), action: action));
   }
 
   @override

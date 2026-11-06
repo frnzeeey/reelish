@@ -260,7 +260,7 @@ class _PluginLibraryViewState extends State<PluginLibraryView> {
                 actionLabel: 'Retry',
                 busy: repository.refreshing,
                 onAction: repository.retry,
-                secondaryLabel: 'Paste a manifest',
+                secondaryLabel: 'Add by link',
                 onSecondary: _pasteManifest,
               ),
             ),
@@ -411,7 +411,7 @@ class _PluginLibraryViewState extends State<PluginLibraryView> {
       title: 'Nothing installed from the library yet',
       message:
           'Install a provider below and it appears here. Providers added '
-          'from a pasted manifest are managed in Plugins.',
+          'by link are managed in Plugins.',
       actionLabel: 'Show all plugins',
       actionIcon: Symbols.storefront_rounded,
       onAction: () => _setAvailability(PluginAvailability.all),
@@ -422,12 +422,12 @@ class _PluginLibraryViewState extends State<PluginLibraryView> {
         icon: Symbols.check_circle_rounded,
         title: 'Everything here is installed',
         message:
-            'Every provider in the catalog is already installed. Paste a '
-            'manifest URL to add one that is not listed.',
+            'Every provider in the catalog is already installed. Add by '
+            'link to install one that is not listed.',
         actionLabel: 'Show installed',
         actionIcon: Symbols.extension_rounded,
         onAction: () => _setAvailability(PluginAvailability.installed),
-        secondaryLabel: 'Paste a manifest',
+        secondaryLabel: 'Add by link',
         onSecondary: _pasteManifest,
       ),
     _ => PluginMessageState(
@@ -435,11 +435,11 @@ class _PluginLibraryViewState extends State<PluginLibraryView> {
       title: 'No plugins found',
       message:
           'Try a different search or remove some filters. If the '
-          'provider is not listed, paste its manifest URL instead.',
+          'provider is not listed, add it by link instead.',
       actionLabel: 'Clear filters',
       actionIcon: Symbols.filter_alt_off_rounded,
       onAction: _clearFilters,
-      secondaryLabel: 'Paste a manifest',
+      secondaryLabel: 'Add by link',
       onSecondary: _pasteManifest,
     ),
   };
@@ -639,7 +639,7 @@ class _HeaderActions extends StatelessWidget {
     mainAxisSize: MainAxisSize.min,
     children: [
       IconButton(
-        tooltip: 'Paste a manifest URL',
+        tooltip: 'Add by link',
         onPressed: onPaste,
         icon: const Icon(Symbols.add_link_rounded),
       ),

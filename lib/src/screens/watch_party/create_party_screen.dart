@@ -69,7 +69,10 @@ class _CreatePartyScreenState extends State<CreatePartyScreen> {
       }
       final party = WatchPartyController(code: code);
       await party.start();
-      if (!mounted) return;
+      if (!mounted) {
+        party.dispose();
+        return;
+      }
       await Navigator.pushReplacement(
         context,
         AppPageRoute<void>(

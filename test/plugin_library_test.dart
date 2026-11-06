@@ -522,11 +522,11 @@ void main() {
       expect(
         find.text(
           'Try a different search or remove some filters. If the '
-          'provider is not listed, paste its manifest URL instead.',
+          'provider is not listed, add it by link instead.',
         ),
         findsOneWidget,
       );
-      expect(find.text('Paste a manifest'), findsOneWidget);
+      expect(find.text('Add by link'), findsOneWidget);
       await tester.tap(find.text('Clear filters'));
       await tester.pumpAndSettle();
       expect(find.text('No plugins found'), findsNothing);

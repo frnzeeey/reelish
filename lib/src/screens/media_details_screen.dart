@@ -278,42 +278,54 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
     final size = MediaQuery.sizeOf(context);
     final pixelRatio = MediaQuery.devicePixelRatioOf(context);
 
-    return SizedBox(
-      height: 440,
+    // Its full height on a phone held upright, and less on a short or
+    // landscape screen so the title is on the first view. Long titles and
+    // large text make it taller rather than running under the Back button.
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        minHeight: (size.height * .62).clamp(280.0, 440.0),
+      ),
       child: Stack(
-        fit: StackFit.expand,
+        alignment: AlignmentDirectional.bottomStart,
         children: [
-          if (item.background.isNotEmpty)
-            ArtworkImage.network(
-              item.background,
-              fit: BoxFit.cover,
-              cacheWidth: (size.width * pixelRatio).round(),
-              errorBuilder: (_, __, ___) =>
-                  ColoredBox(color: GlassTheme.elevatedSurface),
-            )
-          else
-            ColoredBox(color: GlassTheme.elevatedSurface),
+          Positioned.fill(
+            child: item.background.isNotEmpty
+                ? ArtworkImage.network(
+                    item.background,
+                    fit: BoxFit.cover,
+                    cacheWidth: (size.width * pixelRatio).round(),
+                    errorBuilder: (_, __, ___) =>
+                        ColoredBox(color: GlassTheme.elevatedSurface),
+                  )
+                : ColoredBox(color: GlassTheme.elevatedSurface),
+          ),
           // Ends in the page colour, fully opaque, so the header blends into
           // the content below without a seam.
-          const DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0x990B0B0F),
-                  Color(0x220B0B0F),
-                  Color(0xE60B0B0F),
-                  GlassTheme.background,
-                ],
-                stops: [0, .42, .9, 1],
+          const Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color(0x990B0B0F),
+                    Color(0x220B0B0F),
+                    Color(0xE60B0B0F),
+                    GlassTheme.background,
+                  ],
+                  stops: [0, .42, .9, 1],
+                ),
               ),
             ),
           ),
-          Positioned(
-            left: 22,
-            right: 22,
-            bottom: 24,
+          Padding(
+            // Clears the status bar and the Back button.
+            padding: EdgeInsets.fromLTRB(
+              22 + _sideInsets(context).left,
+              MediaQuery.paddingOf(context).top + 66,
+              22 + _sideInsets(context).right,
+              24,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -386,17 +398,14 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                     ),
                   ),
                 ],
-                if (widget.onToggleFavorite != null ||
-                    _offersSeriesParty(item)) ...[
+                if (widget.onToggleFavorite != null || _offersParty(item)) ...[
                   const SizedBox(height: 14),
                   Wrap(
                     spacing: 10,
                     runSpacing: 10,
                     children: [
                       if (widget.onToggleFavorite != null) _myListButton(),
-                      // A series has no play bar, so its watch party starts
-                      // here; it asks which episode of the shown season.
-                      if (_offersSeriesParty(item)) _watchTogetherButton(item),
+                      if (_offersParty(item)) _watchTogetherButton(item),
                     ],
                   ),
                 ],
@@ -410,13 +419,16 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
 
   /// Styled as the Spotlight's My list button; it also says when the title
   /// is already saved.
-  bool _offersSeriesParty(MediaItem item) =>
+  bool _offersParty(MediaItem item) =>
       widget.onWatchTogether != null &&
-      item.type == 'series' &&
-      PartyContent.fromItem(item, season: 1, episode: 1) != null;
+      (item.type == 'series'
+              ? PartyContent.fromItem(item, season: 1, episode: 1)
+              : PartyContent.fromItem(item)) !=
+          null;
 
-  /// Watch together for a series, in the My list button's style; ready once
-  /// the season's episodes are listed.
+  /// Watch together, in the My list button's style. A movie starts its party
+  /// at once; a series asks which episode of the shown season, so it is
+  /// ready once that season's episodes are listed.
   Widget _watchTogetherButton(MediaItem item) => OutlinedButton.icon(
     style: OutlinedButton.styleFrom(
       foregroundColor: Colors.white,
@@ -425,7 +437,9 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
       side: BorderSide(color: Colors.white.withValues(alpha: .35)),
       padding: const EdgeInsets.symmetric(horizontal: 19, vertical: 13),
     ),
-    onPressed: _selectedSeason != null && _episodes.isNotEmpty
+    onPressed: item.type != 'series'
+        ? () => widget.onWatchTogether!(context, PartyContent.fromItem(item)!)
+        : _selectedSeason != null && _episodes.isNotEmpty
         ? () => _chooseEpisodeToWatchTogether(item)
         : null,
     icon: const Icon(Symbols.groups_rounded, size: 19),
@@ -455,7 +469,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
       size: 19,
     ),
     label: Text(
-      _favorite ? 'In My list' : 'My list',
+      _favorite ? 'On My list' : 'My list',
       style: const TextStyle(fontWeight: FontWeight.w700),
     ),
   );
@@ -596,6 +610,10 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
     );
   }
 
+  /// The camera cutout's side on a landscape phone. The artwork runs under
+  /// it, but text keeps clear, in line with Back and the Play bar.
+  EdgeInsets _sideInsets(BuildContext context) => MediaQuery.paddingOf(context);
+
   Widget _content(
     BuildContext context,
     MediaItem item,
@@ -605,7 +623,12 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
       SliverToBoxAdapter(child: _header(context)),
       SliverToBoxAdapter(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 22, 20, 28),
+          padding: EdgeInsets.fromLTRB(
+            20 + _sideInsets(context).left,
+            22,
+            20 + _sideInsets(context).right,
+            28,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -747,7 +770,12 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
           _episodeError == null &&
           _episodes.isNotEmpty)
         SliverPadding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
+          padding: EdgeInsets.fromLTRB(
+            20 + _sideInsets(context).left,
+            0,
+            20 + _sideInsets(context).right,
+            28,
+          ),
           sliver: SliverList(
             delegate: SliverChildBuilderDelegate(
               (context, index) => _episodeCard(_episodes[index]),
@@ -758,55 +786,30 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
     ],
   );
 
-  Widget? _playBar(BuildContext context, MediaItem item) =>
-      item.type == 'series'
-      ? null
-      : SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(18, 10, 18, 12),
-            child: SizedBox(
-              height: 54,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: SizedBox.expand(
-                      child: FilledButton.icon(
-                        style: FilledButton.styleFrom(
-                          backgroundColor: GlassTheme.primary,
-                          foregroundColor: GlassTheme.background,
-                        ),
-                        onPressed: () => widget.onPlay(context),
-                        icon: const Icon(Symbols.play_arrow_rounded, fill: 1),
-                        label: Text(
-                          item.type == 'series'
-                              ? 'Choose episode and play'
-                              : 'Play movie',
-                          style: const TextStyle(fontWeight: FontWeight.w800),
-                        ),
-                      ),
-                    ),
-                  ),
-                  if (widget.onWatchTogether != null &&
-                      PartyContent.fromItem(item) != null) ...[
-                    const SizedBox(width: 10),
-                    SizedBox.square(
-                      dimension: 54,
-                      child: IconButton.outlined(
-                        tooltip: 'Watch together',
-                        onPressed: () => widget.onWatchTogether!(
-                          context,
-                          PartyContent.fromItem(item)!,
-                        ),
-                        icon: const Icon(Symbols.groups_rounded),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
+  /// The main action, always on screen. For a series, Play opens the episode
+  /// list on the one watched last, as on TV and Windows.
+  Widget _playBar(BuildContext context, MediaItem item) => SafeArea(
+    top: false,
+    child: Padding(
+      padding: const EdgeInsets.fromLTRB(18, 10, 18, 12),
+      child: SizedBox(
+        height: 54,
+        width: double.infinity,
+        child: FilledButton.icon(
+          style: FilledButton.styleFrom(
+            backgroundColor: GlassTheme.primary,
+            foregroundColor: GlassTheme.background,
           ),
-        );
+          onPressed: () => widget.onPlay(context),
+          icon: const Icon(Symbols.play_arrow_rounded, fill: 1),
+          label: Text(
+            item.type == 'series' ? 'Play' : 'Play movie',
+            style: const TextStyle(fontWeight: FontWeight.w800),
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 /// Shades the status bar once content scrolls beneath it, so the clock and

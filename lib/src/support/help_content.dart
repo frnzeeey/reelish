@@ -74,7 +74,7 @@ const faqEntries = <FaqEntry>[
     FaqCategory.gettingStarted,
     'Why is there nothing to play right after installing?',
     'Reelish does not include video sources. Open Plugins and add a provider '
-        'repository from the Plugin Library or from a manifest link. Its '
+        'collection from the Plugin Library or by link. Its '
         'providers search for streams when you press Play.',
   ),
   FaqEntry(
@@ -122,7 +122,7 @@ const faqEntries = <FaqEntry>[
     FaqCategory.sources,
     'What does "Needs attention" or "Allow update" mean in Plugins?',
     'When a provider\'s code changes, Reelish pauses that provider until you '
-        'review it and choose Allow update. It stops a repository from '
+        'review it and choose Allow update. It stops a collection from '
         'swapping in new code without your say.',
   ),
   FaqEntry(
@@ -136,8 +136,8 @@ const faqEntries = <FaqEntry>[
   FaqEntry(
     FaqCategory.sources,
     'Does Reelish make the providers?',
-    'No. Provider repositories are third-party code that runs in a sandbox. '
-        'Install only repositories you trust.',
+    'No. Provider collections are third-party code that runs in a sandbox. '
+        'Install only collections you trust.',
   ),
   FaqEntry(
     FaqCategory.library,
@@ -213,13 +213,13 @@ const troubleshootingArticles = <TroubleshootingArticle>[
     title: 'Videos do not play or no sources are found',
     summary: 'Play searches for a while, then finds nothing or fails to start.',
     causes: [
-      'No provider repository is installed, or its providers are switched off.',
+      'No collection is installed, or its providers are switched off.',
       'A provider changed its code and is paused until you allow the update.',
       'The providers do not have this title, or their sites are down.',
       'The source found does not play on this device.',
     ],
     solutions: [
-      'Open Plugins: install a repository, or switch providers on.',
+      'Open Plugins: install a collection, or switch providers on.',
       'In Plugins, review "Needs attention" and choose Allow update.',
       'Try another title to see whether the problem is the title or the providers.',
       'Pick a different stream from the player\'s source list.',
@@ -267,16 +267,16 @@ const troubleshootingArticles = <TroubleshootingArticle>[
   TroubleshootingArticle(
     id: 'providers',
     title: 'Providers are unavailable',
-    summary: 'Plugins shows errors, or a repository does not load.',
+    summary: 'Plugins shows errors, or a collection does not load.',
     causes: [
-      'The repository\'s address moved or its host is down.',
+      'The collection\'s address moved or its host is down.',
       'You were offline when Reelish started.',
       'A provider is paused for review.',
     ],
     solutions: [
       'Open Plugins and try again once you are online.',
       'Choose Allow update for providers under "Needs attention".',
-      'Remove a repository that no longer loads and add its new address.',
+      'Remove a collection that no longer loads and add its new address.',
     ],
     reportCategory: 'sources',
   ),

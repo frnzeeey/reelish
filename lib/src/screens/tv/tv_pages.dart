@@ -25,12 +25,16 @@ class TvHomePage extends StatefulWidget {
     required this.onOpen,
     required this.onRetry,
     required this.onAddSource,
+    this.onJoinParty,
   });
 
   final TvCatalog catalog;
   final ValueChanged<MediaItem> onOpen;
   final VoidCallback onRetry;
   final VoidCallback onAddSource;
+
+  /// Opens Join a party; without it Home has no Watch together row.
+  final VoidCallback? onJoinParty;
 
   @override
   State<TvHomePage> createState() => _TvHomePageState();
@@ -132,6 +136,8 @@ class _TvHomePageState extends State<TvHomePage> {
         cards: cards,
         autofocus: true,
       ),
+      if (widget.onJoinParty case final onJoin?)
+        _WatchTogetherRow(key: const ValueKey('join-party'), onJoin: onJoin),
       TvPagedRow(
         key: const ValueKey('row:Top 10 recommendations'),
         title: 'Top 10 recommendations',
@@ -205,6 +211,72 @@ class _AddSourceBanner extends StatelessWidget {
           label: const Text('Add a source'),
         ),
       ],
+    ),
+  );
+}
+
+/// Watch Party on Home: what it is, how to start one, and the way in with a
+/// code. The whole row is one target as wide as the rows of posters: moving
+/// down, the D-pad prefers what is straight below it, so a button at the far
+/// end of the row would be skipped.
+class _WatchTogetherRow extends StatelessWidget {
+  const _WatchTogetherRow({super.key, required this.onJoin});
+
+  final VoidCallback onJoin;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(12, 6, 12, 18),
+    child: TvFocusable(
+      onSelect: onJoin,
+      borderRadius: 16,
+      focusScale: 1.01,
+      // Comes to the top of the list, where the poster rows rest.
+      scrollAlignment: 0,
+      semanticLabel:
+          'Watch together. Join a friend’s party with a code. To host, open '
+          'a title and choose Watch together.',
+      child: ColoredBox(
+        color: GlassTheme.surface,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+          child: Row(
+            children: [
+              Icon(Symbols.groups_rounded, color: GlassTheme.primary),
+              const SizedBox(width: 14),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Watch together',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Have a code? Join a friend’s party. To host, open a '
+                      'title and choose Watch together.',
+                      style: TextStyle(color: GlassTheme.muted, fontSize: 14),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 14),
+              Text(
+                'Join with a code',
+                style: TextStyle(
+                  color: GlassTheme.coralBright,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     ),
   );
 }

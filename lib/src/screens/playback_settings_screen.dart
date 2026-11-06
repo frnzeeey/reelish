@@ -347,7 +347,8 @@ class _AccentChoice extends StatelessWidget {
       child: AnimatedContainer(
         duration: AppMotion.resolve(context, AppMotion.hover),
         width: width,
-        height: 72,
+        constraints: const BoxConstraints(minHeight: 72),
+        padding: const EdgeInsets.symmetric(vertical: 6),
         decoration: BoxDecoration(
           color: selected
               ? accent.primary.withValues(alpha: .12)

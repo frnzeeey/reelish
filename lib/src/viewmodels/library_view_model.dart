@@ -67,6 +67,17 @@ class LibraryViewModel extends ChangeNotifier {
     await load();
   }
 
+  /// Where [item] is in the history, for [restoreToHistory]; read it before
+  /// removing the title.
+  int historyIndexOf(MediaItem item) =>
+      history.indexWhere((e) => e.id == item.id && e.type == item.type);
+
+  /// Puts back a title just removed, with its resume point, where it was.
+  Future<void> restoreToHistory(MediaItem item, int index) async {
+    await _storage.restoreHistory(item, index);
+    await load();
+  }
+
   Future<void> toggleFavorite(MediaItem item) async {
     await _storage.toggleFavorite(item);
     await load();

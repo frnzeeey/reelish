@@ -95,7 +95,7 @@ class _ProviderInstallerModalState extends State<ProviderInstallerModal> {
                 children: [
                   const Expanded(
                     child: Text(
-                      'Install a provider manifest',
+                      'Add by link',
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w800,
@@ -110,7 +110,7 @@ class _ProviderInstallerModalState extends State<ProviderInstallerModal> {
                 ],
               ),
               const Text(
-                'Provider scripts run on this device and can make network requests. Install only repositories you trust. Use an HTTPS manifest URL.',
+                'Provider scripts run on this device and can make network requests. Add only collections you trust. Use an HTTPS manifest link.',
                 style: TextStyle(color: GlassTheme.muted),
               ),
               const SizedBox(height: 16),
@@ -173,9 +173,7 @@ class _ProviderInstallerModalState extends State<ProviderInstallerModal> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Symbols.download_rounded),
-                  label: Text(
-                    _busy ? 'Checking manifest…' : 'Install provider',
-                  ),
+                  label: Text(_busy ? 'Checking manifest…' : 'Add collection'),
                 ),
               ),
             ],

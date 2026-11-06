@@ -209,11 +209,11 @@ void main() {
       await _pump(tester, page());
       await tester.tap(find.text('Provider Two'));
       await tester.tap(find.byType(Switch).first);
-      await tester.tap(find.byTooltip('Refresh repositories'));
+      await tester.tap(find.byTooltip('Refresh collections'));
       await tester.pump();
       expect(plugins.calls, ['two=true', 'one=false', 'load']);
 
-      await tester.tap(find.byTooltip('Remove repository'));
+      await tester.tap(find.byTooltip('Remove collection'));
       await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(FilledButton, 'Remove'));
       await tester.pumpAndSettle();
@@ -242,13 +242,13 @@ void main() {
       expect(find.byType(PluginLibraryScreen), findsNothing);
       expect(navigator.canPop(), isFalse);
       expect(find.text('Community Library'), findsOneWidget);
-      expect(find.text('Your repositories'), findsNothing);
+      expect(find.text('Your collections'), findsNothing);
 
-      await tester.tap(find.byTooltip('Your repositories and providers'));
+      await tester.tap(find.byTooltip('Your collections and providers'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
       expect(find.byType(PluginLibraryView), findsNothing);
-      expect(find.text('Your repositories'), findsOneWidget);
+      expect(find.text('Your collections'), findsOneWidget);
     });
 
     testWidgets('with nothing installed, offers the library and a URL', (
@@ -256,9 +256,9 @@ void main() {
     ) async {
       plugins.repositories.clear();
       await _pump(tester, page(), size: const Size(1044, 720));
-      expect(find.text('Start with a provider'), findsOneWidget);
+      expect(find.text('Add your first collection'), findsOneWidget);
       expect(find.text('Browse the library'), findsOneWidget);
-      expect(find.text('Paste a manifest'), findsOneWidget);
+      expect(find.text('Add by link'), findsOneWidget);
     });
   });
 }

@@ -31,6 +31,7 @@ class TvMediaDetailsScreen extends StatefulWidget {
     this.isFavorite = false,
     this.onToggleFavorite,
     this.onWatchTogether,
+    this.onRemoveFromHistory,
   });
 
   final MediaItem item;
@@ -48,6 +49,10 @@ class TvMediaDetailsScreen extends StatefulWidget {
   /// Adds the title to My list or removes it; completes with whether it is
   /// on the list afterwards.
   final Future<bool> Function()? onToggleFavorite;
+
+  /// Removes the title from the watch history. Without it the page offers
+  /// no Remove from history button.
+  final Future<void> Function()? onRemoveFromHistory;
 
   @override
   State<TvMediaDetailsScreen> createState() => _TvMediaDetailsScreenState();
@@ -112,8 +117,53 @@ class _TvMediaDetailsScreenState extends State<TvMediaDetailsScreen> {
   Future<void> _toggleFavorite() async {
     final toggle = widget.onToggleFavorite;
     if (toggle == null) return;
-    final favorite = await toggle();
-    if (mounted) setState(() => _favorite = favorite);
+    try {
+      final favorite = await toggle();
+      if (mounted) setState(() => _favorite = favorite);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        const SnackBar(content: Text('Could not update My list. Try again.')),
+      );
+    }
+  }
+
+  /// Cancel comes first, so Select never removes anything by accident.
+  Future<void> _removeFromHistory() async {
+    final remove = widget.onRemoveFromHistory;
+    if (remove == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Remove from history?'),
+        content: const Text(
+          'It leaves Continue watching and your watch history. My list does '
+          'not change.',
+        ),
+        actions: [
+          TextButton(
+            autofocus: true,
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await remove();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        const SnackBar(content: Text('Could not remove it. Try again.')),
+      );
+      return;
+    }
+    if (mounted) Navigator.pop(context);
   }
 
   @override
@@ -324,6 +374,13 @@ class _TvMediaDetailsScreenState extends State<TvMediaDetailsScreen> {
                     : _watchTogether,
                 icon: const Icon(Symbols.groups_rounded),
                 label: const Text('Watch together'),
+              ),
+            if (widget.onRemoveFromHistory != null)
+              OutlinedButton.icon(
+                style: _actionStyle(filled: false),
+                onPressed: _removeFromHistory,
+                icon: const Icon(Symbols.history_toggle_off_rounded),
+                label: const Text('Remove from history'),
               ),
             if (_loading)
               SizedBox.square(

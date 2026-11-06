@@ -601,6 +601,7 @@ class _ReportScreenState extends State<ReportScreen> {
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 initialValue: _category,
+                isExpanded: true,
                 decoration: const InputDecoration(labelText: 'Category'),
                 items: [
                   for (final MapEntry(:key, :value) in _categories.entries)
@@ -612,6 +613,7 @@ class _ReportScreenState extends State<ReportScreen> {
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 initialValue: _platform,
+                isExpanded: true,
                 decoration: const InputDecoration(labelText: 'Device'),
                 items: [
                   for (final MapEntry(:key, :value) in reportPlatforms.entries)

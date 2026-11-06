@@ -3,6 +3,16 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import '../theme/glass_theme.dart';
 import 'liquid_glass.dart';
+import 'settings/settings_components.dart';
+
+/// Puts a floating [SnackBar] above the dock, whose tabs it would otherwise
+/// cover and block while it shows.
+EdgeInsets snackBarMarginOverDock(BuildContext context) => EdgeInsets.fromLTRB(
+  16,
+  0,
+  16,
+  SettingsMetrics.dockClearance + MediaQuery.paddingOf(context).bottom,
+);
 
 class SoftGlassDock extends StatelessWidget {
   const SoftGlassDock({
@@ -16,8 +26,8 @@ class SoftGlassDock extends StatelessWidget {
 
   static const _destinations = [
     (Symbols.home_rounded, Symbols.home_rounded, 'Home'),
-    (Symbols.grid_view_rounded, Symbols.grid_view_rounded, 'Plugins'),
     (Symbols.bookmark_rounded, Symbols.bookmark_rounded, 'Library'),
+    (Symbols.extension_rounded, Symbols.extension_rounded, 'Plugins'),
     (Symbols.settings_rounded, Symbols.settings_rounded, 'Settings'),
   ];
 
@@ -48,6 +58,7 @@ class SoftGlassDock extends StatelessWidget {
                   selected: selectedIndex == i,
                   iconSize: metrics.iconSize,
                   labelSize: metrics.labelSize,
+                  maxLabelScale: metrics.maxLabelScale,
                   onTap: () => onSelected(i),
                 ),
               ),
@@ -69,10 +80,11 @@ class SoftGlassDock extends StatelessWidget {
   }
 }
 
-/// Dock proportions for the device class. Phones keep the original
-/// full-width dock; tablets (shortest side of at least 600 dp, in either
-/// orientation) get a compact, centered dock that never stretches across
-/// the screen.
+/// Dock proportions for the device class. A phone held upright has the
+/// full-width dock; on its side a shorter, centered one leaves the little
+/// height there is to the page. Tablets (shortest side of at least 600 dp,
+/// in either orientation) get a compact, centered dock that never stretches
+/// across the screen.
 @immutable
 class DockMetrics {
   const DockMetrics._({
@@ -83,6 +95,7 @@ class DockMetrics {
     required this.radius,
     required this.innerPadding,
     required this.margin,
+    this.maxLabelScale = double.infinity,
   });
 
   static const tabletBreakpoint = 600.0;
@@ -99,8 +112,22 @@ class DockMetrics {
     margin: EdgeInsets.fromLTRB(22, 6, 22, 10),
   );
 
+  static const landscapePhone = DockMetrics._(
+    width: 400,
+    height: 52,
+    iconSize: 20,
+    labelSize: 10,
+    radius: 22,
+    innerPadding: 8,
+    margin: EdgeInsets.fromLTRB(16, 4, 16, 6),
+    // The label stays inside the shorter dock at any text size.
+    maxLabelScale: 1.2,
+  );
+
   factory DockMetrics.forSize(Size size) {
-    if (size.shortestSide < tabletBreakpoint) return phone;
+    if (size.shortestSide < tabletBreakpoint) {
+      return size.width > size.height ? landscapePhone : phone;
+    }
     return DockMetrics._(
       // Half the screen, kept between 380 and 440 dp: 400 dp on an 800 dp
       // portrait tablet, 440 dp on anything wider.
@@ -124,6 +151,9 @@ class DockMetrics {
   final double radius;
   final double innerPadding;
 
+  /// The largest text scale for the labels.
+  final double maxLabelScale;
+
   /// Minimum space around the dock; the system inset wins when larger.
   final EdgeInsets margin;
 }
@@ -136,6 +166,7 @@ class _DockItem extends StatelessWidget {
     required this.selected,
     required this.iconSize,
     required this.labelSize,
+    required this.maxLabelScale,
     required this.onTap,
   });
 
@@ -145,6 +176,7 @@ class _DockItem extends StatelessWidget {
   final bool selected;
   final double iconSize;
   final double labelSize;
+  final double maxLabelScale;
   final VoidCallback onTap;
 
   @override
@@ -216,7 +248,10 @@ class _DockItem extends StatelessWidget {
                       color: selected ? GlassTheme.primary : GlassTheme.muted,
                       fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                     ),
-                    child: Text(label),
+                    child: MediaQuery.withClampedTextScaling(
+                      maxScaleFactor: maxLabelScale,
+                      child: Text(label),
+                    ),
                   ),
                   const SizedBox(height: 5),
                   AnimatedContainer(

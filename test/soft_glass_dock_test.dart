@@ -45,14 +45,20 @@ Future<List<int>> _pumpDock(WidgetTester tester, Size size) async {
 Rect _glass(WidgetTester tester) => tester.getRect(find.byType(LiquidGlass));
 
 void main() {
-  const labels = ['Home', 'Plugins', 'Library', 'Settings'];
+  const labels = ['Home', 'Library', 'Plugins', 'Settings'];
 
-  group('phones keep the original dock', () {
-    for (final size in const [
-      Size(360, 800),
-      Size(412, 915),
-      Size(915, 412), // large phone, landscape
-    ]) {
+  testWidgets('a landscape phone has a short, centered dock', (tester) async {
+    const size = Size(915, 412);
+    await _pumpDock(tester, size);
+    final glass = _glass(tester);
+    expect(glass.width, 400);
+    expect(glass.center.dx, size.width / 2);
+    // 52 dp row + 6 dp padding each way, against 84 upright.
+    expect(glass.height, 64);
+  });
+
+  group('phones held upright keep the original dock', () {
+    for (final size in const [Size(360, 800), Size(412, 915)]) {
       testWidgets('${size.width.toInt()} x ${size.height.toInt()}', (
         tester,
       ) async {
@@ -108,7 +114,10 @@ void main() {
   });
 
   test('breakpoint follows the shortest side, not orientation', () {
-    expect(DockMetrics.forSize(const Size(915, 412)), DockMetrics.phone);
+    expect(
+      DockMetrics.forSize(const Size(915, 412)),
+      DockMetrics.landscapePhone,
+    );
     expect(DockMetrics.forSize(const Size(412, 915)), DockMetrics.phone);
     expect(DockMetrics.forSize(const Size(960, 600)).width, 440);
     expect(DockMetrics.forSize(const Size(600, 960)).width, 380);
@@ -118,7 +127,7 @@ void main() {
     tester,
   ) async {
     await _pumpDock(tester, const Size(412, 915));
-    for (final label in ['Home', 'Plugins', 'Library', 'Settings']) {
+    for (final label in ['Home', 'Library', 'Plugins', 'Settings']) {
       final text = tester.widget<RichText>(
         find.descendant(of: find.text(label), matching: find.byType(RichText)),
       );

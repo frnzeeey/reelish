@@ -194,7 +194,7 @@ void main() {
     testWidgets('no My list button where the page offers none', (tester) async {
       await _pump(tester, screen(_movie));
       expect(find.text('My list'), findsNothing);
-      expect(find.text('In My list'), findsNothing);
+      expect(find.text('On My list'), findsNothing);
     });
 
     testWidgets('My list saves once per tap and says it is saved', (
@@ -224,16 +224,16 @@ void main() {
       pending.complete();
       await tester.pumpAndSettle();
       expect(toggles, 1);
-      expect(find.text('In My list'), findsOneWidget);
+      expect(find.text('On My list'), findsOneWidget);
 
       pending = Completer<void>()..complete();
-      await tester.tap(find.text('In My list'));
+      await tester.tap(find.text('On My list'));
       await tester.pumpAndSettle();
       expect((toggles, saved), (2, false));
       expect(find.text('My list'), findsOneWidget);
     });
 
-    testWidgets('a title already saved opens as In My list', (tester) async {
+    testWidgets('a title already saved opens as On My list', (tester) async {
       await _pump(
         tester,
         MediaDetailsScreen(
@@ -245,7 +245,7 @@ void main() {
           onToggleFavorite: () async => false,
         ),
       );
-      expect(find.text('In My list'), findsOneWidget);
+      expect(find.text('On My list'), findsOneWidget);
     });
 
     testWidgets('a failed save says so and changes nothing', (tester) async {
@@ -425,7 +425,7 @@ void main() {
           onWatchTogether: start,
         ),
       );
-      await tester.tap(find.byTooltip('Watch together'));
+      await tester.tap(find.text('Watch together'));
       expect(started.map(key), ['movie:8:null:null']);
 
       await _pump(

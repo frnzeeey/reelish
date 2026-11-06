@@ -38,6 +38,7 @@ class JoinPartyScreen extends StatefulWidget {
 class _JoinPartyScreenState extends State<JoinPartyScreen> {
   final _field = TextEditingController();
   final _focus = FocusNode();
+  final _joinFocus = FocusNode(debugLabel: 'Join party');
   PartyPreview? _found;
   String? _error;
   bool _looking = false;
@@ -48,6 +49,7 @@ class _JoinPartyScreenState extends State<JoinPartyScreen> {
   void dispose() {
     _field.dispose();
     _focus.dispose();
+    _joinFocus.dispose();
     super.dispose();
   }
 
@@ -90,6 +92,12 @@ class _JoinPartyScreenState extends State<JoinPartyScreen> {
       if (!mounted || _lookedUp != code) return;
       setState(() => _found = preview);
       _focus.unfocus();
+      // The remote moves on to Join, which is enabled from this frame.
+      if (DeviceCapabilities.isTv && !preview.full) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _joinFocus.requestFocus();
+        });
+      }
     } catch (error) {
       if (mounted && _lookedUp == code) {
         setState(() => _error = partyErrorMessage(error));
@@ -107,9 +115,23 @@ class _JoinPartyScreenState extends State<JoinPartyScreen> {
       open(context, found.code);
       return;
     }
-    setState(() => _joining = true);
+    setState(() {
+      _joining = true;
+      _error = null;
+    });
     final party = WatchPartyController(code: found.code);
-    await party.start();
+    try {
+      await party.start();
+    } catch (error) {
+      party.dispose();
+      if (mounted) {
+        setState(() {
+          _joining = false;
+          _error = partyErrorMessage(error);
+        });
+      }
+      return;
+    }
     if (!mounted) {
       party.dispose();
       return;
@@ -196,6 +218,15 @@ class _JoinPartyScreenState extends State<JoinPartyScreen> {
             ),
             // Where the lookup's answer appears: a spinner, the reason it
             // failed, or the party itself.
+            const SizedBox(height: AppSpace.md),
+            const Text(
+              _hostHint,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: GlassTheme.muted,
+                fontSize: AppTextSize.bodySmall,
+              ),
+            ),
             AnimatedSize(
               duration: desktopMotion(context, 220),
               curve: DesktopSurfaces.curve,
@@ -262,14 +293,24 @@ class _JoinPartyScreenState extends State<JoinPartyScreen> {
           child: SizedBox(
             height: 54,
             child: FilledButton.icon(
+              focusNode: _joinFocus,
               style: FilledButton.styleFrom(
                 backgroundColor: GlassTheme.primary,
                 foregroundColor: GlassTheme.background,
               ),
               onPressed: found == null || found.full || _joining ? null : _join,
-              icon: const Icon(Symbols.login_rounded),
+              icon: _joining
+                  ? const SizedBox.square(
+                      dimension: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2.4),
+                    )
+                  : const Icon(Symbols.login_rounded),
               label: Text(
-                found?.full == true ? 'This party is full' : 'Join party',
+                _joining
+                    ? 'Joining…'
+                    : found?.full == true
+                    ? 'This party is full'
+                    : 'Join party',
                 style: const TextStyle(fontWeight: FontWeight.w800),
               ),
             ),
@@ -368,8 +409,31 @@ class _JoinPartyScreenState extends State<JoinPartyScreen> {
                     '${found.phase == PartyPhase.watching ? ' · watching now' : ''}',
               ),
             ],
+          )
+        else
+          // Who has no code came to the wrong page; say where to go.
+          const Padding(
+            padding: EdgeInsets.fromLTRB(
+              AppSpace.lg,
+              AppSpace.md,
+              AppSpace.lg,
+              AppSpace.md,
+            ),
+            child: Text(
+              _hostHint,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: GlassTheme.muted,
+                fontSize: AppTextSize.label,
+              ),
+            ),
           ),
       ],
     );
   }
 }
+
+/// How to host, for anyone who arrived here without a code.
+const _hostHint =
+    'No code? Host your own: open any movie or series and choose '
+    'Watch together.';

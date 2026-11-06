@@ -87,76 +87,90 @@ class _FirstRunConsentScreenState extends State<FirstRunConsentScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: GlassTheme.coralGlow,
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Icon(
-                            Symbols.policy_rounded,
-                            color: GlassTheme.coralBright,
-                          ),
-                        ),
-                        const SizedBox(height: 18),
-                        Text(
-                          'Before you start',
-                          style: Theme.of(context).textTheme.headlineSmall
-                              ?.copyWith(fontWeight: FontWeight.w800),
-                        ),
-                        const SizedBox(height: 9),
-                        const Text(
-                          'Please read Reelish’s privacy policy and terms of use. '
-                          'They explain what information stays on your device, '
-                          'what may be shared with services and add-ons you use, '
-                          'and the responsibilities and risks of playing '
-                          'third-party content. You need to review both and '
-                          'agree before using the app.',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 13,
-                            height: 1.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  // Everything scrolls but Agree, so at large text or on a
+                  // short screen the way forward is never pushed off it.
                   Flexible(
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                       child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          _DocumentConsentTile(
-                            title: 'Privacy policy',
-                            // A remote needs a starting point: the screen
-                            // opens with the first Read focused on a TV.
-                            autofocus: DeviceCapabilities.isTv,
-                            read: _privacyRead,
-                            agreed: _privacyAgreed,
-                            onRead: () => _readDocument(LegalDocument.privacy),
-                            onChanged: _privacyRead
-                                ? (value) => setState(
-                                    () => _privacyAgreed = value ?? false,
-                                  )
-                                : null,
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  width: 48,
+                                  height: 48,
+                                  decoration: BoxDecoration(
+                                    color: GlassTheme.coralGlow,
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: Icon(
+                                    Symbols.policy_rounded,
+                                    color: GlassTheme.coralBright,
+                                  ),
+                                ),
+                                const SizedBox(height: 18),
+                                Text(
+                                  'Before you start',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .headlineSmall
+                                      ?.copyWith(fontWeight: FontWeight.w800),
+                                ),
+                                const SizedBox(height: 9),
+                                const Text(
+                                  'Please read Reelish’s privacy policy and terms of use. '
+                                  'They explain what information stays on your device, '
+                                  'what may be shared with services and add-ons you use, '
+                                  'and the responsibilities and risks of playing '
+                                  'third-party content. You need to review both and '
+                                  'agree before using the app.',
+                                  style: TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 13,
+                                    height: 1.5,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                          const SizedBox(height: 8),
-                          _DocumentConsentTile(
-                            title: 'Terms of use',
-                            read: _termsRead,
-                            agreed: _termsAgreed,
-                            onRead: () => _readDocument(LegalDocument.terms),
-                            onChanged: _termsRead
-                                ? (value) => setState(
-                                    () => _termsAgreed = value ?? false,
-                                  )
-                                : null,
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                            child: Column(
+                              children: [
+                                _DocumentConsentTile(
+                                  title: 'Privacy policy',
+                                  // A remote needs a starting point: the screen
+                                  // opens with the first Read focused on a TV.
+                                  autofocus: DeviceCapabilities.isTv,
+                                  read: _privacyRead,
+                                  agreed: _privacyAgreed,
+                                  onRead: () =>
+                                      _readDocument(LegalDocument.privacy),
+                                  onChanged: _privacyRead
+                                      ? (value) => setState(
+                                          () => _privacyAgreed = value ?? false,
+                                        )
+                                      : null,
+                                ),
+                                const SizedBox(height: 8),
+                                _DocumentConsentTile(
+                                  title: 'Terms of use',
+                                  read: _termsRead,
+                                  agreed: _termsAgreed,
+                                  onRead: () =>
+                                      _readDocument(LegalDocument.terms),
+                                  onChanged: _termsRead
+                                      ? (value) => setState(
+                                          () => _termsAgreed = value ?? false,
+                                        )
+                                      : null,
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),

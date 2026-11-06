@@ -86,22 +86,25 @@ class _DesktopPluginsPageState extends State<DesktopPluginsPage> {
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     IconButton(
-                      tooltip: 'Refresh repositories',
+                      tooltip: 'Refresh collections',
                       onPressed: () => unawaited(pluginService.load()),
                       icon: const Icon(Symbols.refresh_rounded),
                     ),
-                    OutlinedButton.icon(
-                      onPressed: install,
-                      style: DesktopPluginsPage._outlined,
-                      icon: const Icon(Symbols.add_link_rounded),
-                      label: const Text('Paste a manifest URL'),
-                    ),
-                    FilledButton.icon(
-                      onPressed: browse,
-                      style: DesktopPluginsPage._filled,
-                      icon: const Icon(Symbols.storefront_rounded),
-                      label: const Text('Browse Reelish Plugins'),
-                    ),
+                    // With nothing installed the empty state offers these.
+                    if (repositories.isNotEmpty) ...[
+                      OutlinedButton.icon(
+                        onPressed: install,
+                        style: DesktopPluginsPage._outlined,
+                        icon: const Icon(Symbols.add_link_rounded),
+                        label: const Text('Add by link'),
+                      ),
+                      FilledButton.icon(
+                        onPressed: browse,
+                        style: DesktopPluginsPage._filled,
+                        icon: const Icon(Symbols.storefront_rounded),
+                        label: const Text('Browse Reelish Plugins'),
+                      ),
+                    ],
                   ],
                 ),
         ),
@@ -169,8 +172,8 @@ class _DesktopPluginsPageState extends State<DesktopPluginsPage> {
                       icon: Symbols.dns_rounded,
                       value: repositories.length,
                       label: repositories.length == 1
-                          ? 'repository'
-                          : 'repositories',
+                          ? 'collection'
+                          : 'collections',
                     ),
                   ],
                 ),
@@ -191,11 +194,11 @@ class _DesktopPluginsPageState extends State<DesktopPluginsPage> {
                       message: update.value.length == 1
                           ? 'A provider was added or changed its code. It is '
                                 'paused until you allow it. Only allow it if '
-                                'you trust this repository.'
+                                'you trust this collection.'
                           : '${update.value.length} providers were added or '
                                 'changed their code. They are paused until '
                                 'you allow them. Only allow it if you trust '
-                                'this repository.',
+                                'this collection.',
                       actions: [
                         FilledButton.tonal(
                           onPressed: () => unawaited(
@@ -246,9 +249,9 @@ class _DesktopPluginsPageState extends State<DesktopPluginsPage> {
                     ),
                 ],
                 _Heading(
-                  title: 'Your repositories',
+                  title: 'Your collections',
                   detail: repositories.isEmpty
-                      ? 'Add a provider manifest to get started'
+                      ? 'Add one to get started'
                       : '${repositories.length} installed',
                 ),
                 if (repositories.isEmpty)
@@ -307,7 +310,7 @@ class _ViewSwitch extends StatelessWidget {
         label: Text(
           installedCount == 0 ? 'Installed' : 'Installed · $installedCount',
         ),
-        tooltip: 'Your repositories and providers',
+        tooltip: 'Your collections and providers',
       ),
       const ButtonSegment(
         value: _PluginsView.discover,
@@ -468,7 +471,7 @@ class _Empty extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Start with a provider',
+                'Add your first collection',
                 style: TextStyle(
                   fontSize: AppTextSize.title,
                   fontWeight: FontWeight.w800,
@@ -476,9 +479,9 @@ class _Empty extends StatelessWidget {
               ),
               SizedBox(height: 6),
               Text(
-                'Browse the library or paste a provider manifest URL to add '
-                'streaming sources. You can turn each provider on or off at '
-                'any time.',
+                'Collections give Reelish places to look for streams. Browse '
+                'the library or add one by its link. You can turn each '
+                'provider on or off at any time.',
                 style: TextStyle(color: GlassTheme.muted, height: 1.45),
               ),
             ],
@@ -492,7 +495,7 @@ class _Empty extends StatelessWidget {
             OutlinedButton.icon(
               onPressed: onInstall,
               icon: const Icon(Symbols.add_rounded),
-              label: const Text('Paste a manifest'),
+              label: const Text('Add by link'),
             ),
             FilledButton.icon(
               onPressed: onBrowse,
@@ -738,7 +741,7 @@ class _RepositoryCardState extends State<_RepositoryCard> {
                       ),
                       const SizedBox(width: 10),
                       IconButton(
-                        tooltip: 'Remove repository',
+                        tooltip: 'Remove collection',
                         onPressed: () => unawaited(_confirmRemove()),
                         icon: const Icon(Symbols.delete_rounded, size: 20),
                       ),
@@ -777,7 +780,7 @@ class _RepositoryCardState extends State<_RepositoryCard> {
                           const Padding(
                             padding: EdgeInsets.all(20),
                             child: Text(
-                              'This repository contains no valid providers.',
+                              'This collection has no valid providers.',
                               style: TextStyle(color: GlassTheme.muted),
                             ),
                           )

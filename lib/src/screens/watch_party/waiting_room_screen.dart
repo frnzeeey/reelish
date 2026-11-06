@@ -165,7 +165,9 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
     final room = _party.room;
     if (room == null) return 'Connecting…';
     if (_party.isHost) return 'Share the code. You control playback.';
-    return 'Hosted by ${room.hostName}';
+    return room.phase == PartyPhase.lobby
+        ? 'Hosted by ${room.hostName}. Waiting for the host to start.'
+        : 'Hosted by ${room.hostName}';
   }
 
   /// A connection problem, above everything else.

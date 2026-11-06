@@ -337,6 +337,15 @@ class StorageService {
     await _saveItems(_history, all);
   });
 
+  /// Puts back a title [removeHistory] took out, at [index] as it was then.
+  Future<void> restoreHistory(MediaItem item, int index) =>
+      _serialized(() async {
+        final all = await history()
+          ..removeWhere((e) => e.id == item.id && e.type == item.type);
+        all.insert(index.clamp(0, all.length), item);
+        await _saveItems(_history, all.take(50).toList());
+      });
+
   Future<bool> isFavorite(MediaItem item) async =>
       (await favorites()).any((e) => e.id == item.id && e.type == item.type);
 
