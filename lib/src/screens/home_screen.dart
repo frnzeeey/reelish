@@ -38,6 +38,7 @@ import '../theme/glass_theme.dart';
 import '../viewmodels/home_view_model.dart';
 import '../widgets/provider_installer_modal.dart';
 import '../widgets/analytics_consent_dialog.dart';
+import '../widgets/crash_report_consent_dialog.dart';
 import '../widgets/app_update_flow.dart';
 import '../widgets/category_chip.dart';
 import '../widgets/top_lit_edge.dart';
@@ -179,6 +180,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _startupPrompts() async {
     try {
       await AnalyticsConsentDialog.maybeAsk(context);
+      if (mounted) await CrashReportConsentDialog.maybeAsk(context);
     } catch (_) {
       // Optional; the update check runs regardless.
     }
@@ -186,6 +188,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     AnalyticsService.instance.setUserProperty(
       'interface',
       DeviceCapabilities.isTv ? 'tv' : 'phone',
+    );
+    // The page the app opened on; only moving to another one logs otherwise.
+    AnalyticsService.instance.logScreen(
+      DeviceCapabilities.usesTvLayout ? _tvDestination.name : 'home',
     );
     await _checkForUpdate();
   }
@@ -393,8 +399,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ),
       clearOnError: true,
     );
-    // Only the outcome of a settled search, never what was typed.
-    if (!mounted || _search.text.trim() != query) return;
+    // Only the outcome of a settled search, never what was typed. A refresh
+    // of the same results is not another search.
+    if (forceRefresh || !mounted || _search.text.trim() != query) return;
     final results = _searchFeed.items.length;
     AnalyticsService.instance.log(
       AnalyticsEvent.search(
@@ -459,7 +466,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _openingDetails = true;
     PerfTimeline.begin('DETAIL_OPEN');
     AnalyticsService.instance.log(
-      AnalyticsEvent.selectContent(contentType: item.type, itemId: item.id),
+      AnalyticsEvent.selectContent(
+        contentType: item.type,
+        itemId: item.id,
+        // Only watch history carries a position.
+        from: item.resumeMs > 0 ? 'continue_watching' : null,
+      ),
     );
     _spotlightTimer?.cancel();
     try {
@@ -890,6 +902,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             _tab = _pluginsTab;
             _tvDestination = TvDestination.plugins;
           });
+          AnalyticsService.instance.logScreen(TvDestination.plugins.name);
           if (presentationContext?.mounted == true) {
             Navigator.of(presentationContext!).pop();
           }

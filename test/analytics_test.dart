@@ -111,6 +111,33 @@ void main() {
       expect(analytics.available.value, isFalse);
     });
 
+    test('a page opened before agreeing can still be counted after', () async {
+      final calls = _fakeNative();
+      final analytics = _service();
+      await analytics.load();
+      analytics.logScreen('home');
+      await analytics.setConsent(true);
+      analytics.logScreen('home');
+      await pumpEventQueue();
+      expect(
+        _events(calls).where((name) => name == 'screen_view'),
+        hasLength(1),
+      );
+    });
+
+    test('a user property set before agreeing is sent on agreeing', () async {
+      final calls = _fakeNative();
+      final analytics = _service();
+      await analytics.load();
+      analytics.setUserProperty('interface', 'tv');
+      await analytics.setConsent(true);
+      await pumpEventQueue();
+      expect(
+        calls.singleWhere((c) => c.method == 'setUserProperty').arguments,
+        {'name': 'interface', 'value': 'tv'},
+      );
+    });
+
     test('the same page twice in a row is counted once', () async {
       final calls = _fakeNative();
       final analytics = _service();
@@ -202,6 +229,41 @@ void main() {
           AnalyticsFeature.watchPartyCreate,
         ).parameters,
         {'feature': 'watch_party_create'},
+      );
+    });
+
+    test('watch party events hold fixed values only', () {
+      expect(
+        AnalyticsEvent.watchPartySession(
+          host: false,
+          endReason: 'notFound',
+          minutes: 12,
+          reconnects: 2,
+        ).parameters,
+        {
+          'role': 'guest',
+          'end_reason': 'not_found',
+          'minutes': 12,
+          'reconnects': 2,
+        },
+      );
+      expect(
+        AnalyticsEvent.watchPartyFailed(
+          step: 'join',
+          reason: 'notFound',
+        ).parameters,
+        {'step': 'join', 'reason': 'not_found'},
+      );
+    });
+
+    test('a title from Continue watching says so', () {
+      expect(
+        AnalyticsEvent.selectContent(
+          contentType: 'movie',
+          itemId: '1',
+          from: 'continue_watching',
+        ).parameters['origin'],
+        'continue_watching',
       );
     });
 

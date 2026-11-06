@@ -23,7 +23,7 @@ class LegalInformationScreen extends StatefulWidget {
 
   /// The privacy policy's own date: it changed with accounts and the
   /// Reelish API, while the terms did not.
-  static const _privacyDate = 'November 2, 2026';
+  static const _privacyDate = 'November 6, 2026';
 
   /// What Reelish is and is not responsible for. Shown first in the Terms of
   /// use and on the Credits screen; keep the wording exact.
@@ -319,9 +319,34 @@ class _LegalInformationScreenState extends State<LegalInformationScreen> {
           'stored on the device. Windows sends no usage statistics.',
     ),
     (
+      'Crash reports (Android only, optional)',
+      'On Android phones, Android TV and Google TV, Reelish asks separately '
+          'whether you want to share crash reports, and sends none until you '
+          'agree. If you do, Firebase Crashlytics receives what went wrong: '
+          'the type of error and where in the app’s code it happened, a '
+          'short description with addresses, tokens and codes removed, which '
+          'page was open, whether a video or watch party was active and in '
+          'which state, and recent app events that led up to it. If you also '
+          'share usage statistics, those events can appear with the report. '
+          'Google also records standard details such as device model, '
+          'operating-system version, app version, free memory and storage, '
+          'and an installation identifier. Reports never include your '
+          'account, Trakt name, display name, search text, add-on or provider '
+          'names, stream addresses, tokens or watch party codes. Google keeps '
+          'reports for 90 days. You can turn sharing off in Settings at any '
+          'time; doing so also deletes reports not yet sent.',
+    ),
+    (
+      'Error log (Windows)',
+      'On Windows, Reelish keeps a small log of app errors on your computer '
+          'to help with troubleshooting. It is limited in size, has addresses, '
+          'tokens and codes removed, and is never sent anywhere. You can open '
+          'it from Help & Support.',
+    ),
+    (
       'Third-party services and add-ons',
       'Trakt, TMDB, Cloudflare (which hosts the Reelish API), Google '
-          '(usage statistics, only if you agree), OpenSubtitles, '
+          '(usage statistics and crash reports, only if you agree), OpenSubtitles, '
           'add-on publishers, media hosts, torrent peers, GitHub, and your '
           'device platform operate independently. Their privacy practices, '
           'logs, retention and locations are governed by their own policies. '

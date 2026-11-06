@@ -19,6 +19,7 @@ import 'party_models.dart';
 import 'playback_sync.dart';
 import '../analytics/analytics_events.dart';
 import '../analytics/analytics_service.dart';
+import '../diagnostics/crash_reporter.dart';
 
 /// One open connection to a room; dart:io's WebSocket in the app.
 abstract interface class PartySocket {
@@ -105,15 +106,24 @@ Future<String> createWatchParty({
 }) async {
   final session = account ?? AccountController.instance;
   final client = api ?? AccountApi(baseUrl: BackendConfig.apiUrl);
-  final code = await _withToken(
-    session,
-    (token) => client.createParty(
-      token,
-      content: content.toJson(),
-      settings: settings.toJson(),
-      profile: _profileJson(profile ?? ProfileController.instance, session),
-    ),
-  );
+  final String code;
+  try {
+    code = await _withToken(
+      session,
+      (token) => client.createParty(
+        token,
+        content: content.toJson(),
+        settings: settings.toJson(),
+        profile: _profileJson(profile ?? ProfileController.instance, session),
+      ),
+    );
+  } on AccountApiException catch (error) {
+    AnalyticsService.instance.log(
+      AnalyticsEvent.watchPartyFailed(step: 'create', reason: error.code),
+    );
+    CrashReporter.instance.note('party create failed ${error.code}');
+    rethrow;
+  }
   AnalyticsService.instance.log(
     AnalyticsEvent.featureUsed(AnalyticsFeature.watchPartyCreate),
   );
@@ -136,10 +146,6 @@ Future<PartyPreview> previewWatchParty(
   if (preview == null) {
     throw const AccountApiException('unavailable', 'Unexpected response.');
   }
-  // A valid code entered: the step before joining.
-  AnalyticsService.instance.log(
-    AnalyticsEvent.featureUsed(AnalyticsFeature.watchPartyJoin),
-  );
   return preview;
 }
 
@@ -255,6 +261,10 @@ class WatchPartyController extends ChangeNotifier {
   /// Until then a resent action has not come back from the room.
   DateTime? _controlPendingUntil;
   int _reconnects = 0;
+  bool _joinCounted = false;
+
+  /// When this device first reached the room.
+  DateTime? _joinedAt;
   int _staleStates = 0;
   int _deliveries = 0;
   int _deliveryTotalMs = 0;
@@ -363,6 +373,7 @@ class WatchPartyController extends ChangeNotifier {
         token,
       ).timeout(const Duration(seconds: 15));
     } catch (_) {
+      CrashReporter.instance.note('party connect failed');
       return _connectFailed();
     }
     if (_disposed || _endReason != null) {
@@ -481,7 +492,11 @@ class WatchPartyController extends ChangeNotifier {
         _failingSince = null;
         _you = you['pid'] as String;
         final serverTime = message['serverTime'];
-        if (_room != null) _reconnects++;
+        if (_room != null) {
+          _reconnects++;
+        } else {
+          _joinedAt = DateTime.now();
+        }
         _silence ??= Timer.periodic(silenceLimit ~/ 3, (_) => _checkSilence());
         clock.restart();
         if (serverTime is int) clock.seed(serverTime, now);
@@ -489,6 +504,7 @@ class WatchPartyController extends ChangeNotifier {
         // Before anything hears of the room, which does not include this.
         _flushControl();
         _setRoom(room);
+        _noteJoined();
         _setConnection(PartyConnection.connected);
         _send(jsonEncode({'t': 'hello', ..._profileJson(_profile, _account)}));
         final status = _status;
@@ -575,9 +591,52 @@ class WatchPartyController extends ChangeNotifier {
 
   void _sendJson(Map<String, Object?> body) => _send(jsonEncode(body));
 
+  /// Counts a guest's arrival once: a reconnect is not another join, and
+  /// creating the party already counted for the host.
+  void _noteJoined() {
+    CrashReporter.instance.setContext(
+      CrashContext.partyRole,
+      isHost ? 'host' : 'guest',
+    );
+    if (_joinCounted) return;
+    _joinCounted = true;
+    if (isHost) return;
+    AnalyticsService.instance.log(
+      AnalyticsEvent.featureUsed(AnalyticsFeature.watchPartyJoin),
+    );
+  }
+
+  /// One event for this device's time in the party, however it ended.
+  void _reportEnd(PartyEndReason reason) {
+    final joinedAt = _joinedAt;
+    if (joinedAt == null) {
+      if (reason != PartyEndReason.left) {
+        AnalyticsService.instance.log(
+          AnalyticsEvent.watchPartyFailed(step: 'join', reason: reason.name),
+        );
+      }
+    } else {
+      AnalyticsService.instance.log(
+        AnalyticsEvent.watchPartySession(
+          host: isHost,
+          endReason: reason.name,
+          minutes: DateTime.now().difference(joinedAt).inMinutes,
+          reconnects: _reconnects,
+        ),
+      );
+    }
+    if (reason == PartyEndReason.failed) {
+      CrashReporter.instance.note('party ended failed');
+    }
+    CrashReporter.instance
+      ..setContext(CrashContext.partyState, null)
+      ..setContext(CrashContext.partyRole, null);
+  }
+
   void _setConnection(PartyConnection next) {
     if (_connection == next) return;
     _connection = next;
+    CrashReporter.instance.setContext(CrashContext.partyState, next.name);
     notifyListeners();
   }
 
@@ -696,6 +755,7 @@ class WatchPartyController extends ChangeNotifier {
 
   void _end(PartyEndReason reason) {
     if (_endReason != null) return;
+    _reportEnd(reason);
     _endReason = reason;
     _retry?.cancel();
     _silence?.cancel();

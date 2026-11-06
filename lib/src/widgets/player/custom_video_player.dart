@@ -8,6 +8,8 @@ import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 import 'package:flutter_go_torrent_streamer/flutter_go_torrent_streamer.dart';
 import 'package:video_player_media_kit/video_player_media_kit.dart';
+import '../../diagnostics/crash_reporter.dart';
+import '../../diagnostics/playback_diagnostics.dart';
 import '../../models/episode_context.dart';
 import '../../models/episode_progress.dart';
 import '../../models/media_details.dart';
@@ -577,6 +579,12 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
             'engine=${attemptEngine.id.name}',
       );
       _metrics.opened(attemptClock.elapsed);
+      _metrics.sourceType(
+        source.isTorrent ? 'torrent' : playable.streamType.name,
+      );
+      CrashReporter.instance
+        ..setContext(CrashContext.playbackState, 'opening')
+        ..setContext(CrashContext.playbackEngine, attemptEngine.id.name);
       _controller = c;
       _bindEmbeddedSubtitles(c);
       // Track menus are optional. Query both concurrently and never make
@@ -777,6 +785,10 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
       if (!noted && value.position > start) {
         noted = true;
         _metrics.firstFrame(engine.id.name);
+        CrashReporter.instance.setContext(
+          CrashContext.playbackState,
+          'playing',
+        );
         PlaybackLog.log(
           'Player',
           'first frame after ${attemptClock.elapsedMilliseconds}ms '
@@ -844,6 +856,11 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
 
     final failure = PlaybackFailure.classify(error);
     _metrics.failure(failure.kind);
+    PlaybackDiagnostics.failed(
+      failure.kind,
+      engine: failedEngine.id.name,
+      wasPlaying: wasPlaying,
+    );
     PlaybackLog.log(
       'Failure',
       'kind=${failure.kind.name}'
@@ -939,6 +956,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
     if (!mounted || generation != _initializationGeneration) return;
     final attempted = _playbackCoordinator.attemptedCount;
     _metrics.gaveUp();
+    CrashReporter.instance.setContext(CrashContext.playbackState, 'failed');
     setState(() {
       _error = true;
       _errorMessage = attempted > 1
@@ -2886,6 +2904,9 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
     // stopped listening to the settings it writes.
     _volumeApply?.cancel();
     if (_volumeSave != null) _saveVolume();
+    CrashReporter.instance
+      ..setContext(CrashContext.playbackState, null)
+      ..setContext(CrashContext.playbackEngine, null);
     _metrics.report(
       contentType: widget.item.type,
       itemId: widget.item.id,

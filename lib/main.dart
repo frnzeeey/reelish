@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'src/account/account_controller.dart';
 import 'src/account/profile_controller.dart';
 import 'src/account/watchlist_sync.dart';
+import 'src/diagnostics/crash_reporter.dart';
 import 'src/notifications/episode_alerts.dart';
 import 'src/platform/desktop_gamepad.dart';
 import 'src/platform/desktop_window.dart';
@@ -24,8 +27,14 @@ void episodeAlertsDispatcher() => runEpisodeAlertsTask();
 void main() {
   PerfTimeline.appStarted();
   WidgetsFlutterBinding.ensureInitialized();
+  CrashReporter.instance.install();
   PlayerEngineBootstrap.initialize();
   runApp(const ReelishApp());
+  // After the first frame, so it costs startup nothing; errors before then
+  // are held.
+  WidgetsBinding.instance.addPostFrameCallback(
+    (_) => unawaited(CrashReporter.instance.load()),
+  );
 }
 
 class ReelishApp extends StatefulWidget {

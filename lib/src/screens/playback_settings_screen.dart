@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../analytics/analytics_service.dart';
+import '../diagnostics/crash_reporter.dart';
 import '../account/account_controller.dart';
 import '../account/profile_controller.dart';
 import '../models/playback_settings.dart';
@@ -123,8 +124,10 @@ class SettingsScreen extends StatelessWidget {
             description: 'Enter a code to watch in sync with friends',
             onTap: () => _open(context, (_) => const JoinPartyScreen()),
           ),
-          // Android with analytics configured only; absent elsewhere.
+          // Android with Firebase configured only; absent elsewhere.
           const _UsageStatisticsTile(),
+          const _CrashReportsTile(),
+          if (CrashReporter.testTriggers) const _CrashTestTiles(),
         ],
       ),
       SettingsSection(
@@ -1509,4 +1512,77 @@ class _UsageStatisticsTile extends StatelessWidget {
       },
     );
   }
+}
+
+/// Turns opt-in crash reports on or off. Shown only where they can be sent
+/// (Android builds with a Firebase configuration).
+class _CrashReportsTile extends StatelessWidget {
+  const _CrashReportsTile();
+
+  @override
+  Widget build(BuildContext context) {
+    final reports = CrashReporter.instance;
+    return ListenableBuilder(
+      listenable: Listenable.merge([reports.available, reports.consent]),
+      builder: (context, _) {
+        if (!reports.available.value) return const SizedBox.shrink();
+        return SettingsSwitchTile(
+          icon: Symbols.bug_report_rounded,
+          title: 'Share crash reports',
+          description:
+              'What failed in the app when it crashes. Never your account, '
+              'what you watch or your streaming sources.',
+          value: reports.consent.value == AnalyticsConsent.granted,
+          onChanged: (value) => unawaited(reports.setConsent(value)),
+        );
+      },
+    );
+  }
+}
+
+/// Controlled failures for checking crash reports. Compiled in only with
+/// `--dart-define=REELISH_CRASH_TEST=true`; see
+/// docs/features/crash-reporting.md.
+class _CrashTestTiles extends StatelessWidget {
+  const _CrashTestTiles();
+
+  @override
+  Widget build(BuildContext context) => Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      SettingsTile(
+        icon: Symbols.bug_report_rounded,
+        title: 'Test: non-fatal error',
+        onTap: () => CrashReporter.instance.recordError(
+          StateError('Reelish test non-fatal'),
+          StackTrace.current,
+        ),
+      ),
+      SettingsTile(
+        icon: Symbols.bug_report_rounded,
+        title: 'Test: framework error',
+        onTap: () => FlutterError.reportError(
+          FlutterErrorDetails(
+            exception: FlutterError('Reelish test framework error'),
+            stack: StackTrace.current,
+          ),
+        ),
+      ),
+      SettingsTile(
+        icon: Symbols.bug_report_rounded,
+        title: 'Test: uncaught async error',
+        onTap: () => unawaited(
+          Future<void>.delayed(
+            Duration.zero,
+            () => throw StateError('Reelish test async error'),
+          ),
+        ),
+      ),
+      SettingsTile(
+        icon: Symbols.bug_report_rounded,
+        title: 'Test: native crash',
+        onTap: () => unawaited(CrashReporter.instance.testNativeCrash()),
+      ),
+    ],
+  );
 }

@@ -1,5 +1,6 @@
 // The complete list of analytics events Reelish sends, in one place. Each
-// event answers one product question (docs/analytics.md has the catalog).
+// event answers one product question (docs/features/analytics.md has the
+// catalog).
 //
 // Rules: no account ids, names, tokens, search text, stream addresses,
 // provider or plugin names, or file paths. Titles are identified only by
@@ -87,6 +88,7 @@ class AnalyticsEvent {
     String failure = '',
     int? watchedPercent,
     bool watchParty = false,
+    String sourceType = '',
   }) => AnalyticsEvent._('playback_session', {
     'content_type': _kind(contentType),
     'item_id': itemId,
@@ -103,6 +105,31 @@ class AnalyticsEvent {
     if (failure.isNotEmpty) 'failure': failure,
     'watched_pct': ?watchedPercent,
     'watch_party': watchParty ? 1 : 0,
+    if (sourceType.isNotEmpty) 'source_type': sourceType,
+  });
+
+  /// One party, sent when this device's part in it ends. How long parties
+  /// last and whether connections hold; never the code or who was there.
+  factory AnalyticsEvent.watchPartySession({
+    required bool host,
+    required String endReason,
+    required int minutes,
+    required int reconnects,
+  }) => AnalyticsEvent._('watch_party_session', {
+    'role': host ? 'host' : 'guest',
+    'end_reason': _snake(endReason),
+    'minutes': minutes,
+    'reconnects': reconnects,
+  });
+
+  /// A party that could not be created or joined. [step] is `create` or
+  /// `join`; [reason] is a fixed code, never the room's code.
+  factory AnalyticsEvent.watchPartyFailed({
+    required String step,
+    required String reason,
+  }) => AnalyticsEvent._('watch_party_failed', {
+    'step': step,
+    'reason': _snake(reason),
   });
 
   /// Which features are used, and which are ignored.

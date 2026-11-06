@@ -29,6 +29,7 @@ class PlaybackMetrics {
   late final DateTime _openedAt;
   Duration? _firstFrame;
   String _engine = '';
+  String _sourceType = '';
   int _rebuffers = 0;
   Duration _rebuffering = Duration.zero;
   DateTime? _bufferingSince;
@@ -68,6 +69,9 @@ class PlaybackMetrics {
 
   /// How long the first engine that opened took, from its attempt starting.
   void opened(Duration elapsed) => _open ??= elapsed;
+
+  /// The kind of stream that opened last, such as `hls` or `torrent`.
+  void sourceType(String type) => _sourceType = type;
 
   /// The session's first play request, which starts the time to first frame
   /// without the time spent opening.
@@ -202,6 +206,7 @@ class PlaybackMetrics {
         ? null
         : ((watched.clamp(0.0, 1.0) * 10).round() * 10),
     watchParty: watchParty,
+    sourceType: _sourceType,
   );
 
   /// Ends the session: prints [summary] (debug and profile) and sends

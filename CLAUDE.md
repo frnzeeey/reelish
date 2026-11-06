@@ -86,6 +86,17 @@ the interface once per launch:
   notification handlers) keeps its library URI, so define it in
   `lib/main.dart`, not under `lib/src/`.
 
+## Analytics and crash reports
+
+Firebase runs through the Android SDK and the app's own method channels, not
+FlutterFire: `firebase_core` would build the C++ SDK into Windows. Both are
+opt-in, each with its own consent, and Firebase is not started before a yes.
+Report failures through `CrashReporter` (`lib/src/diagnostics/`): pass an
+error's type and fixed text, since error messages quote stream URLs and remote
+data, and call `note` for expected failures. Windows keeps a local log only.
+`--dart-define=REELISH_CRASH_TEST=true` adds test crashes and must never reach a
+release. Docs: `docs/features/analytics.md`, `docs/features/crash-reporting.md`.
+
 ## Non-negotiable rules
 
 1. **Verify before you change.** Read the code; never assume an

@@ -7,6 +7,7 @@
 // make this test flaky.
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:onfeed/main.dart' as app;
@@ -37,7 +38,10 @@ void main() {
     final preferences = await SharedPreferences.getInstance();
     await preferences.setBool('reelish.legal.documentsAccepted.v1', true);
 
+    // main() adds its crash reporting to the test's error handler.
+    final errors = FlutterError.onError;
     app.main();
+    FlutterError.onError = errors;
     // Phones and TVs navigate with the dock; Windows with its sidebar,
     // which labels each page in text or, when compact, in a tooltip.
     final desktop = Platform.isWindows;

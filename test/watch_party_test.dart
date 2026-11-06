@@ -11,6 +11,7 @@ import 'package:onfeed/src/account/account_api.dart';
 import 'package:onfeed/src/account/account_controller.dart';
 import 'package:onfeed/src/account/profile_controller.dart';
 import 'package:onfeed/src/account/session_store.dart';
+import 'package:onfeed/src/analytics/analytics_service.dart';
 import 'package:onfeed/src/models/media_item.dart';
 import 'package:onfeed/src/platform/device_capabilities.dart';
 import 'package:onfeed/src/widgets/tv/tv_focus.dart';
@@ -1576,6 +1577,91 @@ void main() {
         expect(sent['action'], 'play');
         expect(sent['positionMs'] as int, greaterThanOrEqualTo(5060));
         controller.dispose();
+      },
+    );
+
+    test(
+      'a reconnecting guest joined once, and its party is one session',
+      () async {
+        const channel = MethodChannel('onfeed/party-analytics-test');
+        final logged = <Map<Object?, Object?>>[];
+        final messenger =
+            TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+        messenger.setMockMethodCallHandler(channel, (call) async {
+          if (call.method == 'isConfigured') return true;
+          if (call.method == 'logEvent') {
+            logged.add(call.arguments as Map<Object?, Object?>);
+          }
+          return true;
+        });
+        SharedPreferences.setMockInitialValues({
+          AnalyticsService.consentKey: 'granted',
+        });
+        final previous = AnalyticsService.instance;
+        AnalyticsService.instance = AnalyticsService(
+          channel: channel,
+          supportedPlatform: true,
+        );
+        await AnalyticsService.instance.load();
+        addTearDown(() {
+          AnalyticsService.instance = previous;
+          messenger.setMockMethodCallHandler(channel, null);
+        });
+
+        final sockets = <FakeSocket>[FakeSocket(), FakeSocket()];
+        var connects = 0;
+        final api = AccountApi(
+          baseUrl: Uri.parse('https://api.reelish.test'),
+          client: MockClient((_) async => _json({})),
+        );
+        final account = AccountController(
+          api: api,
+          store: MemorySessionStore(_session()),
+        );
+        await account.restore();
+        final controller = WatchPartyController(
+          code: '12345678',
+          account: account,
+          api: api,
+          profile: ProfileController(
+            directory: () async => Directory.systemTemp,
+          ),
+          backoff: (_) => const Duration(milliseconds: 20),
+          connector: (_, _) async => sockets[connects++],
+        );
+        await controller.start();
+        Map<String, Object?> welcome() => {
+          't': 'welcome',
+          'you': {'pid': 'guest-pid'},
+          'room': _roomJson(hostPid: 'host-pid'),
+          'serverTime': now,
+        };
+        sockets[0].receive(welcome());
+        await _settle();
+        await sockets[0].drop();
+        await Future<void>.delayed(const Duration(milliseconds: 60));
+        sockets[1].receive(welcome());
+        await _settle();
+        await controller.leave();
+        controller.dispose();
+        await _settle();
+
+        final joins = logged.where(
+          (event) =>
+              event['name'] == 'feature_used' &&
+              (event['parameters'] as Map)['feature'] == 'watch_party_join',
+        );
+        expect(joins, hasLength(1));
+        final session = logged.singleWhere(
+          (event) => event['name'] == 'watch_party_session',
+        );
+        expect(session['parameters'], {
+          'role': 'guest',
+          'end_reason': 'left',
+          'minutes': 0,
+          'reconnects': 1,
+        });
+        expect(logged.toString(), isNot(contains('12345678')));
       },
     );
 

@@ -8,6 +8,8 @@ import 'package:flutter/services.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../diagnostics/crash_reporter.dart';
+import '../diagnostics/local_error_log.dart';
 import '../navigation/app_transitions.dart';
 import '../support/help_content.dart';
 import '../support/support_service.dart';
@@ -153,6 +155,14 @@ class HelpSupportScreen extends StatelessWidget {
             onTap: () =>
                 _push(context, (_) => const SupportDevelopmentScreen()),
           ),
+          // Windows only: there, errors stay in a log on this computer.
+          if (CrashReporter.instance.localLog case final log?)
+            SettingsTile(
+              icon: Symbols.description_rounded,
+              title: 'Open error log',
+              description: 'Stays on this computer; nothing is sent',
+              onTap: () => unawaited(_openErrorLog(log)),
+            ),
         ],
       ),
       // A heading, not a page of its own: each document is one tap from here.
@@ -757,5 +767,16 @@ class _ReportScreenState extends State<ReportScreen> {
         ),
       ],
     );
+  }
+}
+
+/// Shows the folder of the local error log in the file manager.
+Future<void> _openErrorLog(LocalErrorLog log) async {
+  try {
+    final folder = await log.folder();
+    await folder.create(recursive: true);
+    await launchUrl(Uri.directory(folder.path, windows: true));
+  } catch (_) {
+    // Nothing to show; the app is unaffected.
   }
 }
