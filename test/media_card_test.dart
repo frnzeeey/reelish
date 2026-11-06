@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import 'package:onfeed/src/theme/reelish_icons.dart';
 import 'package:onfeed/src/models/media_item.dart';
 import 'package:onfeed/src/widgets/media_card.dart';
 import 'package:onfeed/src/widgets/poster_image.dart';
@@ -124,7 +124,7 @@ void main() {
   testWidgets('a card without a poster shows the placeholder', (tester) async {
     await _pump(tester, MediaCard(item: movie, onTap: () {}));
     expect(find.byType(PosterPlaceholder), findsOneWidget);
-    expect(find.byIcon(Symbols.movie_rounded), findsOneWidget);
+    expect(find.byIcon(ReelishIcons.movie), findsOneWidget);
     expect(find.byType(Image), findsNothing);
   });
 

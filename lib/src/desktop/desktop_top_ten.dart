@@ -4,7 +4,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../theme/reelish_icons.dart';
 
 import '../models/media_item.dart';
 import '../services/media_catalog_rules.dart';
@@ -276,7 +276,7 @@ class _TopTenCarouselState extends State<_TopTenCarousel> {
                   if (_hovered && _canBack)
                     DesktopRowArrow(
                       alignment: Alignment.centerLeft,
-                      icon: Symbols.chevron_left_rounded,
+                      icon: ReelishIcons.chevronLeft,
                       label: 'Scroll ${widget.title} back',
                       onPressed: () => _page(-1),
                       height: posterWidth * 1.5,
@@ -284,7 +284,7 @@ class _TopTenCarouselState extends State<_TopTenCarousel> {
                   if (_hovered && _canForward)
                     DesktopRowArrow(
                       alignment: Alignment.centerRight,
-                      icon: Symbols.chevron_right_rounded,
+                      icon: ReelishIcons.chevronRight,
                       label: 'Scroll ${widget.title} forward',
                       onPressed: () => _page(1),
                       height: posterWidth * 1.5,

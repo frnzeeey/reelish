@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../../theme/reelish_icons.dart';
 
 import '../../models/plugin_catalog.dart';
 import '../../services/provider_plugin_service.dart';
@@ -155,13 +155,20 @@ class _PluginInstallButtonState extends State<PluginInstallButton> {
                 )
               : Icon(
                   installed
-                      ? Symbols.check_circle_rounded
-                      : failed
-                      ? Symbols.error_rounded
-                      : Symbols.download_rounded,
+                      ? ReelishIcons.filled(
+                          installed
+                              ? ReelishIcons.checkCircle
+                              : failed
+                              ? ReelishIcons.error
+                              : ReelishIcons.download,
+                        )
+                      : (installed
+                            ? ReelishIcons.checkCircle
+                            : failed
+                            ? ReelishIcons.error
+                            : ReelishIcons.download),
                   key: ValueKey(label),
                   size: 18,
-                  fill: installed ? 1 : 0,
                 ),
         ),
         label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
@@ -272,7 +279,7 @@ class _PluginRemoveButtonState extends State<PluginRemoveButton> {
                 dimension: 16,
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
-            : const Icon(Symbols.delete_rounded, size: 18),
+            : const Icon(ReelishIcons.trash, size: 18),
         label: Text(_removing ? 'Removing…' : 'Remove'),
       );
     },

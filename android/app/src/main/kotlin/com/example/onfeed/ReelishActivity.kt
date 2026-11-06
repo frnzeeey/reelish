@@ -146,6 +146,7 @@ class ReelishActivity : FlutterActivity() {
         super.configureFlutterEngine(flutterEngine)
         // Opt-in usage statistics; inert without consent and a configuration.
         AnalyticsChannel(applicationContext).register(flutterEngine.dartExecutor.binaryMessenger)
+        CrashReportChannel(applicationContext).register(flutterEngine.dartExecutor.binaryMessenger)
         if (supportsPip() && pipReceiver == null) {
             val receiver = object : BroadcastReceiver() {
                 override fun onReceive(context: Context, intent: Intent) {

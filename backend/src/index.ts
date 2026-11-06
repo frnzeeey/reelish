@@ -13,6 +13,7 @@ import * as alerts from './episode-alerts';
 import * as party from './watch-party';
 import { pruneAuditEvents } from './retention';
 import * as support from './support';
+import * as supporters from './supporters';
 
 export { WatchPartyRoom } from './party-room';
 
@@ -84,6 +85,11 @@ async function route(request: Request, env: Env, requestId: string): Promise<Res
     await limit(env.SYNC_LIMITER, `alerts:${owner.sessionId}`);
     return alerts.checkEpisodes(env, owner, request, requestId);
   }
+  if (post('/webhooks/buymeacoffee')) {
+    // Buy Me a Coffee's signed notifications; no session involved.
+    await limit(env.AUTH_LIMITER, `bmc:${ip}`);
+    return supporters.buyMeACoffeeWebhook(env, request, requestId);
+  }
   if (post('/auth/refresh')) {
     await limit(env.AUTH_LIMITER, `refresh:${ip}`);
     return auth.refresh(env, request, requestId);
@@ -105,6 +111,19 @@ async function route(request: Request, env: Env, requestId: string): Promise<Res
     return method === 'GET'
       ? sync.getWatchlist(env, principal, requestId)
       : sync.updateWatchlist(env, principal, request, requestId);
+  }
+  if (rest.startsWith('/supporters/')) {
+    await limit(env.SYNC_LIMITER, `supporters:${principal.userId}`);
+    if (rest === '/supporters/me' && method === 'GET') {
+      return supporters.getStatus(env, principal, requestId);
+    }
+    if (post('/supporters/claim')) return supporters.requestReview(env, principal, requestId);
+    if (rest === '/supporters/recognition' && method === 'PUT') {
+      return supporters.setRecognition(env, principal, request, requestId);
+    }
+    if (rest === '/supporters/public' && method === 'GET') {
+      return supporters.publicList(env, requestId);
+    }
   }
   if (post('/support/reports')) {
     await limit(env.SYNC_LIMITER, `support:${principal.userId}`);

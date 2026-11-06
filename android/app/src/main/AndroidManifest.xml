@@ -59,6 +59,11 @@
             android:name="com.google.firebase.provider.FirebaseInitProvider"
             android:authorities="${applicationId}.firebaseinitprovider"
             tools:node="remove" />
+        <!-- Opt-in crash reports: off until the viewer agrees
+             (CrashReportChannel.kt). -->
+        <meta-data
+            android:name="firebase_crashlytics_collection_enabled"
+            android:value="false" />
         <meta-data
             android:name="firebase_analytics_collection_enabled"
             android:value="false" />

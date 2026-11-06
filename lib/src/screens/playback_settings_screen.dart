@@ -2,9 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../theme/reelish_icons.dart';
 
 import '../analytics/analytics_service.dart';
+import '../diagnostics/crash_reporter.dart';
 import '../account/account_controller.dart';
 import '../account/profile_controller.dart';
 import '../models/playback_settings.dart';
@@ -22,10 +23,7 @@ import '../widgets/tv/tv_focus.dart';
 
 import 'account_settings_screen.dart';
 import 'app_icon_settings_screen.dart';
-import 'app_information_screens.dart';
 import 'help_support_screen.dart';
-import 'credits_screen.dart';
-import 'legal_information_screen.dart';
 import 'notification_settings_screen.dart';
 import 'subtitle_addons_screen.dart';
 import 'watch_party/join_party_screen.dart';
@@ -63,7 +61,7 @@ class SettingsScreen extends StatelessWidget {
               ProfileController.instance,
             ]),
             builder: (context, _) => SettingsTile(
-              icon: Symbols.account_circle_rounded,
+              icon: ReelishIcons.account,
               title: 'Profile and account',
               description: 'Display name, avatar and Trakt sign-in',
               value: ProfileController.instance.nameOr(
@@ -91,7 +89,7 @@ class SettingsScreen extends StatelessWidget {
           AnimatedBuilder(
             animation: accentSettings,
             builder: (context, _) => SettingsTile(
-              icon: Symbols.palette_rounded,
+              icon: ReelishIcons.palette,
               title: 'Appearance',
               description: 'Accent color for highlights and controls',
               value: accentSettings.value.label,
@@ -102,7 +100,7 @@ class SettingsScreen extends StatelessWidget {
             ListenableBuilder(
               listenable: EpisodeAlerts.instance,
               builder: (context, _) => SettingsTile(
-                icon: Symbols.notifications_rounded,
+                icon: ReelishIcons.bell,
                 title: 'Notifications',
                 description: 'Alerts when new episodes are out',
                 value: EpisodeAlerts.instance.settings.enabled ? 'On' : 'Off',
@@ -121,98 +119,44 @@ class SettingsScreen extends StatelessWidget {
           // On TV this is the way into a party; phones also have the
           // button on Home.
           SettingsTile(
-            icon: Symbols.groups_rounded,
+            icon: ReelishIcons.people,
             title: 'Join a watch party',
             description: 'Enter a code to watch in sync with friends',
             onTap: () => _open(context, (_) => const JoinPartyScreen()),
           ),
+          // Android with Firebase configured only; absent elsewhere.
+          const _UsageStatisticsTile(),
+          const _CrashReportsTile(),
+          if (CrashReporter.testTriggers) const _CrashTestTiles(),
         ],
       ),
       SettingsSection(
         label: 'PLAYBACK',
         children: [
           SettingsTile(
-            icon: Symbols.play_circle_rounded,
+            icon: ReelishIcons.playCircle,
             title: 'Playback',
             description: 'Player, stream selection, subtitles and P2P',
             onTap: onPlaybackSettings,
           ),
           SettingsTile(
-            icon: Symbols.closed_caption_rounded,
+            icon: ReelishIcons.subtitles,
             title: 'Subtitle addons',
             description: 'Stremio subtitle sources searched while you watch',
             onTap: () => _open(context, (_) => const SubtitleAddonsScreen()),
           ),
         ],
       ),
-      SettingsSection(
-        label: 'ABOUT & INFORMATION',
-        children: [
-          // No version here: this tab is built during Home startup, which
-          // must not wait on a platform call. About reads it on demand.
-          SettingsTile(
-            icon: Symbols.info_rounded,
-            title: 'About Reelish',
-            description: 'Version, build and updates',
-            onTap: () => _open(context, (_) => const AboutScreen()),
-          ),
-          SettingsTile(
-            icon: Symbols.handshake_rounded,
-            title: 'Credits & attribution',
-            description: 'TMDB, third-party services and acknowledgments',
-            onTap: () => _open(context, (_) => const CreditsScreen()),
-          ),
-          SettingsTile(
-            icon: Symbols.code_rounded,
-            title: 'Open-source licenses',
-            description: 'Licenses for Flutter, packages and fonts',
-            onTap: () => showAppLicenses(context),
-          ),
-        ],
-      ),
-      SettingsSection(
-        label: 'LEGAL',
-        children: [
-          SettingsTile(
-            icon: Symbols.shield_rounded,
-            title: 'Privacy policy',
-            description:
-                'What stays on your device and what is sent to services',
-            onTap: () => _open(
-              context,
-              (_) =>
-                  const LegalInformationScreen(document: LegalDocument.privacy),
-            ),
-          ),
-          // Android with analytics configured only; absent elsewhere.
-          const _UsageStatisticsTile(),
-          SettingsTile(
-            icon: Symbols.gavel_rounded,
-            title: 'Terms of use',
-            description: 'Rules for using the app, add-ons and media sources',
-            onTap: () => _open(
-              context,
-              (_) =>
-                  const LegalInformationScreen(document: LegalDocument.terms),
-            ),
-          ),
-        ],
-      ),
+      // Everything about Reelish rather than its behaviour lives here: help,
+      // About, credits, and the privacy policy and terms.
       SettingsSection(
         label: 'SUPPORT',
         children: [
           SettingsTile(
-            icon: Symbols.support_rounded,
+            icon: ReelishIcons.support,
             title: 'Help & Support',
-            description: 'Get help, report problems, and learn about Reelish',
+            description: 'FAQs, contact, About, privacy policy and terms',
             onTap: () => _open(context, (_) => const HelpSupportScreen()),
-          ),
-          SettingsTile(
-            icon: Symbols.favorite_rounded,
-            title: 'Support development',
-            description: 'Optional help with development and server costs',
-            onTap: () =>
-                _open(context, (_) => const SupportDevelopmentScreen()),
           ),
         ],
       ),
@@ -234,7 +178,7 @@ class AppearanceSettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) => SettingsPage(
     title: 'Appearance',
     subtitle: 'Choose the accent used across the app.',
-    icon: Symbols.palette_rounded,
+    icon: ReelishIcons.palette,
     onBack: onBack,
     children: [
       AnimatedBuilder(
@@ -288,7 +232,7 @@ class AppearanceSettingsScreen extends StatelessWidget {
           label: 'APP ICON',
           children: [
             SettingsTile(
-              icon: Symbols.apps_rounded,
+              icon: ReelishIcons.grid,
               title: 'App icon',
               description: 'Choose the icon on your home screen',
               onTap: () => Navigator.of(context).push(
@@ -347,7 +291,8 @@ class _AccentChoice extends StatelessWidget {
       child: AnimatedContainer(
         duration: AppMotion.resolve(context, AppMotion.hover),
         width: width,
-        height: 72,
+        constraints: const BoxConstraints(minHeight: 72),
+        padding: const EdgeInsets.symmetric(vertical: 6),
         decoration: BoxDecoration(
           color: selected
               ? accent.primary.withValues(alpha: .12)
@@ -392,7 +337,7 @@ class _AccentChoice extends StatelessWidget {
                         border: Border.all(color: accent.primary),
                       ),
                       child: Icon(
-                        Symbols.check_rounded,
+                        ReelishIcons.check,
                         size: 10,
                         color: accent.bright,
                       ),
@@ -565,10 +510,9 @@ class _AccentPreview extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
-                    Symbols.play_arrow_rounded,
+                    ReelishIcons.play,
                     size: 16,
                     color: GlassTheme.background,
-                    fill: 1,
                   ),
                   SizedBox(width: 4),
                   Text(
@@ -735,7 +679,7 @@ class PlaybackSettingsScreen extends StatelessWidget {
       return SettingsPage(
         title: 'Playback',
         subtitle: 'Fine tune streams, subtitles and controls.',
-        icon: Symbols.play_circle_rounded,
+        icon: ReelishIcons.playCircle,
         onBack: onBack,
         children: [
           _section('PLAYER', [
@@ -1389,7 +1333,7 @@ class PlaybackSettingsScreen extends StatelessWidget {
                 selectedColor: GlassTheme.coralBright,
                 title: Text(label?.call(option) ?? '$option'),
                 trailing: option == current
-                    ? Icon(Symbols.check_rounded, color: GlassTheme.primary)
+                    ? Icon(ReelishIcons.check, color: GlassTheme.primary)
                     : null,
                 onTap: () => Navigator.pop(context, option),
               ),
@@ -1556,7 +1500,7 @@ class _UsageStatisticsTile extends StatelessWidget {
       builder: (context, _) {
         if (!analytics.available.value) return const SizedBox.shrink();
         return SettingsSwitchTile(
-          icon: Symbols.insights_rounded,
+          icon: ReelishIcons.insights,
           title: 'Share usage statistics',
           description:
               'Pages, features and whether playback starts. Never your '
@@ -1567,4 +1511,77 @@ class _UsageStatisticsTile extends StatelessWidget {
       },
     );
   }
+}
+
+/// Turns opt-in crash reports on or off. Shown only where they can be sent
+/// (Android builds with a Firebase configuration).
+class _CrashReportsTile extends StatelessWidget {
+  const _CrashReportsTile();
+
+  @override
+  Widget build(BuildContext context) {
+    final reports = CrashReporter.instance;
+    return ListenableBuilder(
+      listenable: Listenable.merge([reports.available, reports.consent]),
+      builder: (context, _) {
+        if (!reports.available.value) return const SizedBox.shrink();
+        return SettingsSwitchTile(
+          icon: ReelishIcons.bug,
+          title: 'Share crash reports',
+          description:
+              'What failed in the app when it crashes. Never your account, '
+              'what you watch or your streaming sources.',
+          value: reports.consent.value == AnalyticsConsent.granted,
+          onChanged: (value) => unawaited(reports.setConsent(value)),
+        );
+      },
+    );
+  }
+}
+
+/// Controlled failures for checking crash reports. Compiled in only with
+/// `--dart-define=REELISH_CRASH_TEST=true`; see
+/// docs/features/crash-reporting.md.
+class _CrashTestTiles extends StatelessWidget {
+  const _CrashTestTiles();
+
+  @override
+  Widget build(BuildContext context) => Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      SettingsTile(
+        icon: ReelishIcons.bug,
+        title: 'Test: non-fatal error',
+        onTap: () => CrashReporter.instance.recordError(
+          StateError('Reelish test non-fatal'),
+          StackTrace.current,
+        ),
+      ),
+      SettingsTile(
+        icon: ReelishIcons.bug,
+        title: 'Test: framework error',
+        onTap: () => FlutterError.reportError(
+          FlutterErrorDetails(
+            exception: FlutterError('Reelish test framework error'),
+            stack: StackTrace.current,
+          ),
+        ),
+      ),
+      SettingsTile(
+        icon: ReelishIcons.bug,
+        title: 'Test: uncaught async error',
+        onTap: () => unawaited(
+          Future<void>.delayed(
+            Duration.zero,
+            () => throw StateError('Reelish test async error'),
+          ),
+        ),
+      ),
+      SettingsTile(
+        icon: ReelishIcons.bug,
+        title: 'Test: native crash',
+        onTap: () => unawaited(CrashReporter.instance.testNativeCrash()),
+      ),
+    ],
+  );
 }

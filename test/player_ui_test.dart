@@ -4,7 +4,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import 'package:onfeed/src/theme/reelish_icons.dart';
 import 'package:onfeed/src/models/stream_source.dart';
 import 'package:onfeed/src/widgets/player/gesture_touch_layer.dart';
 import 'package:onfeed/src/widgets/player/player_controls.dart';
@@ -880,10 +880,10 @@ void main() {
     });
 
     test('icons by level', () {
-      expect(PlayerVolumeControl.iconFor(0), Symbols.volume_off_rounded);
-      expect(PlayerVolumeControl.iconFor(.2), Symbols.volume_mute_rounded);
-      expect(PlayerVolumeControl.iconFor(.5), Symbols.volume_down_rounded);
-      expect(PlayerVolumeControl.iconFor(1), Symbols.volume_up_rounded);
+      expect(PlayerVolumeControl.iconFor(0), ReelishIcons.volumeOff);
+      expect(PlayerVolumeControl.iconFor(.2), ReelishIcons.volumeMute);
+      expect(PlayerVolumeControl.iconFor(.5), ReelishIcons.volumeDown);
+      expect(PlayerVolumeControl.iconFor(1), ReelishIcons.volumeUp);
     });
   });
 }

@@ -1,23 +1,29 @@
 // The signed-in person's page: who they are, their viewing at a glance, and
-// the way into their library, watch parties and account. It changes nothing
-// itself: editing goes to the existing Profile and account page, the library
-// to its own tab, and settings to Settings.
+// their account. It is not a menu: Library, Settings and Watch Party are one
+// step away in the main navigation, so they are not listed here again. The
+// counts open the library, since that is where those titles are. It changes
+// nothing itself: managing the account goes to the existing Profile and
+// account page.
+
+import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../theme/reelish_icons.dart';
 
 import '../account/account_controller.dart';
 import '../account/profile_controller.dart';
+import '../account/supporter_controller.dart';
 import '../models/media_item.dart';
 import '../navigation/app_transitions.dart';
+import '../platform/device_capabilities.dart';
 import '../services/storage_service.dart';
 import '../theme/design_tokens.dart';
 import '../theme/glass_theme.dart';
 import '../widgets/profile_avatar.dart';
 import '../widgets/settings/settings_components.dart';
+import '../widgets/supporter_badge.dart';
 import 'account_settings_screen.dart';
-import 'legal_information_screen.dart';
-import 'watch_party/join_party_screen.dart';
+import 'supporters_screen.dart';
 
 /// What the library holds, counted from this device's history and My list.
 @immutable
@@ -58,7 +64,6 @@ class ProfileScreen extends StatefulWidget {
     required this.storage,
     this.onBack,
     this.onOpenLibrary,
-    this.onOpenSettings,
     this.refreshToken = 0,
     this.account,
     this.profile,
@@ -69,9 +74,8 @@ class ProfileScreen extends StatefulWidget {
   /// Shown as Back when the page was opened over another (phone).
   final VoidCallback? onBack;
 
-  /// Opens the library where the interface keeps it.
+  /// Opens the library where the interface keeps it, from the counts.
   final VoidCallback? onOpenLibrary;
-  final VoidCallback? onOpenSettings;
 
   /// A change re-reads the activity (the page stays built in TV and
   /// Windows navigation).
@@ -160,7 +164,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final signedIn = _account.status == AccountStatus.signedIn;
       return SettingsPage(
         title: 'Profile',
-        subtitle: 'Your account, library and preferences.',
+        subtitle: 'Your account and your viewing at a glance.',
         onBack: widget.onBack,
         footer: null,
         children: !signedIn
@@ -181,62 +185,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                 ),
-                if (widget.onOpenLibrary != null)
-                  SettingsSection(
-                    label: 'LIBRARY',
-                    children: [
-                      SettingsTile(
-                        icon: Symbols.bookmark_rounded,
-                        title: 'Open my library',
-                        description: 'Continue watching, My list and history',
-                        onTap: widget.onOpenLibrary,
-                      ),
-                    ],
-                  ),
-                SettingsSection(
-                  label: 'WATCH TOGETHER',
-                  children: [
-                    SettingsTile(
-                      icon: Symbols.groups_rounded,
-                      title: 'Join a watch party',
-                      description: 'Enter a code to watch in sync with friends',
-                      onTap: () => _open((_) => const JoinPartyScreen()),
-                    ),
-                  ],
-                ),
-                SettingsSection(
-                  label: 'ACCOUNT',
-                  children: [
-                    SettingsTile(
-                      icon: Symbols.manage_accounts_rounded,
-                      title: 'Profile and account',
-                      description:
-                          'Name, avatar, Trakt sync, devices and account '
-                          'deletion',
-                      onTap: _openAccount,
-                    ),
-                    if (widget.onOpenSettings != null)
-                      SettingsTile(
-                        icon: Symbols.settings_rounded,
-                        title: 'Settings',
-                        description: 'Appearance, notifications and playback',
-                        onTap: widget.onOpenSettings,
-                      ),
-                    SettingsTile(
-                      icon: Symbols.shield_rounded,
-                      title: 'Privacy policy',
-                      description:
-                          'What stays on your device and what is sent to '
-                          'services',
-                      onTap: () => _open(
-                        (_) => const LegalInformationScreen(
-                          document: LegalDocument.privacy,
-                        ),
-                      ),
-                    ),
-                    _SignOutTile(onTap: _signOut),
-                  ],
-                ),
+                SettingsSection(children: [_SignOutTile(onTap: _signOut)]),
               ],
       );
     },
@@ -348,17 +297,20 @@ class _ProfileHero extends StatelessWidget {
                             // Trakt usernames often repeat the person's name,
                             // so the badge names the service, not the user.
                             const _TraktBadge(),
+                            const _SupporterLine(),
                             const SizedBox(height: AppSpace.sm),
                             FilledButton.icon(
                               style: FilledButton.styleFrom(
                                 backgroundColor: accent.withValues(alpha: .16),
                                 foregroundColor: GlassTheme.coralBright,
-                                visualDensity: VisualDensity.compact,
                               ),
                               onPressed: onEdit,
-                              icon: const Icon(Symbols.edit_rounded, size: 18),
+                              icon: const Icon(
+                                ReelishIcons.manageAccounts,
+                                size: 18,
+                              ),
                               label: const Text(
-                                'Edit profile',
+                                'Manage account',
                                 style: TextStyle(fontWeight: FontWeight.w700),
                               ),
                             ),
@@ -380,7 +332,7 @@ class _ProfileHero extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    Icon(Symbols.badge_rounded, size: 18, color: accent),
+                    Icon(ReelishIcons.badge, size: 18, color: accent),
                     const SizedBox(width: AppSpace.sm),
                     const Expanded(
                       child: Text(
@@ -404,6 +356,48 @@ class _ProfileHero extends StatelessWidget {
   }
 }
 
+/// The badge of a verified supporter, and nothing for anyone else: a profile
+/// is no place to ask for money. Tapping it opens the Supporters page.
+class _SupporterLine extends StatefulWidget {
+  const _SupporterLine();
+
+  @override
+  State<_SupporterLine> createState() => _SupporterLineState();
+}
+
+class _SupporterLineState extends State<_SupporterLine> {
+  final _supporters = SupporterController.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_supporters.refresh());
+  }
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: _supporters,
+    builder: (context, _) {
+      if (!_supporters.isSupporter) return const SizedBox.shrink();
+      return Padding(
+        padding: const EdgeInsets.only(top: AppSpace.xs),
+        child: SupporterBadge(
+          tv: DeviceCapabilities.isTv,
+          onTap: () => unawaited(
+            Navigator.push(
+              context,
+              AppPageRoute<void>(
+                context: context,
+                builder: (_) => const SupportersScreen(),
+              ),
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}
+
 /// The account behind the profile: signed in with Trakt. The username
 /// itself is on the Profile and account page.
 class _TraktBadge extends StatelessWidget {
@@ -421,9 +415,8 @@ class _TraktBadge extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         const Icon(
-          Symbols.verified_rounded,
+          ReelishIcons.verifiedFilled,
           size: 14,
-          fill: 1,
           color: GlassTheme.muted,
         ),
         const SizedBox(width: 5),
@@ -484,9 +477,9 @@ class _ActivityRow extends StatelessWidget {
       );
     }
     final stats = [
-      (activity.myList, 'On My list', Symbols.favorite_rounded),
-      (activity.watched, 'Watched', Symbols.history_rounded),
-      (activity.inProgress, 'In progress', Symbols.play_circle_rounded),
+      (activity.myList, 'On My list', ReelishIcons.heart),
+      (activity.watched, 'Watched', ReelishIcons.history),
+      (activity.inProgress, 'In progress', ReelishIcons.playCircle),
     ];
     return Padding(
       padding: const EdgeInsets.all(AppSpace.xs),
@@ -620,7 +613,7 @@ class _SignOutTile extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppRadius.md),
             ),
             child: const Icon(
-              Symbols.logout_rounded,
+              ReelishIcons.logout,
               color: GlassTheme.danger,
               size: 20,
             ),

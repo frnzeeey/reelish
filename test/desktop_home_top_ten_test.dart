@@ -248,14 +248,16 @@ void main() {
       expect(rect.top, greaterThanOrEqualTo(0));
       expect(rect.bottom, lessThanOrEqualTo(1000));
 
-      // Right moves to the next rank; Up leaves the row for the Spotlight
-      // above it.
+      // Right moves to the next rank; Up leaves the row for the prompt to
+      // add a source above it, then the Spotlight.
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
       await settle(tester, rounds: 6);
       expect(focusedCard()!.rank, first.rank! + 1);
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
       await settle(tester, rounds: 6);
       expect(inTopTen(), isFalse);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+      await settle(tester, rounds: 6);
       expect(
         FocusManager.instance.primaryFocus?.context
             ?.findAncestorWidgetOfExactType<DesktopHero>(),
@@ -268,15 +270,19 @@ void main() {
   );
 
   testWidgets(
-    'Top 10 sits directly under the Spotlight; the other rows keep their order',
+    'Top 10 follows the Spotlight, after Add a source when there is none; '
+    'the other rows keep their order',
     (tester) async {
       // Tall enough that every row is built without scrolling.
       await pumpHome(tester, size: const Size(1600, 6000));
       final hero = tester.getRect(find.byType(DesktopHero));
       final top10 = tester.getRect(topTen());
-      // Nothing in between, and no gap beyond the rows' usual spacing.
-      expect(top10.top, greaterThanOrEqualTo(hero.bottom - .5));
-      expect(top10.top - hero.bottom, lessThan(1));
+      // These tests install nothing, so the prompt to add a source comes
+      // first; only it comes between, and no gap beyond the usual spacing.
+      final banner = tester.getRect(find.byKey(const ValueKey('add-source')));
+      expect(banner.top, greaterThanOrEqualTo(hero.bottom - .5));
+      expect(top10.top, greaterThanOrEqualTo(banner.bottom - .5));
+      expect(top10.top - banner.bottom, lessThan(1));
 
       double topOf(String key) => tester.getRect(find.byKey(ValueKey(key))).top;
       // Spotlight, Top 10, then every other row in its previous order. Rows
@@ -284,9 +290,10 @@ void main() {
       // watching, and Trending, whose fake data lacks media types).
       final order = [
         'hero',
-        'row:top10',
         'add-source',
+        'row:top10',
         'row:trending',
+        'join-party',
         'row:movies',
         'row:series',
         'row:releases',
@@ -299,6 +306,7 @@ void main() {
         containsAll([
           'hero',
           'row:top10',
+          'join-party',
           'row:movies',
           'row:series',
           'row:releases',

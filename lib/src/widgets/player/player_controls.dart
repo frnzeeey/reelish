@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../../theme/reelish_icons.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../platform/device_capabilities.dart';
@@ -296,7 +296,7 @@ class _TopBar extends StatelessWidget {
   Widget build(BuildContext context) => Row(
     children: [
       PlayerIconButton(
-        icon: Symbols.arrow_back_rounded,
+        icon: ReelishIcons.back,
         label: 'Back',
         onPressed: onBack,
       ),
@@ -338,20 +338,20 @@ class _TopBar extends StatelessWidget {
       ),
       if (onLock != null)
         PlayerIconButton(
-          icon: Symbols.lock_rounded,
+          icon: ReelishIcons.lock,
           label: 'Lock controls',
           onPressed: onLock!,
         ),
       PlayerIconButton(
         icon: subtitleEnabled
-            ? Symbols.closed_caption_rounded
-            : Symbols.closed_caption_disabled_rounded,
+            ? ReelishIcons.subtitles
+            : ReelishIcons.subtitlesOff,
         label: subtitleEnabled ? 'Subtitles on' : 'Subtitles',
         selected: subtitleEnabled,
         onPressed: onSubtitles,
       ),
       PlayerIconButton(
-        icon: Symbols.settings_rounded,
+        icon: ReelishIcons.settings,
         label: 'Playback settings',
         onPressed: onSettings,
       ),
@@ -413,7 +413,7 @@ class _SeekButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => PlayerIconButton(
-    icon: forward ? Symbols.forward_10_rounded : Symbols.replay_10_rounded,
+    icon: forward ? ReelishIcons.forward10 : ReelishIcons.replay10,
     label: forward ? 'Forward 10 seconds' : 'Back 10 seconds',
     size: 56,
     iconSize: 32,
@@ -442,8 +442,8 @@ class _PlayButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final label = completed ? 'Replay' : (playing ? 'Pause' : 'Play');
     final icon = completed
-        ? Symbols.replay_rounded
-        : (playing ? Symbols.pause_rounded : Symbols.play_arrow_rounded);
+        ? ReelishIcons.replay
+        : (playing ? ReelishIcons.pause : ReelishIcons.play);
     return Semantics(
       button: true,
       label: label,
@@ -478,9 +478,8 @@ class _PlayButton extends StatelessWidget {
                     child: FadeTransition(opacity: animation, child: child),
                   ),
                   child: Icon(
-                    icon,
+                    ReelishIcons.filled(icon),
                     key: ValueKey(icon),
-                    fill: 1,
                     size: size * .5,
                     color: Colors.white,
                   ),
@@ -577,7 +576,7 @@ class _BottomBar extends StatelessWidget {
               children: [
                 if (onEpisodes case final openEpisodes?) ...[
                   _PillButton(
-                    icon: Symbols.playlist_play_rounded,
+                    icon: ReelishIcons.playlist,
                     label: 'Episodes',
                     semanticLabel: 'Episodes. Choose another episode',
                     onPressed: openEpisodes,
@@ -587,7 +586,7 @@ class _BottomBar extends StatelessWidget {
                 if (showSources)
                   Flexible(
                     child: _PillButton(
-                      icon: Symbols.video_library_rounded,
+                      icon: ReelishIcons.library,
                       label: sourceLabel.isEmpty ? 'Source' : sourceLabel,
                       semanticLabel: 'Choose source. Current: $sourceLabel',
                       onPressed: onSources,
@@ -596,7 +595,7 @@ class _BottomBar extends StatelessWidget {
                 if (showAudio) ...[
                   const SizedBox(width: 6),
                   _PillButton(
-                    icon: Symbols.graphic_eq_rounded,
+                    icon: ReelishIcons.audioWave,
                     label: 'Audio',
                     semanticLabel: 'Choose audio track',
                     onPressed: onAudio,
@@ -610,7 +609,7 @@ class _BottomBar extends StatelessWidget {
                       : Padding(
                           padding: const EdgeInsets.only(left: 6),
                           child: _PillButton(
-                            icon: Symbols.speed_rounded,
+                            icon: ReelishIcons.speed,
                             label: '${_speedLabel(speed)}×',
                             semanticLabel: onSpeedReset == null
                                 ? 'Playback speed ${_speedLabel(speed)}'
@@ -619,7 +618,7 @@ class _BottomBar extends StatelessWidget {
                             onPressed: onSpeedReset ?? onSettings,
                             trailingIcon: onSpeedReset == null
                                 ? null
-                                : Symbols.close_rounded,
+                                : ReelishIcons.close,
                             selected: true,
                           ),
                         ),
@@ -631,7 +630,7 @@ class _BottomBar extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(left: 6, right: 2),
               child: _PillButton(
-                icon: Symbols.skip_next_rounded,
+                icon: ReelishIcons.skipNext,
                 label: nextEpisodeCountdown == null
                     ? 'Next episode'
                     : 'Next episode · $nextEpisodeCountdown',
@@ -644,15 +643,15 @@ class _BottomBar extends StatelessWidget {
             ),
           if (onPip case final pip?)
             PlayerIconButton(
-              icon: Symbols.picture_in_picture_alt_rounded,
+              icon: ReelishIcons.pip,
               label: 'Picture in picture',
               onPressed: pip,
             ),
           if (onRotate case final rotate?)
             PlayerIconButton(
               icon: landscapeLocked
-                  ? Symbols.screen_rotation_alt_rounded
-                  : Symbols.stay_current_landscape_rounded,
+                  ? ReelishIcons.rotate
+                  : ReelishIcons.landscape,
               label: landscapeLocked ? 'Allow rotation' : 'Lock to landscape',
               onPressed: rotate,
             ),
@@ -669,8 +668,8 @@ class _BottomBar extends StatelessWidget {
           if (onFullscreen case final toggle?)
             PlayerIconButton(
               icon: fullscreen
-                  ? Symbols.fullscreen_exit_rounded
-                  : Symbols.fullscreen_rounded,
+                  ? ReelishIcons.fullscreenExit
+                  : ReelishIcons.fullscreen,
               label: fullscreen ? 'Exit full screen (F)' : 'Full screen (F)',
               onPressed: toggle,
             ),
@@ -997,10 +996,11 @@ class _PlayerSeekFeedbackState extends State<PlayerSeekFeedback> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        forward
-                            ? Symbols.fast_forward_rounded
-                            : Symbols.fast_rewind_rounded,
-                        fill: 1,
+                        ReelishIcons.filled(
+                          forward
+                              ? ReelishIcons.fastForward
+                              : ReelishIcons.fastRewind,
+                        ),
                         size: 34,
                         color: Colors.white,
                       ),
@@ -1164,7 +1164,7 @@ class PlayerStatusView extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.all(8),
             child: PlayerIconButton(
-              icon: Symbols.arrow_back_rounded,
+              icon: ReelishIcons.back,
               label: 'Back',
               onPressed: onBack,
             ),
@@ -1213,7 +1213,7 @@ class PlayerErrorPanel extends StatelessWidget {
               shape: BoxShape.circle,
             ),
             child: Icon(
-              Symbols.error_rounded,
+              ReelishIcons.error,
               color: GlassTheme.primary,
               size: 28,
             ),
@@ -1257,21 +1257,21 @@ class PlayerErrorPanel extends StatelessWidget {
                 FilledButton.icon(
                   focusNode: primaryFocusNode,
                   onPressed: onTryAnother,
-                  icon: const Icon(Symbols.video_library_rounded, size: 18),
+                  icon: const Icon(ReelishIcons.library, size: 18),
                   label: const Text('Try another source'),
                   style: _buttonStyle(filled: true),
                 ),
               canTryAnother
                   ? OutlinedButton.icon(
                       onPressed: onRetry,
-                      icon: const Icon(Symbols.refresh_rounded, size: 18),
+                      icon: const Icon(ReelishIcons.refresh, size: 18),
                       label: const Text('Retry'),
                       style: _buttonStyle(filled: false),
                     )
                   : FilledButton.icon(
                       focusNode: primaryFocusNode,
                       onPressed: onRetry,
-                      icon: const Icon(Symbols.refresh_rounded, size: 18),
+                      icon: const Icon(ReelishIcons.refresh, size: 18),
                       label: const Text('Retry'),
                       style: _buttonStyle(filled: true),
                     ),
@@ -1343,7 +1343,7 @@ class NextEpisodeCard extends StatelessWidget {
     );
     final play = FilledButton.icon(
       onPressed: onPlay,
-      icon: const Icon(Symbols.play_arrow_rounded, size: 20, fill: 1),
+      icon: const Icon(ReelishIcons.play, size: 20),
       label: Text(countdown == null ? 'Play next' : 'Play now'),
       style: FilledButton.styleFrom(
         minimumSize: const Size(0, 44),
@@ -1355,7 +1355,7 @@ class NextEpisodeCard extends StatelessWidget {
       ),
     );
     final dismiss = PlayerIconButton(
-      icon: Symbols.close_rounded,
+      icon: ReelishIcons.close,
       label: countdown == null ? 'Dismiss' : 'Cancel auto-play',
       onPressed: onDismiss,
     );

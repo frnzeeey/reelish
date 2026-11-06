@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../theme/reelish_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../models/plugin_catalog.dart';
@@ -63,7 +63,7 @@ class PluginDetailsScreen extends StatelessWidget {
                             ? 'Back (Esc)'
                             : 'Back to Community Library',
                         onPressed: () => Navigator.maybePop(context),
-                        icon: const Icon(Symbols.arrow_back_rounded),
+                        icon: const Icon(ReelishIcons.back),
                       ),
                       const Text(
                         'Community Library',
@@ -192,10 +192,7 @@ class PluginDetailsScreen extends StatelessWidget {
                           style: TextButton.styleFrom(
                             minimumSize: const Size(0, 44),
                           ),
-                          icon: const Icon(
-                            Symbols.open_in_new_rounded,
-                            size: 18,
-                          ),
+                          icon: const Icon(ReelishIcons.externalLink, size: 18),
                           label: const Text('View repository'),
                         ),
                       ),
@@ -354,15 +351,15 @@ class _Hero extends StatelessWidget {
           runSpacing: 8,
           children: [
             PluginMetaPill(
-              icon: Symbols.translate_rounded,
+              icon: ReelishIcons.language,
               label: plugin.languages.isEmpty
                   ? 'Unknown'
                   : plugin.languages.join(' · '),
             ),
             PluginMetaPill(
               icon: plugin.available
-                  ? Symbols.stacks_rounded
-                  : Symbols.cloud_off_rounded,
+                  ? ReelishIcons.stack
+                  : ReelishIcons.offline,
               label: plugin.available
                   ? '${plugin.scraperCount} ${plugin.scraperCount == 1 ? 'source' : 'sources'}'
                   : 'Sources unavailable',
@@ -370,7 +367,7 @@ class _Hero extends StatelessWidget {
             ),
             if (types.isNotEmpty)
               PluginMetaPill(
-                icon: Symbols.movie_rounded,
+                icon: ReelishIcons.movie,
                 label: types.join(' · '),
               ),
           ],
@@ -484,7 +481,7 @@ class _ManifestBox extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Symbols.link_rounded, size: 18, color: GlassTheme.muted),
+          const Icon(ReelishIcons.link, size: 18, color: GlassTheme.muted),
           const SizedBox(width: 10),
           Expanded(
             child: url == null
@@ -508,7 +505,7 @@ class _ManifestBox extends StatelessWidget {
             IconButton(
               tooltip: 'Copy manifest URL',
               onPressed: () => CopyManifestButton.copy(context, url),
-              icon: const Icon(Symbols.content_copy_rounded, size: 20),
+              icon: const Icon(ReelishIcons.copy, size: 20),
             ),
         ],
       ),
@@ -533,7 +530,7 @@ class _Note extends StatelessWidget {
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Icon(Symbols.info_rounded, size: 18, color: GlassTheme.warning),
+        const Icon(ReelishIcons.info, size: 18, color: GlassTheme.warning),
         const SizedBox(width: 10),
         Expanded(
           child: Text(

@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../../theme/reelish_icons.dart';
 
 import '../../theme/design_tokens.dart';
 import '../../theme/glass_theme.dart';
@@ -100,7 +100,7 @@ class _Monogram extends StatelessWidget {
       ),
       child: letter.isEmpty
           ? Icon(
-              Symbols.extension_rounded,
+              ReelishIcons.plugin,
               color: GlassTheme.primary,
               size: size * .46,
             )

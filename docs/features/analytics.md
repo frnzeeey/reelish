@@ -10,8 +10,8 @@ through Google Analytics for Firebase. Windows sends nothing.
 | Event catalog and parameter rules | `lib/src/analytics/analytics_events.dart` |
 | Consent, the channel, deduplication | `lib/src/analytics/analytics_service.dart` |
 | One-time question | `lib/src/widgets/analytics_consent_dialog.dart`, asked from Home after its first frame, before the update check |
-| Settings switch | "Share usage statistics" under Settings › Legal (`playback_settings_screen.dart`), shown only where analytics can run |
-| Native side | `android/app/src/main/kotlin/com/example/onfeed/AnalyticsChannel.kt` (method channel `onfeed/analytics`) |
+| Settings switch | "Share usage statistics" under Settings › General (`playback_settings_screen.dart`), shown only where analytics can run |
+| Native side | `android/app/src/main/kotlin/com/example/onfeed/AnalyticsChannel.kt` (method channel `onfeed/analytics`), `FirebaseStarter.kt` |
 | Build configuration | `REELISH_FIREBASE_*` in `android/app/build.gradle.kts`; manifest switches in `AndroidManifest.xml` |
 
 - **Native SDK, not FlutterFire.** `firebase_core` would also build for
@@ -45,11 +45,13 @@ country from its automatic events (`first_open`, `session_start`,
 
 | Event | Parameters | Sent when | Question it answers |
 |---|---|---|---|
-| `screen_view` | `screen_name` (`home`, `plugins`, `library`, `settings` on phones; TV rail destinations such as `movies`, `search`, `profile`), `screen_class` | A phone tab or TV rail destination opens; repeats of the same page are dropped | Which pages people use and which they ignore |
-| `select_content` | `content_type` (`movie`/`series`), `item_id` (TMDB id) | A details page opens | Which titles people look at; movies versus series |
-| `search_performed` | `outcome` (`results`, `no_results`, `failed`), `results` (0–20, 21 = more) | A search settles (phone search, TV search) | Whether search finds things; never the text |
-| `playback_session` | `content_type`, `item_id`, `outcome` (`played`, `failed`, `abandoned`), `engine`, `first_frame_ms`, `rebuffers`, `rebuffer_ms`, `stalls`, `failure` (first failure kind, such as `http`, `timeout`, `decoder`), `watched_pct` (tens), `watch_party` (0/1) | Once, when the player closes | Startup time, playback failure and abandonment rates, buffering, completion |
-| `feature_used` | `feature`: `my_list_add`, `my_list_remove`, `watch_party_create`, `watch_party_join` (a valid code entered), `plugin_repository_install`, `accent_change`, `app_icon_change`, `episode_alerts_on`, `update_accepted` | The feature succeeds | Which features matter |
+| `screen_view` | `screen_name` (`home`, `plugins`, `library`, `settings` on phones; TV rail destinations such as `movies`, `search`, `profile`), `screen_class` | The first page after launch, and each phone tab or TV rail destination opened; repeats of the same page are dropped | Which pages people use and which they ignore |
+| `select_content` | `content_type` (`movie`/`series`), `item_id` (TMDB id), `origin` (`continue_watching`, when opened from watch history) | A details page opens | Which titles people look at; movies versus series |
+| `search_performed` | `outcome` (`results`, `no_results`, `failed`), `results` (0–20, 21 = more) | A search settles (phone search, TV search); refreshing the same results does not count | Whether search finds things; never the text |
+| `playback_session` | `content_type`, `item_id`, `outcome` (`played`, `failed`, `abandoned`, `interrupted`), `engine`, `first_frame_ms`, `rebuffers`, `rebuffer_ms`, `stalls`, `failure` (first failure kind, such as `http`, `timeout`, `decoder`), `watched_pct` (tens), `watch_party` (0/1), `source_type` (`hls`, `dash`, `progressive`, `torrent`…) | Once, when the player closes | Startup time, playback failure and abandonment rates, buffering, completion |
+| `feature_used` | `feature`: `my_list_add`, `my_list_remove`, `watch_party_create`, `watch_party_join` (a guest reached the room, once per party), `plugin_repository_install`, `accent_change`, `app_icon_change`, `episode_alerts_on`, `update_accepted` | The feature succeeds | Which features matter |
+| `watch_party_session` | `role` (`host`/`guest`), `end_reason`, `minutes`, `reconnects` | Once, when this device's part in a party ends | How long parties last; whether connections hold |
+| `watch_party_failed` | `step` (`create`, `join`), `reason` (a fixed code, such as `not_found`, `full`) | A party could not be created or reached | Why people fail to get into a party |
 | `analytics_enabled` | — | The viewer turns sharing on | Where a device's data starts |
 
 User property: `interface` = `phone` or `tv` (set at each launch while
@@ -58,13 +60,32 @@ automatic device data.
 
 **Never sent:** account or Trakt ids and names, display names, tokens,
 search text, provider, plugin or repository names or addresses, stream URLs
-or headers, file paths, precise location.
+or headers, file paths, Watch Party codes, precise location.
+
+## Events left out on purpose
+
+| Idea | Why not |
+|---|---|
+| `app_open`, `app_foreground`, `app_background` | `session_start` and `user_engagement` already cover them; `app_background` is a name Firebase reserves |
+| `onboarding_completed`, `onboarding_skipped` | First-run screens come before the sharing question, so nothing may be sent yet |
+| `playback_paused`, `playback_resumed`, `playback_quality_changed` | A record of every action in a session is more than the product questions need; `playback_session` is the summary |
+| `genre_selected`, `recommendation_clicked` | No such feature exists: there is no genre picker or recommendation rail to attribute |
+| `favorite_added`, `content_added_to_watchlist` | Already `my_list_add` and `my_list_remove` in `feature_used` |
+| `settings_opened` | Already `screen_view` with `settings` |
+
+`playback_session` also carries `play_to_frame_ms` (from the first play
+request to the first frame), `rebuffer_pct` (share of viewing time spent
+waiting for data), `recoveries` and `recovered` (playback interruptions, and
+how many of them resumed). `interrupted` means a first frame was shown and
+playback then failed for good.
 
 Useful reports: playback success rate = `playback_session` with
-`outcome = played` ÷ all sessions; completion = `watched_pct ≥ 90` among
+`outcome = played` ÷ all sessions; recovery rate = sum of `recovered` ÷ sum
+of `recoveries`; completion = `watched_pct ≥ 90` among
 played sessions; startup = median `first_frame_ms`. Register
 `content_type`, `outcome`, `failure`, `feature`, `screen_name` as custom
-dimensions and `first_frame_ms`, `rebuffer_ms`, `watched_pct` as custom
+dimensions and `first_frame_ms`, `play_to_frame_ms`, `rebuffer_ms`, `rebuffer_pct`,
+`recoveries`, `recovered`, `watched_pct` as custom
 metrics in the Firebase console to see them in reports.
 
 ## Setting up Firebase (once)
@@ -106,11 +127,11 @@ so a missing event there is not a failed delivery. Turn debug mode off with
 ## Cost
 
 Google Analytics for Firebase is free on the Spark plan with no event
-quota for app streams. Reelish adds no Firestore, Functions, Storage,
-Crashlytics or BigQuery. Possible future costs only if added deliberately:
-BigQuery export (needs the Blaze plan; storage and queries are billed) and
-Crashlytics or Performance Monitoring (free, but more SDK size and data to
-disclose).
+quota for app streams. Reelish adds no Firestore, Functions, Storage or
+BigQuery. [Crash reports](crash-reporting.md) use Crashlytics, also no-cost.
+Possible future costs only if added deliberately: BigQuery export (needs the
+Blaze plan; storage and queries are billed) and Performance Monitoring (free,
+but more SDK size and data to disclose).
 
 ## Release checklist
 

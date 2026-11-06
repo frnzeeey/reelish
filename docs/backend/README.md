@@ -116,6 +116,11 @@ its own).
 | `GET /api/v1/me` | Bearer | `{user, traktLinked, sessionId}` |
 | `DELETE /api/v1/me` | Bearer | Revoke Trakt access, delete the account and its sessions |
 | `GET /api/v1/trakt/watchlist` | Bearer | `{items: [{type, tmdbId, listedAt}]}` (`movie` or `series`) |
+| `POST /api/v1/webhooks/buymeacoffee` | Signature | Buy Me a Coffee events ([supporters](supporters.md)); 503 until configured |
+| `GET /api/v1/supporters/me` | Bearer | `{code, status, since, recognition}`; `status` is `none`, `pending` or `verified` |
+| `POST /api/v1/supporters/claim` | Bearer | Asks for a review; shows as pending, grants nothing |
+| `PUT /api/v1/supporters/recognition` | Bearer | `{listed, name}`; supporters only (409) |
+| `GET /api/v1/supporters/public` | Bearer | `{supporters: [{name, since}]}`, opted-in only |
 | `POST /api/v1/trakt/watchlist` | Bearer | `{add, remove}` (≤ 100 `{type, tmdbId}` each) → `{added, removed, notFound}`; 409 `trakt_limit` or `trakt_reauth_required` |
 | `POST /api/v1/notifications/token` | Bearer | `{token}`: an episode-check token for this session (replaces the previous one) |
 | `POST /api/v1/notifications/episodes` | Alert token | `{series: [tmdbId] (≤ 150), popular}` → each series' `lastEpisode`, and TMDB's popular series when asked |
@@ -171,6 +176,32 @@ rate, at, seq, by}`: the position was true at server time `at`, and `seq`
 grows with every change. Close codes: 4000 ended, 4001 replaced by another
 connection of the same account, 4003 removed, 4004 not found, 4029 too
 many messages.
+
+Clients follow the room in `PartyPlayerSync`, with the arithmetic in
+`playback_sync.dart`. The room's timeline gives the expected position
+(`positionMs + (serverNow - at) × rate`, using the clock offset from `time`
+round trips), and each player compares itself with that:
+
+| Gap to the room | What the player does |
+|---|---|
+| Up to 500 ms | Nothing |
+| 500 ms to 3 s | Plays at 1.05x or 0.95x until within 150 ms |
+| Behind by more than 3 s | Seeks, at most as often as `seekBackoffMs` allows (2 s doubling to 30 s), and nudges in between |
+| Ahead by up to 15 s | Holds the frame until the room arrives |
+| Ahead by more than 15 s | Seeks back |
+
+A seek aims ahead of the room by `SeekCost`, the measured time seeks take on
+that device and stream: aiming at where the room is now arrives that much
+late, which on a slow stream repeats forever. A buffering player is never
+sought unless the room has changed, because Media3 reports "not playing"
+while it buffers and a second seek discards the buffer. A change from the room
+overrides waiting and resets the back-off. While reconnecting nothing is
+corrected, because the room as last seen may be out of date; the viewer's last
+action is kept and sent on reconnecting. A player opens at the room's position
+at that moment and does not start if the room is paused. Parties always play
+at 1x, whatever the viewer's default speed. `[PartySync]` lines in debug and
+profile logs summarize seeks, holds, drift, reconnects and delivery time. A
+playing room silent for 35 seconds counts as a dead socket and reconnects.
 
 ### TMDB gateway
 

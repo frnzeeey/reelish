@@ -8,6 +8,7 @@
 library;
 
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -98,6 +99,101 @@ void main() {
       controller,
       (value) => value.position >= const Duration(seconds: 61),
     );
+  });
+
+  _liveTest(
+    'a title that plays to its end completes without an error',
+    () async {
+      final controller = await _play(_source(_mp4, StreamType.progressive));
+      addTearDown(controller.dispose);
+      await _waitFor(controller, (value) => value.isCompleted);
+      expect(controller.value.hasError, isFalse);
+    },
+  );
+
+  _liveTest('seeking to the end completes without an error', () async {
+    for (final gap in const [
+      Duration(milliseconds: 500),
+      Duration(milliseconds: 50),
+      Duration.zero,
+    ]) {
+      final controller = await _play(_source(_mp4, StreamType.progressive));
+      await controller.seekTo(controller.value.duration - gap);
+      await _waitFor(controller, (value) => value.isCompleted);
+      expect(controller.value.hasError, isFalse, reason: '$gap');
+      await controller.dispose();
+    }
+  });
+
+  _liveTest('a connection lost for good is an error, not the end of the '
+      'title', () async {
+    final client = HttpClient();
+    final request = await client.getUrl(Uri.parse(_mp4));
+    final builder = BytesBuilder(copy: false);
+    await (await request.close()).forEach(builder.add);
+    client.close();
+    final bytes = builder.takeBytes();
+
+    // Half the file, then every later request is refused, as with a server
+    // that went away or a link that expired while playing.
+    var cut = false;
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    addTearDown(() => server.close(force: true));
+    server.listen((request) async {
+      final range = RegExp(
+        r'bytes=(\d+)-',
+      ).firstMatch(request.headers.value('range') ?? '');
+      final start = range == null ? 0 : int.parse(range.group(1)!);
+      final response = request.response;
+      if (cut) {
+        response.statusCode = HttpStatus.forbidden;
+        return response.close();
+      }
+      response
+        ..statusCode = range == null ? 200 : 206
+        ..headers.contentType = ContentType.parse('video/mp4')
+        ..headers.set('accept-ranges', 'bytes')
+        ..headers.set('content-length', '${bytes.length - start}');
+      if (range != null) {
+        response.headers.set(
+          'content-range',
+          'bytes $start-${bytes.length - 1}/${bytes.length}',
+        );
+      }
+      final half = bytes.length ~/ 2;
+      final socket = await response.detachSocket();
+      if (range != null && start < half) {
+        socket.add(Uint8List.sublistView(bytes, start, half));
+        await socket.flush();
+        cut = true;
+        socket.destroy();
+        return;
+      }
+      socket.add(Uint8List.sublistView(bytes, start));
+      await socket.flush();
+      await socket.close();
+    });
+
+    final engine = PlayerEngineFactory.forCurrentPlatform()..activate();
+    final controller = engine.createController(
+      _source(
+        'http://127.0.0.1:${server.port}/video.mp4',
+        StreamType.progressive,
+      ),
+    );
+    addTearDown(controller.dispose);
+    await controller.initialize().timeout(const Duration(seconds: 45));
+    await controller.setVolume(0);
+    await controller.play();
+    final deadline = DateTime.now().add(const Duration(seconds: 40));
+    while (!controller.value.hasError && !controller.value.isCompleted) {
+      if (DateTime.now().isAfter(deadline)) {
+        fail('Timed out; last value: ${controller.value}');
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    }
+    expect(controller.value.hasError, isTrue);
+    expect(controller.value.isCompleted, isFalse);
   });
 
   _liveTest('DASH plays', () async {

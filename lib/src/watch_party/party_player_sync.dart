@@ -5,6 +5,7 @@
 // new pause. Automatic changes (buffering, the end) are reported as status.
 
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 
@@ -18,6 +19,9 @@ abstract interface class PartyPlayerHandle {
   bool get ready;
   bool get playing;
   bool get buffering;
+
+  /// The title has played to its end here.
+  bool get completed;
 
   /// The player gave up on every source.
   bool get failed;
@@ -107,8 +111,34 @@ class PartyPlayerSync extends ChangeNotifier {
   bool _nudging = false;
   double _rate = 1;
   int _echoAfterSeq = 0;
-  int _seekCooldownUntil = 0;
   int _awaitingEchoUntil = 0;
+
+  /// The room's last change this player has acted on.
+  int _appliedSeq = -1;
+
+  /// Until then a seek is in flight, and the position means nothing yet.
+  int _settleUntil = 0;
+
+  /// No correcting seek before this (see [seekBackoffMs]).
+  int _nextSeekAt = 0;
+  int _seekStreak = 0;
+
+  /// The seek being timed: when it was asked for, and where to.
+  int? _seekStartedAt;
+  int _seekTarget = 0;
+
+  /// The last seek just landed, so a small lead is waited out once.
+  bool _arrived = false;
+
+  /// Paused at a spot the room has not reached; plays when it does.
+  Timer? _hold;
+  bool _wasBuffering = false;
+  int? _endSentFor;
+  int _lastHeartbeatAt = 0;
+  final SeekCost _seekCost = SeekCost();
+
+  /// What this player's sync did, for diagnostics.
+  final PartySyncStats stats = PartySyncStats();
   int? _readyAt;
   bool _started = false;
   int? _followedEpisodeKey;
@@ -153,6 +183,42 @@ class PartyPlayerSync extends ChangeNotifier {
     _check?.cancel();
     _heartbeat?.cancel();
     _bufferingReport?.cancel();
+    _hold?.cancel();
+    _hold = null;
+    if (!kReleaseMode) {
+      debugPrint(
+        '[PartySync] ${stats.summary()} seekCost=${_seekCost.estimateMs}ms '
+        '${party.stats.summary()}',
+      );
+    }
+  }
+
+  // ---- Opening ----
+
+  /// Where a player opening now should start, from the room's latest state,
+  /// or null before the room has started. Asked for at the moment of the
+  /// seek, so a change made while the source was found is already in it.
+  Duration? takeOpeningPosition() {
+    final playback = party.room?.playback;
+    if (playback == null || !_startedFor(playback)) return null;
+    final expected = expectedPositionMs(
+      playback,
+      party.clock.serverNow(_clock()),
+    );
+    if (!playback.playing) return Duration(milliseconds: expected);
+    final target = expected + _seekCost.leadMs;
+    _seekTarget = target;
+    _seekStartedAt = _clock();
+    _settleUntil = _clock() + 1500;
+    _appliedSeq = playback.seq;
+    return Duration(milliseconds: target);
+  }
+
+  /// Whether a player opening now should wait instead of starting: the room
+  /// is paused or has not started (the host starts it when everyone is ready).
+  bool get holdOpening {
+    final playback = party.room?.playback;
+    return playback == null || !playback.playing;
   }
 
   // ---- The viewer's own actions ----
@@ -211,13 +277,59 @@ class PartyPlayerSync extends ChangeNotifier {
       _setState(PartySyncState.unavailable);
       return;
     }
-    if (!player.ready) _setState(PartySyncState.loading);
+    if (!player.ready) {
+      _setState(PartySyncState.loading);
+      // A new engine comes back at normal speed, with no seek in flight, and
+      // is put right as soon as it is ready.
+      _wasReady = false;
+      _nudging = false;
+      _rate = 1;
+      _seekStartedAt = null;
+      _hold?.cancel();
+      _hold = null;
+    }
     if (player.ready && !_wasReady) {
       _wasReady = true;
-      _readyAt = _clock();
+      _readyAt ??= _clock();
       _reconcile();
     }
+    if (_noteLanding(player)) _reconcile();
+    _followHostBuffering(player);
     _reportStatus(player);
+  }
+
+  /// Times a seek when it lands: the picture moved past where it aimed, or
+  /// buffering has finished once the seek has had time to begin. True when
+  /// it just did, so the room should be checked straight away.
+  bool _noteLanding(PartyPlayerHandle player) {
+    final started = _seekStartedAt;
+    if (started == null) return false;
+    final now = _clock();
+    if (now - started > 20000) {
+      _seekStartedAt = null;
+      return false;
+    }
+    if (!player.playing || player.buffering) return false;
+    if (player.position.inMilliseconds <= _seekTarget && now < _settleUntil) {
+      return false;
+    }
+    _seekCost.add(now - started);
+    _seekStartedAt = null;
+    _settleUntil = 0;
+    _arrived = true;
+    return true;
+  }
+
+  /// A host that stopped to buffer has fallen behind its own timeline; says
+  /// where it really is when it moves again, not at the next heartbeat.
+  void _followHostBuffering(PartyPlayerHandle player) {
+    final was = _wasBuffering;
+    _wasBuffering = player.buffering;
+    if (was &&
+        !player.buffering &&
+        _clock() - _lastHeartbeatAt >= thresholds.seekMs) {
+      _sendHeartbeat();
+    }
   }
 
   void _reportStatus(PartyPlayerHandle player) {
@@ -257,6 +369,8 @@ class PartyPlayerSync extends ChangeNotifier {
 
   void _onPlayback(PartyPlayback playback) {
     if (playback.seq > _echoAfterSeq) _awaitingEchoUntil = 0;
+    // This player already did what it asked the room to do.
+    if (playback.by == party.you) _appliedSeq = playback.seq;
     if (playback.status != PlaybackStatus.idle && _startedFor(playback)) {
       _started = true;
     }
@@ -271,11 +385,24 @@ class PartyPlayerSync extends ChangeNotifier {
     _reconcile();
   }
 
+  /// The title reached its end here. The host says so, so the room's
+  /// timeline stops running on past it.
+  void playerCompleted(Duration position) {
+    final playback = party.room?.playback;
+    if (!isHost || playback == null || !playback.playing) return;
+    if (_endSentFor == playback.seq) return;
+    _endSentFor = playback.seq;
+    party.control('ended', position.inMilliseconds);
+  }
+
   void _reconcile() {
     final player = _player;
     final room = party.room;
+    // The room as last seen may be out of date: everyone keeps playing, and
+    // nothing is corrected until the connection brings the real one.
     if (party.connection == PartyConnection.reconnecting) {
       _setState(PartySyncState.reconnecting);
+      return;
     }
     if (player == null || room == null || room.phase != PartyPhase.watching) {
       return;
@@ -295,47 +422,112 @@ class PartyPlayerSync extends ChangeNotifier {
       }
       return;
     }
-    if (now < _awaitingEchoUntil) return;
+    if (now < _awaitingEchoUntil || party.controlPending) return;
 
     final expected = expectedPositionMs(playback, party.clock.serverNow(now));
     final local = player.position.inMilliseconds;
+    final drift = local - expected;
+    final seekNeeded = drift.abs() > thresholds.seekMs;
+    // A change from the room overrides waiting, and starts corrections afresh.
+    final commanded = playback.seq != _appliedSeq;
+    _appliedSeq = playback.seq;
+    if (commanded) {
+      _hold?.cancel();
+      _hold = null;
+      _nextSeekAt = 0;
+      _seekStreak = 0;
+    }
+    if (_hold != null) return;
+    // Before anything below reads the position, or a new seek replaces this
+    // one and the time it took is lost.
+    _noteLanding(player);
+
     if (!playback.playing) {
       if (player.playing) unawaited(player.remotePause());
-      if ((local - playback.positionMs).abs() > thresholds.ignoreMs) {
+      if ((local - playback.positionMs).abs() > thresholds.ignoreMs &&
+          (commanded || now >= _settleUntil) &&
+          (commanded || !player.buffering)) {
         unawaited(
           player.remoteSeek(Duration(milliseconds: playback.positionMs)),
         );
+        _seekStartedAt = null;
+        _settleUntil = now + 1500;
       }
       _settleSpeed(player);
       _setState(PartySyncState.inSync);
       return;
     }
+    // The room's timeline can outlast this copy of the title.
+    if (player.completed && drift > -thresholds.seekMs) {
+      _settleSpeed(player);
+      _setState(PartySyncState.inSync);
+      return;
+    }
+    // Still arriving. Seeking again would throw away what it has buffered.
+    // Some engines report "not playing" while they buffer, so this comes
+    // before that check. Only a change from the room moves it on.
+    if (player.buffering && !(commanded && seekNeeded)) {
+      if (!player.playing) unawaited(player.remotePlay());
+      if (!isHost) _setState(PartySyncState.catchingUp);
+      return;
+    }
+    if (now < _settleUntil && !commanded) return;
     if (!player.playing) {
-      if ((local - expected).abs() > thresholds.ignoreMs) {
-        unawaited(player.remoteSeek(Duration(milliseconds: expected)));
-        _seekCooldownUntil = now + 1500;
+      if (drift.abs() > thresholds.ignoreMs &&
+          (commanded || now >= _nextSeekAt)) {
+        if (!commanded) {
+          _seekStreak++;
+          _nextSeekAt = now + _seekCost.estimateMs + seekBackoffMs(_seekStreak);
+        }
+        _seek(player, expected, now, commanded: commanded);
       }
       unawaited(player.remotePlay());
       _setState(PartySyncState.catchingUp);
       return;
     }
     // The host's timeline is the reference; only others correct drift.
-    if (isHost || player.buffering || now < _seekCooldownUntil) {
-      if (isHost) _setState(PartySyncState.inSync);
+    if (isHost) {
+      _settleSpeed(player);
+      _setState(PartySyncState.inSync);
       return;
     }
-    switch (decideSync(
-      local - expected,
-      nudging: _nudging,
-      thresholds: thresholds,
-    )) {
+    if (commanded && seekNeeded) {
+      _settleSpeed(player);
+      _seek(player, expected, now, commanded: true);
+      _setState(PartySyncState.catchingUp);
+      return;
+    }
+    if (_arrived) {
+      _arrived = false;
+      if (drift > thresholds.ignoreMs && drift <= thresholds.holdMs) {
+        _waitForRoom(player, drift);
+        return;
+      }
+    }
+    if (_nudging || !seekNeeded) {
+      stats.worstDriftMs = max(stats.worstDriftMs, drift.abs());
+    }
+    switch (decideSync(drift, nudging: _nudging, thresholds: thresholds)) {
       case SyncAction.none:
+        _seekStreak = 0;
         _settleSpeed(player);
         _setState(PartySyncState.inSync);
       case SyncAction.seek:
+        if (drift > 0 && drift <= thresholds.holdMs) {
+          _waitForRoom(player, drift);
+          return;
+        }
+        if (now < _nextSeekAt) {
+          _nudge(
+            player,
+            drift < 0 ? 1 + thresholds.nudgeRate : 1 - thresholds.nudgeRate,
+          );
+          return;
+        }
         _settleSpeed(player);
-        unawaited(player.remoteSeek(Duration(milliseconds: expected)));
-        _seekCooldownUntil = now + 1500;
+        _seekStreak++;
+        _nextSeekAt = now + _seekCost.estimateMs + seekBackoffMs(_seekStreak);
+        _seek(player, expected, now);
         _setState(PartySyncState.catchingUp);
       case SyncAction.speedUp:
         _nudge(player, 1 + thresholds.nudgeRate);
@@ -344,9 +536,44 @@ class PartyPlayerSync extends ChangeNotifier {
     }
   }
 
+  /// Seeks to where the room will be once the seek has finished.
+  void _seek(
+    PartyPlayerHandle player,
+    int expected,
+    int now, {
+    bool commanded = false,
+  }) {
+    if (commanded) {
+      stats.commandedSeeks++;
+    } else {
+      stats.correctingSeeks++;
+    }
+    final target = expected + _seekCost.leadMs;
+    unawaited(player.remoteSeek(Duration(milliseconds: target)));
+    _seekTarget = target;
+    _seekStartedAt = now;
+    _settleUntil = now + 1500;
+    _arrived = false;
+  }
+
+  /// Landed ahead of the room: holds the frame until the room gets here,
+  /// which is quicker and more exact than playing slowly for much longer.
+  void _waitForRoom(PartyPlayerHandle player, int aheadMs) {
+    stats.holds++;
+    unawaited(player.remotePause());
+    _settleSpeed(player);
+    _setState(PartySyncState.catchingUp);
+    _hold = Timer(Duration(milliseconds: aheadMs), () {
+      _hold = null;
+      unawaited(player.remotePlay());
+      _reconcile();
+    });
+  }
+
   void _nudge(PartyPlayerHandle player, double rate) {
     _nudging = true;
     if (_rate != rate) {
+      stats.nudges++;
       _rate = rate;
       unawaited(player.remoteSpeed(rate));
     }
@@ -397,6 +624,7 @@ class PartyPlayerSync extends ChangeNotifier {
     if (!isHost || player == null || playback == null) return;
     if (!playback.playing || !player.playing || player.buffering) return;
     if (_clock() < _awaitingEchoUntil) return;
+    _lastHeartbeatAt = _clock();
     party.heartbeat(player.position.inMilliseconds);
   }
 

@@ -2,8 +2,6 @@ package com.example.onfeed
 
 import android.content.Context
 import android.os.Bundle
-import com.google.firebase.FirebaseApp
-import com.google.firebase.FirebaseOptions
 import com.google.firebase.analytics.FirebaseAnalytics
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodChannel
@@ -24,16 +22,11 @@ class AnalyticsChannel(private val context: Context) {
 
     private var analytics: FirebaseAnalytics? = null
 
-    private val configured: Boolean
-        get() = BuildConfig.FIREBASE_APP_ID.isNotBlank() &&
-            BuildConfig.FIREBASE_API_KEY.isNotBlank() &&
-            BuildConfig.FIREBASE_PROJECT_ID.isNotBlank()
-
     fun register(messenger: BinaryMessenger) {
         MethodChannel(messenger, NAME).setMethodCallHandler { call, result ->
             try {
                 when (call.method) {
-                    "isConfigured" -> result.success(configured)
+                    "isConfigured" -> result.success(FirebaseStarter.configured)
                     "configure" -> {
                         val enabled = call.argument<Boolean>("enabled") == true
                         val reset = call.argument<Boolean>("reset") == true
@@ -61,7 +54,7 @@ class AnalyticsChannel(private val context: Context) {
     }
 
     private fun configure(enabled: Boolean, reset: Boolean): Boolean {
-        if (!configured) return false
+        if (!FirebaseStarter.configured) return false
         // Off and nothing to erase: Firebase is not started at all.
         if (!enabled && !reset && analytics == null) return true
         val instance = analytics ?: start()
@@ -80,19 +73,7 @@ class AnalyticsChannel(private val context: Context) {
     }
 
     private fun start(): FirebaseAnalytics {
-        if (FirebaseApp.getApps(context).isEmpty()) {
-            val options = FirebaseOptions.Builder()
-                .setApplicationId(BuildConfig.FIREBASE_APP_ID)
-                .setApiKey(BuildConfig.FIREBASE_API_KEY)
-                .setProjectId(BuildConfig.FIREBASE_PROJECT_ID)
-                .apply {
-                    if (BuildConfig.FIREBASE_SENDER_ID.isNotBlank()) {
-                        setGcmSenderId(BuildConfig.FIREBASE_SENDER_ID)
-                    }
-                }
-                .build()
-            FirebaseApp.initializeApp(context, options)
-        }
+        FirebaseStarter.start(context)
         return FirebaseAnalytics.getInstance(context).also { analytics = it }
     }
 

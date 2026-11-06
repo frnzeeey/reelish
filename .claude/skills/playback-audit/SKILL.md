@@ -61,6 +61,11 @@ Pipeline (see `reelish-architecture/architecture.md` § Play):
 - Never log full stream URLs or headers (they can carry tokens).
 
 ## Platform considerations
+- libmpv reports a lost connection as a normal end of file once its
+  reconnects fail (no error), and `video_player` then seeks to the end. The
+  bridge turns an end of file well short of the duration into a network
+  error (`MediaKitVideoPlayer.endedEarly`); keep that, or a dropped stream
+  saves as watched and starts the next episode.
 - Android phone/TV: Media3 + libmpv fallback; torrents only on 64-bit
   processes (`TorrentSupport`). Chromecast-class TVs are 32-bit.
 - Windows: libmpv only, bundled by `media_kit_libs_windows_video`;

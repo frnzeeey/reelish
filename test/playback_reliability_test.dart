@@ -23,6 +23,93 @@ StreamSource _source(String name, {String provider = 'A', String url = ''}) =>
     );
 
 void main() {
+  group('end of file from libmpv', () {
+    Duration s(num seconds) => Duration(milliseconds: (seconds * 1000).round());
+
+    test('a connection lost at 49% is not the end of the title', () {
+      expect(MediaKitVideoPlayer.endedEarly(s(4.9), s(10)), isTrue);
+      expect(MediaKitVideoPlayer.endedEarly(s(2520), s(7200)), isTrue);
+    });
+
+    test('the real end counts, within the tolerance for rough durations', () {
+      expect(MediaKitVideoPlayer.endedEarly(s(10), s(10)), isFalse);
+      expect(MediaKitVideoPlayer.endedEarly(s(7.5), s(10)), isFalse);
+      // 1% of two hours: an HLS length is the sum of rounded segment times.
+      expect(MediaKitVideoPlayer.endedEarly(s(7130), s(7200)), isFalse);
+      expect(MediaKitVideoPlayer.endedEarly(s(7120), s(7200)), isTrue);
+    });
+
+    test('a stream of unknown length never ends early', () {
+      expect(MediaKitVideoPlayer.endedEarly(s(40), Duration.zero), isFalse);
+    });
+
+    test('the error it becomes is a network failure, so the player '
+        'reconnects at the same position', () {
+      final failure = PlaybackFailure.classify(
+        PlatformException(
+          code: '',
+          message:
+              'The connection to the stream was lost before the end of the '
+              'video.',
+        ),
+      );
+      expect(failure.kind, PlaybackFailureKind.network);
+      expect(failure.linkRejected, isFalse);
+      expect(failure.linkMayHaveDied, isTrue);
+    });
+  });
+
+  group('links that stop working', () {
+    PlaybackFailure http(int code) => PlaybackFailure.classify(
+      PlatformException(code: 'VideoError', message: 'HTTP error $code'),
+    );
+
+    test('a refused or missing link is not worth reconnecting to', () {
+      for (final code in [401, 403, 404, 410]) {
+        expect(http(code).linkRejected, isTrue, reason: '$code');
+      }
+      for (final code in [429, 500, 502, 503]) {
+        expect(http(code).linkRejected, isFalse, reason: '$code');
+      }
+      expect(
+        PlaybackFailure.classify(TimeoutException('open')).linkRejected,
+        isFalse,
+      );
+    });
+
+    test('a fresh link goes only to a source that played', () {
+      final budget = LinkRefreshBudget();
+      expect(budget.take('a', http(403)), isFalse);
+      budget.played('a');
+      expect(budget.take('b', http(403)), isFalse);
+      expect(budget.take('a', http(403)), isTrue);
+    });
+
+    test('a fresh link cannot help a problem with the media', () {
+      final budget = LinkRefreshBudget()..played('a');
+      for (final failure in [
+        PlaybackFailure.noPicture,
+        'Failed to recognize file format',
+        'Decoder init failed',
+        'was cancelled',
+      ]) {
+        expect(
+          budget.take('a', PlaybackFailure.classify(failure)),
+          isFalse,
+          reason: failure,
+        );
+      }
+    });
+
+    test('refreshes are bounded per session', () {
+      final budget = LinkRefreshBudget()..played('a');
+      for (var i = 0; i < LinkRefreshBudget.maxPerSession; i++) {
+        expect(budget.take('a', http(403)), isTrue);
+      }
+      expect(budget.take('a', http(403)), isFalse);
+    });
+  });
+
   group('failure classification', () {
     PlaybackFailure classify(Object error) => PlaybackFailure.classify(error);
 

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../../theme/reelish_icons.dart';
 import 'package:video_player/video_player.dart';
 import '../../models/stream_source.dart';
 import '../glass_box.dart';
@@ -159,8 +159,8 @@ class PlayerSettingsSheet extends StatelessWidget {
                     leading: Icon(
                       track.id == value.audioTrackId ||
                               (value.audioTrackId == null && track.isSelected)
-                          ? Symbols.radio_button_checked_rounded
-                          : Symbols.radio_button_unchecked_rounded,
+                          ? ReelishIcons.radioOn
+                          : ReelishIcons.radioOff,
                     ),
                     title: Text(track.label ?? track.language ?? 'Audio track'),
                     subtitle: Text(
@@ -181,7 +181,7 @@ class PlayerSettingsSheet extends StatelessWidget {
               if (alternateEngine case final engine?)
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Symbols.swap_horiz_rounded),
+                  leading: const Icon(ReelishIcons.swapHorizontal),
                   title: Text('Switch to $engine'),
                   subtitle: const Text(
                     'Try this if the picture stays black while audio plays.',
@@ -239,7 +239,7 @@ class PlayerSettingsSheet extends StatelessWidget {
                         subtitleDelay: (value.subtitleDelay - .25).clamp(-5, 5),
                       ),
                     ),
-                    icon: const Icon(Symbols.do_not_disturb_on_rounded),
+                    icon: const Icon(ReelishIcons.blocked),
                   ),
                   Text('${value.subtitleDelay.toStringAsFixed(2)}s'),
                   IconButton(
@@ -250,15 +250,15 @@ class PlayerSettingsSheet extends StatelessWidget {
                         subtitleDelay: (value.subtitleDelay + .25).clamp(-5, 5),
                       ),
                     ),
-                    icon: const Icon(Symbols.add_circle_rounded),
+                    icon: const Icon(ReelishIcons.addCircle),
                   ),
                 ],
               ),
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Symbols.vertical_align_center_rounded),
+                leading: const Icon(ReelishIcons.alignCenter),
                 title: const Text('Subtitle position'),
-                trailing: const Icon(Symbols.chevron_right_rounded),
+                trailing: const Icon(ReelishIcons.chevronRight),
                 onTap: () => Navigator.pop(
                   context,
                   value.copyWith(adjustSubtitlePosition: true),

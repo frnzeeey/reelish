@@ -5,7 +5,7 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart' show CustomSemanticsAction;
 import 'package:flutter/services.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../theme/reelish_icons.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/media_item.dart';
@@ -616,9 +616,10 @@ class _SidebarItemState extends State<_SidebarItem> {
                         )
                       else
                         Icon(
-                          widget.destination.icon,
+                          selected
+                              ? ReelishIcons.filled(widget.destination.icon)
+                              : widget.destination.icon,
                           size: 23,
-                          fill: selected ? 1 : 0,
                           color: color,
                         ),
                       // Built only while open: a hidden label would still
@@ -685,9 +686,7 @@ class _PinToggle extends StatelessWidget {
               children: [
                 const SizedBox(width: 17),
                 Icon(
-                  pinned
-                      ? Symbols.left_panel_close_rounded
-                      : Symbols.left_panel_open_rounded,
+                  pinned ? ReelishIcons.panelClose : ReelishIcons.panelOpen,
                   size: 22,
                   color: GlassTheme.muted,
                 ),
@@ -831,7 +830,7 @@ class _ResumeSection extends StatelessWidget {
                               onPressed: onSeeAll,
                               iconAlignment: IconAlignment.end,
                               icon: const Icon(
-                                Symbols.chevron_right_rounded,
+                                ReelishIcons.chevronRight,
                                 size: 14,
                               ),
                               label: const Text('See all'),
@@ -865,7 +864,7 @@ class _ResumeSection extends StatelessWidget {
                   message: 'Continue watching',
                   child: Center(
                     child: Icon(
-                      Symbols.history_rounded,
+                      ReelishIcons.history,
                       size: 18,
                       color: GlassTheme.muted,
                     ),
@@ -1225,8 +1224,7 @@ class _ResumeTileState extends State<_ResumeTile> {
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
-                      Symbols.play_arrow_rounded,
-                      fill: 1,
+                      ReelishIcons.play,
                       size: 17,
                       color: Colors.white,
                     ),

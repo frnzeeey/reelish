@@ -2,7 +2,7 @@
 // the waiting room with the code to share.
 
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../../theme/reelish_icons.dart';
 
 import '../../navigation/app_transitions.dart';
 import '../../platform/device_capabilities.dart';
@@ -69,7 +69,10 @@ class _CreatePartyScreenState extends State<CreatePartyScreen> {
       }
       final party = WatchPartyController(code: code);
       await party.start();
-      if (!mounted) return;
+      if (!mounted) {
+        party.dispose();
+        return;
+      }
       await Navigator.pushReplacement(
         context,
         AppPageRoute<void>(
@@ -90,7 +93,7 @@ class _CreatePartyScreenState extends State<CreatePartyScreen> {
     description: description,
     children: [
       SettingsTile(
-        icon: Symbols.group_rounded,
+        icon: ReelishIcons.people,
         title: 'Up to $_capacity people',
         description: 'Including you',
         mergeSemantics: false,
@@ -102,20 +105,20 @@ class _CreatePartyScreenState extends State<CreatePartyScreen> {
               onPressed: _capacity > 2
                   ? () => setState(() => _capacity--)
                   : null,
-              icon: const Icon(Symbols.remove_rounded),
+              icon: const Icon(ReelishIcons.minus),
             ),
             IconButton(
               tooltip: 'More people',
               onPressed: _capacity < _maxCapacity
                   ? () => setState(() => _capacity++)
                   : null,
-              icon: const Icon(Symbols.add_rounded),
+              icon: const Icon(ReelishIcons.add),
             ),
           ],
         ),
       ),
       SettingsSwitchTile(
-        icon: Symbols.play_pause_rounded,
+        icon: ReelishIcons.playPause,
         title: 'Everyone can play and pause',
         description: _guestControl
             ? 'Anyone in the party controls playback'
@@ -124,7 +127,7 @@ class _CreatePartyScreenState extends State<CreatePartyScreen> {
         onChanged: (value) => setState(() => _guestControl = value),
       ),
       SettingsSwitchTile(
-        icon: Symbols.hourglass_top_rounded,
+        icon: ReelishIcons.hourglass,
         title: 'Wait for everyone',
         description: 'Start once everyone’s player is ready',
         value: _waitForAll,
@@ -218,7 +221,7 @@ class _CreatePartyScreenState extends State<CreatePartyScreen> {
                         const SizedBox(width: AppSpace.md),
                         PartyDesktopButton(
                           label: _creating ? 'Creating party…' : 'Create party',
-                          icon: Symbols.celebration_rounded,
+                          icon: ReelishIcons.celebration,
                           busy: _creating,
                           onPressed: _creating ? null : _submit,
                         ),
@@ -282,7 +285,7 @@ class _CreatePartyScreenState extends State<CreatePartyScreen> {
                         dimension: 20,
                         child: CircularProgressIndicator(strokeWidth: 2.4),
                       )
-                    : const Icon(Symbols.celebration_rounded),
+                    : const Icon(ReelishIcons.celebration),
                 label: Text(
                   _creating ? 'Creating party…' : 'Create party',
                   style: const TextStyle(fontWeight: FontWeight.w800),

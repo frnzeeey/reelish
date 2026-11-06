@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../../theme/reelish_icons.dart';
 
 import '../../theme/design_tokens.dart';
 import '../../theme/glass_theme.dart';
@@ -69,7 +69,7 @@ class _CopyManifestButtonState extends State<CopyManifestButton> {
       transitionBuilder: (child, animation) =>
           ScaleTransition(scale: animation, child: child),
       child: Icon(
-        _copied ? Symbols.check_rounded : Symbols.content_copy_rounded,
+        _copied ? ReelishIcons.check : ReelishIcons.copy,
         key: ValueKey(_copied),
         size: 18,
       ),

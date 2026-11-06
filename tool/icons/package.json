@@ -1,0 +1,13 @@
+{
+  "name": "reelish-icons",
+  "private": true,
+  "type": "module",
+  "description": "Builds Reelish's icon set: flattened SVGs, the icon font and the Dart registry. Development only; nothing here ships.",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "devDependencies": {
+    "canvaskit-wasm": "0.39.1",
+    "opentype.js": "1.3.4"
+  }
+}

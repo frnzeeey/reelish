@@ -3,7 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../../theme/reelish_icons.dart';
 
 import '../../account/account_api.dart';
 import '../../account/profile_controller.dart';
@@ -87,7 +87,7 @@ class _PosterFallback extends StatelessWidget {
   @override
   Widget build(BuildContext context) => const ColoredBox(
     color: GlassTheme.surface,
-    child: Icon(Symbols.movie_rounded, color: GlassTheme.muted),
+    child: Icon(ReelishIcons.movie, color: GlassTheme.muted),
   );
 }
 
@@ -283,7 +283,7 @@ class PartyCodeBlock extends StatelessWidget {
           children: [
             OutlinedButton.icon(
               onPressed: () => _copy(context, code, 'Code copied.'),
-              icon: const Icon(Symbols.content_copy_rounded),
+              icon: const Icon(ReelishIcons.copy),
               label: const Text('Copy code'),
             ),
             OutlinedButton.icon(
@@ -293,7 +293,7 @@ class PartyCodeBlock extends StatelessWidget {
                     'enter ${formatPartyCode(code)}.',
                 'Invitation copied. Paste it in a message.',
               ),
-              icon: const Icon(Symbols.forward_to_inbox_rounded),
+              icon: const Icon(ReelishIcons.mailSend),
               label: const Text('Copy invitation'),
             ),
           ],
@@ -311,13 +311,9 @@ class PartyHowItWorks extends StatelessWidget {
   final bool vertical;
 
   static const _steps = [
-    (Symbols.ios_share_rounded, 'Share the code', 'Friends join with it'),
-    (
-      Symbols.extension_rounded,
-      'Everyone finds a source',
-      'From their own plugins',
-    ),
-    (Symbols.sync_rounded, 'Watch in sync', 'Play, pause and seek together'),
+    (ReelishIcons.share, 'Share the code', 'Friends join with it'),
+    (ReelishIcons.plugin, 'Everyone finds a source', 'From their own plugins'),
+    (ReelishIcons.sync, 'Watch in sync', 'Play, pause and seek together'),
   ];
 
   @override

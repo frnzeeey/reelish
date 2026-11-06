@@ -4,7 +4,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../theme/reelish_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../account/account_controller.dart';
@@ -295,7 +295,7 @@ class _Welcome extends StatelessWidget {
     children: [
       _PrimaryButton(
         autofocus: true,
-        icon: Symbols.login_rounded,
+        icon: ReelishIcons.login,
         label: tv ? 'Sign in with Trakt' : 'Continue with Trakt',
         onPressed: () => onStart(),
       ),
@@ -383,7 +383,7 @@ class _BrowserPanel extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Icon(
-          Symbols.open_in_browser_rounded,
+          ReelishIcons.openBrowser,
           size: AppIcon.xl,
           color: GlassTheme.coralBright,
         ),
@@ -414,14 +414,14 @@ class _BrowserPanel extends StatelessWidget {
         const SizedBox(height: AppSpace.lg),
         _PrimaryButton(
           autofocus: true,
-          icon: Symbols.open_in_new_rounded,
+          icon: ReelishIcons.externalLink,
           label: 'Open Trakt again',
           onPressed: signIn.openBrowser,
         ),
         const SizedBox(height: AppSpace.xs),
         OutlinedButton.icon(
           onPressed: onUseCode,
-          icon: const Icon(Symbols.pin_rounded),
+          icon: const Icon(ReelishIcons.numberPad),
           label: const Text('Use a code instead'),
         ),
         const SizedBox(height: AppSpace.md),
@@ -487,7 +487,7 @@ class _CodePanel extends StatelessWidget {
             // code can then simply be pasted on Trakt.
             _PrimaryButton(
               autofocus: true,
-              icon: Symbols.open_in_new_rounded,
+              icon: ReelishIcons.externalLink,
               label: 'Copy code and open Trakt',
               onPressed: () async {
                 await Clipboard.setData(ClipboardData(text: code.userCode));
@@ -504,7 +504,7 @@ class _CodePanel extends StatelessWidget {
                   ).showSnackBar(const SnackBar(content: Text('Code copied')));
                 }
               },
-              icon: const Icon(Symbols.content_copy_rounded),
+              icon: const Icon(ReelishIcons.copy),
               label: const Text('Copy code'),
             ),
           ],
@@ -682,7 +682,7 @@ class _PrivacyNote extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.only(right: AppSpace.xxs),
             child: Icon(
-              Symbols.lock_rounded,
+              ReelishIcons.lock,
               size: tv ? AppIcon.md : AppIcon.sm,
               color: GlassTheme.muted,
             ),
@@ -758,7 +758,7 @@ class _Retry extends StatelessWidget {
         const SizedBox(height: AppSpace.md),
         _PrimaryButton(
           autofocus: true,
-          icon: Symbols.refresh_rounded,
+          icon: ReelishIcons.refresh,
           label: action,
           onPressed: onPressed,
         ),
@@ -787,7 +787,7 @@ class _Notice extends StatelessWidget {
       child: Row(
         children: [
           const Icon(
-            Symbols.info_rounded,
+            ReelishIcons.info,
             size: AppIcon.md,
             color: GlassTheme.warning,
           ),

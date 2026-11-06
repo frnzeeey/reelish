@@ -1,7 +1,7 @@
 // The one-time question about sharing usage statistics (Android phones,
 // Android TV and Google TV, when the build has analytics configured).
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../theme/reelish_icons.dart';
 
 import '../analytics/analytics_service.dart';
 import 'update_dialog.dart';
@@ -47,7 +47,7 @@ class AnalyticsConsentDialog extends StatelessWidget {
       if (!didPop) Navigator.pop(context, false);
     },
     child: UpdateDialogFrame(
-      icon: Symbols.insights_rounded,
+      icon: ReelishIcons.insights,
       title: 'Share usage statistics?',
       actions: [
         UpdateDialogButton(

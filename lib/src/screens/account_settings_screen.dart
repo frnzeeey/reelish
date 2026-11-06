@@ -6,7 +6,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../theme/reelish_icons.dart';
 
 import '../account/account_api.dart';
 import '../account/account_controller.dart';
@@ -228,7 +228,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
     builder: (context, _) => SettingsPage(
       title: 'Account',
       subtitle: 'Your profile and Trakt sign-in on this device.',
-      icon: Symbols.account_circle_rounded,
+      icon: ReelishIcons.account,
       onBack: widget.onBack,
       children: [
         _ProfileCard(profile: _profile, username: widget.account.username),
@@ -239,7 +239,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
               'uploaded or shown to anyone else.',
           children: [
             SettingsTile(
-              icon: Symbols.badge_rounded,
+              icon: ReelishIcons.badge,
               title: 'Display name',
               description: _profile.displayName == null
                   ? 'Not set: Reelish shows your Trakt username'
@@ -255,7 +255,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
             ),
             if (_canPickPhoto)
               SettingsTile(
-                icon: Symbols.add_photo_alternate_rounded,
+                icon: ReelishIcons.addPhoto,
                 title: _profile.photo == null
                     ? 'Choose a photo'
                     : 'Choose another photo',
@@ -267,7 +267,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
               ),
             if (_profile.photo != null)
               SettingsTile(
-                icon: Symbols.hide_image_rounded,
+                icon: ReelishIcons.imageOff,
                 title: 'Remove photo',
                 description: 'Deletes it from this device',
                 enabled: _busy == null,
@@ -283,7 +283,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
               'Trakt account. Watch history sync is coming later.',
           children: [
             SettingsSwitchTile(
-              icon: Symbols.bookmarks_rounded,
+              icon: ReelishIcons.bookmarks,
               title: 'Sync My list with Trakt watchlist',
               description: _sync.enabled
                   ? _syncStatus()
@@ -294,7 +294,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
             ),
             if (_sync.enabled)
               SettingsTile(
-                icon: Symbols.sync_rounded,
+                icon: ReelishIcons.sync,
                 title: 'Sync now',
                 description: 'Sync also runs on its own after changes',
                 enabled: _busy == null && !_sync.syncing,
@@ -316,7 +316,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
               'device.',
           children: [
             SettingsTile(
-              icon: Symbols.logout_rounded,
+              icon: ReelishIcons.logout,
               title: 'Sign out',
               description: 'Sign out of Reelish on this device',
               enabled: _busy == null,
@@ -334,7 +334,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
               },
             ),
             SettingsTile(
-              icon: Symbols.devices_rounded,
+              icon: ReelishIcons.devices,
               title: 'Sign out everywhere',
               description: 'Sign out of Reelish on all your devices',
               enabled: _busy == null,
@@ -361,7 +361,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
           label: 'DANGER ZONE',
           children: [
             _DangerTile(
-              icon: Symbols.delete_forever_rounded,
+              icon: ReelishIcons.trashForever,
               title: 'Delete Reelish account',
               description:
                   'Removes your Reelish account and its access to Trakt. '
@@ -476,7 +476,7 @@ class _ProfileCard extends StatelessWidget {
                     ],
                     const SizedBox(height: AppSpace.xs),
                     _Pill(
-                      icon: Symbols.verified_user_rounded,
+                      icon: ReelishIcons.shieldCheck,
                       label: 'Connected on this ${_deviceNoun()}',
                     ),
                   ],
@@ -600,7 +600,7 @@ class _DangerTile extends StatelessWidget {
               const SizedBox(width: 8),
               trailing ??
                   const Icon(
-                    Symbols.chevron_right_rounded,
+                    ReelishIcons.chevronRight,
                     color: GlassTheme.muted,
                     size: 22,
                   ),
@@ -735,10 +735,9 @@ class _AvatarChoiceState extends State<_AvatarChoice> {
                         border: Border.all(color: GlassTheme.surface, width: 2),
                       ),
                       child: const Icon(
-                        Symbols.check_rounded,
+                        ReelishIcons.check,
                         size: 12,
                         color: Colors.white,
-                        weight: 700,
                       ),
                     ),
                   ),

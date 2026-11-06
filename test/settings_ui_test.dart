@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:onfeed/src/screens/app_information_screens.dart';
 import 'package:onfeed/src/screens/credits_screen.dart';
 import 'package:onfeed/src/screens/legal_information_screen.dart';
+import 'package:onfeed/src/screens/supporters_screen.dart';
 import 'package:onfeed/src/screens/playback_settings_screen.dart';
 import 'package:onfeed/src/screens/subtitle_addons_screen.dart';
 import 'package:onfeed/src/services/accent_settings_controller.dart';
@@ -138,12 +139,7 @@ void main() {
       'Appearance',
       'Playback',
       'Subtitle addons',
-      'About Reelish',
-      'Credits & attribution',
-      'Open-source licenses',
-      'Privacy policy',
-      'Terms of use',
-      'Support development',
+      'Help & Support',
     ]) {
       await _scrollTo(tester, find.text(label));
       expect(find.text(label), findsOneWidget, reason: label);
@@ -174,6 +170,13 @@ void main() {
     expect(_logo, findsOneWidget);
     expect(find.text('The Movie Database (TMDB)'), findsOneWidget);
     expect(find.text(_disclaimer), findsOneWidget);
+    await _scrollTo(tester, find.text('Powered by Trakt'));
+    expect(find.bySemanticsLabel('Trakt logo'), findsOneWidget);
+    expect(
+      find.textContaining('not sponsored by, endorsed by or affiliated with'),
+      findsOneWidget,
+    );
+    await _scrollTo(tester, find.text('trakt.tv'));
     await _scrollTo(tester, find.text('REELISH INFORMATION'));
     await _scrollTo(tester, find.text('1.7.0 (build 1007000)'));
     await _scrollTo(tester, find.text('Reporting and support'));
@@ -230,7 +233,7 @@ void main() {
     addTearDown(accent.dispose);
     final screens = <String, Widget>{
       'About': const AboutScreen(),
-      'Support': const SupportDevelopmentScreen(),
+      'Supporters': const SupportersScreen(),
       'Privacy': const LegalInformationScreen(document: LegalDocument.privacy),
       'Terms': const LegalInformationScreen(document: LegalDocument.terms),
       'Subtitles': const SubtitleAddonsScreen(),

@@ -4,7 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../../theme/reelish_icons.dart';
 
 import '../../models/media_item.dart';
 import '../../services/paged_feed_controller.dart';
@@ -587,7 +587,7 @@ class TvRowMessage extends StatelessWidget {
                           const SizedBox(width: 16),
                           OutlinedButton.icon(
                             onPressed: onRetry,
-                            icon: const Icon(Symbols.refresh_rounded),
+                            icon: const Icon(ReelishIcons.refresh),
                             label: const Text('Retry'),
                           ),
                         ],
@@ -631,7 +631,7 @@ class _TrailingRetry extends StatelessWidget {
       child: IconButton.filledTonal(
         tooltip: 'Retry',
         onPressed: onRetry,
-        icon: const Icon(Symbols.refresh_rounded),
+        icon: const Icon(ReelishIcons.refresh),
       ),
     ),
   );
@@ -845,8 +845,7 @@ class TvMetaLine extends StatelessWidget {
                   child: Padding(
                     padding: const EdgeInsets.only(right: 4),
                     child: Icon(
-                      Symbols.star_rounded,
-                      fill: 1,
+                      ReelishIcons.starFilled,
                       size: (style.fontSize ?? 15) * 1.1,
                       color: GlassTheme.primary,
                     ),

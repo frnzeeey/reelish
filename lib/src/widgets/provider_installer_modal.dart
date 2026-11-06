@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../theme/reelish_icons.dart';
 import 'package:flutter/services.dart';
 import '../platform/device_capabilities.dart';
 import '../services/provider_plugin_service.dart';
@@ -95,7 +95,7 @@ class _ProviderInstallerModalState extends State<ProviderInstallerModal> {
                 children: [
                   const Expanded(
                     child: Text(
-                      'Install a provider manifest',
+                      'Add by link',
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w800,
@@ -105,12 +105,12 @@ class _ProviderInstallerModalState extends State<ProviderInstallerModal> {
                   IconButton(
                     tooltip: 'Close',
                     onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Symbols.close_rounded),
+                    icon: const Icon(ReelishIcons.close),
                   ),
                 ],
               ),
               const Text(
-                'Provider scripts run on this device and can make network requests. Install only repositories you trust. Use an HTTPS manifest URL.',
+                'Provider scripts run on this device and can make network requests. Add only collections you trust. Use an HTTPS manifest link.',
                 style: TextStyle(color: GlassTheme.muted),
               ),
               const SizedBox(height: 16),
@@ -124,7 +124,7 @@ class _ProviderInstallerModalState extends State<ProviderInstallerModal> {
                         autofocus: true,
                         value: _url.text,
                         hint: 'Provider manifest URL',
-                        icon: Symbols.link_rounded,
+                        icon: ReelishIcons.link,
                         keyboardType: TextInputType.url,
                         onChanged: (value) => setState(() => _url.text = value),
                         onSubmitted: (_) => _busy ? null : _install(),
@@ -134,7 +134,7 @@ class _ProviderInstallerModalState extends State<ProviderInstallerModal> {
                     IconButton(
                       tooltip: 'Paste from clipboard',
                       onPressed: _busy ? null : _paste,
-                      icon: const Icon(Symbols.content_paste_rounded),
+                      icon: const Icon(ReelishIcons.paste),
                     ),
                   ],
                 )
@@ -146,11 +146,11 @@ class _ProviderInstallerModalState extends State<ProviderInstallerModal> {
                   onSubmitted: (_) => _busy ? null : _install(),
                   decoration: InputDecoration(
                     hintText: 'Provider manifest URL',
-                    prefixIcon: const Icon(Symbols.link_rounded),
+                    prefixIcon: const Icon(ReelishIcons.link),
                     suffixIcon: IconButton(
                       tooltip: 'Paste from clipboard',
                       onPressed: _busy ? null : _paste,
-                      icon: const Icon(Symbols.content_paste_rounded),
+                      icon: const Icon(ReelishIcons.paste),
                     ),
                   ),
                 ),
@@ -172,10 +172,8 @@ class _ProviderInstallerModalState extends State<ProviderInstallerModal> {
                           dimension: 18,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Icon(Symbols.download_rounded),
-                  label: Text(
-                    _busy ? 'Checking manifest…' : 'Install provider',
-                  ),
+                      : const Icon(ReelishIcons.download),
+                  label: Text(_busy ? 'Checking manifest…' : 'Add collection'),
                 ),
               ),
             ],

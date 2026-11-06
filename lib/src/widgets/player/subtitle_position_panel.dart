@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../../theme/reelish_icons.dart';
 
 import '../../models/playback_settings.dart';
 import '../tv/tv_focus.dart';
@@ -86,7 +86,7 @@ class SubtitlePositionPanel extends StatelessWidget {
                         onPressed: value <= PlaybackSettings.subtitlePositionMin
                             ? null
                             : () => _set(value - _step),
-                        icon: const Icon(Symbols.arrow_downward_rounded),
+                        icon: const Icon(ReelishIcons.arrowDown),
                       ),
                       Expanded(
                         child: TvSliderNavigation(
@@ -106,7 +106,7 @@ class SubtitlePositionPanel extends StatelessWidget {
                         onPressed: value >= PlaybackSettings.subtitlePositionMax
                             ? null
                             : () => _set(value + _step),
-                        icon: const Icon(Symbols.arrow_upward_rounded),
+                        icon: const Icon(ReelishIcons.arrowUp),
                       ),
                     ],
                   ),

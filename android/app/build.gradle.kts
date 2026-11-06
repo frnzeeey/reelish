@@ -1,3 +1,5 @@
+import java.util.UUID
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
@@ -31,6 +33,9 @@ val firebaseAppId = firebaseValue("REELISH_FIREBASE_APP_ID")
 val firebaseApiKey = firebaseValue("REELISH_FIREBASE_API_KEY")
 val firebaseProjectId = firebaseValue("REELISH_FIREBASE_PROJECT_ID")
 val firebaseSenderId = firebaseValue("REELISH_FIREBASE_SENDER_ID")
+// Compiles in the native test crash (docs/features/crash-reporting.md).
+// Release builds never set it.
+val crashTest = firebaseValue("REELISH_CRASH_TEST") == "true"
 
 fun buildConfigString(value: String) =
     "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
@@ -81,6 +86,7 @@ android {
         buildConfigField("String", "FIREBASE_API_KEY", buildConfigString(firebaseApiKey))
         buildConfigField("String", "FIREBASE_PROJECT_ID", buildConfigString(firebaseProjectId))
         buildConfigField("String", "FIREBASE_SENDER_ID", buildConfigString(firebaseSenderId))
+        buildConfigField("boolean", "CRASH_TEST", crashTest.toString())
         // Firebase's measurement service reads the app id from resources,
         // as the google-services plugin would generate them.
         if (firebaseAppId.isNotEmpty()) {
@@ -90,6 +96,14 @@ android {
             if (firebaseSenderId.isNotEmpty()) {
                 resValue("string", "gcm_defaultSenderId", firebaseSenderId)
             }
+            // What the Crashlytics Gradle plugin would generate. That plugin
+            // needs google-services, which this build leaves out on purpose.
+            // The SDK refuses to start without an id; it also names the R8
+            // mapping for this build if that is ever uploaded.
+            val mappingId = UUID.nameUUIDFromBytes(
+                "${flutter.versionCode}:${System.getenv("GITHUB_SHA") ?: "local"}".toByteArray()
+            ).toString().replace("-", "")
+            resValue("string", "com.google.firebase.crashlytics.mapping_file_id", mappingId)
         }
     }
 
@@ -123,9 +137,11 @@ flutter {
 dependencies {
     // Java 8+ APIs on older Android, for flutter_local_notifications.
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
-    // Opt-in usage statistics (AnalyticsChannel.kt); Android only.
+    // Opt-in usage statistics and crash reports (AnalyticsChannel.kt,
+    // CrashReportChannel.kt); Android only.
     implementation(platform("com.google.firebase:firebase-bom:34.0.0"))
     implementation("com.google.firebase:firebase-analytics")
+    implementation("com.google.firebase:firebase-crashlytics")
 }
 
 // Release APKs ship ARM code only. x86_64 libraries (libmpv, the torrent

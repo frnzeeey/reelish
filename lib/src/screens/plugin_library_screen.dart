@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../theme/reelish_icons.dart';
 
 import '../models/plugin_catalog.dart';
 import '../navigation/app_transitions.dart';
@@ -252,7 +252,7 @@ class _PluginLibraryViewState extends State<PluginLibraryView> {
             hasScrollBody: false,
             child: Center(
               child: PluginMessageState(
-                icon: Symbols.cloud_off_rounded,
+                icon: ReelishIcons.offline,
                 title: 'Unable to load plugins',
                 message:
                     repository.refreshError ??
@@ -260,7 +260,7 @@ class _PluginLibraryViewState extends State<PluginLibraryView> {
                 actionLabel: 'Retry',
                 busy: repository.refreshing,
                 onAction: repository.retry,
-                secondaryLabel: 'Paste a manifest',
+                secondaryLabel: 'Add by link',
                 onSecondary: _pasteManifest,
               ),
             ),
@@ -386,7 +386,7 @@ class _PluginLibraryViewState extends State<PluginLibraryView> {
         value: _search.text,
         hint: 'Search plugins, authors or sources',
         title: 'Search plugins',
-        icon: Symbols.search_rounded,
+        icon: ReelishIcons.search,
         textInputAction: TextInputAction.search,
         onChanged: (value) {
           _search.text = value;
@@ -407,39 +407,39 @@ class _PluginLibraryViewState extends State<PluginLibraryView> {
 
   Widget _emptyState(int installedCount) => switch (_availability) {
     PluginAvailability.installed when installedCount == 0 => PluginMessageState(
-      icon: Symbols.extension_rounded,
+      icon: ReelishIcons.plugin,
       title: 'Nothing installed from the library yet',
       message:
           'Install a provider below and it appears here. Providers added '
-          'from a pasted manifest are managed in Plugins.',
+          'by link are managed in Plugins.',
       actionLabel: 'Show all plugins',
-      actionIcon: Symbols.storefront_rounded,
+      actionIcon: ReelishIcons.store,
       onAction: () => _setAvailability(PluginAvailability.all),
     ),
     PluginAvailability.available
         when installedCount > 0 && !_query.hasFilters =>
       PluginMessageState(
-        icon: Symbols.check_circle_rounded,
+        icon: ReelishIcons.checkCircle,
         title: 'Everything here is installed',
         message:
-            'Every provider in the catalog is already installed. Paste a '
-            'manifest URL to add one that is not listed.',
+            'Every provider in the catalog is already installed. Add by '
+            'link to install one that is not listed.',
         actionLabel: 'Show installed',
-        actionIcon: Symbols.extension_rounded,
+        actionIcon: ReelishIcons.plugin,
         onAction: () => _setAvailability(PluginAvailability.installed),
-        secondaryLabel: 'Paste a manifest',
+        secondaryLabel: 'Add by link',
         onSecondary: _pasteManifest,
       ),
     _ => PluginMessageState(
-      icon: Symbols.search_off_rounded,
+      icon: ReelishIcons.searchOff,
       title: 'No plugins found',
       message:
           'Try a different search or remove some filters. If the '
-          'provider is not listed, paste its manifest URL instead.',
+          'provider is not listed, add it by link instead.',
       actionLabel: 'Clear filters',
-      actionIcon: Symbols.filter_alt_off_rounded,
+      actionIcon: ReelishIcons.filterOff,
       onAction: _clearFilters,
-      secondaryLabel: 'Paste a manifest',
+      secondaryLabel: 'Add by link',
       onSecondary: _pasteManifest,
     ),
   };
@@ -611,7 +611,7 @@ class _TopBar extends StatelessWidget {
       IconButton(
         tooltip: 'Back to plugins',
         onPressed: () => Navigator.maybePop(context),
-        icon: const Icon(Symbols.arrow_back_rounded),
+        icon: const Icon(ReelishIcons.back),
       ),
       const Spacer(),
       _HeaderActions(
@@ -639,9 +639,9 @@ class _HeaderActions extends StatelessWidget {
     mainAxisSize: MainAxisSize.min,
     children: [
       IconButton(
-        tooltip: 'Paste a manifest URL',
+        tooltip: 'Add by link',
         onPressed: onPaste,
-        icon: const Icon(Symbols.add_link_rounded),
+        icon: const Icon(ReelishIcons.linkAdd),
       ),
       const SizedBox(width: AppSpace.xxs),
       IconButton.filledTonal(
@@ -659,7 +659,7 @@ class _HeaderActions extends StatelessWidget {
                   color: GlassTheme.primary,
                 ),
               )
-            : const Icon(Symbols.refresh_rounded),
+            : const Icon(ReelishIcons.refresh),
       ),
     ],
   );

@@ -85,11 +85,14 @@ order:
 
 1. **Cancelled**: stop.
 2. **Reconnect** the same source on the same engine, if it was already
-   playing and the failure is not "no picture": at most two reconnects per
+   playing, the failure is not "no picture" and the server did not refuse
+   the link (401, 403, 404, 410: `linkRejected`): at most two reconnects per
    source in two minutes (`_allowReconnect`), after 1 s then 3 s.
-3. **Refresh a cached link**: a reused last link that fails is usually an
-   expired signed URL, so providers are asked again
-   (`_refreshAfterCachedFailure`).
+3. **Refresh a link**: a reused last link that fails is usually an expired
+   signed URL, so providers are asked again (`_refreshAfterCachedFailure`).
+   So is a source that played and no longer opens (`_refreshDeadLink`),
+   at most twice per session (`LinkRefreshBudget`); it returns to the same
+   source when the providers still offer it, at the same position.
 4. **Other engine** for the same source, when the failure kind can depend
    on the engine (`canTryAnotherEngine`: manifest, format, decoder,
    rendering, engine, source, unknown), the engine can open the URL

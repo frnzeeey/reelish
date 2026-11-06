@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../theme/reelish_icons.dart';
 
 import '../models/provider_plugin.dart';
 import '../services/plugin_library_repository.dart';
@@ -48,12 +48,14 @@ class PluginsScreen extends StatelessWidget {
               enabledCount: enabledCount,
             ),
             const SizedBox(height: 12),
-            _LibraryEntry(onTap: browse),
+            // With nothing installed the empty state below offers it.
+            if (pluginService.repositories.isNotEmpty)
+              _LibraryEntry(onTap: browse),
             const SizedBox(height: 24),
             _SectionHeading(
-              title: 'Your repositories',
+              title: 'Your collections',
               detail: pluginService.repositories.isEmpty
-                  ? 'Add a provider manifest to get started'
+                  ? 'Add one to get started'
                   : '${pluginService.repositories.length} installed',
             ),
             const SizedBox(height: 12),
@@ -102,8 +104,8 @@ class PluginsScreen extends StatelessWidget {
                             ?.name ??
                         update.key,
                     message: update.value.length == 1
-                        ? 'A provider was added or changed its code. It is paused until you allow it. Only allow it if you trust this repository.'
-                        : '${update.value.length} providers were added or changed their code. They are paused until you allow them. Only allow it if you trust this repository.',
+                        ? 'A provider was added or changed its code. It is paused until you allow it. Only allow it if you trust this collection.'
+                        : '${update.value.length} providers were added or changed their code. They are paused until you allow them. Only allow it if you trust this collection.',
                     onApprove: () =>
                         pluginService.approveScriptUpdates(update.key),
                   ),
@@ -175,23 +177,23 @@ class _PluginsHeader extends StatelessWidget {
       // Same circular shape as Refresh, in neutral white, so the pair reads
       // as one group with Refresh as the primary action.
       IconButton.filledTonal(
-        tooltip: 'Paste a manifest URL',
+        tooltip: 'Add by link',
         onPressed: onPaste,
         style: IconButton.styleFrom(
           foregroundColor: Colors.white,
           backgroundColor: Colors.white.withValues(alpha: .07),
         ),
-        icon: const Icon(Symbols.add_link_rounded),
+        icon: const Icon(ReelishIcons.linkAdd),
       ),
       const SizedBox(width: 4),
       IconButton.filledTonal(
-        tooltip: 'Refresh repositories',
+        tooltip: 'Refresh collections',
         onPressed: onRefresh,
         style: IconButton.styleFrom(
           foregroundColor: GlassTheme.primary,
           backgroundColor: GlassTheme.primary.withValues(alpha: .1),
         ),
-        icon: const Icon(Symbols.refresh_rounded),
+        icon: const Icon(ReelishIcons.refresh),
       ),
     ],
   );
@@ -254,7 +256,7 @@ class _PluginsHero extends StatelessWidget {
                       color: GlassTheme.primary.withValues(alpha: .16),
                       borderRadius: BorderRadius.circular(AppRadius.card),
                     ),
-                    child: Icon(Symbols.hub_rounded, color: GlassTheme.primary),
+                    child: Icon(ReelishIcons.hub, color: GlassTheme.primary),
                   ),
                   const SizedBox(width: 12),
                   const Expanded(
@@ -281,11 +283,7 @@ class _PluginsHero extends StatelessWidget {
                       ],
                     ),
                   ),
-                  Icon(
-                    Symbols.bolt_rounded,
-                    color: GlassTheme.primary,
-                    size: 22,
-                  ),
+                  Icon(ReelishIcons.bolt, color: GlassTheme.primary, size: 22),
                 ],
               ),
               const SizedBox(height: 14),
@@ -298,15 +296,15 @@ class _PluginsHero extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 17),
-              Row(
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
                 children: [
                   _MetricPill(value: '$enabledCount', label: 'active'),
-                  const SizedBox(width: 8),
                   _MetricPill(value: '$providerCount', label: 'providers'),
-                  const SizedBox(width: 8),
                   _MetricPill(
                     value: '$repositoryCount',
-                    label: repositoryCount == 1 ? 'repo' : 'repos',
+                    label: repositoryCount == 1 ? 'collection' : 'collections',
                   ),
                 ],
               ),
@@ -415,7 +413,7 @@ class _LibraryEntry extends StatelessWidget {
                 borderRadius: BorderRadius.circular(AppRadius.md),
               ),
               child: Icon(
-                Symbols.storefront_rounded,
+                ReelishIcons.store,
                 color: GlassTheme.primary,
                 size: 21,
               ),
@@ -444,7 +442,7 @@ class _LibraryEntry extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(Symbols.chevron_right_rounded, color: GlassTheme.muted),
+            const Icon(ReelishIcons.chevronRight, color: GlassTheme.muted),
           ],
         ),
       ),
@@ -475,14 +473,11 @@ class _EmptyPlugins extends StatelessWidget {
             color: GlassTheme.primary.withValues(alpha: .12),
             shape: BoxShape.circle,
           ),
-          child: Icon(
-            Symbols.travel_explore_rounded,
-            color: GlassTheme.primary,
-          ),
+          child: Icon(ReelishIcons.explore, color: GlassTheme.primary),
         ),
         const SizedBox(height: 14),
         const Text(
-          'Start with a provider',
+          'Add your first collection',
           style: TextStyle(
             fontSize: AppTextSize.bodyLarge,
             fontWeight: FontWeight.w800,
@@ -490,7 +485,7 @@ class _EmptyPlugins extends StatelessWidget {
         ),
         const SizedBox(height: 7),
         const Text(
-          'Browse the library or paste a provider manifest URL to add streaming sources. You can turn each provider on or off at any time.',
+          'Collections give Reelish places to look for streams. Browse the library or add one by its link. You can turn each provider on or off at any time.',
           textAlign: TextAlign.center,
           style: TextStyle(
             color: GlassTheme.muted,
@@ -506,13 +501,13 @@ class _EmptyPlugins extends StatelessWidget {
           children: [
             FilledButton.icon(
               onPressed: onBrowse,
-              icon: const Icon(Symbols.storefront_rounded),
+              icon: const Icon(ReelishIcons.store),
               label: const Text('Browse the library'),
             ),
             OutlinedButton.icon(
               onPressed: onInstall,
-              icon: const Icon(Symbols.add_rounded),
-              label: const Text('Paste a manifest'),
+              icon: const Icon(ReelishIcons.add),
+              label: const Text('Add by link'),
             ),
           ],
         ),
@@ -542,7 +537,7 @@ class _RepositoryCardState extends State<_RepositoryCard> {
     final remove = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Remove repository?'),
+        title: const Text('Remove collection?'),
         content: Text(
           'Providers from ${widget.repository.name} will no longer be available.',
         ),
@@ -595,7 +590,7 @@ class _RepositoryCardState extends State<_RepositoryCard> {
                   borderRadius: BorderRadius.circular(AppRadius.md),
                 ),
                 child: Icon(
-                  Symbols.dns_rounded,
+                  ReelishIcons.server,
                   color: GlassTheme.primary,
                   size: 21,
                 ),
@@ -623,15 +618,14 @@ class _RepositoryCardState extends State<_RepositoryCard> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   IconButton(
-                    tooltip: 'Remove repository',
+                    tooltip: 'Remove collection',
                     onPressed: _confirmRemove,
-                    icon: const Icon(Symbols.delete_rounded, size: 20),
-                    visualDensity: VisualDensity.compact,
+                    icon: const Icon(ReelishIcons.trash, size: 20),
                   ),
                   AnimatedRotation(
                     turns: _expanded ? .5 : 0,
                     duration: AppMotion.resolve(context, AppMotion.hover),
-                    child: const Icon(Symbols.keyboard_arrow_down_rounded),
+                    child: const Icon(ReelishIcons.chevronDown),
                   ),
                   const SizedBox(width: 6),
                 ],
@@ -664,7 +658,7 @@ class _RepositoryCardState extends State<_RepositoryCard> {
                     const Padding(
                       padding: EdgeInsets.all(18),
                       child: Text(
-                        'This repository contains no valid providers.',
+                        'This collection has no valid providers.',
                         style: TextStyle(
                           color: GlassTheme.muted,
                           fontSize: AppTextSize.label,
@@ -701,9 +695,14 @@ class _ProviderTile extends StatelessWidget {
           children: [
             Icon(
               plugin.enabled
-                  ? Symbols.check_circle_rounded
-                  : Symbols.circle_rounded,
-              fill: plugin.enabled ? 1 : 0,
+                  ? ReelishIcons.filled(
+                      plugin.enabled
+                          ? ReelishIcons.checkCircle
+                          : ReelishIcons.radioOff,
+                    )
+                  : (plugin.enabled
+                        ? ReelishIcons.checkCircle
+                        : ReelishIcons.radioOff),
               color: plugin.enabled ? GlassTheme.primary : GlassTheme.disabled,
               size: 17,
             ),
@@ -772,11 +771,7 @@ class _NoticeCard extends StatelessWidget {
     ),
     child: Row(
       children: [
-        const Icon(
-          Symbols.power_settings_new_rounded,
-          color: GlassTheme.warning,
-          size: 20,
-        ),
+        const Icon(ReelishIcons.power, color: GlassTheme.warning, size: 20),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
@@ -817,7 +812,7 @@ Future<void> _confirmRemoveFailed(
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (dialogContext) => AlertDialog(
-      title: const Text('Remove repository?'),
+      title: const Text('Remove collection?'),
       content: Text(
         'This uninstalls $url. If it failed only because you are offline, '
         'use Retry instead.',
@@ -867,11 +862,7 @@ class _RepositoryError extends StatelessWidget {
     ),
     child: Row(
       children: [
-        const Icon(
-          Symbols.warning_rounded,
-          color: GlassTheme.warning,
-          size: 20,
-        ),
+        const Icon(ReelishIcons.warning, color: GlassTheme.warning, size: 20),
         const SizedBox(width: 11),
         Expanded(
           child: Column(
@@ -907,21 +898,20 @@ class _RepositoryError extends StatelessWidget {
             tooltip: 'Retry',
             visualDensity: VisualDensity.compact,
             onPressed: onRetry,
-            icon: const Icon(Symbols.refresh_rounded, size: 18),
+            icon: const Icon(ReelishIcons.refresh, size: 18),
           ),
         if (onRemove != null)
           IconButton(
-            tooltip: 'Remove repository',
-            visualDensity: VisualDensity.compact,
+            tooltip: 'Remove collection',
             onPressed: onRemove,
-            icon: const Icon(Symbols.delete_rounded, size: 18),
+            icon: const Icon(ReelishIcons.trash, size: 18),
           ),
         if (onDismiss != null)
           IconButton(
             tooltip: 'Dismiss',
             visualDensity: VisualDensity.compact,
             onPressed: onDismiss,
-            icon: const Icon(Symbols.close_rounded, size: 18),
+            icon: const Icon(ReelishIcons.close, size: 18),
           ),
       ],
     ),

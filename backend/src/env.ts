@@ -25,6 +25,8 @@ export interface Env {
    * sign-in off; the device code still works.
    */
   PUBLIC_URL?: string;
+  /** "true" lets Buy Me a Coffee dashboard test events count. Staging only. */
+  SUPPORTERS_ACCEPT_TEST_EVENTS?: string;
   /** Most participants a watch party may allow (2–20; default 5). */
   PARTY_MAX_CAPACITY?: string;
 
@@ -39,6 +41,11 @@ export interface Env {
   SESSION_SIGNING_KEY_PREVIOUS?: string;
   /** 32 random bytes, base64: AES-GCM key for stored Trakt credentials. */
   TOKEN_ENCRYPTION_KEY: string;
+  /**
+   * The Buy Me a Coffee webhook's signing secret. Optional: without it the
+   * webhook refuses everything and the rest of the API runs as usual.
+   */
+  BMC_WEBHOOK_SECRET?: string;
 }
 
 /** Fails fast, with no secret values in the message, when one is missing. */

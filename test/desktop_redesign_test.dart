@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import 'package:onfeed/src/theme/reelish_icons.dart';
 import 'package:onfeed/src/desktop/desktop_details_screen.dart';
 import 'package:onfeed/src/desktop/desktop_hero.dart';
 import 'package:onfeed/src/desktop/desktop_pages.dart';
@@ -545,7 +545,7 @@ void main() {
       // Watched, in progress (with what is left) and last watched.
       expect(
         find.byWidgetPredicate(
-          (w) => w is Icon && w.icon == Symbols.check_circle_rounded,
+          (w) => w is Icon && w.icon == ReelishIcons.checkCircleFilled,
         ),
         findsOneWidget,
       );

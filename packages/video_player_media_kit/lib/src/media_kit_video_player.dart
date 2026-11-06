@@ -118,6 +118,25 @@ class MediaKitVideoPlayer extends VideoPlayerPlatform {
     }
   }
 
+  /// How far before the end of a title an end of file still counts as the
+  /// real end: durations are estimates (an HLS length is the sum of rounded
+  /// segment times), and a loss this close to the end costs only the credits.
+  static Duration _endTolerance(Duration duration) {
+    final share = duration * 0.01;
+    const least = Duration(seconds: 3);
+    return share > least ? share : least;
+  }
+
+  /// Whether an end of file at [position] came too early to be the end of
+  /// the title.
+  ///
+  /// When the connection is lost and every reconnect fails, libmpv reports a
+  /// normal end of file, without an error, once it has played what it has.
+  /// `video_player` would then seek to the end and report the title as
+  /// finished. A stream of unknown length (live) has no early end.
+  static bool endedEarly(Duration position, Duration duration) =>
+      duration > Duration.zero && duration - position > _endTolerance(duration);
+
   /// Creates an instance of a video player and returns its textureId.
   @override
   Future<int?> create(DataSource dataSource) async {
@@ -548,13 +567,29 @@ class MediaKitVideoPlayer extends VideoPlayerPlatform {
         player.stream.completed.listen(
           (event) async {
             await completer.future;
-            if (event) {
-              streamController.add(
-                VideoEvent(
-                  eventType: VideoEventType.completed,
+            if (!event || streamController.isClosed) return;
+            final state = player.state;
+            if (endedEarly(state.position, state.duration)) {
+              if (kDebugMode) {
+                debugPrint(
+                  '[MPV] end of file at ${state.position} of '
+                  '${state.duration}: reporting a lost connection',
+                );
+              }
+              streamController.addError(
+                PlatformException(
+                  code: '',
+                  message: 'The connection to the stream was lost before '
+                      'the end of the video.',
                 ),
               );
+              return;
             }
+            streamController.add(
+              VideoEvent(
+                eventType: VideoEventType.completed,
+              ),
+            );
           },
         ),
       );

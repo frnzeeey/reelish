@@ -203,7 +203,7 @@ void main() {
     await settle(tester, rounds: 40);
     expect(urls.where(isNewReleases), isEmpty);
 
-    await revealRow(tester, 'New releases: Just Dropped');
+    await revealRow(tester, 'New releases');
 
     expect(urls.where(isNewReleases), hasLength(3));
     expect(urls.where(isNewReleases).map(pageOf), everyElement(1));
@@ -218,7 +218,7 @@ void main() {
   ) async {
     await pumpHome(tester);
     await settle(tester, rounds: 40);
-    await revealRow(tester, 'Movies: Fresh on the Reel');
+    await revealRow(tester, 'New movies');
     final before = urls.length;
     final seriesBefore = urls.where(isSeries).length;
     final releasesBefore = urls.where(isNewReleases).length;
@@ -227,10 +227,7 @@ void main() {
     // Page 1 holds 20 cards; drag toward the end in steps, as a viewer
     // would, so the row reports many scroll updates near its end.
     for (var i = 0; i < 12; i++) {
-      await tester.drag(
-        row('Movies: Fresh on the Reel'),
-        const Offset(-260, 0),
-      );
+      await tester.drag(row('New movies'), const Offset(-260, 0));
       await tester.pump(const Duration(milliseconds: 16));
     }
     await settle(tester, rounds: 15);
@@ -242,7 +239,7 @@ void main() {
     expect(urls.where(isNewReleases), hasLength(releasesBefore));
     expect(urls.where(isRecommendations), hasLength(recommendationsBefore));
     // Page 2's titles were appended to the row.
-    final list = tester.widget<ListView>(row('Movies: Fresh on the Reel'));
+    final list = tester.widget<ListView>(row('New movies'));
     expect(list.childrenDelegate.estimatedChildCount, greaterThan(20 * 2));
 
     await disposeHome(tester);
@@ -276,12 +273,12 @@ void main() {
 
     await tester.tap(find.text('My list'));
     await settle(tester, rounds: 10);
-    expect(find.text('In My list'), findsOneWidget);
+    expect(find.text('On My list'), findsOneWidget);
     expect(find.text('$spotlightTitle saved to your list'), findsOneWidget);
     // The wider label still fits on a narrow phone (an overflow fails).
     tester.view.physicalSize = const Size(360, 915);
     await settle(tester, rounds: 5);
-    expect(find.text('In My list'), findsOneWidget);
+    expect(find.text('On My list'), findsOneWidget);
     tester.view.physicalSize = const Size(430, 915);
     await settle(tester, rounds: 5);
     // Dismiss that message; the next one would wait behind it.
@@ -290,7 +287,7 @@ void main() {
         .removeCurrentSnackBar();
     await settle(tester, rounds: 5);
 
-    await tester.tap(find.text('In My list'));
+    await tester.tap(find.text('On My list'));
     await settle(tester, rounds: 10);
     expect(find.text('My list'), findsOneWidget);
     expect(find.text('$spotlightTitle removed from your list'), findsOneWidget);
@@ -355,9 +352,9 @@ void main() {
         .widgetList<MediaCard>(find.byType(MediaCard, skipOffstage: false))
         .where((card) => card.item.name == name)
         .firstOrNull;
-    // Home's Continue watching row ('Pick up where you left off').
-    final pickUp = find.text('Pick up where you left off');
-    expect(pickUp, findsOneWidget);
+    // Home's Continue watching row.
+    final pickUp = find.text('Continue watching');
+    expect(pickUp, findsWidgets);
     expect(cardOf('Removed Film'), isNotNull);
     expect(cardOf('Removed Film')!.isFavorite, isTrue);
 

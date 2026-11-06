@@ -6,6 +6,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart' show AppLifecycleListener;
@@ -18,6 +19,7 @@ import 'party_models.dart';
 import 'playback_sync.dart';
 import '../analytics/analytics_events.dart';
 import '../analytics/analytics_service.dart';
+import '../diagnostics/crash_reporter.dart';
 
 /// One open connection to a room; dart:io's WebSocket in the app.
 abstract interface class PartySocket {
@@ -63,6 +65,19 @@ Future<PartySocket> _connectIo(Uri uri, String accessToken) async {
 
 enum PartyConnection { connecting, connected, reconnecting, ended }
 
+typedef PartyConnectionStats = ({
+  int reconnects,
+  int staleStates,
+  int averageDeliveryMs,
+  int worstDeliveryMs,
+});
+
+extension PartyConnectionStatsSummary on PartyConnectionStats {
+  String summary() =>
+      'reconnects=$reconnects staleStates=$staleStates '
+      'delivery=${averageDeliveryMs}ms worstDelivery=${worstDeliveryMs}ms';
+}
+
 /// Why this device is no longer in the party.
 enum PartyEndReason {
   /// This device left.
@@ -91,15 +106,24 @@ Future<String> createWatchParty({
 }) async {
   final session = account ?? AccountController.instance;
   final client = api ?? AccountApi(baseUrl: BackendConfig.apiUrl);
-  final code = await _withToken(
-    session,
-    (token) => client.createParty(
-      token,
-      content: content.toJson(),
-      settings: settings.toJson(),
-      profile: _profileJson(profile ?? ProfileController.instance, session),
-    ),
-  );
+  final String code;
+  try {
+    code = await _withToken(
+      session,
+      (token) => client.createParty(
+        token,
+        content: content.toJson(),
+        settings: settings.toJson(),
+        profile: _profileJson(profile ?? ProfileController.instance, session),
+      ),
+    );
+  } on AccountApiException catch (error) {
+    AnalyticsService.instance.log(
+      AnalyticsEvent.watchPartyFailed(step: 'create', reason: error.code),
+    );
+    CrashReporter.instance.note('party create failed ${error.code}');
+    rethrow;
+  }
   AnalyticsService.instance.log(
     AnalyticsEvent.featureUsed(AnalyticsFeature.watchPartyCreate),
   );
@@ -122,10 +146,6 @@ Future<PartyPreview> previewWatchParty(
   if (preview == null) {
     throw const AccountApiException('unavailable', 'Unexpected response.');
   }
-  // A valid code entered: the step before joining.
-  AnalyticsService.instance.log(
-    AnalyticsEvent.featureUsed(AnalyticsFeature.watchPartyJoin),
-  );
   return preview;
 }
 
@@ -171,6 +191,7 @@ class WatchPartyController extends ChangeNotifier {
     PartySocketConnector? connector,
     @visibleForTesting Duration Function(int attempt)? backoff,
     this.maxOutage = const Duration(minutes: 5),
+    this.silenceLimit = const Duration(seconds: 35),
   }) : _account = account ?? AccountController.instance,
        _api = api ?? AccountApi(baseUrl: BackendConfig.apiUrl),
        _profile = profile ?? ProfileController.instance,
@@ -180,6 +201,11 @@ class WatchPartyController extends ChangeNotifier {
   /// How long reconnecting keeps trying before the party is given up; long
   /// enough for a phone that spent a while in the background.
   final Duration maxOutage;
+
+  /// How long a playing room may go without a message before the connection
+  /// counts as dead. The host's heartbeats arrive every 10 seconds, so this
+  /// is several missed in a row, on a socket that still looks open.
+  final Duration silenceLimit;
 
   /// The party this device is in, for the player and Home to find.
   static final active = ValueNotifier<WatchPartyController?>(null);
@@ -203,8 +229,13 @@ class WatchPartyController extends ChangeNotifier {
   static const _timeChecks = 3;
 
   PartySocket? _socket;
+
+  /// Whether the room has welcomed the current socket.
+  bool _socketReady = false;
   StreamSubscription<dynamic>? _subscription;
   Timer? _retry;
+  Timer? _silence;
+  DateTime _lastMessageAt = DateTime.now();
   int _attempt = 0;
 
   /// When the connection was last lost, while reconnecting.
@@ -223,6 +254,36 @@ class WatchPartyController extends ChangeNotifier {
   ParticipantStatus? _status;
   PartyContent? _pendingContent;
   int _playerSessions = 0;
+
+  /// The viewer's last action while disconnected, sent on reconnecting.
+  ({String action, int positionMs, DateTime at})? _queuedControl;
+
+  /// Until then a resent action has not come back from the room.
+  DateTime? _controlPendingUntil;
+  int _reconnects = 0;
+  bool _joinCounted = false;
+
+  /// When this device first reached the room.
+  DateTime? _joinedAt;
+  int _staleStates = 0;
+  int _deliveries = 0;
+  int _deliveryTotalMs = 0;
+  int _worstDeliveryMs = 0;
+
+  /// Whether an action made offline was resent and has not come back. The
+  /// room still describes the time before it, so it must not be applied.
+  bool get controlPending {
+    final until = _controlPendingUntil;
+    return until != null && DateTime.now().isBefore(until);
+  }
+
+  /// The connection so far, for diagnostics.
+  PartyConnectionStats get stats => (
+    reconnects: _reconnects,
+    staleStates: _staleStates,
+    averageDeliveryMs: _deliveries == 0 ? 0 : _deliveryTotalMs ~/ _deliveries,
+    worstDeliveryMs: _worstDeliveryMs,
+  );
 
   /// How many players have joined this party's sync on this device; the
   /// waiting room compares it to tell whether a player opened at all.
@@ -312,6 +373,7 @@ class WatchPartyController extends ChangeNotifier {
         token,
       ).timeout(const Duration(seconds: 15));
     } catch (_) {
+      CrashReporter.instance.note('party connect failed');
       return _connectFailed();
     }
     if (_disposed || _endReason != null) {
@@ -364,6 +426,7 @@ class WatchPartyController extends ChangeNotifier {
   void _onClosed(PartySocket socket) {
     if (socket != _socket) return;
     _socket = null;
+    _socketReady = false;
     unawaited(_subscription?.cancel());
     _subscription = null;
     if (_disposed || _endReason != null) return;
@@ -385,7 +448,31 @@ class WatchPartyController extends ChangeNotifier {
     _scheduleReconnect();
   }
 
+  /// Reconnects a socket that stopped delivering. Without this a client can
+  /// sit "connected" and hear nothing more from the room.
+  void _checkSilence() {
+    final socket = _socket;
+    final room = _room;
+    if (socket == null ||
+        !_socketReady ||
+        room == null ||
+        !room.playback.playing ||
+        !room.hostConnected ||
+        DateTime.now().difference(_lastMessageAt) < silenceLimit) {
+      return;
+    }
+    if (!kReleaseMode) debugPrint('[PartySync] no messages; reconnecting');
+    _socket = null;
+    _socketReady = false;
+    unawaited(_subscription?.cancel());
+    _subscription = null;
+    unawaited(socket.close(1000).catchError((Object _) {}));
+    _attempt += 1;
+    _scheduleReconnect();
+  }
+
   void _onMessage(dynamic data) {
+    _lastMessageAt = DateTime.now();
     if (data is! String || data == 'pong') return;
     Map<String, dynamic> message;
     try {
@@ -405,8 +492,19 @@ class WatchPartyController extends ChangeNotifier {
         _failingSince = null;
         _you = you['pid'] as String;
         final serverTime = message['serverTime'];
+        if (_room != null) {
+          _reconnects++;
+        } else {
+          _joinedAt = DateTime.now();
+        }
+        _silence ??= Timer.periodic(silenceLimit ~/ 3, (_) => _checkSilence());
+        clock.restart();
         if (serverTime is int) clock.seed(serverTime, now);
+        _socketReady = true;
+        // Before anything hears of the room, which does not include this.
+        _flushControl();
         _setRoom(room);
+        _noteJoined();
         _setConnection(PartyConnection.connected);
         _send(jsonEncode({'t': 'hello', ..._profileJson(_profile, _account)}));
         final status = _status;
@@ -420,7 +518,18 @@ class WatchPartyController extends ChangeNotifier {
         if (room == null) return;
         final playback = PartyPlayback.fromJson(message['playback']);
         // Newer changes only; a heartbeat carries the current sequence.
-        if (playback.seq < room.playback.seq) return;
+        if (playback.seq < room.playback.seq) {
+          _staleStates++;
+          return;
+        }
+        final sentAt = message['serverTime'];
+        if (sentAt is int) {
+          final delivery = max(0, clock.serverNow(now) - sentAt);
+          _deliveries++;
+          _deliveryTotalMs += delivery;
+          _worstDeliveryMs = max(_worstDeliveryMs, delivery);
+        }
+        if (playback.seq > room.playback.seq) _controlPendingUntil = null;
         _room = room.copyWith(playback: playback);
         _playback.add(playback);
         notifyListeners();
@@ -482,9 +591,52 @@ class WatchPartyController extends ChangeNotifier {
 
   void _sendJson(Map<String, Object?> body) => _send(jsonEncode(body));
 
+  /// Counts a guest's arrival once: a reconnect is not another join, and
+  /// creating the party already counted for the host.
+  void _noteJoined() {
+    CrashReporter.instance.setContext(
+      CrashContext.partyRole,
+      isHost ? 'host' : 'guest',
+    );
+    if (_joinCounted) return;
+    _joinCounted = true;
+    if (isHost) return;
+    AnalyticsService.instance.log(
+      AnalyticsEvent.featureUsed(AnalyticsFeature.watchPartyJoin),
+    );
+  }
+
+  /// One event for this device's time in the party, however it ended.
+  void _reportEnd(PartyEndReason reason) {
+    final joinedAt = _joinedAt;
+    if (joinedAt == null) {
+      if (reason != PartyEndReason.left) {
+        AnalyticsService.instance.log(
+          AnalyticsEvent.watchPartyFailed(step: 'join', reason: reason.name),
+        );
+      }
+    } else {
+      AnalyticsService.instance.log(
+        AnalyticsEvent.watchPartySession(
+          host: isHost,
+          endReason: reason.name,
+          minutes: DateTime.now().difference(joinedAt).inMinutes,
+          reconnects: _reconnects,
+        ),
+      );
+    }
+    if (reason == PartyEndReason.failed) {
+      CrashReporter.instance.note('party ended failed');
+    }
+    CrashReporter.instance
+      ..setContext(CrashContext.partyState, null)
+      ..setContext(CrashContext.partyRole, null);
+  }
+
   void _setConnection(PartyConnection next) {
     if (_connection == next) return;
     _connection = next;
+    CrashReporter.instance.setContext(CrashContext.partyState, next.name);
     notifyListeners();
   }
 
@@ -501,14 +653,39 @@ class WatchPartyController extends ChangeNotifier {
       _sendJson({'t': 'status', 'state': status.name});
 
   /// Play, pause, seek or end for everyone, at [positionMs] now.
+  ///
+  /// Made while disconnected, the last one is kept and sent on reconnecting;
+  /// otherwise the room's old state would undo it.
   void control(String action, int positionMs) {
     if (!canControl) return;
-    _sendJson({
-      't': 'control',
-      'action': action,
-      'positionMs': positionMs,
-      'at': clock.serverNow(DateTime.now().millisecondsSinceEpoch),
-    });
+    if (!_socketReady) {
+      _queuedControl = (
+        action: action,
+        positionMs: positionMs,
+        at: DateTime.now(),
+      );
+      return;
+    }
+    _sendControl(action, positionMs);
+  }
+
+  void _sendControl(String action, int positionMs) => _sendJson({
+    't': 'control',
+    'action': action,
+    'positionMs': positionMs,
+    'at': clock.serverNow(DateTime.now().millisecondsSinceEpoch),
+  });
+
+  void _flushControl() {
+    final queued = _queuedControl;
+    if (queued == null) return;
+    _queuedControl = null;
+    _controlPendingUntil = DateTime.now().add(const Duration(seconds: 3));
+    // This device kept playing after a play or a seek, and is further on by
+    // now; a pause stays where it was made.
+    final moved = queued.action != 'pause';
+    final elapsed = DateTime.now().difference(queued.at).inMilliseconds;
+    _sendControl(queued.action, queued.positionMs + (moved ? elapsed : 0));
   }
 
   /// The host's position while playing, for drift (every few seconds).
@@ -578,13 +755,16 @@ class WatchPartyController extends ChangeNotifier {
 
   void _end(PartyEndReason reason) {
     if (_endReason != null) return;
+    _reportEnd(reason);
     _endReason = reason;
     _retry?.cancel();
+    _silence?.cancel();
     _account.removeListener(_accountChanged);
     _lifecycle?.dispose();
     _lifecycle = null;
     final socket = _socket;
     _socket = null;
+    _socketReady = false;
     unawaited(_subscription?.cancel());
     _subscription = null;
     if (socket != null && reason != PartyEndReason.left) {

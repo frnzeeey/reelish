@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../../theme/reelish_icons.dart';
 
 import '../../models/media_item.dart';
 import '../../services/paged_feed_controller.dart';
@@ -25,12 +25,16 @@ class TvHomePage extends StatefulWidget {
     required this.onOpen,
     required this.onRetry,
     required this.onAddSource,
+    this.onJoinParty,
   });
 
   final TvCatalog catalog;
   final ValueChanged<MediaItem> onOpen;
   final VoidCallback onRetry;
   final VoidCallback onAddSource;
+
+  /// Opens Join a party; without it Home has no Watch together row.
+  final VoidCallback? onJoinParty;
 
   @override
   State<TvHomePage> createState() => _TvHomePageState();
@@ -89,7 +93,7 @@ class _TvHomePageState extends State<TvHomePage> {
     final error = catalog.catalogError;
     if (catalogEmpty && error != null) {
       return TvMessage(
-        icon: Symbols.cloud_off_rounded,
+        icon: ReelishIcons.offline,
         title: 'Could not load titles',
         message: error,
         actionLabel: 'Retry',
@@ -132,6 +136,8 @@ class _TvHomePageState extends State<TvHomePage> {
         cards: cards,
         autofocus: true,
       ),
+      if (widget.onJoinParty case final onJoin?)
+        _WatchTogetherRow(key: const ValueKey('join-party'), onJoin: onJoin),
       TvPagedRow(
         key: const ValueKey('row:Top 10 recommendations'),
         title: 'Top 10 recommendations',
@@ -190,7 +196,7 @@ class _AddSourceBanner extends StatelessWidget {
     padding: const EdgeInsets.fromLTRB(12, 6, 12, 18),
     child: Row(
       children: [
-        Icon(Symbols.link_rounded, color: GlassTheme.primary),
+        Icon(ReelishIcons.link, color: GlassTheme.primary),
         const SizedBox(width: 14),
         const Expanded(
           child: Text(
@@ -201,10 +207,76 @@ class _AddSourceBanner extends StatelessWidget {
         FilledButton.icon(
           autofocus: true,
           onPressed: onAddSource,
-          icon: const Icon(Symbols.add_rounded),
+          icon: const Icon(ReelishIcons.add),
           label: const Text('Add a source'),
         ),
       ],
+    ),
+  );
+}
+
+/// Watch Party on Home: what it is, how to start one, and the way in with a
+/// code. The whole row is one target as wide as the rows of posters: moving
+/// down, the D-pad prefers what is straight below it, so a button at the far
+/// end of the row would be skipped.
+class _WatchTogetherRow extends StatelessWidget {
+  const _WatchTogetherRow({super.key, required this.onJoin});
+
+  final VoidCallback onJoin;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(12, 6, 12, 18),
+    child: TvFocusable(
+      onSelect: onJoin,
+      borderRadius: 16,
+      focusScale: 1.01,
+      // Comes to the top of the list, where the poster rows rest.
+      scrollAlignment: 0,
+      semanticLabel:
+          'Watch together. Join a friend’s party with a code. To host, open '
+          'a title and choose Watch together.',
+      child: ColoredBox(
+        color: GlassTheme.surface,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+          child: Row(
+            children: [
+              Icon(ReelishIcons.people, color: GlassTheme.primary),
+              const SizedBox(width: 14),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Watch together',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Have a code? Join a friend’s party. To host, open a '
+                      'title and choose Watch together.',
+                      style: TextStyle(color: GlassTheme.muted, fontSize: 14),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 14),
+              Text(
+                'Join with a code',
+                style: TextStyle(
+                  color: GlassTheme.coralBright,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     ),
   );
 }
@@ -257,14 +329,14 @@ class _TvCatalogPageState extends State<TvCatalogPage> {
         if (state.items.isEmpty) {
           return switch (state.status) {
             PagedFeedStatus.failed => TvMessage(
-              icon: Symbols.cloud_off_rounded,
+              icon: ReelishIcons.offline,
               title: 'Could not load ${widget.title.toLowerCase()}',
               message: 'Check your connection and try again.',
               actionLabel: 'Retry',
               onAction: () => unawaited(widget.feed.retry()),
             ),
             PagedFeedStatus.ready => TvMessage(
-              icon: Symbols.movie_rounded,
+              icon: ReelishIcons.movie,
               title: 'Nothing to show just yet',
             ),
             _ => const _PageProgress(),
@@ -384,20 +456,20 @@ class _TvSearchPageState extends State<TvSearchPage> {
       body = const _PageProgress();
     } else if (_error != null) {
       body = TvMessage(
-        icon: Symbols.cloud_off_rounded,
+        icon: ReelishIcons.offline,
         title: _error!,
         actionLabel: 'Retry',
         onAction: () => _search(query),
       );
     } else if (query.isEmpty) {
       body = const TvMessage(
-        icon: Symbols.search_rounded,
+        icon: ReelishIcons.search,
         title: 'Find your next favorite',
         message: 'Search movies and series by title.',
       );
     } else if (_results.isEmpty) {
       body = TvMessage(
-        icon: Symbols.movie_rounded,
+        icon: ReelishIcons.movie,
         title: 'No results for $query',
         message: 'Try another title.',
       );
@@ -427,7 +499,7 @@ class _TvSearchPageState extends State<TvSearchPage> {
                   value: _query,
                   hint: 'Search movies and series',
                   title: 'Search',
-                  icon: Symbols.search_rounded,
+                  icon: ReelishIcons.search,
                   textInputAction: TextInputAction.search,
                   onChanged: _onChanged,
                   onSubmitted: _onSubmitted,
@@ -438,7 +510,7 @@ class _TvSearchPageState extends State<TvSearchPage> {
               const SizedBox(width: 14),
               OutlinedButton.icon(
                 onPressed: _clear,
-                icon: const Icon(Symbols.close_rounded),
+                icon: const Icon(ReelishIcons.close),
                 label: const Text('Clear'),
               ),
             ],
@@ -557,7 +629,7 @@ class _TvLibraryPageState extends State<TvLibraryPage> {
       header: const TvPageHeading('My library'),
       child: rows.isEmpty
           ? const TvMessage(
-              icon: Symbols.bookmark_rounded,
+              icon: ReelishIcons.bookmark,
               title: 'Nothing here yet',
               message:
                   'Titles you watch, and titles you add to My list from a '

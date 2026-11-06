@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../../theme/reelish_icons.dart';
 
 import '../../models/stream_source.dart';
 import 'player_sheet.dart';
@@ -110,7 +110,7 @@ class _StreamSelectorSheetState extends State<StreamSelectorSheet> {
 
   @override
   Widget build(BuildContext context) => PlayerSheetFrame(
-    icon: Symbols.video_library_rounded,
+    icon: ReelishIcons.library,
     title: 'Playback source',
     subtitle: _subtitle,
     children: [

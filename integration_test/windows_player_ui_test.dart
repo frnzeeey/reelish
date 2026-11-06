@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:onfeed/src/models/content_advisory.dart';
 import 'package:onfeed/src/models/media_item.dart';
 import 'package:onfeed/src/models/stream_source.dart';
 import 'package:onfeed/src/platform/desktop_window.dart';
@@ -510,5 +511,97 @@ void main() {
       );
     },
     timeout: const Timeout(Duration(minutes: 2)),
+  );
+
+  testWidgets(
+    'the content advisory shows once, and the keyboard still works under it',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final files = await tester.runAsync(
+        () => Directory.systemTemp.createTemp('reelish-advisory-'),
+      );
+      final storage = StorageService(filesDirectory: () async => files!);
+      await tester.runAsync(DeviceCapabilities.load);
+      final navigatorKey = GlobalKey<NavigatorState>();
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: GlassTheme.tv,
+          navigatorKey: navigatorKey,
+          home: const Scaffold(body: Text('Home')),
+        ),
+      );
+      navigatorKey.currentState!.push(
+        MaterialPageRoute<void>(
+          builder: (_) => PlayerScreen(
+            item: const MediaItem(id: '10378', type: 'movie', name: 'Clip'),
+            source: const StreamSource(name: 'Test clip', url: _clip),
+            sources: const [StreamSource(name: 'Test clip', url: _clip)],
+            storage: storage,
+            playbackSettings: PlaybackSettingsController(storage: storage),
+            advisory: Future.value(
+              const ContentAdvisory(
+                rating: 'R',
+                ratingCountry: 'US',
+                descriptors: [ContentDescriptor.violence],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      Future<void> until(bool Function() condition, String what) async {
+        final deadline = DateTime.now().add(const Duration(seconds: 40));
+        while (!condition()) {
+          expect(
+            DateTime.now().isBefore(deadline),
+            isTrue,
+            reason: 'timed out: $what',
+          );
+          await tester.pump(const Duration(milliseconds: 100));
+        }
+      }
+
+      VideoPlayerController? controller() {
+        final players = find.byType(VideoPlayer);
+        return players.evaluate().isEmpty
+            ? null
+            : tester.widget<VideoPlayer>(players.first).controller;
+      }
+
+      double advisoryOpacity() {
+        final text = find.text('CONTENT ADVISORY');
+        if (text.evaluate().isEmpty) return 0;
+        return tester
+            .widget<AnimatedOpacity>(
+              find
+                  .ancestor(of: text, matching: find.byType(AnimatedOpacity))
+                  .first,
+            )
+            .opacity;
+      }
+
+      expect(advisoryOpacity(), 0, reason: 'not before playback starts');
+      await until(() => advisoryOpacity() == 1, 'the advisory shows');
+      expect(controller()!.value.isPlaying, isTrue);
+
+      // It holds no focus: Space still reaches the player beneath it.
+      await tester.sendKeyEvent(LogicalKeyboardKey.space);
+      await until(() => !controller()!.value.isPlaying, 'Space pauses');
+      await tester.sendKeyEvent(LogicalKeyboardKey.space);
+      await until(() => controller()!.value.isPlaying, 'Space resumes');
+
+      await until(() => advisoryOpacity() == 0, 'the advisory goes');
+      await tester.sendKeyEvent(LogicalKeyboardKey.space);
+      await until(() => !controller()!.value.isPlaying, 'paused again');
+      await tester.sendKeyEvent(LogicalKeyboardKey.space);
+      await until(() => controller()!.value.isPlaying, 'resumed again');
+      await tester.pump(const Duration(seconds: 1));
+      expect(advisoryOpacity(), 0, reason: 'pausing does not bring it back');
+
+      navigatorKey.currentState!.pop();
+      await tester.pump(const Duration(seconds: 2));
+      await tester.runAsync(() => files!.delete(recursive: true));
+    },
+    timeout: const Timeout(Duration(minutes: 3)),
   );
 }

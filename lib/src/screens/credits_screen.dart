@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../theme/reelish_icons.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -83,7 +83,7 @@ class CreditsScreen extends StatelessWidget {
     return SettingsScaffold(
       title: 'Credits & attribution',
       subtitle: 'Data, services and software behind Reelish.',
-      icon: Symbols.handshake_rounded,
+      icon: ReelishIcons.credits,
       // The full TMDB attribution is on this page; the footer only repeats
       // the required notice, without a second logo.
       footer: const TmdbAttributionFooter(showLogo: false),
@@ -93,7 +93,7 @@ class CreditsScreen extends StatelessWidget {
           children: [
             const _TmdbAttributionBlock(),
             SettingsTile(
-              icon: Symbols.open_in_new_rounded,
+              icon: ReelishIcons.externalLink,
               title: 'The Movie Database (TMDB)',
               description: 'www.themoviedb.org',
               onTap: () => _openExternal(
@@ -115,15 +115,23 @@ class CreditsScreen extends StatelessWidget {
         SettingsSection(
           label: 'THIRD-PARTY SERVICES',
           children: [
+            const _TraktAttributionBlock(),
+            SettingsTile(
+              icon: ReelishIcons.externalLink,
+              title: 'Trakt',
+              description: 'trakt.tv',
+              onTap: () =>
+                  _openExternal(context, Uri.https('trakt.tv', '/'), 'Trakt'),
+            ),
             const SettingsTile(
-              icon: Symbols.closed_caption_rounded,
+              icon: ReelishIcons.subtitles,
               title: 'OpenSubtitles v3',
               description:
                   'Preinstalled Stremio subtitle addon used to search for '
                   'subtitles. Reelish is not affiliated with OpenSubtitles.',
             ),
             const SettingsTile(
-              icon: Symbols.cloud_rounded,
+              icon: ReelishIcons.cloud,
               title: 'GitHub',
               description:
                   'Hosts Reelish releases for update checks and the plugin '
@@ -140,7 +148,7 @@ class CreditsScreen extends StatelessWidget {
           label: 'ARTWORK',
           children: [
             SettingsTile(
-              icon: Symbols.face_rounded,
+              icon: ReelishIcons.face,
               title: 'Profile avatars',
               description: 'Illustrations by angelina888 on Figma',
               onTap: () => _openExternal(
@@ -162,7 +170,7 @@ class CreditsScreen extends StatelessWidget {
                   'subject to its own license.',
             ),
             SettingsTile(
-              icon: Symbols.code_rounded,
+              icon: ReelishIcons.code,
               title: 'Open-source licenses',
               description: 'Full license texts for every package and font',
               onTap: () => showAppLicenses(context),
@@ -180,19 +188,19 @@ class CreditsScreen extends StatelessWidget {
               label: 'REELISH INFORMATION',
               children: [
                 const SettingsTile(
-                  icon: Symbols.movie_rounded,
+                  icon: ReelishIcons.movie,
                   title: 'App name',
                   value: 'Reelish',
                 ),
                 SettingsTile(
-                  icon: Symbols.verified_rounded,
+                  icon: ReelishIcons.verified,
                   title: 'Version',
                   value: info == null
                       ? fallback
                       : '${info.version} (build ${info.buildNumber})',
                 ),
                 SettingsTile(
-                  icon: Symbols.code_blocks_rounded,
+                  icon: ReelishIcons.codeBlocks,
                   title: 'Project page & support',
                   description: 'github.com/frnzeeey/reelish',
                   onTap: () => _openExternal(
@@ -216,6 +224,67 @@ class CreditsScreen extends StatelessWidget {
 /// Laid out as a plain credit, not a promotion: the logo sits at a modest
 /// size beneath Reelish's own branding, unmodified and on the dark surface
 /// TMDB's gradient artwork is designed for.
+/// Trakt's Full Logo for dark backgrounds, with what Reelish uses it for, per
+/// https://app.trakt.tv/branding: an approved logo, unaltered, identifies the
+/// app as powered by Trakt without implying sponsorship, endorsement or
+/// affiliation, with clear space around it equal to the height of the "T" in
+/// Trakt.
+class _TraktAttributionBlock extends StatelessWidget {
+  const _TraktAttributionBlock();
+
+  /// Rasterized unmodified from the SVG on the branding page (kept beside
+  /// it for reference). Trakt forbids altering, recoloring or recreating it.
+  static const _logoAsset = 'assets/images/trakt/trakt_logo_dark.png';
+
+  /// Width / height of the source artwork (121.6 × 29.4).
+  static const _logoAspectRatio = 121.6 / 29.4;
+
+  /// No taller than the 16 dp the block leaves around it, so the clear space
+  /// always covers the height of the "T", which is nearly the logo's own.
+  static const _logoHeight = 16.0;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(16, 20, 16, 18),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          height: _logoHeight,
+          width: _logoHeight * _logoAspectRatio,
+          child: Image.asset(
+            _logoAsset,
+            fit: BoxFit.contain,
+            filterQuality: FilterQuality.medium,
+            semanticLabel: 'Trakt logo',
+          ),
+        ),
+        const SizedBox(height: 16),
+        const Text(
+          'Powered by Trakt',
+          style: TextStyle(
+            color: GlassTheme.textPrimary,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            height: 1.45,
+          ),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Sign-in, My list sync and new episode checks use Trakt. Reelish '
+          'is independent and is not sponsored by, endorsed by or affiliated '
+          'with Trakt.',
+          style: TextStyle(
+            color: GlassTheme.muted,
+            fontSize: 12.5,
+            height: 1.5,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
 class _TmdbAttributionBlock extends StatelessWidget {
   const _TmdbAttributionBlock();
 

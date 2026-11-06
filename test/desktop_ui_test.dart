@@ -2,7 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import 'package:onfeed/src/theme/reelish_icons.dart';
 import 'package:onfeed/src/desktop/desktop_provider_search.dart';
 import 'package:onfeed/src/desktop/desktop_shell.dart';
 import 'package:onfeed/src/desktop/desktop_widgets.dart';
@@ -451,7 +451,7 @@ void main() {
                 .ancestor(
                   of: find.descendant(
                     of: tile('0'),
-                    matching: find.byIcon(Symbols.play_arrow_rounded),
+                    matching: find.byIcon(ReelishIcons.play),
                   ),
                   matching: find.byType(AnimatedOpacity),
                 )

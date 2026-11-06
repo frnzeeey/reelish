@@ -3,7 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../theme/reelish_icons.dart';
 
 import '../models/media_item.dart';
 import '../viewmodels/home_catalog.dart';
@@ -30,6 +30,7 @@ class DesktopHomePage extends StatefulWidget {
     required this.onToggleFavorite,
     required this.onRetry,
     required this.onAddSource,
+    this.onJoinParty,
   });
 
   final TvCatalog catalog;
@@ -38,6 +39,9 @@ class DesktopHomePage extends StatefulWidget {
   final Future<bool> Function(MediaItem item) onToggleFavorite;
   final VoidCallback onRetry;
   final VoidCallback onAddSource;
+
+  /// Opens Join a party; without it Home has no Watch together row.
+  final VoidCallback? onJoinParty;
 
   @override
   State<DesktopHomePage> createState() => _DesktopHomePageState();
@@ -74,7 +78,7 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
     final error = catalog.catalogError;
     if (catalogEmpty && error != null) {
       return DesktopMessage(
-        icon: Symbols.cloud_off_rounded,
+        icon: ReelishIcons.offline,
         title: 'Could not load titles',
         message: error,
         actionLabel: 'Retry',
@@ -97,6 +101,13 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
         )
       else
         const SizedBox(key: ValueKey('hero-space'), height: 32),
+      // With no source yet, how to get one comes first: under Top 10 it was
+      // below the fold of a 1280 × 720 window.
+      if (!catalog.hasSources)
+        _AddSourceBanner(
+          key: const ValueKey('add-source'),
+          onAddSource: widget.onAddSource,
+        ),
       // Windows shows Top 10 right under the Spotlight; phone and TV Home
       // keep it further down. It still loads only once Movies and Series
       // (its seeds) have, showing its placeholders until then.
@@ -108,11 +119,6 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
         onToggleFavorite: widget.onToggleFavorite,
         loadWhenShown: catalog.catalogSettled,
       ),
-      if (!catalog.hasSources)
-        _AddSourceBanner(
-          key: const ValueKey('add-source'),
-          onAddSource: widget.onAddSource,
-        ),
       // Continue watching is in the sidebar on Windows, not a row here.
       if (_trending.isNotEmpty)
         DesktopMediaRow(
@@ -123,6 +129,8 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
           isFavorite: catalog.isFavorite,
           onToggleFavorite: widget.onToggleFavorite,
         ),
+      if (widget.onJoinParty case final onJoin?)
+        _WatchTogetherRow(key: const ValueKey('join-party'), onJoin: onJoin),
       DesktopPagedRow(
         key: const ValueKey('row:movies'),
         title: 'New movies',
@@ -195,7 +203,7 @@ class _AddSourceBanner extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
         child: Row(
           children: [
-            Icon(Symbols.link_rounded, color: GlassTheme.primary),
+            Icon(ReelishIcons.link, color: GlassTheme.primary),
             const SizedBox(width: 16),
             const Expanded(
               child: Column(
@@ -207,8 +215,8 @@ class _AddSourceBanner extends StatelessWidget {
                   ),
                   SizedBox(height: 2),
                   Text(
-                    'Install a provider repository from Plugins; browsing works '
-                    'without one.',
+                    'Reelish plays titles through plugins you choose. Browsing '
+                    'works without one.',
                     style: TextStyle(color: GlassTheme.muted),
                   ),
                 ],
@@ -216,8 +224,65 @@ class _AddSourceBanner extends StatelessWidget {
             ),
             FilledButton.icon(
               onPressed: onAddSource,
-              icon: const Icon(Symbols.add_rounded),
+              icon: const Icon(ReelishIcons.add),
               label: const Text('Add a source'),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+/// Watch Party on Home: what it is, how to start one, and the way in with a
+/// code, which otherwise only Profile and Settings offer.
+class _WatchTogetherRow extends StatelessWidget {
+  const _WatchTogetherRow({super.key, required this.onJoin});
+
+  final VoidCallback onJoin;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(
+      DesktopMetrics.pagePadding,
+      12,
+      DesktopMetrics.pagePadding,
+      0,
+    ),
+    child: DecoratedBox(
+      decoration: BoxDecoration(
+        color: GlassTheme.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: DesktopSurfaces.hairline),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
+        child: Row(
+          children: [
+            Icon(ReelishIcons.people, color: GlassTheme.primary),
+            const SizedBox(width: 16),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Watch together',
+                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Have a code? Join a friend’s party. To host, open a title '
+                    'and choose Watch together.',
+                    style: TextStyle(color: GlassTheme.muted),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 16),
+            OutlinedButton.icon(
+              onPressed: onJoin,
+              icon: const Icon(ReelishIcons.dialpad),
+              label: const Text('Join with a code'),
             ),
           ],
         ),
@@ -298,7 +363,7 @@ class _DesktopCatalogPageState extends State<DesktopCatalogPage> {
               hasScrollBody: false,
               child: state.status == PagedFeedStatus.failed
                   ? DesktopMessage(
-                      icon: Symbols.cloud_off_rounded,
+                      icon: ReelishIcons.offline,
                       title: 'Could not load ${widget.title.toLowerCase()}',
                       message: 'Check your connection and try again.',
                       actionLabel: 'Retry',
@@ -475,7 +540,7 @@ class _DesktopSearchPageState extends State<DesktopSearchPage> {
       body = SliverFillRemaining(
         hasScrollBody: false,
         child: DesktopMessage(
-          icon: Symbols.cloud_off_rounded,
+          icon: ReelishIcons.offline,
           title: 'Could not search',
           message: _error!,
           actionLabel: 'Try again',
@@ -487,7 +552,7 @@ class _DesktopSearchPageState extends State<DesktopSearchPage> {
           ? const SliverFillRemaining(
               hasScrollBody: false,
               child: DesktopMessage(
-                icon: Symbols.search_rounded,
+                icon: ReelishIcons.search,
                 title: 'Find a movie or series',
                 message: 'Type a title, then press Enter or pause to search.',
               ),
@@ -519,7 +584,7 @@ class _DesktopSearchPageState extends State<DesktopSearchPage> {
       body = SliverFillRemaining(
         hasScrollBody: false,
         child: DesktopMessage(
-          icon: Symbols.search_off_rounded,
+          icon: ReelishIcons.searchOff,
           title: 'No results',
           message: 'Nothing matched "$_query". Try another title.',
         ),
@@ -573,7 +638,7 @@ class _DesktopSearchPageState extends State<DesktopSearchPage> {
                   style: const TextStyle(fontSize: 17),
                   decoration: InputDecoration(
                     hintText: 'Search titles',
-                    prefixIcon: const Icon(Symbols.search_rounded),
+                    prefixIcon: const Icon(ReelishIcons.search),
                     suffixIcon: ListenableBuilder(
                       listenable: _controller,
                       builder: (context, _) => _controller.text.isEmpty
@@ -581,7 +646,7 @@ class _DesktopSearchPageState extends State<DesktopSearchPage> {
                           ? const _KeyHint('Ctrl+F')
                           : IconButton(
                               tooltip: 'Clear',
-                              icon: const Icon(Symbols.close_rounded),
+                              icon: const Icon(ReelishIcons.close),
                               onPressed: () {
                                 _controller.clear();
                                 unawaited(_search(''));
@@ -701,8 +766,39 @@ class _DesktopLibraryPageState extends State<DesktopLibraryPage> {
   /// Removes [item]'s watch history (and so its resume point), as the phone
   /// library's Remove does. My list is not touched.
   Future<void> _removeFromHistory(MediaItem item) async {
-    await _model.removeFromHistory(item);
+    final index = _model.historyIndexOf(item);
+    try {
+      await _model.removeFromHistory(item);
+    } catch (_) {
+      _say('Could not remove it. Try again.');
+      return;
+    }
     widget.onHistoryChanged?.call();
+    // Delete on a poster removes a resume point, so it can be taken back.
+    _say(
+      '${item.name} removed from your history',
+      action: SnackBarAction(
+        label: 'Undo',
+        onPressed: () => unawaited(_restoreToHistory(item, index)),
+      ),
+    );
+  }
+
+  Future<void> _restoreToHistory(MediaItem item, int index) async {
+    try {
+      await _model.restoreToHistory(item, index);
+    } catch (_) {
+      _say('Could not put it back. Try again.');
+      return;
+    }
+    widget.onHistoryChanged?.call();
+  }
+
+  void _say(String message, {SnackBarAction? action}) {
+    if (!mounted) return;
+    ScaffoldMessenger.maybeOf(context)
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message), action: action));
   }
 
   @override
@@ -739,7 +835,7 @@ class _DesktopLibraryPageState extends State<DesktopLibraryPage> {
         // Say where saved titles go, rather than leaving the list out.
         const _LibraryHint(
           title: 'My list',
-          icon: Symbols.bookmark_add_rounded,
+          icon: ReelishIcons.bookmarkAdd,
           message:
               'Nothing saved yet. Choose My list on any title, or press F '
               'on a poster, to keep it here.',
@@ -768,19 +864,19 @@ class _DesktopLibraryPageState extends State<DesktopLibraryPage> {
                       _LibraryStat(
                         count: continuing.length,
                         label: 'In progress',
-                        icon: Symbols.play_circle_rounded,
+                        icon: ReelishIcons.playCircle,
                       ),
                       const SizedBox(width: 10),
                       _LibraryStat(
                         count: _favorites.length,
                         label: 'On My list',
-                        icon: Symbols.bookmark_rounded,
+                        icon: ReelishIcons.bookmark,
                       ),
                       const SizedBox(width: 10),
                       _LibraryStat(
                         count: _history.length,
                         label: 'Watched',
-                        icon: Symbols.history_rounded,
+                        icon: ReelishIcons.history,
                       ),
                     ],
                   ),
@@ -790,7 +886,7 @@ class _DesktopLibraryPageState extends State<DesktopLibraryPage> {
           const SliverFillRemaining(
             hasScrollBody: false,
             child: DesktopMessage(
-              icon: Symbols.bookmark_rounded,
+              icon: ReelishIcons.bookmark,
               title: 'Nothing here yet',
               message:
                   'Titles you watch, and titles you add to My list from a '
@@ -831,7 +927,11 @@ class _LibraryStat extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 20, fill: 1, color: GlassTheme.primary),
+            Icon(
+              ReelishIcons.filled(icon),
+              size: 20,
+              color: GlassTheme.primary,
+            ),
             const SizedBox(width: 10),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -969,7 +1069,7 @@ class _RecentSearches extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         const Icon(
-                          Symbols.history_rounded,
+                          ReelishIcons.history,
                           size: 18,
                           color: GlassTheme.muted,
                         ),

@@ -142,8 +142,16 @@ void main() {
 
     await tester.tap(find.text('On My list'));
     expect(libraryOpened, 1);
-    await tester.tap(find.text('Open my library'));
-    expect(libraryOpened, 2);
+    // A summary, not a second menu of what the main navigation offers.
+    for (final duplicate in [
+      'Open my library',
+      'Settings',
+      'Join a watch party',
+      'Privacy policy',
+      'Profile and account',
+    ]) {
+      expect(find.text(duplicate), findsNothing, reason: duplicate);
+    }
     expect(tester.takeException(), isNull);
   });
 
@@ -181,7 +189,6 @@ void main() {
       find.text('Titles you watch and add to My list show up here.'),
       findsOneWidget,
     );
-    expect(find.text('Open my library'), findsNothing, reason: 'no callback');
   });
 
   testWidgets('re-reads the activity when asked, not on every rebuild', (
@@ -206,7 +213,7 @@ void main() {
     expect(storage.reads, 2);
   });
 
-  testWidgets('Edit profile opens the existing Profile and account page', (
+  testWidgets('Manage account opens the existing Profile and account page', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -215,7 +222,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Edit profile'));
+    await tester.tap(find.text('Manage account'));
     await tester.pumpAndSettle();
     expect(find.byType(AccountSettingsScreen), findsOneWidget);
   });
@@ -237,6 +244,8 @@ void main() {
       300,
       scrollable: find.byType(Scrollable).first,
     );
+    await tester.ensureVisible(find.text('Sign out'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Sign out'));
     await tester.pumpAndSettle();
     expect(find.text('Sign out?'), findsOneWidget);

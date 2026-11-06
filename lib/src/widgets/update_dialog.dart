@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../theme/reelish_icons.dart';
 
 import '../models/app_update.dart';
 import '../services/github_update_service.dart';
@@ -176,7 +176,7 @@ class UpdateAvailableDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     final notes = formatReleaseNotes(update.releaseNotes);
     return UpdateDialogFrame(
-      icon: Symbols.cloud_download_rounded,
+      icon: ReelishIcons.cloudDownload,
       title: 'New Reelish update available',
       actions: [
         UpdateDialogButton(
@@ -351,7 +351,7 @@ class _UpdateDownloadDialogState extends State<UpdateDownloadDialog> {
       },
       child: error != null
           ? UpdateDialogFrame(
-              icon: Symbols.error_rounded,
+              icon: ReelishIcons.error,
               title: 'Download failed',
               actions: [
                 UpdateDialogButton(label: 'Close', onPressed: _close),
@@ -365,7 +365,7 @@ class _UpdateDownloadDialogState extends State<UpdateDownloadDialog> {
               children: [Text(error, style: updateDialogBodyStyle(context))],
             )
           : UpdateDialogFrame(
-              icon: Symbols.download_rounded,
+              icon: ReelishIcons.download,
               title: 'Downloading Reelish ${widget.update.latestVersion}',
               actions: [UpdateDialogButton(label: 'Cancel', onPressed: _close)],
               children: [
@@ -415,7 +415,7 @@ class InstallPermissionDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => UpdateDialogFrame(
-    icon: Symbols.shield_rounded,
+    icon: ReelishIcons.shield,
     title: 'Allow Reelish to install updates',
     actions: [
       UpdateDialogButton(
@@ -447,7 +447,7 @@ class UpdateNoticeDialog extends StatelessWidget {
     super.key,
     required this.title,
     required this.message,
-    this.icon = Symbols.error_rounded,
+    this.icon = ReelishIcons.error,
     this.secondaryLabel,
   });
 

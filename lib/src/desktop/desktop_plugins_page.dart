@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../theme/reelish_icons.dart';
 
 import '../models/provider_plugin.dart';
 import '../screens/plugin_library_screen.dart';
@@ -86,22 +86,25 @@ class _DesktopPluginsPageState extends State<DesktopPluginsPage> {
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     IconButton(
-                      tooltip: 'Refresh repositories',
+                      tooltip: 'Refresh collections',
                       onPressed: () => unawaited(pluginService.load()),
-                      icon: const Icon(Symbols.refresh_rounded),
+                      icon: const Icon(ReelishIcons.refresh),
                     ),
-                    OutlinedButton.icon(
-                      onPressed: install,
-                      style: DesktopPluginsPage._outlined,
-                      icon: const Icon(Symbols.add_link_rounded),
-                      label: const Text('Paste a manifest URL'),
-                    ),
-                    FilledButton.icon(
-                      onPressed: browse,
-                      style: DesktopPluginsPage._filled,
-                      icon: const Icon(Symbols.storefront_rounded),
-                      label: const Text('Browse Reelish Plugins'),
-                    ),
+                    // With nothing installed the empty state offers these.
+                    if (repositories.isNotEmpty) ...[
+                      OutlinedButton.icon(
+                        onPressed: install,
+                        style: DesktopPluginsPage._outlined,
+                        icon: const Icon(ReelishIcons.linkAdd),
+                        label: const Text('Add by link'),
+                      ),
+                      FilledButton.icon(
+                        onPressed: browse,
+                        style: DesktopPluginsPage._filled,
+                        icon: const Icon(ReelishIcons.store),
+                        label: const Text('Browse Reelish Plugins'),
+                      ),
+                    ],
                   ],
                 ),
         ),
@@ -151,7 +154,7 @@ class _DesktopPluginsPageState extends State<DesktopPluginsPage> {
                   runSpacing: 14,
                   children: [
                     _Stat(
-                      icon: Symbols.bolt_rounded,
+                      icon: ReelishIcons.bolt,
                       value: enabled,
                       label: enabled == 1
                           ? 'provider active'
@@ -159,18 +162,18 @@ class _DesktopPluginsPageState extends State<DesktopPluginsPage> {
                       highlight: true,
                     ),
                     _Stat(
-                      icon: Symbols.hub_rounded,
+                      icon: ReelishIcons.hub,
                       value: plugins.length,
                       label: plugins.length == 1
                           ? 'provider installed'
                           : 'providers installed',
                     ),
                     _Stat(
-                      icon: Symbols.dns_rounded,
+                      icon: ReelishIcons.server,
                       value: repositories.length,
                       label: repositories.length == 1
-                          ? 'repository'
-                          : 'repositories',
+                          ? 'collection'
+                          : 'collections',
                     ),
                   ],
                 ),
@@ -191,11 +194,11 @@ class _DesktopPluginsPageState extends State<DesktopPluginsPage> {
                       message: update.value.length == 1
                           ? 'A provider was added or changed its code. It is '
                                 'paused until you allow it. Only allow it if '
-                                'you trust this repository.'
+                                'you trust this collection.'
                           : '${update.value.length} providers were added or '
                                 'changed their code. They are paused until '
                                 'you allow them. Only allow it if you trust '
-                                'this repository.',
+                                'this collection.',
                       actions: [
                         FilledButton.tonal(
                           onPressed: () => unawaited(
@@ -216,7 +219,7 @@ class _DesktopPluginsPageState extends State<DesktopPluginsPage> {
                                 onPressed: () =>
                                     unawaited(pluginService.load()),
                                 icon: const Icon(
-                                  Symbols.refresh_rounded,
+                                  ReelishIcons.refresh,
                                   size: 18,
                                 ),
                                 label: const Text('Retry'),
@@ -229,10 +232,7 @@ class _DesktopPluginsPageState extends State<DesktopPluginsPage> {
                                     error.key,
                                   ),
                                 ),
-                                icon: const Icon(
-                                  Symbols.delete_rounded,
-                                  size: 18,
-                                ),
+                                icon: const Icon(ReelishIcons.trash, size: 18),
                                 label: const Text('Remove'),
                               ),
                             ]
@@ -246,9 +246,9 @@ class _DesktopPluginsPageState extends State<DesktopPluginsPage> {
                     ),
                 ],
                 _Heading(
-                  title: 'Your repositories',
+                  title: 'Your collections',
                   detail: repositories.isEmpty
-                      ? 'Add a provider manifest to get started'
+                      ? 'Add one to get started'
                       : '${repositories.length} installed',
                 ),
                 if (repositories.isEmpty)
@@ -303,15 +303,15 @@ class _ViewSwitch extends StatelessWidget {
     segments: [
       ButtonSegment(
         value: _PluginsView.installed,
-        icon: const Icon(Symbols.extension_rounded, size: AppIcon.sm),
+        icon: const Icon(ReelishIcons.plugin, size: AppIcon.sm),
         label: Text(
           installedCount == 0 ? 'Installed' : 'Installed · $installedCount',
         ),
-        tooltip: 'Your repositories and providers',
+        tooltip: 'Your collections and providers',
       ),
       const ButtonSegment(
         value: _PluginsView.discover,
-        icon: Icon(Symbols.storefront_rounded, size: AppIcon.sm),
+        icon: Icon(ReelishIcons.store, size: AppIcon.sm),
         label: Text('Discover'),
         tooltip: 'Browse the Community Library',
       ),
@@ -456,7 +456,7 @@ class _Empty extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.all(18),
             child: Icon(
-              Symbols.travel_explore_rounded,
+              ReelishIcons.explore,
               size: 32,
               color: GlassTheme.primary,
             ),
@@ -468,7 +468,7 @@ class _Empty extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Start with a provider',
+                'Add your first collection',
                 style: TextStyle(
                   fontSize: AppTextSize.title,
                   fontWeight: FontWeight.w800,
@@ -476,9 +476,9 @@ class _Empty extends StatelessWidget {
               ),
               SizedBox(height: 6),
               Text(
-                'Browse the library or paste a provider manifest URL to add '
-                'streaming sources. You can turn each provider on or off at '
-                'any time.',
+                'Collections give Reelish places to look for streams. Browse '
+                'the library or add one by its link. You can turn each '
+                'provider on or off at any time.',
                 style: TextStyle(color: GlassTheme.muted, height: 1.45),
               ),
             ],
@@ -491,12 +491,12 @@ class _Empty extends StatelessWidget {
           children: [
             OutlinedButton.icon(
               onPressed: onInstall,
-              icon: const Icon(Symbols.add_rounded),
-              label: const Text('Paste a manifest'),
+              icon: const Icon(ReelishIcons.add),
+              label: const Text('Add by link'),
             ),
             FilledButton.icon(
               onPressed: onBrowse,
-              icon: const Icon(Symbols.storefront_rounded),
+              icon: const Icon(ReelishIcons.store),
               label: const Text('Browse the library'),
             ),
           ],
@@ -513,11 +513,8 @@ class _Notice extends StatelessWidget {
   final String message;
 
   @override
-  Widget build(BuildContext context) => _Warning(
-    icon: Symbols.power_settings_new_rounded,
-    title: title,
-    message: message,
-  );
+  Widget build(BuildContext context) =>
+      _Warning(icon: ReelishIcons.power, title: title, message: message);
 }
 
 class _Issue extends StatelessWidget {
@@ -535,7 +532,7 @@ class _Issue extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(bottom: 10),
     child: _Warning(
-      icon: Symbols.warning_rounded,
+      icon: ReelishIcons.warning,
       title: name,
       message: message,
       actions: actions,
@@ -692,7 +689,7 @@ class _RepositoryCardState extends State<_RepositoryCard> {
                           borderRadius: BorderRadius.circular(AppRadius.md),
                         ),
                         child: Icon(
-                          Symbols.dns_rounded,
+                          ReelishIcons.server,
                           color: GlassTheme.primary,
                           size: 22,
                         ),
@@ -738,9 +735,9 @@ class _RepositoryCardState extends State<_RepositoryCard> {
                       ),
                       const SizedBox(width: 10),
                       IconButton(
-                        tooltip: 'Remove repository',
+                        tooltip: 'Remove collection',
                         onPressed: () => unawaited(_confirmRemove()),
-                        icon: const Icon(Symbols.delete_rounded, size: 20),
+                        icon: const Icon(ReelishIcons.trash, size: 20),
                       ),
                       Tooltip(
                         message: _expanded
@@ -749,9 +746,7 @@ class _RepositoryCardState extends State<_RepositoryCard> {
                         child: AnimatedRotation(
                           turns: _expanded ? .5 : 0,
                           duration: duration,
-                          child: const Icon(
-                            Symbols.keyboard_arrow_down_rounded,
-                          ),
+                          child: const Icon(ReelishIcons.chevronDown),
                         ),
                       ),
                       const SizedBox(width: 6),
@@ -777,7 +772,7 @@ class _RepositoryCardState extends State<_RepositoryCard> {
                           const Padding(
                             padding: EdgeInsets.all(20),
                             child: Text(
-                              'This repository contains no valid providers.',
+                              'This collection has no valid providers.',
                               style: TextStyle(color: GlassTheme.muted),
                             ),
                           )
@@ -859,9 +854,14 @@ class _ProviderTile extends StatelessWidget {
           children: [
             Icon(
               plugin.enabled
-                  ? Symbols.check_circle_rounded
-                  : Symbols.circle_rounded,
-              fill: plugin.enabled ? 1 : 0,
+                  ? ReelishIcons.filled(
+                      plugin.enabled
+                          ? ReelishIcons.checkCircle
+                          : ReelishIcons.radioOff,
+                    )
+                  : (plugin.enabled
+                        ? ReelishIcons.checkCircle
+                        : ReelishIcons.radioOff),
               color: plugin.enabled ? GlassTheme.primary : GlassTheme.disabled,
               size: 19,
             ),

@@ -8,6 +8,9 @@ import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 import 'package:flutter_go_torrent_streamer/flutter_go_torrent_streamer.dart';
 import 'package:video_player_media_kit/video_player_media_kit.dart';
+import '../../models/content_advisory.dart';
+import '../../diagnostics/crash_reporter.dart';
+import '../../diagnostics/playback_diagnostics.dart';
 import '../../models/episode_context.dart';
 import '../../models/episode_progress.dart';
 import '../../models/media_details.dart';
@@ -30,8 +33,10 @@ import '../../services/network_target_policy.dart';
 import '../../services/subtitle_addon_service.dart';
 import '../../services/subtitle_loader.dart';
 import '../../services/torrent_source_preparer.dart';
+import '../../theme/design_tokens.dart';
 import '../../watch_party/party_player_sync.dart';
 import 'audio_track_sheet.dart';
+import 'content_advisory_overlay.dart';
 import 'episode_panel.dart';
 import 'external_cue_clock.dart';
 import 'gesture_touch_layer.dart';
@@ -84,6 +89,7 @@ class CustomVideoPlayer extends StatefulWidget {
     this.episode,
     this.imdbId,
     this.details,
+    this.advisory,
   });
   final MediaItem item;
   final StreamSource source;
@@ -123,6 +129,10 @@ class CustomVideoPlayer extends StatefulWidget {
   /// the pause screen shows what the item itself carries until it resolves.
   final Future<MediaDetails?>? details;
 
+  /// The age rating and content advisory shown as playback starts. Optional;
+  /// playback never waits for it.
+  final Future<ContentAdvisory?>? advisory;
+
   /// Where a title resumes from its history entry: its saved position, or
   /// the beginning once watched (a rewatch, not the credits), as episodes
   /// do. A length that was never saved keeps the position.
@@ -150,6 +160,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
   /// Controls visibility. A notifier, so showing or hiding controls rebuilds
   /// only the overlay, never the video surface or the rest of the player.
   final ValueNotifier<bool> _controlsVisible = ValueNotifier(true);
+  final _advisory = ContentAdvisoryController();
 
   /// Controls lock against accidental touches. Session-only: every player
   /// (and so every episode) starts unlocked. It blocks touches, never
@@ -356,6 +367,9 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
   /// stream drops during playback.
   final Map<String, List<DateTime>> _runtimeRetries = {};
 
+  /// Fresh lookups left for links that stopped working during this session.
+  final LinkRefreshBudget _linkRefresh = LinkRefreshBudget();
+
   /// Off restores the behaviour before stall recovery: a stream that stops
   /// delivering without an error leaves the spinner up until the viewer acts.
   static const _recoverStalls = true;
@@ -376,6 +390,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
   @override
   void initState() {
     super.initState();
+    unawaited(widget.advisory?.then(_advisory.provide, onError: (Object _) {}));
     _playback = widget.playbackSettings.value;
     _speed = _playback.defaultPlaybackSpeed;
     _subtitlePosition = ValueNotifier(_playback.subtitlePosition);
@@ -410,6 +425,9 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
       season: widget.season,
       episode: widget.episode,
     )?..attach(_PartyHandle(this));
+    // A party plays at the room's pace, not the viewer's usual speed: a host
+    // at 1.25x would leave everyone behind for as long as the party lasts.
+    if (_party != null) _speed = 1;
     _source = widget.source;
     final discovery = widget.discovery;
     if (discovery != null) _listenForSources(discovery);
@@ -477,6 +495,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
           '${PlaybackLog.describe(source)}',
     );
     if (!mounted) return;
+    _metrics.interrupted();
     final previousOpen = _openCancellation;
     if (previousOpen != null && !previousOpen.isCompleted) {
       previousOpen.complete();
@@ -496,6 +515,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
       // Cleanup failure should not prevent trying the newly selected source.
     }
     if (old != null) {
+      _metrics.closed(attemptClock.elapsed);
       PlaybackLog.log(
         'Player',
         'previous player closed after ${attemptClock.elapsedMilliseconds}ms',
@@ -568,6 +588,13 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
             'since screen open) type=${playable.streamType.name} '
             'engine=${attemptEngine.id.name}',
       );
+      _metrics.opened(attemptClock.elapsed);
+      _metrics.sourceType(
+        source.isTorrent ? 'torrent' : playable.streamType.name,
+      );
+      CrashReporter.instance
+        ..setContext(CrashContext.playbackState, 'opening')
+        ..setContext(CrashContext.playbackEngine, attemptEngine.id.name);
       _controller = c;
       _bindEmbeddedSubtitles(c);
       // Track menus are optional. Query both concurrently and never make
@@ -633,7 +660,11 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
           // The engine keeps full volume if it refuses; playback continues.
         }
       }
-      final resume = _lastPosition ?? await _startPosition;
+      // A party decides where to start, from its state at this moment.
+      final resume =
+          _party?.takeOpeningPosition() ??
+          _lastPosition ??
+          await _startPosition;
       if (resume > Duration.zero) {
         final duration = c.value.duration;
         final safeResume =
@@ -650,10 +681,14 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
       // A play request the engine never answers would leave the viewer on
       // the loading screen. It fails as an engine problem, so the other
       // engine gets the same source before another source is tried.
-      await c.play().timeout(
-        const Duration(seconds: 10),
-        onTimeout: () => throw const EngineStartTimeout(),
-      );
+      // A paused party, or one yet to start, leaves this player waiting.
+      if (_party?.holdOpening != true) {
+        _metrics.playRequested();
+        await c.play().timeout(
+          const Duration(seconds: 10),
+          onTimeout: () => throw const EngineStartTimeout(),
+        );
+      }
       if (mounted && generation == _initializationGeneration) {
         PlaybackLog.log(
           'Player',
@@ -669,6 +704,8 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
         // moment later, when the codec opens.
         if (engineFallback) _enginePreference.fallbackStarted(attemptEngine);
         setState(() => _ready = true);
+        // Nothing else reports readiness to a player that is waiting.
+        _party?.playerChanged();
         // Pause artwork downloads once, after startup has had the network,
         // so the first pause shows it from memory.
         _artworkTimer ??= Timer(
@@ -758,6 +795,11 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
       if (!noted && value.position > start) {
         noted = true;
         _metrics.firstFrame(engine.id.name);
+        _advisory.playbackStarted();
+        CrashReporter.instance.setContext(
+          CrashContext.playbackState,
+          'playing',
+        );
         PlaybackLog.log(
           'Player',
           'first frame after ${attemptClock.elapsedMilliseconds}ms '
@@ -813,15 +855,23 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
     // screen until the player closed. The next player turns it back on.
     if (_desktop) _setKeepScreenOn(false);
     _unbindEmbeddedSubtitles();
+    _metrics.interrupted();
+    final closeClock = Stopwatch()..start();
     try {
       await failedController?.dispose();
       await _torrentSession?.stop();
     } catch (_) {}
+    if (failedController != null) _metrics.closed(closeClock.elapsed);
     _torrentSession = null;
     if (!mounted || generation != _initializationGeneration) return;
 
     final failure = PlaybackFailure.classify(error);
     _metrics.failure(failure.kind);
+    PlaybackDiagnostics.failed(
+      failure.kind,
+      engine: failedEngine.id.name,
+      wasPlaying: wasPlaying,
+    );
     PlaybackLog.log(
       'Failure',
       'kind=${failure.kind.name}'
@@ -831,10 +881,16 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
           'detail="${_safePlaybackError(error.toString())}"',
     );
     if (failure.kind == PlaybackFailureKind.cancelled) return;
+    if (wasPlaying) {
+      _metrics.recovering();
+      _linkRefresh.played(_sourceKey(failedCandidate));
+    }
 
-    // Reconnecting cannot help a picture that was never drawn.
+    // Reconnecting cannot help a picture that was never drawn, or a link the
+    // server has refused.
     if (wasPlaying &&
         failure.kind != PlaybackFailureKind.rendering &&
+        !failure.linkRejected &&
         _allowReconnect(failedCandidate)) {
       final attempt = _runtimeRetries[_sourceKey(failedCandidate)]!.length;
       final delay = Duration(seconds: attempt == 1 ? 1 : 3);
@@ -860,6 +916,8 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
     if (await _refreshAfterCachedFailure(failedCandidate)) return;
     // Rediscovery can take seconds; the viewer may have left or picked
     // another source meanwhile.
+    if (!mounted || generation != _initializationGeneration) return;
+    if (await _refreshDeadLink(failedCandidate, failure)) return;
     if (!mounted || generation != _initializationGeneration) return;
 
     final alternateEngine = PlayerEngineFactory.alternateFor(failedEngine);
@@ -908,6 +966,8 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
 
     if (!mounted || generation != _initializationGeneration) return;
     final attempted = _playbackCoordinator.attemptedCount;
+    _metrics.gaveUp();
+    CrashReporter.instance.setContext(CrashContext.playbackState, 'failed');
     setState(() {
       _error = true;
       _errorMessage = attempted > 1
@@ -1271,6 +1331,22 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
     _cachedRefreshAttempted = true;
     PlaybackLog.log('Fallback', 'cached link failed; rediscovering sources');
     return _rediscoverAndPlay();
+  }
+
+  /// A source that was playing and no longer opens usually has an expired
+  /// link. Asks the providers for a fresh one and returns to the same source
+  /// where it can, before anything else is tried. [_initialize] resumes at
+  /// the last position.
+  Future<bool> _refreshDeadLink(
+    StreamSource failed,
+    PlaybackFailure failure,
+  ) async {
+    if (failed.isTorrent || !_linkRefresh.take(_sourceKey(failed), failure)) {
+      return false;
+    }
+    PlaybackLog.log('Fallback', 'link stopped working; rediscovering sources');
+    setState(() => _ready = false);
+    return _rediscoverAndPlay(prefer: failed);
   }
 
   late final TorrentSourcePreparer _torrents = TorrentSourcePreparer(
@@ -2839,6 +2915,10 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
     // stopped listening to the settings it writes.
     _volumeApply?.cancel();
     if (_volumeSave != null) _saveVolume();
+    _advisory.dispose();
+    CrashReporter.instance
+      ..setContext(CrashContext.playbackState, null)
+      ..setContext(CrashContext.playbackEngine, null);
     _metrics.report(
       contentType: widget.item.type,
       itemId: widget.item.id,
@@ -2929,6 +3009,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
         final value = _controller?.value;
         if (mounted && value != null && _canShowPauseScreen(value)) {
           _pauseOverlay.value = true;
+          _advisory.dismiss();
         }
       });
     }
@@ -2942,7 +3023,11 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
       );
       return;
     }
+    if (_ready && c.value.isCompleted) {
+      _party?.playerCompleted(c.value.position);
+    }
     _metrics.buffering(_ready && c.value.isPlaying && c.value.isBuffering);
+    _metrics.playing(_ready && c.value.isPlaying && !c.value.isBuffering);
     // Playing (not paused, not being scrubbed) yet buffering in place.
     _stallWatchdog?.update(
       stalled:
@@ -3252,6 +3337,15 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
                   ),
                 ),
               ),
+            // Under the controls, which never overlap it: it sits below the
+            // top bar, and below the party badge in a party.
+            if (playable)
+              ContentAdvisoryOverlay(
+                controller: _advisory,
+                controlsVisible: _controlsShown,
+                tv: _tv,
+                extraTop: _party == null ? 0 : AppSpace.xxl,
+              ),
             // 6. Controls: always mounted while playable, faded in and out.
             // Locking hides them without unmounting.
             if (playable)
@@ -3501,6 +3595,9 @@ class _PartyHandle implements PartyPlayerHandle {
 
   @override
   bool get buffering => _engine?.value.isBuffering ?? false;
+
+  @override
+  bool get completed => _engine?.value.isCompleted ?? false;
 
   @override
   bool get failed => _state._error;

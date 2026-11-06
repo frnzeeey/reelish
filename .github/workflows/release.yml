@@ -213,9 +213,9 @@ jobs:
           ONFEED_RELEASE_STORE_PASSWORD: ${{ secrets.ONFEED_RELEASE_STORE_PASSWORD }}
           ONFEED_RELEASE_KEY_ALIAS: ${{ secrets.ONFEED_RELEASE_KEY_ALIAS }}
           ONFEED_RELEASE_KEY_PASSWORD: ${{ secrets.ONFEED_RELEASE_KEY_PASSWORD }}
-          # Opt-in usage statistics (docs/analytics.md). Repository
+          # Opt-in usage statistics and crash reports (docs/features/). Repository
           # variables, not secrets: Firebase client identifiers. When unset,
-          # the APK has no analytics and never asks.
+          # the APK has neither and never asks. REELISH_CRASH_TEST stays unset.
           REELISH_FIREBASE_APP_ID: ${{ vars.REELISH_FIREBASE_APP_ID }}
           REELISH_FIREBASE_API_KEY: ${{ vars.REELISH_FIREBASE_API_KEY }}
           REELISH_FIREBASE_PROJECT_ID: ${{ vars.REELISH_FIREBASE_PROJECT_ID }}

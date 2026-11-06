@@ -1,14 +1,16 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../theme/reelish_icons.dart';
 
 import '../models/media_item.dart';
 import '../models/resume_summary.dart';
 import '../services/storage_service.dart';
+import '../theme/design_tokens.dart';
 import '../theme/glass_theme.dart';
 import '../viewmodels/library_view_model.dart';
 import '../widgets/media_card.dart';
+import '../widgets/soft_glass_dock.dart';
 
 enum _LibraryFilter { all, continueWatching, favorites }
 
@@ -18,6 +20,7 @@ class LibraryScreen extends StatefulWidget {
     required this.storage,
     required this.onPlay,
     this.refreshToken = 0,
+    this.onBrowse,
     this.onHistoryChanged,
     this.onFavoritesChanged,
   });
@@ -25,6 +28,9 @@ class LibraryScreen extends StatefulWidget {
   final StorageService storage;
   final ValueChanged<MediaItem> onPlay;
   final int refreshToken;
+
+  /// Opens Home, from a section with nothing in it yet.
+  final VoidCallback? onBrowse;
 
   /// After a title's watch history was removed and saved, so Home's
   /// Continue watching follows at once (the Windows library does the same).
@@ -78,10 +84,37 @@ class _LibraryScreenState extends State<LibraryScreen> {
   // Home is told only once the change is saved. A failed one says so (as on
   // Windows) and the library shows what is saved, which is unchanged.
   Future<void> _removeHistory(MediaItem item) async {
+    final index = _model.historyIndexOf(item);
     try {
       await _model.removeFromHistory(item);
     } catch (_) {
       _failed('Could not remove it. Try again.');
+      return;
+    }
+    widget.onHistoryChanged?.call();
+    if (!mounted) return;
+    // One tap on a poster's corner removes a resume point, so it can be
+    // taken back. Episode progress was never touched.
+    ScaffoldMessenger.maybeOf(context)
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          margin: snackBarMarginOverDock(context),
+          content: Text('${item.name} removed from your history'),
+          action: SnackBarAction(
+            label: 'Undo',
+            onPressed: () => unawaited(_restoreHistory(item, index)),
+          ),
+        ),
+      );
+  }
+
+  Future<void> _restoreHistory(MediaItem item, int index) async {
+    try {
+      await _model.restoreToHistory(item, index);
+    } catch (_) {
+      _failed('Could not put it back. Try again.');
       return;
     }
     widget.onHistoryChanged?.call();
@@ -100,9 +133,13 @@ class _LibraryScreenState extends State<LibraryScreen> {
   void _failed(String message) {
     unawaited(_load().catchError((Object _) {}));
     if (!mounted) return;
-    ScaffoldMessenger.maybeOf(
-      context,
-    )?.showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        margin: snackBarMarginOverDock(context),
+        content: Text(message),
+      ),
+    );
   }
 
   @override
@@ -120,11 +157,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   SliverPadding(
                     padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
                     sliver: SliverToBoxAdapter(
-                      child: _LibraryHeader(
-                        historyCount: _history.length,
-                        favoriteCount: _favorites.length,
-                        onRefresh: _load,
-                      ),
+                      child: _LibraryHeader(onRefresh: _load),
                     ),
                   ),
                   SliverToBoxAdapter(
@@ -155,7 +188,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                           ),
                           const SizedBox(width: 8),
                           _FilterChip(
-                            label: 'Favorites',
+                            label: 'My list',
                             count: _favorites.length,
                             selected: _filter == _LibraryFilter.favorites,
                             onTap: () => setState(
@@ -179,21 +212,23 @@ class _LibraryScreenState extends State<LibraryScreen> {
                         onPlay: widget.onPlay,
                         onRemove: _removeHistory,
                         resumeOf: _resumeSummary,
+                        onBrowse: widget.onBrowse,
                       ),
                     ),
                   if (_filter == _LibraryFilter.all ||
                       _filter == _LibraryFilter.favorites)
                     SliverToBoxAdapter(
                       child: _MediaSection(
-                        title: 'Your favorites',
+                        title: 'My list',
                         subtitle: 'Saved for another night',
                         items: _favorites,
-                        emptyTitle: 'Your watchlist is waiting',
+                        emptyTitle: 'Nothing saved yet',
                         emptyMessage:
-                            'Save a movie or series from its details page and it will appear here.',
+                            'Add a movie or series to My list and it will appear here.',
                         onPlay: widget.onPlay,
                         onFavorite: _toggleFavorite,
                         favorite: true,
+                        onBrowse: widget.onBrowse,
                       ),
                     ),
                   if (_filter == _LibraryFilter.all)
@@ -219,14 +254,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
 }
 
 class _LibraryHeader extends StatelessWidget {
-  const _LibraryHeader({
-    required this.historyCount,
-    required this.favoriteCount,
-    required this.onRefresh,
-  });
+  const _LibraryHeader({required this.onRefresh});
 
-  final int historyCount;
-  final int favoriteCount;
   final Future<void> Function() onRefresh;
 
   @override
@@ -268,7 +297,7 @@ class _LibraryHeader extends StatelessWidget {
               foregroundColor: GlassTheme.primary,
               backgroundColor: GlassTheme.primary.withValues(alpha: .1),
             ),
-            icon: const Icon(Symbols.refresh_rounded),
+            icon: const Icon(ReelishIcons.refresh),
           ),
         ],
       ),
@@ -277,61 +306,7 @@ class _LibraryHeader extends StatelessWidget {
         'Everything you are watching and saving, all in one place.',
         style: TextStyle(color: GlassTheme.muted, fontSize: 12, height: 1.4),
       ),
-      const SizedBox(height: 17),
-      Row(
-        children: [
-          _LibraryStat(
-            icon: Symbols.play_circle_rounded,
-            value: '$historyCount',
-            label: 'watched',
-          ),
-          const SizedBox(width: 9),
-          _LibraryStat(
-            icon: Symbols.favorite_rounded,
-            value: '$favoriteCount',
-            label: 'saved',
-          ),
-        ],
-      ),
     ],
-  );
-}
-
-class _LibraryStat extends StatelessWidget {
-  const _LibraryStat({
-    required this.icon,
-    required this.value,
-    required this.label,
-  });
-
-  final IconData icon;
-  final String value;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-    decoration: BoxDecoration(
-      color: GlassTheme.surface,
-      borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: GlassTheme.border),
-    ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 15, color: GlassTheme.primary),
-        const SizedBox(width: 7),
-        Text(
-          value,
-          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
-        ),
-        const SizedBox(width: 5),
-        Text(
-          label,
-          style: const TextStyle(fontSize: 11, color: GlassTheme.muted),
-        ),
-      ],
-    ),
   );
 }
 
@@ -349,49 +324,55 @@ class _FilterChip extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => Material(
-    color: selected ? GlassTheme.primary : GlassTheme.surface,
-    borderRadius: BorderRadius.circular(30),
-    child: InkWell(
-      onTap: onTap,
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    selected: selected,
+    label: '$label, $count',
+    excludeSemantics: true,
+    child: Material(
+      color: selected ? GlassTheme.primary : GlassTheme.surface,
       borderRadius: BorderRadius.circular(30),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(30),
-          border: Border.all(
-            color: selected ? GlassTheme.primary : GlassTheme.border,
-          ),
-        ),
-        child: Row(
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                color: selected ? GlassTheme.background : GlassTheme.muted,
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-              ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(30),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(30),
+            border: Border.all(
+              color: selected ? GlassTheme.primary : GlassTheme.border,
             ),
-            const SizedBox(width: 7),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: selected
-                    ? GlassTheme.background.withValues(alpha: .12)
-                    : Colors.white.withValues(alpha: .07),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                '$count',
+          ),
+          child: Row(
+            children: [
+              Text(
+                label,
                 style: TextStyle(
                   color: selected ? GlassTheme.background : GlassTheme.muted,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w800,
+                  fontSize: AppTextSize.label,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-            ),
-          ],
+              const SizedBox(width: 7),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: selected
+                      ? GlassTheme.background.withValues(alpha: .12)
+                      : Colors.white.withValues(alpha: .07),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '$count',
+                  style: TextStyle(
+                    color: selected ? GlassTheme.background : GlassTheme.muted,
+                    fontSize: AppTextSize.caption,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     ),
@@ -410,6 +391,7 @@ class _MediaSection extends StatelessWidget {
     this.onFavorite,
     this.favorite = false,
     this.resumeOf,
+    this.onBrowse,
   });
 
   final String title;
@@ -424,6 +406,9 @@ class _MediaSection extends StatelessWidget {
 
   /// Real progress for watch-history cards; null for other sections.
   final ResumeSummary Function(MediaItem item)? resumeOf;
+
+  /// Offered while the section is empty.
+  final VoidCallback? onBrowse;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -453,7 +438,7 @@ class _MediaSection extends StatelessWidget {
                       subtitle,
                       style: const TextStyle(
                         color: GlassTheme.muted,
-                        fontSize: 10,
+                        fontSize: AppTextSize.label,
                       ),
                     ),
                   ],
@@ -464,7 +449,7 @@ class _MediaSection extends StatelessWidget {
                   '${items.length} ${items.length == 1 ? 'title' : 'titles'}',
                   style: const TextStyle(
                     color: GlassTheme.muted,
-                    fontSize: 10,
+                    fontSize: AppTextSize.caption,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -478,9 +463,8 @@ class _MediaSection extends StatelessWidget {
             child: _LibraryEmptyState(
               title: emptyTitle,
               message: emptyMessage,
-              icon: favorite
-                  ? Symbols.favorite_rounded
-                  : Symbols.movie_filter_rounded,
+              icon: favorite ? ReelishIcons.heart : ReelishIcons.movieFilter,
+              onBrowse: onBrowse,
             ),
           )
         else
@@ -540,7 +524,7 @@ class _MediaSection extends StatelessWidget {
                                 child: SizedBox.square(
                                   dimension: 33,
                                   child: Icon(
-                                    Symbols.close_rounded,
+                                    ReelishIcons.close,
                                     size: 17,
                                     color: Colors.white,
                                   ),
@@ -565,11 +549,13 @@ class _LibraryEmptyState extends StatelessWidget {
     required this.title,
     required this.message,
     required this.icon,
+    this.onBrowse,
   });
 
   final String title;
   final String message;
   final IconData icon;
+  final VoidCallback? onBrowse;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -599,7 +585,7 @@ class _LibraryEmptyState extends StatelessWidget {
               Text(
                 title,
                 style: const TextStyle(
-                  fontSize: 12,
+                  fontSize: AppTextSize.body,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -608,13 +594,17 @@ class _LibraryEmptyState extends StatelessWidget {
                 message,
                 style: const TextStyle(
                   color: GlassTheme.muted,
-                  fontSize: 10,
+                  fontSize: AppTextSize.label,
                   height: 1.35,
                 ),
               ),
             ],
           ),
         ),
+        if (onBrowse != null) ...[
+          const SizedBox(width: AppSpace.xs),
+          TextButton(onPressed: onBrowse, child: const Text('Browse')),
+        ],
       ],
     ),
   );

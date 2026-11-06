@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../../theme/reelish_icons.dart';
 
 import '../../models/episode_context.dart';
 import '../../models/episode_progress.dart';
@@ -304,7 +304,7 @@ class _EpisodePanelState extends State<EpisodePanel> {
               IconButton(
                 tooltip: 'Close episodes',
                 onPressed: () => Navigator.pop(context),
-                icon: const Icon(Symbols.close_rounded),
+                icon: const Icon(ReelishIcons.close),
               ),
             ],
           ),
@@ -433,8 +433,9 @@ class _NavigationButton extends StatelessWidget {
     final episode = this.episode;
     final label = forward ? 'Next' : 'Previous';
     final icon = Icon(
-      forward ? Symbols.skip_next_rounded : Symbols.skip_previous_rounded,
-      fill: 1,
+      ReelishIcons.filled(
+        forward ? ReelishIcons.skipNext : ReelishIcons.skipPrevious,
+      ),
       size: 20,
     );
     final text = Flexible(
@@ -596,8 +597,7 @@ class _EpisodeCardState extends State<_EpisodeCard> {
                         ],
                         if (!current && (progress?.isWatched ?? false)) ...[
                           const Icon(
-                            Symbols.check_circle_rounded,
-                            fill: 1,
+                            ReelishIcons.checkCircleFilled,
                             size: 14,
                             color: Colors.white54,
                           ),
@@ -694,7 +694,7 @@ class _EpisodeCardState extends State<_EpisodeCard> {
                   icon: AnimatedRotation(
                     turns: _expanded ? .5 : 0,
                     duration: const Duration(milliseconds: 180),
-                    child: const Icon(Symbols.expand_more_rounded),
+                    child: const Icon(ReelishIcons.chevronDown),
                   ),
                 ),
               ),
@@ -723,9 +723,7 @@ class _CurrentBadge extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            label == 'Playing'
-                ? Symbols.equalizer_rounded
-                : Symbols.history_rounded,
+            label == 'Playing' ? ReelishIcons.equalizer : ReelishIcons.history,
             size: 12,
             color: GlassTheme.background,
           ),
@@ -771,7 +769,7 @@ class _Thumbnail extends StatelessWidget {
       color: GlassTheme.elevatedSurface,
       child: Center(
         child: Icon(
-          Symbols.movie_rounded,
+          ReelishIcons.movie,
           color: Colors.white.withValues(alpha: .28),
           size: 26,
         ),
@@ -810,12 +808,7 @@ class _Thumbnail extends StatelessWidget {
               const ColoredBox(
                 color: Color(0x59000000),
                 child: Center(
-                  child: Icon(
-                    Symbols.play_arrow_rounded,
-                    fill: 1,
-                    color: Colors.white,
-                    size: 30,
-                  ),
+                  child: Icon(ReelishIcons.play, color: Colors.white, size: 30),
                 ),
               ),
             if (progress != null &&

@@ -1,9 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../theme/reelish_icons.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../desktop/desktop_update_section.dart';
 import '../navigation/app_transitions.dart';
@@ -79,7 +78,7 @@ class AboutScreen extends StatelessWidget {
   Widget build(BuildContext context) => SettingsScaffold(
     title: 'About',
     subtitle: 'App information and version.',
-    icon: Symbols.info_rounded,
+    icon: ReelishIcons.info,
     children: [
       const ReelishIdentity(),
       FutureBuilder<PackageInfo>(
@@ -92,23 +91,23 @@ class AboutScreen extends StatelessWidget {
             label: 'BUILD IDENTITY',
             children: [
               SettingsTile(
-                icon: Symbols.verified_rounded,
+                icon: ReelishIcons.verified,
                 title: 'Version',
                 value: info?.version ?? fallback,
               ),
               SettingsTile(
-                icon: Symbols.tag_rounded,
+                icon: ReelishIcons.hash,
                 title: 'Build',
                 value: info?.buildNumber ?? fallback,
               ),
               if (AppMetadata.buildTag != 'local')
                 const SettingsTile(
-                  icon: Symbols.sell_rounded,
+                  icon: ReelishIcons.tag,
                   title: 'Tag',
                   value: AppMetadata.buildTag,
                 ),
               SettingsTile(
-                icon: Symbols.commit_rounded,
+                icon: ReelishIcons.commit,
                 title: 'Commit',
                 description: 'Tap to copy.',
                 value: AppMetadata.gitSha,
@@ -136,7 +135,7 @@ class AboutScreen extends StatelessWidget {
           label: 'UPDATES',
           children: [
             SettingsTile(
-              icon: Symbols.system_update_rounded,
+              icon: ReelishIcons.systemUpdate,
               title: 'Check for updates',
               description: 'Look for a newer release on GitHub.',
               onTap: () => AppUpdateFlow.checkManually(context),
@@ -147,7 +146,7 @@ class AboutScreen extends StatelessWidget {
         label: 'MORE',
         children: [
           SettingsTile(
-            icon: Symbols.handshake_rounded,
+            icon: ReelishIcons.credits,
             title: 'Credits & attribution',
             description: 'TMDB, third-party services and acknowledgments',
             onTap: () => Navigator.of(context).push(
@@ -158,64 +157,6 @@ class AboutScreen extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    ],
-  );
-}
-
-class SupportDevelopmentScreen extends StatelessWidget {
-  const SupportDevelopmentScreen({super.key});
-
-  static final _coffeeUri = Uri.https('www.buymeacoffee.com', '/frnzegl');
-
-  Future<void> _openCoffeePage(BuildContext context) async {
-    if (!await launchUrl(_coffeeUri, mode: LaunchMode.externalApplication) &&
-        context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not open the support page.')),
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) => SettingsScaffold(
-    title: 'Support development',
-    subtitle: 'Completely optional.',
-    icon: Symbols.favorite_rounded,
-    children: [
-      const SettingsSection(
-        label: 'A LITTLE SUPPORT GOES A LONG WAY',
-        children: [
-          SettingsParagraph(
-            text:
-                'If you enjoy Reelish, you can help with ongoing development '
-                'and server costs. Support is completely optional and does not '
-                'unlock features or content.',
-          ),
-        ],
-      ),
-      SizedBox(
-        height: 54,
-        child: FilledButton.icon(
-          onPressed: () => _openCoffeePage(context),
-          icon: const Icon(Symbols.coffee_rounded),
-          label: const Text('Buy me a coffee'),
-          style: FilledButton.styleFrom(
-            textStyle: const TextStyle(
-              fontFamily: GlassTheme.fontFamily,
-              fontWeight: FontWeight.w700,
-            ),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-          ),
-        ),
-      ),
-      const SizedBox(height: 8),
-      const Text(
-        'Opens buymeacoffee.com in your browser.',
-        textAlign: TextAlign.center,
-        style: TextStyle(color: GlassTheme.muted, fontSize: 11.5),
       ),
     ],
   );

@@ -408,9 +408,10 @@ void main() {
     expect(find.text('Trending Hit'), findsNothing);
 
     await open('For you');
-    expect(find.text('Movies: Fresh on the Reel'), findsOneWidget);
+    expect(find.text('New movies'), findsOneWidget);
     expect(find.text('Popular movies'), findsNothing);
-    expect(find.text('Trending Hit'), findsNothing);
+    // For you shows Trending as a row of its own now.
+    expect(find.text('Trending Hit'), findsWidgets);
 
     await open('Trending');
     expect(find.text('Trending Hit'), findsWidgets);

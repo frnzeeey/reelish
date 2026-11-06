@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../../theme/reelish_icons.dart';
 
 import '../../platform/device_capabilities.dart';
 import '../../services/plugin_library_query.dart';
@@ -197,7 +197,7 @@ class _MenuPill extends StatelessWidget {
             ),
             const SizedBox(width: 2),
             const Icon(
-              Symbols.arrow_drop_down_rounded,
+              ReelishIcons.caretDown,
               size: AppIcon.sm,
               color: GlassTheme.muted,
             ),
@@ -217,7 +217,7 @@ PopupMenuItem<T> _menuItem<T>(T value, String label, {required bool checked}) =>
             width: 26,
             child: checked
                 ? Icon(
-                    Symbols.check_rounded,
+                    ReelishIcons.check,
                     size: AppIcon.sm,
                     color: GlassTheme.primary,
                   )
@@ -260,7 +260,7 @@ class _LanguageMenu extends StatelessWidget {
         _menuItem(option, option, checked: option == language),
     ],
     child: _MenuPill(
-      icon: Symbols.translate_rounded,
+      icon: ReelishIcons.language,
       label: language ?? 'Language',
       active: language != null,
     ),
@@ -286,6 +286,6 @@ class _SortMenu extends StatelessWidget {
       for (final option in PluginSort.values)
         _menuItem(option, option.label, checked: option == sort),
     ],
-    child: _MenuPill(icon: Symbols.swap_vert_rounded, label: sort.label),
+    child: _MenuPill(icon: ReelishIcons.swapVertical, label: sort.label),
   );
 }

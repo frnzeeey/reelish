@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../diagnostics/crash_reporter.dart';
 import 'analytics_events.dart';
 
 /// Whether the viewer agreed to share usage statistics.
@@ -92,6 +93,8 @@ class AnalyticsService {
     await _configure(enabled: granted, reset: !granted);
     if (granted && was != AnalyticsConsent.granted) {
       log(AnalyticsEvent.analyticsEnabled());
+      // Set at launch, when sharing was still off.
+      _properties.forEach(setUserProperty);
     }
   }
 
@@ -122,6 +125,7 @@ class AnalyticsService {
   /// A Firebase user property (low-cardinality, never personal), such as
   /// which interface this device uses.
   void setUserProperty(String name, String value) {
+    _properties[name] = value;
     if (!collecting) return;
     unawaited(
       _channel
@@ -131,12 +135,15 @@ class AnalyticsService {
   }
 
   /// A page the viewer moved to. Repeats of the same page are dropped, so a
-  /// rebuild or a second tap on the current tab is not counted twice.
+  /// rebuild or a second tap on the current tab is not counted twice. A page
+  /// opened while not sharing is not remembered: it was never counted.
   void logScreen(String screen) {
-    if (screen == _lastScreen) return;
+    CrashReporter.instance.setContext(CrashContext.feature, screen);
+    if (!collecting || screen == _lastScreen) return;
     _lastScreen = screen;
     log(AnalyticsEvent.screenView(screen));
   }
 
   String? _lastScreen;
+  final _properties = <String, String>{};
 }

@@ -81,6 +81,8 @@ const routes: Route[] = [
     cache: 'metadata',
   },
   { path: new RegExp(`^/tv/${id}/season/\\d{1,3}$`), params: {}, cache: 'metadata' },
+  { path: new RegExp(`^/movie/${id}/release_dates$`), params: {}, cache: 'metadata' },
+  { path: new RegExp(`^/tv/${id}/content_ratings$`), params: {}, cache: 'metadata' },
   { path: /^\/search\/multi$/, params: { query, page }, cache: 'search', required: ['query'] },
   {
     path: /^\/find\/tt\d{5,10}$/,

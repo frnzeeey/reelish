@@ -2,7 +2,7 @@
 // Android phones and tablets only (see lib/src/platform/app_icon.dart).
 
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../theme/reelish_icons.dart';
 
 import '../platform/app_icon.dart';
 import '../theme/design_tokens.dart';
@@ -60,7 +60,7 @@ class _AppIconSettingsScreenState extends State<AppIconSettingsScreen> {
     builder: (context, _) => SettingsPage(
       title: 'App icon',
       subtitle: 'Choose the launcher icon that suits your Reelish.',
-      icon: Symbols.apps_rounded,
+      icon: ReelishIcons.grid,
       onBack: widget.onBack,
       children: [
         SettingsSection(
@@ -129,7 +129,7 @@ class _FootNote extends StatelessWidget {
         const Padding(
           padding: EdgeInsets.only(top: 1),
           child: Icon(
-            Symbols.info_rounded,
+            ReelishIcons.info,
             size: AppIcon.xs,
             color: GlassTheme.muted,
           ),
@@ -281,10 +281,9 @@ class _IconChoiceState extends State<_IconChoice> {
                               ),
                             ),
                             child: const Icon(
-                              Symbols.check_rounded,
+                              ReelishIcons.check,
                               size: 14,
                               color: Colors.white,
-                              weight: 700,
                             ),
                           ),
                         ),

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../../theme/reelish_icons.dart';
 import 'package:video_player/video_player.dart';
 
 import 'player_sheet.dart';
@@ -14,7 +14,7 @@ abstract final class AudioTrackSheet {
     backgroundColor: Colors.transparent,
     isScrollControlled: true,
     builder: (context) => PlayerSheetFrame(
-      icon: Symbols.graphic_eq_rounded,
+      icon: ReelishIcons.audioWave,
       title: 'Audio',
       children: [
         for (final (index, track) in tracks.indexed)

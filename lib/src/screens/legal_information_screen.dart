@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../theme/reelish_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../platform/device_capabilities.dart';
@@ -23,7 +23,7 @@ class LegalInformationScreen extends StatefulWidget {
 
   /// The privacy policy's own date: it changed with accounts and the
   /// Reelish API, while the terms did not.
-  static const _privacyDate = 'November 2, 2026';
+  static const _privacyDate = 'November 6, 2026';
 
   /// What Reelish is and is not responsible for. Shown first in the Terms of
   /// use and on the Credits screen; keep the wording exact.
@@ -101,9 +101,9 @@ class _LegalInformationScreenState extends State<LegalInformationScreen> {
   };
 
   IconData get _icon => switch (widget.document) {
-    LegalDocument.privacy => Symbols.shield_rounded,
-    LegalDocument.terms => Symbols.gavel_rounded,
-    LegalDocument.notices => Symbols.handshake_rounded,
+    LegalDocument.privacy => ReelishIcons.shield,
+    LegalDocument.terms => ReelishIcons.gavel,
+    LegalDocument.notices => ReelishIcons.credits,
   };
 
   @override
@@ -191,7 +191,7 @@ class _LegalInformationScreenState extends State<LegalInformationScreen> {
               'issue trackers.',
           children: [
             SettingsTile(
-              icon: Symbols.open_in_new_rounded,
+              icon: ReelishIcons.externalLink,
               title: 'Project page & support',
               description: 'github.com/frnzeeey/reelish',
               onTap: () async {
@@ -319,9 +319,51 @@ class _LegalInformationScreenState extends State<LegalInformationScreen> {
           'stored on the device. Windows sends no usage statistics.',
     ),
     (
+      'Crash reports (Android only, optional)',
+      'On Android phones, Android TV and Google TV, Reelish asks separately '
+          'whether you want to share crash reports, and sends none until you '
+          'agree. If you do, Firebase Crashlytics receives what went wrong: '
+          'the type of error and where in the app’s code it happened, a '
+          'short description with addresses, tokens and codes removed, which '
+          'page was open, whether a video or watch party was active and in '
+          'which state, and recent app events that led up to it. If you also '
+          'share usage statistics, those events can appear with the report. '
+          'Google also records standard details such as device model, '
+          'operating-system version, app version, free memory and storage, '
+          'and an installation identifier. Reports never include your '
+          'account, Trakt name, display name, search text, add-on or provider '
+          'names, stream addresses, tokens or watch party codes. Google keeps '
+          'reports for 90 days. You can turn sharing off in Settings at any '
+          'time; doing so also deletes reports not yet sent.',
+    ),
+    (
+      'Error log (Windows)',
+      'On Windows, Reelish keeps a small log of app errors on your computer '
+          'to help with troubleshooting. It is limited in size, has addresses, '
+          'tokens and codes removed, and is never sent anywhere. You can open '
+          'it from Help & Support.',
+    ),
+    (
+      'Supporting Reelish (optional)',
+      'Donations are made on Buy Me a Coffee, which handles your payment and '
+          'your details under its own policies; Reelish never sees your card. '
+          'When you donate, Buy Me a Coffee tells the Reelish API that a '
+          'donation succeeded. If your message contains your supporter code, '
+          'your account receives the Supporter Badge. Reelish keeps only a '
+          'one-way reference to the donation, its date and whether it was '
+          'refunded, and not the amount, your name, your email address or your '
+          'message. Your badge and the date you became a supporter are stored '
+          'with your account and are deleted with it. A refunded donation no '
+          'longer counts. You appear on the supporters list only if you turn '
+          'that on, under a name you choose, which anyone using Reelish can '
+          'see; you can turn it off at any time. If you ask for a review by '
+          'email, the email is used only to check your donation.',
+    ),
+    (
       'Third-party services and add-ons',
       'Trakt, TMDB, Cloudflare (which hosts the Reelish API), Google '
-          '(usage statistics, only if you agree), OpenSubtitles, '
+          '(usage statistics and crash reports, only if you agree), Buy Me a '
+          'Coffee (only if you donate), OpenSubtitles, '
           'add-on publishers, media hosts, torrent peers, GitHub, and your '
           'device platform operate independently. Their privacy practices, '
           'logs, retention and locations are governed by their own policies. '

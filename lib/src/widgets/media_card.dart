@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../theme/reelish_icons.dart';
 import '../models/media_item.dart';
 import '../theme/design_tokens.dart';
 import '../theme/glass_theme.dart';
@@ -178,8 +178,7 @@ class _MediaCardState extends State<MediaCard> {
             child: Padding(
               padding: const EdgeInsets.only(right: 2),
               child: Icon(
-                Symbols.star_rounded,
-                fill: 1,
+                ReelishIcons.starFilled,
                 size: 12,
                 color: GlassTheme.primary,
               ),
@@ -355,8 +354,9 @@ class _MediaCardState extends State<MediaCard> {
                                       );
                                     },
                                     child: Icon(
-                                      Symbols.favorite_rounded,
-                                      fill: _isFavorite ? 1 : 0,
+                                      _isFavorite
+                                          ? ReelishIcons.heartFilled
+                                          : ReelishIcons.heart,
                                       size: 17,
                                       color: _isFavorite
                                           ? GlassTheme.primary
