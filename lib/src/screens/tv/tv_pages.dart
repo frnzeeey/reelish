@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../../theme/reelish_icons.dart';
 
 import '../../models/media_item.dart';
 import '../../services/paged_feed_controller.dart';
@@ -93,7 +93,7 @@ class _TvHomePageState extends State<TvHomePage> {
     final error = catalog.catalogError;
     if (catalogEmpty && error != null) {
       return TvMessage(
-        icon: Symbols.cloud_off_rounded,
+        icon: ReelishIcons.offline,
         title: 'Could not load titles',
         message: error,
         actionLabel: 'Retry',
@@ -196,7 +196,7 @@ class _AddSourceBanner extends StatelessWidget {
     padding: const EdgeInsets.fromLTRB(12, 6, 12, 18),
     child: Row(
       children: [
-        Icon(Symbols.link_rounded, color: GlassTheme.primary),
+        Icon(ReelishIcons.link, color: GlassTheme.primary),
         const SizedBox(width: 14),
         const Expanded(
           child: Text(
@@ -207,7 +207,7 @@ class _AddSourceBanner extends StatelessWidget {
         FilledButton.icon(
           autofocus: true,
           onPressed: onAddSource,
-          icon: const Icon(Symbols.add_rounded),
+          icon: const Icon(ReelishIcons.add),
           label: const Text('Add a source'),
         ),
       ],
@@ -242,7 +242,7 @@ class _WatchTogetherRow extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
           child: Row(
             children: [
-              Icon(Symbols.groups_rounded, color: GlassTheme.primary),
+              Icon(ReelishIcons.people, color: GlassTheme.primary),
               const SizedBox(width: 14),
               const Expanded(
                 child: Column(
@@ -329,14 +329,14 @@ class _TvCatalogPageState extends State<TvCatalogPage> {
         if (state.items.isEmpty) {
           return switch (state.status) {
             PagedFeedStatus.failed => TvMessage(
-              icon: Symbols.cloud_off_rounded,
+              icon: ReelishIcons.offline,
               title: 'Could not load ${widget.title.toLowerCase()}',
               message: 'Check your connection and try again.',
               actionLabel: 'Retry',
               onAction: () => unawaited(widget.feed.retry()),
             ),
             PagedFeedStatus.ready => TvMessage(
-              icon: Symbols.movie_rounded,
+              icon: ReelishIcons.movie,
               title: 'Nothing to show just yet',
             ),
             _ => const _PageProgress(),
@@ -456,20 +456,20 @@ class _TvSearchPageState extends State<TvSearchPage> {
       body = const _PageProgress();
     } else if (_error != null) {
       body = TvMessage(
-        icon: Symbols.cloud_off_rounded,
+        icon: ReelishIcons.offline,
         title: _error!,
         actionLabel: 'Retry',
         onAction: () => _search(query),
       );
     } else if (query.isEmpty) {
       body = const TvMessage(
-        icon: Symbols.search_rounded,
+        icon: ReelishIcons.search,
         title: 'Find your next favorite',
         message: 'Search movies and series by title.',
       );
     } else if (_results.isEmpty) {
       body = TvMessage(
-        icon: Symbols.movie_rounded,
+        icon: ReelishIcons.movie,
         title: 'No results for $query',
         message: 'Try another title.',
       );
@@ -499,7 +499,7 @@ class _TvSearchPageState extends State<TvSearchPage> {
                   value: _query,
                   hint: 'Search movies and series',
                   title: 'Search',
-                  icon: Symbols.search_rounded,
+                  icon: ReelishIcons.search,
                   textInputAction: TextInputAction.search,
                   onChanged: _onChanged,
                   onSubmitted: _onSubmitted,
@@ -510,7 +510,7 @@ class _TvSearchPageState extends State<TvSearchPage> {
               const SizedBox(width: 14),
               OutlinedButton.icon(
                 onPressed: _clear,
-                icon: const Icon(Symbols.close_rounded),
+                icon: const Icon(ReelishIcons.close),
                 label: const Text('Clear'),
               ),
             ],
@@ -629,7 +629,7 @@ class _TvLibraryPageState extends State<TvLibraryPage> {
       header: const TvPageHeading('My library'),
       child: rows.isEmpty
           ? const TvMessage(
-              icon: Symbols.bookmark_rounded,
+              icon: ReelishIcons.bookmark,
               title: 'Nothing here yet',
               message:
                   'Titles you watch, and titles you add to My list from a '

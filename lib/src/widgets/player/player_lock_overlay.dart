@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../../theme/reelish_icons.dart';
 
 import 'player_controls.dart';
 
@@ -170,7 +170,7 @@ class _PlayerLockOverlayState extends State<PlayerLockOverlay> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Symbols.lock_open_rounded, size: 22),
+                      const Icon(ReelishIcons.lockOpen, size: 22),
                       const SizedBox(width: 10),
                       Text(
                         widget.hint,

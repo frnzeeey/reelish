@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../theme/reelish_icons.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../platform/device_capabilities.dart';
@@ -108,7 +108,7 @@ class _FirstRunConsentScreenState extends State<FirstRunConsentScreen> {
                                     borderRadius: BorderRadius.circular(16),
                                   ),
                                   child: Icon(
-                                    Symbols.policy_rounded,
+                                    ReelishIcons.policy,
                                     color: GlassTheme.coralBright,
                                   ),
                                 ),
@@ -236,8 +236,11 @@ class _DocumentConsentTile extends StatelessWidget {
         children: [
           ListTile(
             leading: Icon(
-              read ? Symbols.check_circle_rounded : Symbols.description_rounded,
-              fill: read ? 1 : 0,
+              read
+                  ? ReelishIcons.filled(
+                      read ? ReelishIcons.checkCircle : ReelishIcons.document,
+                    )
+                  : (read ? ReelishIcons.checkCircle : ReelishIcons.document),
               color: read ? GlassTheme.coralBright : GlassTheme.muted,
             ),
             title: Text(

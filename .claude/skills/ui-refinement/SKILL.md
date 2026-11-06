@@ -32,6 +32,8 @@ touch or keyboard use.
 - Phone: `SoftGlassDock`, `MediaCard`, `LiquidGlass`/`GlassBox`.
 - TV: `TvFocusable`, `TvSafeArea` (overscan), `TvKeyScroll`,
   `TvTextEntryDialog`; focus rules in `docs/android_tv.md`.
+- Icons: `ReelishIcons` only (`docs/design/icon-system.md`); check changes with
+  `flutter run -t lib/icon_gallery.dart`.
 - Windows: `DesktopShell` (hover-open glass sidebar, saved pin state, Ctrl+F),
   `DesktopPosterCard`, `DesktopMediaRow`, `DesktopHero`,
   `DesktopDetailsScreen` (episode panel from 1180 px),

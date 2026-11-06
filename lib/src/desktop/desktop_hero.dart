@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../theme/reelish_icons.dart';
 
 import '../models/media_item.dart';
 import '../theme/glass_theme.dart';
@@ -531,8 +531,7 @@ class _HeroText extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      Symbols.star_rounded,
-                      fill: 1,
+                      ReelishIcons.starFilled,
                       size: 16,
                       color: GlassTheme.primary,
                     ),
@@ -641,8 +640,9 @@ class _HeroText extends StatelessWidget {
                 elevation: const WidgetStatePropertyAll(0),
               ),
               icon: Icon(
-                series ? Symbols.view_list_rounded : Symbols.play_arrow_rounded,
-                fill: 1,
+                ReelishIcons.filled(
+                  series ? ReelishIcons.listView : ReelishIcons.play,
+                ),
                 size: 24,
               ),
               label: Text(
@@ -656,7 +656,7 @@ class _HeroText extends StatelessWidget {
             OutlinedButton.icon(
               onPressed: onDetails,
               style: secondary,
-              icon: const Icon(Symbols.info_rounded, size: 22),
+              icon: const Icon(ReelishIcons.info, size: 22),
               label: const Text(
                 'More info',
                 style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
@@ -678,7 +678,7 @@ class _HeroText extends StatelessWidget {
               icon: AnimatedSwitcher(
                 duration: desktopMotion(context, 200),
                 child: Icon(
-                  favorite ? Symbols.check_rounded : Symbols.add_rounded,
+                  favorite ? ReelishIcons.check : ReelishIcons.add,
                   key: ValueKey(favorite),
                 ),
               ),
@@ -1161,8 +1161,7 @@ class _ShownDetails extends StatelessWidget {
                             child: Padding(
                               padding: const EdgeInsets.only(right: 3),
                               child: Icon(
-                                Symbols.star_rounded,
-                                fill: 1,
+                                ReelishIcons.starFilled,
                                 size: 13,
                                 color: GlassTheme.primary,
                               ),
@@ -1198,8 +1197,9 @@ class _ShownDetails extends StatelessWidget {
               padding: EdgeInsets.zero,
             ),
             icon: Icon(
-              series ? Symbols.view_list_rounded : Symbols.play_arrow_rounded,
-              fill: 1,
+              ReelishIcons.filled(
+                series ? ReelishIcons.listView : ReelishIcons.play,
+              ),
               size: compact ? 21 : 26,
             ),
           ),

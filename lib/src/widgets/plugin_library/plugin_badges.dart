@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../../theme/reelish_icons.dart';
 
 import '../../models/plugin_catalog.dart';
 import '../../theme/design_tokens.dart';
@@ -22,19 +22,19 @@ class PluginStatusBadges extends StatelessWidget {
     final badges = [
       if (installed)
         _Badge(
-          icon: Symbols.check_circle_rounded,
+          icon: ReelishIcons.checkCircle,
           label: 'Installed',
           color: GlassTheme.primary,
         ),
       if (plugin.verified)
         const _Badge(
-          icon: Symbols.verified_rounded,
+          icon: ReelishIcons.verified,
           label: 'Verified',
           color: Color(0xFF4DA3FF),
         ),
       if (plugin.featured)
         const _Badge(
-          icon: Symbols.star_rounded,
+          icon: ReelishIcons.star,
           label: 'Featured',
           color: Color(0xFFFFB547),
         ),
@@ -70,7 +70,7 @@ class _Badge extends StatelessWidget {
     child: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 12, color: color, fill: 1),
+        Icon(ReelishIcons.filled(icon), size: 12, color: color),
         const SizedBox(width: 4),
         Text(
           label,

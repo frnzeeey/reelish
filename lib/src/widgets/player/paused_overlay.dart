@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../../theme/reelish_icons.dart';
 
 import '../../models/episode_context.dart';
 import '../../models/media_details.dart';
@@ -632,8 +632,7 @@ class _PauseHeading extends StatelessWidget {
                       child: Padding(
                         padding: const EdgeInsets.only(right: 3),
                         child: Icon(
-                          Symbols.star_rounded,
-                          fill: 1,
+                          ReelishIcons.starFilled,
                           size: 15 * scale,
                           color: accent,
                         ),
@@ -815,8 +814,7 @@ class _PausePlayButton extends StatelessWidget {
             child: SizedBox.square(
               dimension: size,
               child: Icon(
-                Symbols.play_arrow_rounded,
-                fill: 1,
+                ReelishIcons.play,
                 size: size * .54,
                 color: Colors.white,
               ),

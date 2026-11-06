@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../theme/reelish_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../platform/device_capabilities.dart';
@@ -101,9 +101,9 @@ class _LegalInformationScreenState extends State<LegalInformationScreen> {
   };
 
   IconData get _icon => switch (widget.document) {
-    LegalDocument.privacy => Symbols.shield_rounded,
-    LegalDocument.terms => Symbols.gavel_rounded,
-    LegalDocument.notices => Symbols.handshake_rounded,
+    LegalDocument.privacy => ReelishIcons.shield,
+    LegalDocument.terms => ReelishIcons.gavel,
+    LegalDocument.notices => ReelishIcons.credits,
   };
 
   @override
@@ -191,7 +191,7 @@ class _LegalInformationScreenState extends State<LegalInformationScreen> {
               'issue trackers.',
           children: [
             SettingsTile(
-              icon: Symbols.open_in_new_rounded,
+              icon: ReelishIcons.externalLink,
               title: 'Project page & support',
               description: 'github.com/frnzeeey/reelish',
               onTap: () async {

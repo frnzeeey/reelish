@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import 'package:onfeed/src/theme/reelish_icons.dart';
 import 'package:onfeed/src/screens/tv/tv_browse.dart';
 import 'package:onfeed/src/theme/glass_theme.dart';
 
@@ -22,7 +22,7 @@ void main() {
     expect(text.toPlainText(), contains('2026   ·   Movie   ·   '));
     expect(text.toPlainText(), endsWith('8.0'));
     expect(text.toPlainText(), isNot(contains('★')));
-    final star = tester.widget<Icon>(find.byIcon(Symbols.star_rounded));
+    final star = tester.widget<Icon>(find.byIcon(ReelishIcons.starFilled));
     expect(star.color, GlassTheme.primary);
   });
 
@@ -37,7 +37,7 @@ void main() {
         ),
       ),
     );
-    expect(find.byIcon(Symbols.star_rounded), findsNothing);
+    expect(find.byIcon(ReelishIcons.starFilled), findsNothing);
     expect(find.textContaining('2026   ·   Series'), findsOneWidget);
   });
 }

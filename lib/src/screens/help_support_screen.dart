@@ -5,7 +5,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../theme/reelish_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../diagnostics/crash_reporter.dart';
@@ -77,19 +77,19 @@ class HelpSupportScreen extends StatelessWidget {
   Widget build(BuildContext context) => SettingsScaffold(
     title: 'Help & Support',
     subtitle: 'Answers, contact, and everything about Reelish.',
-    icon: Symbols.support_rounded,
+    icon: ReelishIcons.support,
     children: [
       SettingsSection(
         label: 'FIND AN ANSWER',
         children: [
           SettingsTile(
-            icon: Symbols.quiz_rounded,
+            icon: ReelishIcons.help,
             title: 'Frequently asked questions',
             description: 'Search answers about Reelish',
             onTap: () => _push(context, (_) => const FaqScreen()),
           ),
           SettingsTile(
-            icon: Symbols.build_circle_rounded,
+            icon: ReelishIcons.repair,
             title: 'Troubleshooting',
             description: 'Fix playback, sources, subtitles and more',
             onTap: () =>
@@ -101,7 +101,7 @@ class HelpSupportScreen extends StatelessWidget {
         label: 'GET IN TOUCH',
         children: [
           SettingsTile(
-            icon: Symbols.bug_report_rounded,
+            icon: ReelishIcons.bug,
             title: 'Report a problem',
             description: 'Tell the developer what went wrong',
             onTap: () => _push(
@@ -110,7 +110,7 @@ class HelpSupportScreen extends StatelessWidget {
             ),
           ),
           SettingsTile(
-            icon: Symbols.lightbulb_rounded,
+            icon: ReelishIcons.lightbulb,
             title: 'Send feedback',
             description: 'Ideas, suggestions and questions',
             onTap: () => _push(
@@ -120,13 +120,13 @@ class HelpSupportScreen extends StatelessWidget {
           ),
           if (SupportConfig.contactEmail.isNotEmpty)
             SettingsTile(
-              icon: Symbols.mail_rounded,
+              icon: ReelishIcons.mail,
               title: 'Email support',
               description: SupportConfig.contactEmail,
               onTap: () => _emailSupport(context),
             ),
           SettingsTile(
-            icon: Symbols.forum_rounded,
+            icon: ReelishIcons.chat,
             title: 'Project page',
             description: 'Public issues and discussion on GitHub',
             onTap: () => _openExternal(context, SupportConfig.publicIssues),
@@ -137,19 +137,19 @@ class HelpSupportScreen extends StatelessWidget {
         label: 'ABOUT REELISH',
         children: [
           SettingsTile(
-            icon: Symbols.info_rounded,
+            icon: ReelishIcons.info,
             title: 'About Reelish',
             description: 'Version, build and updates',
             onTap: () => _push(context, (_) => const AboutScreen()),
           ),
           SettingsTile(
-            icon: Symbols.new_releases_rounded,
+            icon: ReelishIcons.newBadge,
             title: 'Release notes',
             description: 'What changed in each version',
             onTap: () => _openExternal(context, SupportConfig.releaseNotes),
           ),
           SettingsTile(
-            icon: Symbols.favorite_rounded,
+            icon: ReelishIcons.heart,
             title: 'Support development',
             description: 'Optional help with development and server costs',
             onTap: () =>
@@ -158,7 +158,7 @@ class HelpSupportScreen extends StatelessWidget {
           // Windows only: there, errors stay in a log on this computer.
           if (CrashReporter.instance.localLog case final log?)
             SettingsTile(
-              icon: Symbols.description_rounded,
+              icon: ReelishIcons.document,
               title: 'Open error log',
               description: 'Stays on this computer; nothing is sent',
               onTap: () => unawaited(_openErrorLog(log)),
@@ -170,7 +170,7 @@ class HelpSupportScreen extends StatelessWidget {
         label: 'LEGAL',
         children: [
           SettingsTile(
-            icon: Symbols.shield_rounded,
+            icon: ReelishIcons.shield,
             title: 'Privacy policy',
             description:
                 'What stays on your device and what is sent to services',
@@ -181,7 +181,7 @@ class HelpSupportScreen extends StatelessWidget {
             ),
           ),
           SettingsTile(
-            icon: Symbols.gavel_rounded,
+            icon: ReelishIcons.gavel,
             title: 'Terms of use',
             description: 'Rules for using the app, add-ons and media sources',
             onTap: () => _push(
@@ -226,7 +226,7 @@ class _FaqScreenState extends State<FaqScreen> {
     return SettingsScaffold(
       title: 'Questions',
       subtitle: 'Answers about how Reelish works.',
-      icon: Symbols.quiz_rounded,
+      icon: ReelishIcons.help,
       children: [
         TextField(
           controller: _query,
@@ -234,12 +234,12 @@ class _FaqScreenState extends State<FaqScreen> {
           textInputAction: TextInputAction.search,
           decoration: InputDecoration(
             hintText: 'Search questions',
-            prefixIcon: const Icon(Symbols.search_rounded),
+            prefixIcon: const Icon(ReelishIcons.search),
             suffixIcon: _query.text.isEmpty
                 ? null
                 : IconButton(
                     tooltip: 'Clear search',
-                    icon: const Icon(Symbols.close_rounded),
+                    icon: const Icon(ReelishIcons.close),
                     onPressed: () => setState(_query.clear),
                   ),
           ),
@@ -276,7 +276,7 @@ class _FaqScreenState extends State<FaqScreen> {
                     'see Troubleshooting for common problems.',
               ),
               SettingsTile(
-                icon: Symbols.build_circle_rounded,
+                icon: ReelishIcons.repair,
                 title: 'Troubleshooting',
                 onTap: () =>
                     _push(context, (_) => const TroubleshootingScreen()),
@@ -325,7 +325,7 @@ class _FaqTile extends StatelessWidget {
           trailing: AnimatedRotation(
             turns: open ? .5 : 0,
             duration: const Duration(milliseconds: 180),
-            child: const Icon(Symbols.expand_more_rounded),
+            child: const Icon(ReelishIcons.chevronDown),
           ),
           onTap: onToggle,
         ),
@@ -356,7 +356,7 @@ class TroubleshootingScreen extends StatelessWidget {
   Widget build(BuildContext context) => SettingsScaffold(
     title: 'Troubleshooting',
     subtitle: 'Common problems and how to fix them.',
-    icon: Symbols.build_circle_rounded,
+    icon: ReelishIcons.repair,
     children: [
       SettingsSection(
         label: 'COMMON PROBLEMS',
@@ -419,7 +419,7 @@ class TroubleshootingArticleScreen extends StatelessWidget {
   Widget build(BuildContext context) => SettingsScaffold(
     title: article.title,
     subtitle: article.summary,
-    icon: Symbols.build_circle_rounded,
+    icon: ReelishIcons.repair,
     children: [
       _list('POSSIBLE CAUSES', article.causes),
       _list('TRY THIS', article.solutions, numbered: true),
@@ -428,7 +428,7 @@ class TroubleshootingArticleScreen extends StatelessWidget {
         label: 'STILL NOT WORKING?',
         children: [
           SettingsTile(
-            icon: Symbols.bug_report_rounded,
+            icon: ReelishIcons.bug,
             title: 'Report this problem',
             description: 'Opens a report with this problem filled in',
             onTap: () => _push(
@@ -580,7 +580,7 @@ class _ReportScreenState extends State<ReportScreen> {
     if (sentId != null) {
       return SettingsScaffold(
         title: title,
-        icon: Symbols.check_circle_rounded,
+        icon: ReelishIcons.checkCircle,
         children: [
           SettingsSection(
             label: _bug ? 'REPORT SENT' : 'FEEDBACK SENT',
@@ -607,7 +607,7 @@ class _ReportScreenState extends State<ReportScreen> {
       subtitle: _bug
           ? 'Describe what happened so it can be fixed.'
           : 'Ideas and questions are welcome.',
-      icon: _bug ? Symbols.bug_report_rounded : Symbols.lightbulb_rounded,
+      icon: _bug ? ReelishIcons.bug : ReelishIcons.lightbulb,
       children: [
         Form(
           key: _form,
@@ -627,6 +627,7 @@ class _ReportScreenState extends State<ReportScreen> {
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 initialValue: _category,
+                icon: const Icon(ReelishIcons.chevronDown, size: 20),
                 isExpanded: true,
                 decoration: const InputDecoration(labelText: 'Category'),
                 items: [
@@ -639,6 +640,7 @@ class _ReportScreenState extends State<ReportScreen> {
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 initialValue: _platform,
+                icon: const Icon(ReelishIcons.chevronDown, size: 20),
                 isExpanded: true,
                 decoration: const InputDecoration(labelText: 'Device'),
                 items: [
@@ -687,7 +689,7 @@ class _ReportScreenState extends State<ReportScreen> {
           label: 'DEVICE DETAILS',
           children: [
             SettingsSwitchTile(
-              icon: Symbols.memory_rounded,
+              icon: ReelishIcons.chip,
               title: 'Include app and device details',
               description:
                   'Version, build, system, interface, language and time. '
@@ -724,21 +726,21 @@ class _ReportScreenState extends State<ReportScreen> {
             children: [
               SettingsParagraph(text: error),
               SettingsTile(
-                icon: Symbols.content_copy_rounded,
+                icon: ReelishIcons.copy,
                 title: 'Copy report',
                 description: 'To paste it somewhere else',
                 onTap: () => unawaited(_copy()),
               ),
               if (!_errorRetryable && SupportConfig.contactEmail.isNotEmpty)
                 SettingsTile(
-                  icon: Symbols.mail_rounded,
+                  icon: ReelishIcons.mail,
                   title: 'Email support',
                   description: SupportConfig.contactEmail,
                   onTap: () => unawaited(_emailSupport(context)),
                 ),
               if (!_errorRetryable)
                 SettingsTile(
-                  icon: Symbols.forum_rounded,
+                  icon: ReelishIcons.chat,
                   title: 'Project page',
                   onTap: () =>
                       _openExternal(context, SupportConfig.publicIssues),
@@ -755,7 +757,7 @@ class _ReportScreenState extends State<ReportScreen> {
                     dimension: 18,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Icon(Symbols.send_rounded),
+                : const Icon(ReelishIcons.send),
             label: Text(
               _sending
                   ? 'Sending…'

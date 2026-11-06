@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../theme/reelish_icons.dart';
 
 import '../theme/glass_theme.dart';
 import 'liquid_glass.dart';
@@ -25,10 +25,10 @@ class SoftGlassDock extends StatelessWidget {
   final ValueChanged<int> onSelected;
 
   static const _destinations = [
-    (Symbols.home_rounded, Symbols.home_rounded, 'Home'),
-    (Symbols.bookmark_rounded, Symbols.bookmark_rounded, 'Library'),
-    (Symbols.extension_rounded, Symbols.extension_rounded, 'Plugins'),
-    (Symbols.settings_rounded, Symbols.settings_rounded, 'Settings'),
+    (ReelishIcons.home, ReelishIcons.homeFilled, 'Home'),
+    (ReelishIcons.bookmark, ReelishIcons.bookmarkFilled, 'Library'),
+    (ReelishIcons.plugin, ReelishIcons.pluginFilled, 'Plugins'),
+    (ReelishIcons.settings, ReelishIcons.settingsFilled, 'Settings'),
   ];
 
   @override

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../theme/reelish_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../services/update_config.dart';
@@ -145,7 +145,7 @@ class _WindowsUpdateSectionState extends State<WindowsUpdateSection> {
         label: 'APPLICATION UPDATES',
         children: [
           SettingsTile(
-            icon: Symbols.verified_rounded,
+            icon: ReelishIcons.verified,
             title: 'Current version',
             value: widget.installedVersion,
           ),
@@ -153,8 +153,8 @@ class _WindowsUpdateSectionState extends State<WindowsUpdateSection> {
             liveRegion: true,
             child: SettingsTile(
               icon: c.stage == WindowsUpdateStage.failed
-                  ? Symbols.error_rounded
-                  : Symbols.system_update_rounded,
+                  ? ReelishIcons.error
+                  : ReelishIcons.systemUpdate,
               title: 'Update status',
               description: _status(c),
               trailing: _action(context, c),
@@ -176,21 +176,21 @@ class _WindowsUpdateSectionState extends State<WindowsUpdateSection> {
               ),
             ),
           SettingsTile(
-            icon: Symbols.schedule_rounded,
+            icon: ReelishIcons.clock,
             title: 'Last checked',
             value: lastChecked == null
                 ? 'Never'
                 : formatUpdateDate(lastChecked),
           ),
           SettingsTile(
-            icon: Symbols.refresh_rounded,
+            icon: ReelishIcons.refresh,
             title: 'Check for updates',
             description: 'Look for a newer release on GitHub.',
             enabled: !c.isBusy,
             onTap: () => AppUpdateFlow.checkManually(context),
           ),
           SettingsSwitchTile(
-            icon: Symbols.update_rounded,
+            icon: ReelishIcons.update,
             title: 'Check for updates automatically',
             description:
                 'About once every few hours, after Reelish starts. Updates '
@@ -199,7 +199,7 @@ class _WindowsUpdateSectionState extends State<WindowsUpdateSection> {
             onChanged: c.setAutoCheck,
           ),
           SettingsTile(
-            icon: Symbols.article_rounded,
+            icon: ReelishIcons.article,
             title: 'View release notes',
             description: c.update == null
                 ? 'Opens the Reelish releases page in your browser.'
@@ -207,7 +207,7 @@ class _WindowsUpdateSectionState extends State<WindowsUpdateSection> {
             onTap: () => _viewReleaseNotes(context, c),
           ),
           SettingsTile(
-            icon: Symbols.inventory_2_rounded,
+            icon: ReelishIcons.box,
             title: 'Installation',
             value: c.canInstallInApp ? 'Installed' : 'Portable (ZIP)',
             description: c.canInstallInApp

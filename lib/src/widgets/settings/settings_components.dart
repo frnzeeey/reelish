@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../../theme/reelish_icons.dart';
 
 import '../../theme/design_tokens.dart';
 import '../../theme/glass_theme.dart';
@@ -244,7 +244,7 @@ class SettingsHeader extends StatelessWidget {
             IconButton(
               tooltip: 'Back',
               onPressed: onBack,
-              icon: const Icon(Symbols.arrow_back_rounded),
+              icon: const Icon(ReelishIcons.back),
             ),
             const SizedBox(width: 6),
           ],
@@ -507,7 +507,7 @@ class SettingsTile extends StatelessWidget {
                 ] else if (chevron) ...[
                   const SizedBox(width: 8),
                   const Icon(
-                    Symbols.chevron_right_rounded,
+                    ReelishIcons.chevronRight,
                     color: GlassTheme.muted,
                     size: 22,
                   ),

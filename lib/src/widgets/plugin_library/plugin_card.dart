@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../../theme/reelish_icons.dart';
 
 import '../../models/plugin_catalog.dart';
 import '../../services/plugin_library_query.dart';
@@ -163,7 +163,7 @@ class _PluginCardState extends State<PluginCard> {
                     children: [
                       Flexible(
                         child: PluginMetaPill(
-                          icon: Symbols.translate_rounded,
+                          icon: ReelishIcons.language,
                           label: plugin.languages.isEmpty
                               ? 'Unknown'
                               : plugin.languages.join(' · '),
@@ -172,8 +172,8 @@ class _PluginCardState extends State<PluginCard> {
                       const SizedBox(width: AppSpace.xs),
                       PluginMetaPill(
                         icon: plugin.available
-                            ? Symbols.stacks_rounded
-                            : Symbols.cloud_off_rounded,
+                            ? ReelishIcons.stack
+                            : ReelishIcons.offline,
                         label: sourcesLabel,
                         accent: plugin.available,
                       ),

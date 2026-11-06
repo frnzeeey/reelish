@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../../theme/reelish_icons.dart';
 
 import '../../models/media_details.dart';
 import '../../models/media_item.dart';
@@ -353,16 +353,14 @@ class _TvMediaDetailsScreenState extends State<TvMediaDetailsScreen> {
               autofocus: true,
               style: _actionStyle(filled: true),
               onPressed: () => widget.onPlay(context),
-              icon: const Icon(Symbols.play_arrow_rounded, fill: 1),
+              icon: const Icon(ReelishIcons.play),
               label: Text(_isSeries ? 'Play' : 'Play movie'),
             ),
             if (widget.onToggleFavorite != null)
               OutlinedButton.icon(
                 style: _actionStyle(filled: false),
                 onPressed: _toggleFavorite,
-                icon: Icon(
-                  _favorite ? Symbols.check_rounded : Symbols.add_rounded,
-                ),
+                icon: Icon(_favorite ? ReelishIcons.check : ReelishIcons.add),
                 label: Text(_favorite ? 'On My list' : 'My list'),
               ),
             if (widget.onWatchTogether != null &&
@@ -372,14 +370,14 @@ class _TvMediaDetailsScreenState extends State<TvMediaDetailsScreen> {
                 onPressed: _isSeries && _episodes.isEmpty
                     ? null
                     : _watchTogether,
-                icon: const Icon(Symbols.groups_rounded),
+                icon: const Icon(ReelishIcons.people),
                 label: const Text('Watch together'),
               ),
             if (widget.onRemoveFromHistory != null)
               OutlinedButton.icon(
                 style: _actionStyle(filled: false),
                 onPressed: _removeFromHistory,
-                icon: const Icon(Symbols.history_toggle_off_rounded),
+                icon: const Icon(ReelishIcons.historyOff),
                 label: const Text('Remove from history'),
               ),
             if (_loading)
@@ -393,7 +391,7 @@ class _TvMediaDetailsScreenState extends State<TvMediaDetailsScreen> {
             else if (_error != null)
               TextButton.icon(
                 onPressed: _loadDetails,
-                icon: const Icon(Symbols.refresh_rounded),
+                icon: const Icon(ReelishIcons.refresh),
                 label: Text('$_error Retry'),
               ),
           ],
@@ -509,7 +507,7 @@ class _TvMediaDetailsScreenState extends State<TvMediaDetailsScreen> {
             onPressed: _seasons.isEmpty
                 ? _loadSeasons
                 : () => _loadEpisodes(_selectedSeason!),
-            icon: const Icon(Symbols.refresh_rounded),
+            icon: const Icon(ReelishIcons.refresh),
             label: const Text('Retry'),
           ),
         ],
@@ -585,7 +583,7 @@ class _EpisodeCard extends StatelessWidget {
                     color: GlassTheme.elevatedSurface,
                     child: still.isEmpty
                         ? const Icon(
-                            Symbols.movie_rounded,
+                            ReelishIcons.movie,
                             color: GlassTheme.muted,
                           )
                         : ArtworkImage.network(
@@ -595,7 +593,7 @@ class _EpisodeCard extends StatelessWidget {
                                 (width * MediaQuery.devicePixelRatioOf(context))
                                     .round(),
                             errorBuilder: (_, _, _) => const Icon(
-                              Symbols.movie_rounded,
+                              ReelishIcons.movie,
                               color: GlassTheme.muted,
                             ),
                           ),
@@ -604,8 +602,7 @@ class _EpisodeCard extends StatelessWidget {
                     left: 10,
                     bottom: 8,
                     child: Icon(
-                      Symbols.play_circle_rounded,
-                      fill: 1,
+                      ReelishIcons.playCircleFilled,
                       size: 30,
                       color: Colors.white.withValues(alpha: .9),
                     ),

@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../theme/reelish_icons.dart';
 
 import '../models/media_item.dart';
 import '../models/resume_summary.dart';
@@ -297,7 +297,7 @@ class _LibraryHeader extends StatelessWidget {
               foregroundColor: GlassTheme.primary,
               backgroundColor: GlassTheme.primary.withValues(alpha: .1),
             ),
-            icon: const Icon(Symbols.refresh_rounded),
+            icon: const Icon(ReelishIcons.refresh),
           ),
         ],
       ),
@@ -463,9 +463,7 @@ class _MediaSection extends StatelessWidget {
             child: _LibraryEmptyState(
               title: emptyTitle,
               message: emptyMessage,
-              icon: favorite
-                  ? Symbols.favorite_rounded
-                  : Symbols.movie_filter_rounded,
+              icon: favorite ? ReelishIcons.heart : ReelishIcons.movieFilter,
               onBrowse: onBrowse,
             ),
           )
@@ -526,7 +524,7 @@ class _MediaSection extends StatelessWidget {
                                 child: SizedBox.square(
                                   dimension: 33,
                                   child: Icon(
-                                    Symbols.close_rounded,
+                                    ReelishIcons.close,
                                     size: 17,
                                     color: Colors.white,
                                   ),

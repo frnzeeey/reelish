@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../../theme/reelish_icons.dart';
 
 import '../../platform/device_capabilities.dart';
 import '../../theme/glass_theme.dart';
@@ -139,9 +139,14 @@ class PlayerSheetOption extends StatelessWidget {
                 children: [
                   Icon(
                     selected
-                        ? Symbols.radio_button_checked_rounded
-                        : Symbols.radio_button_unchecked_rounded,
-                    fill: selected ? 1 : 0,
+                        ? ReelishIcons.filled(
+                            selected
+                                ? ReelishIcons.radioOn
+                                : ReelishIcons.radioOff,
+                          )
+                        : (selected
+                              ? ReelishIcons.radioOn
+                              : ReelishIcons.radioOff),
                     size: 20,
                     color: selected ? GlassTheme.primary : Colors.white54,
                   ),

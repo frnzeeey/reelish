@@ -6,7 +6,7 @@
 // account page.
 
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../theme/reelish_icons.dart';
 
 import '../account/account_controller.dart';
 import '../account/profile_controller.dart';
@@ -299,7 +299,7 @@ class _ProfileHero extends StatelessWidget {
                               ),
                               onPressed: onEdit,
                               icon: const Icon(
-                                Symbols.manage_accounts_rounded,
+                                ReelishIcons.manageAccounts,
                                 size: 18,
                               ),
                               label: const Text(
@@ -325,7 +325,7 @@ class _ProfileHero extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    Icon(Symbols.badge_rounded, size: 18, color: accent),
+                    Icon(ReelishIcons.badge, size: 18, color: accent),
                     const SizedBox(width: AppSpace.sm),
                     const Expanded(
                       child: Text(
@@ -366,9 +366,8 @@ class _TraktBadge extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         const Icon(
-          Symbols.verified_rounded,
+          ReelishIcons.verifiedFilled,
           size: 14,
-          fill: 1,
           color: GlassTheme.muted,
         ),
         const SizedBox(width: 5),
@@ -429,9 +428,9 @@ class _ActivityRow extends StatelessWidget {
       );
     }
     final stats = [
-      (activity.myList, 'On My list', Symbols.favorite_rounded),
-      (activity.watched, 'Watched', Symbols.history_rounded),
-      (activity.inProgress, 'In progress', Symbols.play_circle_rounded),
+      (activity.myList, 'On My list', ReelishIcons.heart),
+      (activity.watched, 'Watched', ReelishIcons.history),
+      (activity.inProgress, 'In progress', ReelishIcons.playCircle),
     ];
     return Padding(
       padding: const EdgeInsets.all(AppSpace.xs),
@@ -565,7 +564,7 @@ class _SignOutTile extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppRadius.md),
             ),
             child: const Icon(
-              Symbols.logout_rounded,
+              ReelishIcons.logout,
               color: GlassTheme.danger,
               size: 20,
             ),

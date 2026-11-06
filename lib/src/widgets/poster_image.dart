@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../theme/reelish_icons.dart';
 
 import '../theme/glass_theme.dart';
 
@@ -20,7 +20,7 @@ class PosterPlaceholder extends StatelessWidget {
       ),
     ),
     child: Center(
-      child: Icon(Symbols.movie_rounded, size: iconSize, color: Colors.white24),
+      child: Icon(ReelishIcons.movie, size: iconSize, color: Colors.white24),
     ),
   );
 }

@@ -4,7 +4,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../theme/reelish_icons.dart';
 
 import '../notifications/episode_alerts.dart';
 import '../widgets/settings/settings_components.dart';
@@ -40,7 +40,7 @@ class NotificationSettingsScreen extends StatelessWidget {
         return SettingsPage(
           title: 'Notifications',
           subtitle: 'Know when new episodes are out.',
-          icon: Symbols.notifications_rounded,
+          icon: ReelishIcons.bell,
           onBack: onBack,
           children: [
             SettingsSection(
@@ -50,7 +50,7 @@ class NotificationSettingsScreen extends StatelessWidget {
                   : 'Reelish checks every few hours while it is open.',
               children: [
                 SettingsSwitchTile(
-                  icon: Symbols.notifications_active_rounded,
+                  icon: ReelishIcons.bellRing,
                   title: 'New episode alerts',
                   description: on
                       ? _status(alerts)
@@ -64,7 +64,7 @@ class NotificationSettingsScreen extends StatelessWidget {
               label: 'ALERT ME ABOUT',
               children: [
                 SettingsSwitchTile(
-                  icon: Symbols.bookmarks_rounded,
+                  icon: ReelishIcons.bookmarks,
                   title: 'Series on My list',
                   description: 'A new episode of a series you saved',
                   value: settings.myList,
@@ -72,7 +72,7 @@ class NotificationSettingsScreen extends StatelessWidget {
                   onChanged: (value) => alerts.setSources(myList: value),
                 ),
                 SettingsSwitchTile(
-                  icon: Symbols.play_circle_rounded,
+                  icon: ReelishIcons.playCircle,
                   title: 'Series you are watching',
                   description: 'Series in Continue watching',
                   value: settings.watching,
@@ -80,7 +80,7 @@ class NotificationSettingsScreen extends StatelessWidget {
                   onChanged: (value) => alerts.setSources(watching: value),
                 ),
                 SettingsSwitchTile(
-                  icon: Symbols.local_fire_department_rounded,
+                  icon: ReelishIcons.fire,
                   title: 'Popular series',
                   description:
                       'Today’s most popular series with a new episode; at '
@@ -95,7 +95,7 @@ class NotificationSettingsScreen extends StatelessWidget {
               SettingsSection(
                 children: [
                   SettingsTile(
-                    icon: Symbols.refresh_rounded,
+                    icon: ReelishIcons.refresh,
                     title: 'Check now',
                     description:
                         'The first check only notes what is out, so you are '

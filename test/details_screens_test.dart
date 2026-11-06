@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import 'package:onfeed/src/theme/reelish_icons.dart';
 import 'package:onfeed/src/desktop/desktop_details_screen.dart';
 import 'package:onfeed/src/models/media_details.dart';
 import 'package:onfeed/src/models/media_item.dart';
@@ -182,7 +182,7 @@ void main() {
       );
       expect(find.text('7.8 / 10'), findsOneWidget);
       expect(find.textContaining('★'), findsNothing);
-      final star = tester.widget<Icon>(find.byIcon(Symbols.star_rounded));
+      final star = tester.widget<Icon>(find.byIcon(ReelishIcons.starFilled));
       expect(star.color, GlassTheme.coralBright);
     });
 

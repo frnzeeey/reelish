@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../navigation/app_destination.dart';
 import '../../theme/glass_theme.dart';
+import '../../theme/reelish_icons.dart';
 import '../../widgets/tv/tv_focus.dart';
 import '../../widgets/brand_logo.dart';
 import '../../widgets/profile_avatar.dart';
@@ -426,8 +427,9 @@ class _RailItemState extends State<_RailItem> {
                   )
                 else
                   Icon(
-                    widget.destination.icon,
-                    fill: widget.selected || _focused ? 1 : 0,
+                    widget.selected || _focused
+                        ? ReelishIcons.filled(widget.destination.icon)
+                        : widget.destination.icon,
                     color: color,
                     size: 24,
                   ),

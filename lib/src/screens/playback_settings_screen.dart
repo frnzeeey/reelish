@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../theme/reelish_icons.dart';
 
 import '../analytics/analytics_service.dart';
 import '../diagnostics/crash_reporter.dart';
@@ -61,7 +61,7 @@ class SettingsScreen extends StatelessWidget {
               ProfileController.instance,
             ]),
             builder: (context, _) => SettingsTile(
-              icon: Symbols.account_circle_rounded,
+              icon: ReelishIcons.account,
               title: 'Profile and account',
               description: 'Display name, avatar and Trakt sign-in',
               value: ProfileController.instance.nameOr(
@@ -89,7 +89,7 @@ class SettingsScreen extends StatelessWidget {
           AnimatedBuilder(
             animation: accentSettings,
             builder: (context, _) => SettingsTile(
-              icon: Symbols.palette_rounded,
+              icon: ReelishIcons.palette,
               title: 'Appearance',
               description: 'Accent color for highlights and controls',
               value: accentSettings.value.label,
@@ -100,7 +100,7 @@ class SettingsScreen extends StatelessWidget {
             ListenableBuilder(
               listenable: EpisodeAlerts.instance,
               builder: (context, _) => SettingsTile(
-                icon: Symbols.notifications_rounded,
+                icon: ReelishIcons.bell,
                 title: 'Notifications',
                 description: 'Alerts when new episodes are out',
                 value: EpisodeAlerts.instance.settings.enabled ? 'On' : 'Off',
@@ -119,7 +119,7 @@ class SettingsScreen extends StatelessWidget {
           // On TV this is the way into a party; phones also have the
           // button on Home.
           SettingsTile(
-            icon: Symbols.groups_rounded,
+            icon: ReelishIcons.people,
             title: 'Join a watch party',
             description: 'Enter a code to watch in sync with friends',
             onTap: () => _open(context, (_) => const JoinPartyScreen()),
@@ -134,13 +134,13 @@ class SettingsScreen extends StatelessWidget {
         label: 'PLAYBACK',
         children: [
           SettingsTile(
-            icon: Symbols.play_circle_rounded,
+            icon: ReelishIcons.playCircle,
             title: 'Playback',
             description: 'Player, stream selection, subtitles and P2P',
             onTap: onPlaybackSettings,
           ),
           SettingsTile(
-            icon: Symbols.closed_caption_rounded,
+            icon: ReelishIcons.subtitles,
             title: 'Subtitle addons',
             description: 'Stremio subtitle sources searched while you watch',
             onTap: () => _open(context, (_) => const SubtitleAddonsScreen()),
@@ -153,7 +153,7 @@ class SettingsScreen extends StatelessWidget {
         label: 'SUPPORT',
         children: [
           SettingsTile(
-            icon: Symbols.support_rounded,
+            icon: ReelishIcons.support,
             title: 'Help & Support',
             description: 'FAQs, contact, About, privacy policy and terms',
             onTap: () => _open(context, (_) => const HelpSupportScreen()),
@@ -178,7 +178,7 @@ class AppearanceSettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) => SettingsPage(
     title: 'Appearance',
     subtitle: 'Choose the accent used across the app.',
-    icon: Symbols.palette_rounded,
+    icon: ReelishIcons.palette,
     onBack: onBack,
     children: [
       AnimatedBuilder(
@@ -232,7 +232,7 @@ class AppearanceSettingsScreen extends StatelessWidget {
           label: 'APP ICON',
           children: [
             SettingsTile(
-              icon: Symbols.apps_rounded,
+              icon: ReelishIcons.grid,
               title: 'App icon',
               description: 'Choose the icon on your home screen',
               onTap: () => Navigator.of(context).push(
@@ -337,7 +337,7 @@ class _AccentChoice extends StatelessWidget {
                         border: Border.all(color: accent.primary),
                       ),
                       child: Icon(
-                        Symbols.check_rounded,
+                        ReelishIcons.check,
                         size: 10,
                         color: accent.bright,
                       ),
@@ -510,10 +510,9 @@ class _AccentPreview extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
-                    Symbols.play_arrow_rounded,
+                    ReelishIcons.play,
                     size: 16,
                     color: GlassTheme.background,
-                    fill: 1,
                   ),
                   SizedBox(width: 4),
                   Text(
@@ -680,7 +679,7 @@ class PlaybackSettingsScreen extends StatelessWidget {
       return SettingsPage(
         title: 'Playback',
         subtitle: 'Fine tune streams, subtitles and controls.',
-        icon: Symbols.play_circle_rounded,
+        icon: ReelishIcons.playCircle,
         onBack: onBack,
         children: [
           _section('PLAYER', [
@@ -1334,7 +1333,7 @@ class PlaybackSettingsScreen extends StatelessWidget {
                 selectedColor: GlassTheme.coralBright,
                 title: Text(label?.call(option) ?? '$option'),
                 trailing: option == current
-                    ? Icon(Symbols.check_rounded, color: GlassTheme.primary)
+                    ? Icon(ReelishIcons.check, color: GlassTheme.primary)
                     : null,
                 onTap: () => Navigator.pop(context, option),
               ),
@@ -1501,7 +1500,7 @@ class _UsageStatisticsTile extends StatelessWidget {
       builder: (context, _) {
         if (!analytics.available.value) return const SizedBox.shrink();
         return SettingsSwitchTile(
-          icon: Symbols.insights_rounded,
+          icon: ReelishIcons.insights,
           title: 'Share usage statistics',
           description:
               'Pages, features and whether playback starts. Never your '
@@ -1527,7 +1526,7 @@ class _CrashReportsTile extends StatelessWidget {
       builder: (context, _) {
         if (!reports.available.value) return const SizedBox.shrink();
         return SettingsSwitchTile(
-          icon: Symbols.bug_report_rounded,
+          icon: ReelishIcons.bug,
           title: 'Share crash reports',
           description:
               'What failed in the app when it crashes. Never your account, '
@@ -1551,7 +1550,7 @@ class _CrashTestTiles extends StatelessWidget {
     mainAxisSize: MainAxisSize.min,
     children: [
       SettingsTile(
-        icon: Symbols.bug_report_rounded,
+        icon: ReelishIcons.bug,
         title: 'Test: non-fatal error',
         onTap: () => CrashReporter.instance.recordError(
           StateError('Reelish test non-fatal'),
@@ -1559,7 +1558,7 @@ class _CrashTestTiles extends StatelessWidget {
         ),
       ),
       SettingsTile(
-        icon: Symbols.bug_report_rounded,
+        icon: ReelishIcons.bug,
         title: 'Test: framework error',
         onTap: () => FlutterError.reportError(
           FlutterErrorDetails(
@@ -1569,7 +1568,7 @@ class _CrashTestTiles extends StatelessWidget {
         ),
       ),
       SettingsTile(
-        icon: Symbols.bug_report_rounded,
+        icon: ReelishIcons.bug,
         title: 'Test: uncaught async error',
         onTap: () => unawaited(
           Future<void>.delayed(
@@ -1579,7 +1578,7 @@ class _CrashTestTiles extends StatelessWidget {
         ),
       ),
       SettingsTile(
-        icon: Symbols.bug_report_rounded,
+        icon: ReelishIcons.bug,
         title: 'Test: native crash',
         onTap: () => unawaited(CrashReporter.instance.testNativeCrash()),
       ),

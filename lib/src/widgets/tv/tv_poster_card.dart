@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../../theme/reelish_icons.dart';
 
 import '../../models/media_item.dart';
 import '../../theme/glass_theme.dart';
@@ -88,8 +88,7 @@ class TvPosterCard extends StatelessWidget {
                   child: Padding(
                     padding: const EdgeInsets.all(5),
                     child: Icon(
-                      Symbols.favorite_rounded,
-                      fill: 1,
+                      ReelishIcons.heartFilled,
                       size: 14,
                       color: GlassTheme.primary,
                     ),
@@ -126,7 +125,7 @@ class _TitleFallback extends StatelessWidget {
     child: Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Icon(Symbols.movie_rounded, color: GlassTheme.muted, size: 30),
+        const Icon(ReelishIcons.movie, color: GlassTheme.muted, size: 30),
         const SizedBox(height: 10),
         Text(
           item.name,

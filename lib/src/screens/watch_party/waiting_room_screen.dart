@@ -3,7 +3,7 @@
 // screen leaves the party.
 
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../../theme/reelish_icons.dart';
 
 import '../../platform/device_capabilities.dart';
 import '../../theme/design_tokens.dart';
@@ -174,13 +174,13 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
   Widget? _banner(PartyRoom room) {
     if (_party.connection == PartyConnection.reconnecting) {
       return const _Banner(
-        icon: Symbols.wifi_off_rounded,
+        icon: ReelishIcons.wifiOff,
         text: 'Reconnecting to the party…',
       );
     }
     if (!room.hostConnected) {
       return const _Banner(
-        icon: Symbols.hourglass_top_rounded,
+        icon: ReelishIcons.hourglass,
         text:
             'The host lost their connection. If they don’t return in a '
             'minute, someone else becomes host.',
@@ -217,13 +217,13 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
     label: 'ROOM',
     children: [
       SettingsSwitchTile(
-        icon: Symbols.play_pause_rounded,
+        icon: ReelishIcons.playPause,
         title: 'Everyone can play and pause',
         value: room.settings.guestControl,
         onChanged: (value) => _party.updateSettings(guestControl: value),
       ),
       SettingsSwitchTile(
-        icon: Symbols.hourglass_top_rounded,
+        icon: ReelishIcons.hourglass,
         title: 'Wait for everyone',
         description: 'Start once everyone’s player is ready',
         value: room.settings.waitForAll,
@@ -324,7 +324,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                                 foregroundColor: GlassTheme.danger,
                               ),
                               onPressed: _end,
-                              icon: const Icon(Symbols.cancel_rounded),
+                              icon: const Icon(ReelishIcons.closeCircle),
                               label: const Text('End party'),
                             ),
                           const Spacer(),
@@ -332,7 +332,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                             height: 52,
                             child: OutlinedButton.icon(
                               onPressed: _leave,
-                              icon: const Icon(Symbols.logout_rounded),
+                              icon: const Icon(ReelishIcons.logout),
                               label: const Text('Leave'),
                             ),
                           ),
@@ -373,7 +373,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                 height: 54,
                 child: OutlinedButton.icon(
                   onPressed: _leave,
-                  icon: const Icon(Symbols.logout_rounded),
+                  icon: const Icon(ReelishIcons.logout),
                   label: const Text('Leave'),
                 ),
               ),
@@ -392,7 +392,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                       foregroundColor: GlassTheme.background,
                     ),
                     onPressed: action.onPressed,
-                    icon: Icon(action.icon, fill: 1),
+                    icon: Icon(ReelishIcons.filled(action.icon)),
                     label: Text(
                       action.label,
                       maxLines: 1,
@@ -420,13 +420,13 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
       if (!_party.isHost) return null;
       return (
         label: 'Start watching',
-        icon: Symbols.play_arrow_rounded,
+        icon: ReelishIcons.play,
         onPressed: _party.startWatching,
       );
     }
     return (
       label: _inPlayer ? 'Opening the player…' : 'Back to the player',
-      icon: Symbols.play_arrow_rounded,
+      icon: ReelishIcons.play,
       onPressed: _inPlayer ? null : _openPlayer,
     );
   }
@@ -489,7 +489,7 @@ class _ParticipantTile extends StatelessWidget {
           if (canManage)
             PopupMenuButton<String>(
               tooltip: 'Options for ${person.name}',
-              icon: const Icon(Symbols.more_vert_rounded),
+              icon: const Icon(ReelishIcons.moreVertical),
               onSelected: (action) =>
                   action == 'host' ? onMakeHost() : onRemove(),
               itemBuilder: (_) => const [
@@ -528,7 +528,7 @@ class _EndPartyTile extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppRadius.md),
             ),
             child: const Icon(
-              Symbols.cancel_rounded,
+              ReelishIcons.closeCircle,
               color: GlassTheme.danger,
               size: 20,
             ),
@@ -635,7 +635,7 @@ class _EndedView extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               const Icon(
-                Symbols.groups_rounded,
+                ReelishIcons.people,
                 size: 48,
                 color: GlassTheme.muted,
               ),

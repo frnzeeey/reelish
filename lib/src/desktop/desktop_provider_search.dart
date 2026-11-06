@@ -2,7 +2,7 @@ import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../theme/reelish_icons.dart';
 
 import '../theme/glass_theme.dart';
 import 'desktop_widgets.dart';
@@ -165,10 +165,7 @@ class _DesktopProviderSearchState extends State<DesktopProviderSearch> {
                               const SizedBox(height: 24),
                               OutlinedButton.icon(
                                 onPressed: widget.onCancel,
-                                icon: const Icon(
-                                  Symbols.close_rounded,
-                                  size: 18,
-                                ),
+                                icon: const Icon(ReelishIcons.close, size: 18),
                                 label: const Text('Cancel'),
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: Colors.white,
@@ -238,7 +235,7 @@ class _Spinner extends StatelessWidget {
             color: GlassTheme.primary.withValues(alpha: .14),
           ),
           child: Icon(
-            Symbols.travel_explore_rounded,
+            ReelishIcons.explore,
             size: 22,
             color: GlassTheme.coralBright,
           ),

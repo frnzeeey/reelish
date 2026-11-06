@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../theme/reelish_icons.dart';
 
 import '../models/subtitle_addon.dart';
 import '../services/subtitle_addon_service.dart';
@@ -101,7 +101,7 @@ class _SubtitleAddonsScreenState extends State<SubtitleAddonsScreen> {
   Widget build(BuildContext context) => SettingsScaffold(
     title: 'Subtitle addons',
     subtitle: 'Sources searched for subtitles while you watch.',
-    icon: Symbols.closed_caption_rounded,
+    icon: ReelishIcons.subtitles,
     children: [
       if (_loading)
         Padding(
@@ -129,7 +129,7 @@ class _SubtitleAddonsScreenState extends State<SubtitleAddonsScreen> {
               ),
             if (_addons.isEmpty)
               const SettingsTile(
-                icon: Symbols.subtitles_off_rounded,
+                icon: ReelishIcons.subtitlesOff,
                 title: 'No subtitle addons',
                 description: 'Add one below to get external subtitles.',
               ),
@@ -166,7 +166,7 @@ class _SubtitleAddonsScreenState extends State<SubtitleAddonsScreen> {
                               dimension: 18,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : const Icon(Symbols.add_rounded),
+                          : const Icon(ReelishIcons.add),
                       label: const Text('Add addon'),
                       style: FilledButton.styleFrom(
                         shape: RoundedRectangleBorder(
@@ -186,7 +186,7 @@ class _SubtitleAddonsScreenState extends State<SubtitleAddonsScreen> {
               (addon) => addon.id == SubtitleAddon.openSubtitlesV3.id,
             ))
               SettingsTile(
-                icon: Symbols.restore_rounded,
+                icon: ReelishIcons.restore,
                 title: 'Restore OpenSubtitles v3',
                 description: 'Reinstall the default subtitle addon.',
                 onTap: _installing
@@ -216,7 +216,7 @@ class _AddonTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SettingsTile(
-    icon: Symbols.closed_caption_rounded,
+    icon: ReelishIcons.subtitles,
     title: addon.name,
     // Host only: configured addon URLs can contain tokens.
     description: Uri.tryParse(addon.manifestUrl)?.host ?? '',
@@ -228,7 +228,7 @@ class _AddonTile extends StatelessWidget {
         IconButton(
           tooltip: 'Remove ${addon.name}',
           onPressed: onRemove,
-          icon: const Icon(Symbols.delete_rounded),
+          icon: const Icon(ReelishIcons.trash),
         ),
       ],
     ),

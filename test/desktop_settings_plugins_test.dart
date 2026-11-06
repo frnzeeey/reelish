@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import 'package:onfeed/src/theme/reelish_icons.dart';
 import 'package:onfeed/src/desktop/desktop_plugins_page.dart';
 import 'package:onfeed/src/desktop/desktop_settings_page.dart';
 import 'package:onfeed/src/models/provider_plugin.dart';
@@ -183,7 +183,7 @@ void main() {
       final title = tester.getRect(find.text('Join a watch party'));
       // The row's icon (other rows open something too).
       final icon = find
-          .byIcon(Symbols.open_in_new_rounded)
+          .byIcon(ReelishIcons.externalLink)
           .evaluate()
           .map((element) {
             final box = element.renderObject! as RenderBox;

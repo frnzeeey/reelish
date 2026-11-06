@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../theme/reelish_icons.dart';
 
 import '../models/provider_plugin.dart';
 import '../services/plugin_library_repository.dart';
@@ -183,7 +183,7 @@ class _PluginsHeader extends StatelessWidget {
           foregroundColor: Colors.white,
           backgroundColor: Colors.white.withValues(alpha: .07),
         ),
-        icon: const Icon(Symbols.add_link_rounded),
+        icon: const Icon(ReelishIcons.linkAdd),
       ),
       const SizedBox(width: 4),
       IconButton.filledTonal(
@@ -193,7 +193,7 @@ class _PluginsHeader extends StatelessWidget {
           foregroundColor: GlassTheme.primary,
           backgroundColor: GlassTheme.primary.withValues(alpha: .1),
         ),
-        icon: const Icon(Symbols.refresh_rounded),
+        icon: const Icon(ReelishIcons.refresh),
       ),
     ],
   );
@@ -256,7 +256,7 @@ class _PluginsHero extends StatelessWidget {
                       color: GlassTheme.primary.withValues(alpha: .16),
                       borderRadius: BorderRadius.circular(AppRadius.card),
                     ),
-                    child: Icon(Symbols.hub_rounded, color: GlassTheme.primary),
+                    child: Icon(ReelishIcons.hub, color: GlassTheme.primary),
                   ),
                   const SizedBox(width: 12),
                   const Expanded(
@@ -283,11 +283,7 @@ class _PluginsHero extends StatelessWidget {
                       ],
                     ),
                   ),
-                  Icon(
-                    Symbols.bolt_rounded,
-                    color: GlassTheme.primary,
-                    size: 22,
-                  ),
+                  Icon(ReelishIcons.bolt, color: GlassTheme.primary, size: 22),
                 ],
               ),
               const SizedBox(height: 14),
@@ -417,7 +413,7 @@ class _LibraryEntry extends StatelessWidget {
                 borderRadius: BorderRadius.circular(AppRadius.md),
               ),
               child: Icon(
-                Symbols.storefront_rounded,
+                ReelishIcons.store,
                 color: GlassTheme.primary,
                 size: 21,
               ),
@@ -446,7 +442,7 @@ class _LibraryEntry extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(Symbols.chevron_right_rounded, color: GlassTheme.muted),
+            const Icon(ReelishIcons.chevronRight, color: GlassTheme.muted),
           ],
         ),
       ),
@@ -477,10 +473,7 @@ class _EmptyPlugins extends StatelessWidget {
             color: GlassTheme.primary.withValues(alpha: .12),
             shape: BoxShape.circle,
           ),
-          child: Icon(
-            Symbols.travel_explore_rounded,
-            color: GlassTheme.primary,
-          ),
+          child: Icon(ReelishIcons.explore, color: GlassTheme.primary),
         ),
         const SizedBox(height: 14),
         const Text(
@@ -508,12 +501,12 @@ class _EmptyPlugins extends StatelessWidget {
           children: [
             FilledButton.icon(
               onPressed: onBrowse,
-              icon: const Icon(Symbols.storefront_rounded),
+              icon: const Icon(ReelishIcons.store),
               label: const Text('Browse the library'),
             ),
             OutlinedButton.icon(
               onPressed: onInstall,
-              icon: const Icon(Symbols.add_rounded),
+              icon: const Icon(ReelishIcons.add),
               label: const Text('Add by link'),
             ),
           ],
@@ -597,7 +590,7 @@ class _RepositoryCardState extends State<_RepositoryCard> {
                   borderRadius: BorderRadius.circular(AppRadius.md),
                 ),
                 child: Icon(
-                  Symbols.dns_rounded,
+                  ReelishIcons.server,
                   color: GlassTheme.primary,
                   size: 21,
                 ),
@@ -627,12 +620,12 @@ class _RepositoryCardState extends State<_RepositoryCard> {
                   IconButton(
                     tooltip: 'Remove collection',
                     onPressed: _confirmRemove,
-                    icon: const Icon(Symbols.delete_rounded, size: 20),
+                    icon: const Icon(ReelishIcons.trash, size: 20),
                   ),
                   AnimatedRotation(
                     turns: _expanded ? .5 : 0,
                     duration: AppMotion.resolve(context, AppMotion.hover),
-                    child: const Icon(Symbols.keyboard_arrow_down_rounded),
+                    child: const Icon(ReelishIcons.chevronDown),
                   ),
                   const SizedBox(width: 6),
                 ],
@@ -702,9 +695,14 @@ class _ProviderTile extends StatelessWidget {
           children: [
             Icon(
               plugin.enabled
-                  ? Symbols.check_circle_rounded
-                  : Symbols.circle_rounded,
-              fill: plugin.enabled ? 1 : 0,
+                  ? ReelishIcons.filled(
+                      plugin.enabled
+                          ? ReelishIcons.checkCircle
+                          : ReelishIcons.radioOff,
+                    )
+                  : (plugin.enabled
+                        ? ReelishIcons.checkCircle
+                        : ReelishIcons.radioOff),
               color: plugin.enabled ? GlassTheme.primary : GlassTheme.disabled,
               size: 17,
             ),
@@ -773,11 +771,7 @@ class _NoticeCard extends StatelessWidget {
     ),
     child: Row(
       children: [
-        const Icon(
-          Symbols.power_settings_new_rounded,
-          color: GlassTheme.warning,
-          size: 20,
-        ),
+        const Icon(ReelishIcons.power, color: GlassTheme.warning, size: 20),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
@@ -868,11 +862,7 @@ class _RepositoryError extends StatelessWidget {
     ),
     child: Row(
       children: [
-        const Icon(
-          Symbols.warning_rounded,
-          color: GlassTheme.warning,
-          size: 20,
-        ),
+        const Icon(ReelishIcons.warning, color: GlassTheme.warning, size: 20),
         const SizedBox(width: 11),
         Expanded(
           child: Column(
@@ -908,20 +898,20 @@ class _RepositoryError extends StatelessWidget {
             tooltip: 'Retry',
             visualDensity: VisualDensity.compact,
             onPressed: onRetry,
-            icon: const Icon(Symbols.refresh_rounded, size: 18),
+            icon: const Icon(ReelishIcons.refresh, size: 18),
           ),
         if (onRemove != null)
           IconButton(
             tooltip: 'Remove collection',
             onPressed: onRemove,
-            icon: const Icon(Symbols.delete_rounded, size: 18),
+            icon: const Icon(ReelishIcons.trash, size: 18),
           ),
         if (onDismiss != null)
           IconButton(
             tooltip: 'Dismiss',
             visualDensity: VisualDensity.compact,
             onPressed: onDismiss,
-            icon: const Icon(Symbols.close_rounded, size: 18),
+            icon: const Icon(ReelishIcons.close, size: 18),
           ),
       ],
     ),

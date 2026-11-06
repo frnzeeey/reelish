@@ -2,7 +2,7 @@
 // TV and Google TV, when the build has Firebase configured). It is separate
 // from usage statistics: agreeing to one says nothing about the other.
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../theme/reelish_icons.dart';
 
 import '../analytics/analytics_service.dart';
 import '../diagnostics/crash_reporter.dart';
@@ -49,7 +49,7 @@ class CrashReportConsentDialog extends StatelessWidget {
       if (!didPop) Navigator.pop(context, false);
     },
     child: UpdateDialogFrame(
-      icon: Symbols.bug_report_rounded,
+      icon: ReelishIcons.bug,
       title: 'Share crash reports?',
       actions: [
         UpdateDialogButton(

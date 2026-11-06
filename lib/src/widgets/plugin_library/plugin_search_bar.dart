@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../../theme/reelish_icons.dart';
 
 import '../../theme/design_tokens.dart';
 import '../../theme/glass_theme.dart';
@@ -35,7 +35,7 @@ class PluginSearchBar extends StatelessWidget {
         color: GlassTheme.muted,
         fontWeight: FontWeight.w500,
       ),
-      prefixIcon: const Icon(Symbols.search_rounded, color: GlassTheme.muted),
+      prefixIcon: const Icon(ReelishIcons.search, color: GlassTheme.muted),
       suffixIcon: ValueListenableBuilder<TextEditingValue>(
         valueListenable: controller,
         builder: (context, value, _) => AnimatedSwitcher(
@@ -46,7 +46,7 @@ class PluginSearchBar extends StatelessWidget {
                   key: const ValueKey('clear'),
                   tooltip: 'Clear search',
                   onPressed: onClear,
-                  icon: const Icon(Symbols.close_rounded),
+                  icon: const Icon(ReelishIcons.close),
                 ),
         ),
       ),

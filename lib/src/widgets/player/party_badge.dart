@@ -4,7 +4,7 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../../theme/reelish_icons.dart';
 
 import '../../account/profile_controller.dart';
 import '../../theme/design_tokens.dart';
@@ -60,7 +60,7 @@ class PartyBadge extends StatelessWidget {
                         _Faces(people: people),
                         const SizedBox(width: AppSpace.xs),
                         Icon(
-                          Symbols.groups_rounded,
+                          ReelishIcons.people,
                           size: 16,
                           color: GlassTheme.primary,
                         ),

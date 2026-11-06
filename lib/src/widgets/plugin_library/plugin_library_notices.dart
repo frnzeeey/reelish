@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../../theme/reelish_icons.dart';
 
 import '../../theme/design_tokens.dart';
 import '../../theme/glass_theme.dart';
@@ -27,11 +27,7 @@ class PluginSafetyNotice extends StatelessWidget {
       children: [
         const Padding(
           padding: EdgeInsets.only(top: 1),
-          child: Icon(
-            Symbols.shield_rounded,
-            size: 18,
-            color: GlassTheme.muted,
-          ),
+          child: Icon(ReelishIcons.shield, size: 18, color: GlassTheme.muted),
         ),
         const SizedBox(width: 10),
         Expanded(
@@ -77,7 +73,7 @@ class PluginOfflineBanner extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Symbols.cloud_off_rounded, size: 18, color: _warning),
+          const Icon(ReelishIcons.offline, size: 18, color: _warning),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -180,7 +176,7 @@ class PluginMessageState extends StatelessWidget {
                           dimension: 16,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : Icon(actionIcon ?? Symbols.refresh_rounded),
+                      : Icon(actionIcon ?? ReelishIcons.refresh),
                   label: Text(actionLabel!),
                 ),
               if (secondaryLabel != null)
@@ -189,7 +185,7 @@ class PluginMessageState extends StatelessWidget {
                   style: OutlinedButton.styleFrom(
                     minimumSize: const Size(0, 46),
                   ),
-                  icon: Icon(secondaryIcon ?? Symbols.add_link_rounded),
+                  icon: Icon(secondaryIcon ?? ReelishIcons.linkAdd),
                   label: Text(secondaryLabel!),
                 ),
             ],
@@ -216,7 +212,7 @@ class PluginManualInstallPrompt extends StatelessWidget {
     ),
     child: Row(
       children: [
-        const Icon(Symbols.add_link_rounded, size: 18, color: GlassTheme.muted),
+        const Icon(ReelishIcons.linkAdd, size: 18, color: GlassTheme.muted),
         const SizedBox(width: 10),
         const Expanded(
           child: Text(

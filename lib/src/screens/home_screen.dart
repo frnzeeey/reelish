@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../theme/reelish_icons.dart';
 import '../models/app_update.dart';
 import '../models/episode_context.dart';
 import '../models/episode_progress.dart';
@@ -1230,7 +1230,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   child: IconButton(
                     tooltip: 'Retry loading $title',
                     onPressed: () => unawaited(feed.retry()),
-                    icon: const Icon(Symbols.refresh_rounded),
+                    icon: const Icon(ReelishIcons.refresh),
                   ),
                 ),
               )
@@ -1380,7 +1380,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 child: IconButton(
                   tooltip: 'Retry loading $title',
                   onPressed: () => unawaited(feed.retry()),
-                  icon: const Icon(Symbols.refresh_rounded),
+                  icon: const Icon(ReelishIcons.refresh),
                 ),
               ),
             ),
@@ -1565,7 +1565,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         focusNode: _searchFocus,
                         onChanged: _searchChanged,
                         decoration: InputDecoration(
-                          prefixIcon: const Icon(Symbols.search_rounded),
+                          prefixIcon: const Icon(ReelishIcons.search),
                           hintText: 'Find your next favorite',
                           suffixIcon: value.text.isEmpty
                               ? null
@@ -1575,7 +1575,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                     _search.clear();
                                     _searchChanged('');
                                   },
-                                  icon: const Icon(Symbols.close_rounded),
+                                  icon: const Icon(ReelishIcons.close),
                                 ),
                         ),
                       ),
@@ -1585,7 +1585,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   IconButton(
                     tooltip: 'Close search',
                     onPressed: _closeSearch,
-                    icon: const Icon(Symbols.close_rounded),
+                    icon: const Icon(ReelishIcons.close),
                   ),
                 ],
               )
@@ -1633,7 +1633,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         color: Colors.white.withValues(alpha: .14),
                       ),
                     ),
-                    icon: const Icon(Symbols.groups_rounded),
+                    icon: const Icon(ReelishIcons.people),
                   ),
                   const SizedBox(width: 8),
                   IconButton(
@@ -1651,7 +1651,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         color: Colors.white.withValues(alpha: .14),
                       ),
                     ),
-                    icon: const Icon(Symbols.search_rounded),
+                    icon: const Icon(ReelishIcons.search),
                   ),
                   const SizedBox(width: 8),
                   // The profile at the top right, where streaming apps keep
@@ -1802,7 +1802,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           borderRadius: BorderRadius.circular(14),
                         ),
                         child: Icon(
-                          Symbols.link_rounded,
+                          ReelishIcons.link,
                           color: GlassTheme.primary,
                         ),
                       ),
@@ -1833,7 +1833,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           context,
                           _providerPlugins,
                         ),
-                        icon: const Icon(Symbols.add_rounded),
+                        icon: const Icon(ReelishIcons.add),
                       ),
                     ],
                   ),
@@ -1854,7 +1854,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   child: Row(
                     children: [
                       const Icon(
-                        Symbols.cloud_off_rounded,
+                        ReelishIcons.offline,
                         color: GlassTheme.muted,
                         size: 18,
                       ),
@@ -1871,7 +1871,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       IconButton(
                         tooltip: 'Retry catalog',
                         onPressed: () => _reloadActiveFeed(),
-                        icon: const Icon(Symbols.refresh_rounded),
+                        icon: const Icon(ReelishIcons.refresh),
                       ),
                     ],
                   ),
@@ -1889,8 +1889,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   children: [
                     Icon(
                       feedError == null
-                          ? Symbols.movie_rounded
-                          : Symbols.cloud_off_rounded,
+                          ? ReelishIcons.movie
+                          : ReelishIcons.offline,
                       size: 34,
                       color: GlassTheme.muted,
                     ),
@@ -1914,7 +1914,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       const SizedBox(height: 12),
                       OutlinedButton.icon(
                         onPressed: () => _reloadActiveFeed(),
-                        icon: const Icon(Symbols.refresh_rounded),
+                        icon: const Icon(ReelishIcons.refresh),
                         label: const Text('Retry'),
                       ),
                     ],
@@ -2165,7 +2165,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             else
               TextButton.icon(
                 onPressed: onRetry,
-                icon: const Icon(Symbols.refresh_rounded, size: 15),
+                icon: const Icon(ReelishIcons.refresh, size: 15),
                 label: const Text('Retry'),
               ),
           ],
@@ -2336,8 +2336,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       WidgetSpan(
                         alignment: PlaceholderAlignment.middle,
                         child: Icon(
-                          Symbols.star_rounded,
-                          fill: 1,
+                          ReelishIcons.starFilled,
                           size: 15,
                           color: GlassTheme.primary,
                         ),
@@ -2384,7 +2383,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         ),
                       ),
                       onPressed: () => _showDetails(item),
-                      icon: const Icon(Symbols.info_rounded),
+                      icon: const Icon(ReelishIcons.info),
                       label: const Text(
                         'Details',
                         style: TextStyle(fontWeight: FontWeight.w800),
@@ -2416,7 +2415,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           ),
                           onPressed: () => _toggleFavoriteAndSay(item),
                           icon: Icon(
-                            saved ? Symbols.check_rounded : Symbols.add_rounded,
+                            saved ? ReelishIcons.check : ReelishIcons.add,
                             size: 19,
                           ),
                           label: Text(saved ? 'On My list' : 'My list'),

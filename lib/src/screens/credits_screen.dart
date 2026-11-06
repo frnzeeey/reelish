@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../theme/reelish_icons.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -83,7 +83,7 @@ class CreditsScreen extends StatelessWidget {
     return SettingsScaffold(
       title: 'Credits & attribution',
       subtitle: 'Data, services and software behind Reelish.',
-      icon: Symbols.handshake_rounded,
+      icon: ReelishIcons.credits,
       // The full TMDB attribution is on this page; the footer only repeats
       // the required notice, without a second logo.
       footer: const TmdbAttributionFooter(showLogo: false),
@@ -93,7 +93,7 @@ class CreditsScreen extends StatelessWidget {
           children: [
             const _TmdbAttributionBlock(),
             SettingsTile(
-              icon: Symbols.open_in_new_rounded,
+              icon: ReelishIcons.externalLink,
               title: 'The Movie Database (TMDB)',
               description: 'www.themoviedb.org',
               onTap: () => _openExternal(
@@ -117,21 +117,21 @@ class CreditsScreen extends StatelessWidget {
           children: [
             const _TraktAttributionBlock(),
             SettingsTile(
-              icon: Symbols.open_in_new_rounded,
+              icon: ReelishIcons.externalLink,
               title: 'Trakt',
               description: 'trakt.tv',
               onTap: () =>
                   _openExternal(context, Uri.https('trakt.tv', '/'), 'Trakt'),
             ),
             const SettingsTile(
-              icon: Symbols.closed_caption_rounded,
+              icon: ReelishIcons.subtitles,
               title: 'OpenSubtitles v3',
               description:
                   'Preinstalled Stremio subtitle addon used to search for '
                   'subtitles. Reelish is not affiliated with OpenSubtitles.',
             ),
             const SettingsTile(
-              icon: Symbols.cloud_rounded,
+              icon: ReelishIcons.cloud,
               title: 'GitHub',
               description:
                   'Hosts Reelish releases for update checks and the plugin '
@@ -148,7 +148,7 @@ class CreditsScreen extends StatelessWidget {
           label: 'ARTWORK',
           children: [
             SettingsTile(
-              icon: Symbols.face_rounded,
+              icon: ReelishIcons.face,
               title: 'Profile avatars',
               description: 'Illustrations by angelina888 on Figma',
               onTap: () => _openExternal(
@@ -170,7 +170,7 @@ class CreditsScreen extends StatelessWidget {
                   'subject to its own license.',
             ),
             SettingsTile(
-              icon: Symbols.code_rounded,
+              icon: ReelishIcons.code,
               title: 'Open-source licenses',
               description: 'Full license texts for every package and font',
               onTap: () => showAppLicenses(context),
@@ -188,19 +188,19 @@ class CreditsScreen extends StatelessWidget {
               label: 'REELISH INFORMATION',
               children: [
                 const SettingsTile(
-                  icon: Symbols.movie_rounded,
+                  icon: ReelishIcons.movie,
                   title: 'App name',
                   value: 'Reelish',
                 ),
                 SettingsTile(
-                  icon: Symbols.verified_rounded,
+                  icon: ReelishIcons.verified,
                   title: 'Version',
                   value: info == null
                       ? fallback
                       : '${info.version} (build ${info.buildNumber})',
                 ),
                 SettingsTile(
-                  icon: Symbols.code_blocks_rounded,
+                  icon: ReelishIcons.codeBlocks,
                   title: 'Project page & support',
                   description: 'github.com/frnzeeey/reelish',
                   onTap: () => _openExternal(

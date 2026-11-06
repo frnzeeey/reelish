@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../theme/reelish_icons.dart';
 import '../models/media_details.dart';
 import '../models/media_item.dart';
 import '../models/tv_season.dart';
@@ -131,7 +131,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
             for (final episode in _episodes)
               if ((episode.number ?? 0) > 0)
                 ListTile(
-                  leading: const Icon(Symbols.play_circle_rounded),
+                  leading: const Icon(ReelishIcons.playCircle),
                   title: Text(
                     'E${episode.number.toString().padLeft(2, '0')}  '
                     '${episode.name ?? 'Episode ${episode.number}'}',
@@ -184,7 +184,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                         ? const ColoredBox(
                             color: GlassTheme.surface,
                             child: Icon(
-                              Symbols.movie_rounded,
+                              ReelishIcons.movie,
                               color: GlassTheme.muted,
                             ),
                           )
@@ -195,7 +195,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                             errorBuilder: (_, __, ___) => const ColoredBox(
                               color: GlassTheme.surface,
                               child: Icon(
-                                Symbols.movie_rounded,
+                                ReelishIcons.movie,
                                 color: GlassTheme.muted,
                               ),
                             ),
@@ -218,8 +218,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                         Row(
                           children: [
                             Icon(
-                              Symbols.star_rounded,
-                              fill: 1,
+                              ReelishIcons.starFilled,
                               size: 15,
                               color: GlassTheme.primary,
                             ),
@@ -255,8 +254,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                 Padding(
                   padding: EdgeInsets.only(top: 24),
                   child: Icon(
-                    Symbols.play_circle_rounded,
-                    fill: 1,
+                    ReelishIcons.playCircleFilled,
                     color: GlassTheme.primary,
                     size: 26,
                   ),
@@ -378,7 +376,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                       _metadata(
                         '$rating / 10',
                         highlight: true,
-                        icon: Symbols.star_rounded,
+                        icon: ReelishIcons.star,
                       ),
                     if (details != null && details.voteCount > 0)
                       _metadata('${_formatCount(details.voteCount)} votes'),
@@ -442,7 +440,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
         : _selectedSeason != null && _episodes.isNotEmpty
         ? () => _chooseEpisodeToWatchTogether(item)
         : null,
-    icon: const Icon(Symbols.groups_rounded, size: 19),
+    icon: const Icon(ReelishIcons.people, size: 19),
     label: const Text(
       'Watch together',
       style: TextStyle(fontWeight: FontWeight.w700),
@@ -464,10 +462,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
     // Kept enabled while saving, so a second tap is ignored rather than
     // falling through; the guard is in _toggleFavorite.
     onPressed: _toggleFavorite,
-    icon: Icon(
-      _favorite ? Symbols.check_rounded : Symbols.add_rounded,
-      size: 19,
-    ),
+    icon: Icon(_favorite ? ReelishIcons.check : ReelishIcons.add, size: 19),
     label: Text(
       _favorite ? 'On My list' : 'My list',
       style: const TextStyle(fontWeight: FontWeight.w700),
@@ -496,7 +491,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
         children: [
           // An icon, not a "★" character: Montserrat has no star glyph.
           if (icon != null) ...[
-            Icon(icon, fill: 1, size: 13, color: color),
+            Icon(ReelishIcons.filled(icon), size: 13, color: color),
             const SizedBox(width: 4),
           ],
           Text(
@@ -537,7 +532,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
             child: member.profile.isEmpty
                 ? const ColoredBox(
                     color: GlassTheme.surface,
-                    child: Icon(Symbols.person_rounded, size: 32),
+                    child: Icon(ReelishIcons.person, size: 32),
                   )
                 : ArtworkImage.network(
                     member.profile,
@@ -545,7 +540,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                     cacheWidth: 144,
                     errorBuilder: (_, __, ___) => const ColoredBox(
                       color: GlassTheme.surface,
-                      child: Icon(Symbols.person_rounded, size: 32),
+                      child: Icon(ReelishIcons.person, size: 32),
                     ),
                   ),
           ),
@@ -599,7 +594,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                     foregroundColor: Colors.white,
                   ),
                   onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Symbols.arrow_back_rounded),
+                  icon: const Icon(ReelishIcons.back),
                 ),
               ),
             ),
@@ -684,7 +679,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                     ),
                     TextButton.icon(
                       onPressed: _loadDetails,
-                      icon: const Icon(Symbols.refresh_rounded),
+                      icon: const Icon(ReelishIcons.refresh),
                       label: const Text('Retry'),
                     ),
                   ],
@@ -712,6 +707,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                     if (_seasons.isNotEmpty)
                       DropdownButton<int>(
                         value: _selectedSeason,
+                        icon: const Icon(ReelishIcons.chevronDown, size: 20),
                         underline: const SizedBox.shrink(),
                         items: [
                           for (final season in _seasons)
@@ -750,7 +746,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                         onPressed: _seasons.isEmpty
                             ? _loadSeasons
                             : () => _loadEpisodes(_selectedSeason!),
-                        icon: const Icon(Symbols.refresh_rounded),
+                        icon: const Icon(ReelishIcons.refresh),
                         label: const Text('Retry'),
                       ),
                     ],
@@ -801,7 +797,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
             foregroundColor: GlassTheme.background,
           ),
           onPressed: () => widget.onPlay(context),
-          icon: const Icon(Symbols.play_arrow_rounded, fill: 1),
+          icon: const Icon(ReelishIcons.play),
           label: Text(
             item.type == 'series' ? 'Play' : 'Play movie',
             style: const TextStyle(fontWeight: FontWeight.w800),

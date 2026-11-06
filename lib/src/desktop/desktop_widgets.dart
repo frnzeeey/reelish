@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../theme/reelish_icons.dart';
 
 import '../models/media_item.dart';
 import '../services/paged_feed_controller.dart';
@@ -338,8 +338,7 @@ class _DesktopPosterCardState extends State<DesktopPosterCard> {
                               left: 8,
                               child: _Badge(
                                 child: Icon(
-                                  Symbols.favorite_rounded,
-                                  fill: 1,
+                                  ReelishIcons.heartFilled,
                                   size: 14,
                                   color: Colors.white,
                                 ),
@@ -362,7 +361,7 @@ class _DesktopPosterCardState extends State<DesktopPosterCard> {
                                     children: [
                                       if (widget.onToggleFavorite != null)
                                         _CardAction(
-                                          icon: Symbols.favorite_rounded,
+                                          icon: ReelishIcons.heart,
                                           filled: widget.isFavorite,
                                           tooltip: widget.isFavorite
                                               ? 'Remove from My list (F)'
@@ -375,7 +374,7 @@ class _DesktopPosterCardState extends State<DesktopPosterCard> {
                                         const SizedBox(width: 6),
                                       if (widget.onRemove != null)
                                         _CardAction(
-                                          icon: Symbols.close_rounded,
+                                          icon: ReelishIcons.close,
                                           tooltip:
                                               '${widget.removeLabel} (Delete)',
                                           onPressed: () => unawaited(_remove()),
@@ -433,8 +432,7 @@ class _DesktopPosterCardState extends State<DesktopPosterCard> {
                       // The rating at a glance, without hovering.
                       if (rated && widget.caption.isEmpty) ...[
                         Icon(
-                          Symbols.star_rounded,
-                          fill: 1,
+                          ReelishIcons.starFilled,
                           size: 13,
                           color: GlassTheme.primary,
                         ),
@@ -487,12 +485,7 @@ class _HoverShade extends StatelessWidget {
             ),
             child: const Padding(
               padding: EdgeInsets.all(7),
-              child: Icon(
-                Symbols.play_arrow_rounded,
-                fill: 1,
-                size: 18,
-                color: Colors.white,
-              ),
+              child: Icon(ReelishIcons.play, size: 18, color: Colors.white),
             ),
           ),
         ],
@@ -550,12 +543,7 @@ class _ResumeOverlay extends StatelessWidget {
             ),
             child: const Padding(
               padding: EdgeInsets.all(12),
-              child: Icon(
-                Symbols.play_arrow_rounded,
-                fill: 1,
-                size: 26,
-                color: Colors.white,
-              ),
+              child: Icon(ReelishIcons.play, size: 26, color: Colors.white),
             ),
           ),
         ),
@@ -633,9 +621,8 @@ class _CardAction extends StatelessWidget {
         child: SizedBox.square(
           dimension: 32,
           child: Icon(
-            icon,
+            filled ? ReelishIcons.filled(icon) : icon,
             size: 17,
-            fill: filled ? 1 : 0,
             color: filled ? GlassTheme.coralBright : Colors.white,
           ),
         ),
@@ -884,7 +871,7 @@ class _DesktopMediaRowState extends State<DesktopMediaRow> {
                   if (_hovered && _canBack)
                     DesktopRowArrow(
                       alignment: Alignment.centerLeft,
-                      icon: Symbols.chevron_left_rounded,
+                      icon: ReelishIcons.chevronLeft,
                       label: 'Scroll ${widget.title} back',
                       onPressed: () => _page(-1),
                       height: artHeight,
@@ -893,7 +880,7 @@ class _DesktopMediaRowState extends State<DesktopMediaRow> {
                   if (_hovered && _canForward)
                     DesktopRowArrow(
                       alignment: Alignment.centerRight,
-                      icon: Symbols.chevron_right_rounded,
+                      icon: ReelishIcons.chevronRight,
                       label: 'Scroll ${widget.title} forward',
                       onPressed: () => _page(1),
                       height: artHeight,
@@ -1080,7 +1067,7 @@ class DesktopRowNotice extends StatelessWidget {
                   if (onRetry != null)
                     TextButton.icon(
                       onPressed: onRetry,
-                      icon: const Icon(Symbols.refresh_rounded, size: 18),
+                      icon: const Icon(ReelishIcons.refresh, size: 18),
                       label: const Text('Retry'),
                     ),
                 ],

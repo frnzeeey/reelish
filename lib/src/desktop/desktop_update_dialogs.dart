@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../theme/reelish_icons.dart';
 
 import '../models/app_update.dart';
 import '../services/windows_update_controller.dart';
@@ -110,7 +110,7 @@ class DesktopUpdateAvailableDialog extends StatelessWidget {
         '${formatMegabytes(update.sizeBytes!)} MB download',
     ].join(' · ');
     return UpdateDialogFrame(
-      icon: Symbols.system_update_rounded,
+      icon: ReelishIcons.systemUpdate,
       title: readOnly
           ? 'Reelish ${update.latestVersion}'
           : 'Reelish update available',
@@ -194,7 +194,7 @@ class _DesktopUpdateProgressDialogState
         WindowsUpdateStage.verifying => _progress(context, version),
         WindowsUpdateStage.ready => _ready(context, version),
         WindowsUpdateStage.installing => UpdateDialogFrame(
-          icon: Symbols.install_desktop_rounded,
+          icon: ReelishIcons.installDesktop,
           title: 'Installing Reelish $version',
           maxWidth: 480,
           actions: const [],
@@ -209,7 +209,7 @@ class _DesktopUpdateProgressDialogState
           ],
         ),
         WindowsUpdateStage.failed => UpdateDialogFrame(
-          icon: Symbols.error_rounded,
+          icon: ReelishIcons.error,
           title: 'Update failed',
           maxWidth: 480,
           actions: [
@@ -230,7 +230,7 @@ class _DesktopUpdateProgressDialogState
           ],
         ),
         _ => UpdateDialogFrame(
-          icon: Symbols.download_rounded,
+          icon: ReelishIcons.download,
           title: 'Download cancelled',
           maxWidth: 480,
           actions: [
@@ -260,9 +260,7 @@ class _DesktopUpdateProgressDialogState
     final speed = _controller.bytesPerSecond;
     final received = _controller.received;
     return UpdateDialogFrame(
-      icon: verifying
-          ? Symbols.verified_user_rounded
-          : Symbols.download_rounded,
+      icon: verifying ? ReelishIcons.shieldCheck : ReelishIcons.download,
       title: verifying
           ? 'Verifying the update'
           : 'Downloading Reelish $version',
@@ -335,7 +333,7 @@ class _DesktopUpdateProgressDialogState
   Widget _ready(BuildContext context, String version) {
     final error = _installError;
     return UpdateDialogFrame(
-      icon: Symbols.restart_alt_rounded,
+      icon: ReelishIcons.restart,
       title: 'Ready to install Reelish $version',
       maxWidth: 480,
       actions: [

@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../theme/reelish_icons.dart';
 
 import '../desktop/desktop_update_dialogs.dart';
 import '../models/app_update.dart';
@@ -174,8 +174,8 @@ abstract final class AppUpdateFlow {
               : 'Unable to check for updates',
           message: result.message,
           icon: result.status == UpdateCheckStatus.networkError
-              ? Symbols.wifi_off_rounded
-              : Symbols.error_rounded,
+              ? ReelishIcons.wifiOff
+              : ReelishIcons.error,
         );
       }
     } catch (_) {
@@ -420,7 +420,7 @@ abstract final class AppUpdateFlow {
             '$name is in your Downloads folder. Open it with a file manager '
             'to install Reelish ${update.latestVersion}. Android still asks '
             'you to allow installs from that app first.',
-        icon: Symbols.download_done_rounded,
+        icon: ReelishIcons.downloadDone,
       );
     } on UpdateException catch (error) {
       if (context.mounted) {
@@ -451,7 +451,7 @@ abstract final class AppUpdateFlow {
             'The update was verified and saved to ${saved.path}. Close '
             'Reelish, extract the ZIP, and replace your Reelish folder with '
             'the extracted one. Your settings and library are kept.',
-        icon: Symbols.download_done_rounded,
+        icon: ReelishIcons.downloadDone,
       );
     } on UpdateException catch (error) {
       if (context.mounted) {
@@ -488,7 +488,7 @@ abstract final class AppUpdateFlow {
     BuildContext context, {
     required String title,
     required String message,
-    IconData icon = Symbols.error_rounded,
+    IconData icon = ReelishIcons.error,
   }) => showDialog<void>(
     context: context,
     builder: (_) =>

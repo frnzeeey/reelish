@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../theme/reelish_icons.dart';
 
 import '../account/account_controller.dart';
 import '../navigation/app_transitions.dart';
@@ -21,32 +21,32 @@ enum DesktopSettingsSection {
   account(
     'Profile and account',
     'Display name, avatar and Trakt sign-in',
-    Symbols.account_circle_rounded,
+    ReelishIcons.account,
   ),
   appearance(
     'Appearance',
     'Accent color for highlights and controls',
-    Symbols.palette_rounded,
+    ReelishIcons.palette,
   ),
   notifications(
     'Notifications',
     'Alerts when new episodes are out',
-    Symbols.notifications_rounded,
+    ReelishIcons.bell,
   ),
   playback(
     'Playback',
     'Player, stream selection, subtitles and P2P',
-    Symbols.play_circle_rounded,
+    ReelishIcons.playCircle,
   ),
   subtitles(
     'Subtitle addons',
     'Stremio subtitle sources searched while you watch',
-    Symbols.closed_caption_rounded,
+    ReelishIcons.subtitles,
   ),
   help(
     'Help & Support',
     'FAQs, contact, About, privacy policy and terms',
-    Symbols.support_rounded,
+    ReelishIcons.support,
   );
 
   const DesktopSettingsSection(this.title, this.description, this.icon);
@@ -156,7 +156,7 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
                           title: 'Join a watch party',
                           description:
                               'Enter a code to watch in sync with friends',
-                          icon: Symbols.groups_rounded,
+                          icon: ReelishIcons.people,
                           onTap: () => Navigator.of(context).push(
                             AppPageRoute<void>(
                               context: context,
@@ -395,7 +395,7 @@ class _RailItemState extends State<_RailItem> {
                     // Apart from a title cut to fit, so the two never touch.
                     const SizedBox(width: 8),
                     const Icon(
-                      Symbols.open_in_new_rounded,
+                      ReelishIcons.externalLink,
                       size: 16,
                       color: GlassTheme.muted,
                     ),

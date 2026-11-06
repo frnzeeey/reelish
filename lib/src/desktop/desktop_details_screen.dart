@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../theme/reelish_icons.dart';
 
 import '../models/episode_progress.dart';
 import '../models/media_details.dart';
@@ -351,7 +351,7 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
                 foregroundColor: Colors.white,
                 side: BorderSide(color: Colors.white.withValues(alpha: .14)),
               ),
-              icon: const Icon(Symbols.arrow_back_rounded),
+              icon: const Icon(ReelishIcons.back),
             ),
           ),
           if (panel)
@@ -426,8 +426,7 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
                             children: [
                               if (rating.isNotEmpty && rating != '0.0') ...[
                                 Icon(
-                                  Symbols.star_rounded,
-                                  fill: 1,
+                                  ReelishIcons.starFilled,
                                   size: 17,
                                   color: GlassTheme.primary,
                                 ),
@@ -518,10 +517,7 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
                                     vertical: 18,
                                   ),
                                 ),
-                                icon: const Icon(
-                                  Symbols.play_arrow_rounded,
-                                  fill: 1,
-                                ),
+                                icon: const Icon(ReelishIcons.play),
                                 label: Text(
                                   _isSeries && _selectedSeason != null
                                       ? 'Play season $_selectedSeason'
@@ -548,8 +544,8 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
                                 ),
                                 icon: Icon(
                                   _favorite
-                                      ? Symbols.check_rounded
-                                      : Symbols.add_rounded,
+                                      ? ReelishIcons.check
+                                      : ReelishIcons.add,
                                 ),
                                 label: Text(
                                   _favorite ? 'On My list' : 'My list',
@@ -579,7 +575,7 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
                                       vertical: 18,
                                     ),
                                   ),
-                                  icon: const Icon(Symbols.groups_rounded),
+                                  icon: const Icon(ReelishIcons.people),
                                   label: const Text(
                                     'Watch together',
                                     style: TextStyle(
@@ -704,7 +700,7 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
                   season == null ? _loadSeasons() : _loadEpisodes(season),
                 );
               },
-              icon: const Icon(Symbols.refresh_rounded, size: 18),
+              icon: const Icon(ReelishIcons.refresh, size: 18),
               label: const Text('Retry'),
             ),
           ],
@@ -1220,8 +1216,7 @@ class _EpisodeTileState extends State<_EpisodeTile> {
                           if (lifted)
                             Center(
                               child: Icon(
-                                Symbols.play_circle_rounded,
-                                fill: 1,
+                                ReelishIcons.playCircleFilled,
                                 size: compact ? 34 : 40,
                                 color: Colors.white.withValues(alpha: .92),
                               ),
@@ -1229,8 +1224,7 @@ class _EpisodeTileState extends State<_EpisodeTile> {
                           else if (watched)
                             Center(
                               child: Icon(
-                                Symbols.check_circle_rounded,
-                                fill: 1,
+                                ReelishIcons.checkCircleFilled,
                                 size: 26,
                                 color: Colors.white.withValues(alpha: .9),
                               ),

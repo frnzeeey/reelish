@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../../theme/reelish_icons.dart';
 
 import '../../platform/device_capabilities.dart';
 import '../../theme/glass_theme.dart';
@@ -356,7 +356,7 @@ class TvTextField extends StatelessWidget {
     required this.hint,
     required this.onChanged,
     this.onSubmitted,
-    this.icon = Symbols.edit_rounded,
+    this.icon = ReelishIcons.edit,
     this.title,
     this.keyboardType = TextInputType.text,
     this.textInputAction = TextInputAction.done,
@@ -424,7 +424,7 @@ class TvTextField extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 10),
-          const Icon(Symbols.keyboard_rounded, color: GlassTheme.muted),
+          const Icon(ReelishIcons.keyboard, color: GlassTheme.muted),
         ],
       ),
     ),

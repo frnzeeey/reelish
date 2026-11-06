@@ -3,7 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../../theme/reelish_icons.dart';
 
 import '../../navigation/app_transitions.dart';
 import '../../platform/device_capabilities.dart';
@@ -172,7 +172,7 @@ class _JoinPartyScreenState extends State<JoinPartyScreen> {
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                Symbols.groups_rounded,
+                ReelishIcons.people,
                 size: 28,
                 color: GlassTheme.primary,
               ),
@@ -207,7 +207,7 @@ class _JoinPartyScreenState extends State<JoinPartyScreen> {
                   height: 52,
                   child: OutlinedButton.icon(
                     onPressed: _paste,
-                    icon: const Icon(Symbols.content_paste_rounded),
+                    icon: const Icon(ReelishIcons.paste),
                     label: const Text('Paste code'),
                   ),
                 ),
@@ -216,7 +216,7 @@ class _JoinPartyScreenState extends State<JoinPartyScreen> {
                   label: found?.full == true
                       ? 'This party is full'
                       : 'Join party',
-                  icon: Symbols.login_rounded,
+                  icon: ReelishIcons.login,
                   busy: _joining,
                   onPressed: canJoin ? _join : null,
                 ),
@@ -310,7 +310,7 @@ class _JoinPartyScreenState extends State<JoinPartyScreen> {
                       dimension: 20,
                       child: CircularProgressIndicator(strokeWidth: 2.4),
                     )
-                  : const Icon(Symbols.login_rounded),
+                  : const Icon(ReelishIcons.login),
               label: Text(
                 _joining
                     ? 'Joining…'
@@ -342,7 +342,7 @@ class _JoinPartyScreenState extends State<JoinPartyScreen> {
                             : formatPartyCode(value.text),
                         hint: 'Party code (8 digits)',
                         title: 'Enter the party code',
-                        icon: Symbols.dialpad_rounded,
+                        icon: ReelishIcons.dialpad,
                         keyboardType: TextInputType.number,
                         autofocus: true,
                         onChanged: (text) {
@@ -370,7 +370,7 @@ class _JoinPartyScreenState extends State<JoinPartyScreen> {
                     const SizedBox(height: AppSpace.sm),
                     TextButton.icon(
                       onPressed: _paste,
-                      icon: const Icon(Symbols.content_paste_rounded),
+                      icon: const Icon(ReelishIcons.paste),
                       label: const Text('Paste code'),
                     ),
                     const Text(

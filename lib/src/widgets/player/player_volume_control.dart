@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../../theme/reelish_icons.dart';
 
 import '../../theme/design_tokens.dart';
 import '../../theme/glass_theme.dart';
@@ -27,12 +27,12 @@ class PlayerVolumeControl extends StatefulWidget {
 
   /// The speaker for [volume]: crossed out at 0, then one to three waves.
   static IconData iconFor(double volume) => volume <= 0
-      ? Symbols.volume_off_rounded
+      ? ReelishIcons.volumeOff
       : volume < .34
-      ? Symbols.volume_mute_rounded
+      ? ReelishIcons.volumeMute
       : volume < .67
-      ? Symbols.volume_down_rounded
-      : Symbols.volume_up_rounded;
+      ? ReelishIcons.volumeDown
+      : ReelishIcons.volumeUp;
 
   @override
   State<PlayerVolumeControl> createState() => _PlayerVolumeControlState();

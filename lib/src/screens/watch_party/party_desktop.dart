@@ -4,7 +4,7 @@
 // eight boxes. Phone and TV keep their own layouts.
 
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../../theme/reelish_icons.dart';
 
 import '../../desktop/desktop_widgets.dart';
 import '../../theme/design_tokens.dart';
@@ -71,7 +71,7 @@ class PartyDesktopFrame extends StatelessWidget {
                           IconButton(
                             tooltip: 'Back',
                             onPressed: () => Navigator.of(context).maybePop(),
-                            icon: const Icon(Symbols.arrow_back_rounded),
+                            icon: const Icon(ReelishIcons.back),
                           ),
                           const SizedBox(width: AppSpace.xs),
                           Expanded(
@@ -145,13 +145,13 @@ class PartyDesktopPoster extends StatelessWidget {
         ],
       ),
       child: url.isEmpty
-          ? const Icon(Symbols.movie_rounded, size: 48, color: GlassTheme.muted)
+          ? const Icon(ReelishIcons.movie, size: 48, color: GlassTheme.muted)
           : ArtworkImage.network(
               url,
               fit: BoxFit.cover,
               cacheWidth: posterDecodeWidth(width * dpr),
               errorBuilder: (_, _, _) => const Icon(
-                Symbols.movie_rounded,
+                ReelishIcons.movie,
                 size: 48,
                 color: GlassTheme.muted,
               ),
@@ -218,7 +218,7 @@ class PartyDesktopButton extends StatelessWidget {
               dimension: 18,
               child: CircularProgressIndicator(strokeWidth: 2.4),
             )
-          : Icon(icon, fill: 1),
+          : Icon(ReelishIcons.filled(icon)),
       label: Text(label, style: const TextStyle(fontWeight: FontWeight.w800)),
     ),
   );

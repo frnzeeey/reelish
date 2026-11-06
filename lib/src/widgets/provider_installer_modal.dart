@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../theme/reelish_icons.dart';
 import 'package:flutter/services.dart';
 import '../platform/device_capabilities.dart';
 import '../services/provider_plugin_service.dart';
@@ -105,7 +105,7 @@ class _ProviderInstallerModalState extends State<ProviderInstallerModal> {
                   IconButton(
                     tooltip: 'Close',
                     onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Symbols.close_rounded),
+                    icon: const Icon(ReelishIcons.close),
                   ),
                 ],
               ),
@@ -124,7 +124,7 @@ class _ProviderInstallerModalState extends State<ProviderInstallerModal> {
                         autofocus: true,
                         value: _url.text,
                         hint: 'Provider manifest URL',
-                        icon: Symbols.link_rounded,
+                        icon: ReelishIcons.link,
                         keyboardType: TextInputType.url,
                         onChanged: (value) => setState(() => _url.text = value),
                         onSubmitted: (_) => _busy ? null : _install(),
@@ -134,7 +134,7 @@ class _ProviderInstallerModalState extends State<ProviderInstallerModal> {
                     IconButton(
                       tooltip: 'Paste from clipboard',
                       onPressed: _busy ? null : _paste,
-                      icon: const Icon(Symbols.content_paste_rounded),
+                      icon: const Icon(ReelishIcons.paste),
                     ),
                   ],
                 )
@@ -146,11 +146,11 @@ class _ProviderInstallerModalState extends State<ProviderInstallerModal> {
                   onSubmitted: (_) => _busy ? null : _install(),
                   decoration: InputDecoration(
                     hintText: 'Provider manifest URL',
-                    prefixIcon: const Icon(Symbols.link_rounded),
+                    prefixIcon: const Icon(ReelishIcons.link),
                     suffixIcon: IconButton(
                       tooltip: 'Paste from clipboard',
                       onPressed: _busy ? null : _paste,
-                      icon: const Icon(Symbols.content_paste_rounded),
+                      icon: const Icon(ReelishIcons.paste),
                     ),
                   ),
                 ),
@@ -172,7 +172,7 @@ class _ProviderInstallerModalState extends State<ProviderInstallerModal> {
                           dimension: 18,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Icon(Symbols.download_rounded),
+                      : const Icon(ReelishIcons.download),
                   label: Text(_busy ? 'Checking manifest…' : 'Add collection'),
                 ),
               ),

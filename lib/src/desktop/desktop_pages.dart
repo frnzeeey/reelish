@@ -3,7 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:material_symbols_icons/symbols.dart';
+import '../theme/reelish_icons.dart';
 
 import '../models/media_item.dart';
 import '../viewmodels/home_catalog.dart';
@@ -78,7 +78,7 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
     final error = catalog.catalogError;
     if (catalogEmpty && error != null) {
       return DesktopMessage(
-        icon: Symbols.cloud_off_rounded,
+        icon: ReelishIcons.offline,
         title: 'Could not load titles',
         message: error,
         actionLabel: 'Retry',
@@ -203,7 +203,7 @@ class _AddSourceBanner extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
         child: Row(
           children: [
-            Icon(Symbols.link_rounded, color: GlassTheme.primary),
+            Icon(ReelishIcons.link, color: GlassTheme.primary),
             const SizedBox(width: 16),
             const Expanded(
               child: Column(
@@ -224,7 +224,7 @@ class _AddSourceBanner extends StatelessWidget {
             ),
             FilledButton.icon(
               onPressed: onAddSource,
-              icon: const Icon(Symbols.add_rounded),
+              icon: const Icon(ReelishIcons.add),
               label: const Text('Add a source'),
             ),
           ],
@@ -259,7 +259,7 @@ class _WatchTogetherRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
         child: Row(
           children: [
-            Icon(Symbols.groups_rounded, color: GlassTheme.primary),
+            Icon(ReelishIcons.people, color: GlassTheme.primary),
             const SizedBox(width: 16),
             const Expanded(
               child: Column(
@@ -281,7 +281,7 @@ class _WatchTogetherRow extends StatelessWidget {
             const SizedBox(width: 16),
             OutlinedButton.icon(
               onPressed: onJoin,
-              icon: const Icon(Symbols.dialpad_rounded),
+              icon: const Icon(ReelishIcons.dialpad),
               label: const Text('Join with a code'),
             ),
           ],
@@ -363,7 +363,7 @@ class _DesktopCatalogPageState extends State<DesktopCatalogPage> {
               hasScrollBody: false,
               child: state.status == PagedFeedStatus.failed
                   ? DesktopMessage(
-                      icon: Symbols.cloud_off_rounded,
+                      icon: ReelishIcons.offline,
                       title: 'Could not load ${widget.title.toLowerCase()}',
                       message: 'Check your connection and try again.',
                       actionLabel: 'Retry',
@@ -540,7 +540,7 @@ class _DesktopSearchPageState extends State<DesktopSearchPage> {
       body = SliverFillRemaining(
         hasScrollBody: false,
         child: DesktopMessage(
-          icon: Symbols.cloud_off_rounded,
+          icon: ReelishIcons.offline,
           title: 'Could not search',
           message: _error!,
           actionLabel: 'Try again',
@@ -552,7 +552,7 @@ class _DesktopSearchPageState extends State<DesktopSearchPage> {
           ? const SliverFillRemaining(
               hasScrollBody: false,
               child: DesktopMessage(
-                icon: Symbols.search_rounded,
+                icon: ReelishIcons.search,
                 title: 'Find a movie or series',
                 message: 'Type a title, then press Enter or pause to search.',
               ),
@@ -584,7 +584,7 @@ class _DesktopSearchPageState extends State<DesktopSearchPage> {
       body = SliverFillRemaining(
         hasScrollBody: false,
         child: DesktopMessage(
-          icon: Symbols.search_off_rounded,
+          icon: ReelishIcons.searchOff,
           title: 'No results',
           message: 'Nothing matched "$_query". Try another title.',
         ),
@@ -638,7 +638,7 @@ class _DesktopSearchPageState extends State<DesktopSearchPage> {
                   style: const TextStyle(fontSize: 17),
                   decoration: InputDecoration(
                     hintText: 'Search titles',
-                    prefixIcon: const Icon(Symbols.search_rounded),
+                    prefixIcon: const Icon(ReelishIcons.search),
                     suffixIcon: ListenableBuilder(
                       listenable: _controller,
                       builder: (context, _) => _controller.text.isEmpty
@@ -646,7 +646,7 @@ class _DesktopSearchPageState extends State<DesktopSearchPage> {
                           ? const _KeyHint('Ctrl+F')
                           : IconButton(
                               tooltip: 'Clear',
-                              icon: const Icon(Symbols.close_rounded),
+                              icon: const Icon(ReelishIcons.close),
                               onPressed: () {
                                 _controller.clear();
                                 unawaited(_search(''));
@@ -835,7 +835,7 @@ class _DesktopLibraryPageState extends State<DesktopLibraryPage> {
         // Say where saved titles go, rather than leaving the list out.
         const _LibraryHint(
           title: 'My list',
-          icon: Symbols.bookmark_add_rounded,
+          icon: ReelishIcons.bookmarkAdd,
           message:
               'Nothing saved yet. Choose My list on any title, or press F '
               'on a poster, to keep it here.',
@@ -864,19 +864,19 @@ class _DesktopLibraryPageState extends State<DesktopLibraryPage> {
                       _LibraryStat(
                         count: continuing.length,
                         label: 'In progress',
-                        icon: Symbols.play_circle_rounded,
+                        icon: ReelishIcons.playCircle,
                       ),
                       const SizedBox(width: 10),
                       _LibraryStat(
                         count: _favorites.length,
                         label: 'On My list',
-                        icon: Symbols.bookmark_rounded,
+                        icon: ReelishIcons.bookmark,
                       ),
                       const SizedBox(width: 10),
                       _LibraryStat(
                         count: _history.length,
                         label: 'Watched',
-                        icon: Symbols.history_rounded,
+                        icon: ReelishIcons.history,
                       ),
                     ],
                   ),
@@ -886,7 +886,7 @@ class _DesktopLibraryPageState extends State<DesktopLibraryPage> {
           const SliverFillRemaining(
             hasScrollBody: false,
             child: DesktopMessage(
-              icon: Symbols.bookmark_rounded,
+              icon: ReelishIcons.bookmark,
               title: 'Nothing here yet',
               message:
                   'Titles you watch, and titles you add to My list from a '
@@ -927,7 +927,11 @@ class _LibraryStat extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 20, fill: 1, color: GlassTheme.primary),
+            Icon(
+              ReelishIcons.filled(icon),
+              size: 20,
+              color: GlassTheme.primary,
+            ),
             const SizedBox(width: 10),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1065,7 +1069,7 @@ class _RecentSearches extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         const Icon(
-                          Symbols.history_rounded,
+                          ReelishIcons.history,
                           size: 18,
                           color: GlassTheme.muted,
                         ),
