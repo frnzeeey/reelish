@@ -157,7 +157,7 @@ class DesktopUpdateAvailableDialog extends StatelessWidget {
 
 /// Follows a Windows update from download to installer handoff. Closing it
 /// (Escape, "Continue in background", "Later") leaves a download running;
-/// Settings → About shows its progress.
+/// About (Settings → Help & Support) shows its progress.
 class DesktopUpdateProgressDialog extends StatefulWidget {
   const DesktopUpdateProgressDialog({super.key, required this.controller});
 
@@ -244,7 +244,7 @@ class _DesktopUpdateProgressDialogState
           children: [
             Text(
               'The partial download was removed. You can update any time '
-              'from Settings → About.',
+              'from Help & Support → About Reelish.',
               style: updateDialogBodyStyle(context),
             ),
           ],

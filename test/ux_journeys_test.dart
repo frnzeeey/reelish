@@ -7,11 +7,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:onfeed/src/account/account_api.dart';
+import 'package:onfeed/src/analytics/analytics_service.dart';
 import 'package:onfeed/src/models/app_update.dart';
 import 'package:onfeed/src/models/media_details.dart';
 import 'package:onfeed/src/models/media_item.dart';
 import 'package:onfeed/src/platform/device_capabilities.dart';
+import 'package:onfeed/src/screens/app_information_screens.dart';
+import 'package:onfeed/src/screens/credits_screen.dart';
 import 'package:onfeed/src/screens/first_run_consent_screen.dart';
+import 'package:onfeed/src/screens/legal_information_screen.dart';
+import 'package:onfeed/src/screens/playback_settings_screen.dart';
 import 'package:onfeed/src/screens/help_support_screen.dart';
 import 'package:onfeed/src/screens/home_screen.dart';
 import 'package:onfeed/src/screens/library_screen.dart';
@@ -715,10 +720,168 @@ void main() {
       expect(find.byType(TvMediaDetailsScreen), findsOneWidget);
     });
 
+    testWidgets('Back from Watch together returns to it', (tester) async {
+      tester.view.physicalSize = const Size(1920, 1080);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      DeviceCapabilities.debugOverride = const DeviceCapabilities(
+        isTelevision: true,
+        hasTouchscreen: false,
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: GlassTheme.tv,
+          home: TvMediaDetailsScreen(
+            item: watched,
+            tmdb: _FakeTmdb(),
+            onPlay: (_) {},
+            onPlayEpisode: (_, _, _) {},
+            onWatchTogether: (context, _) => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const Scaffold(body: Text('party')),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pumpAndSettle();
+      Widget? focusedButton() => FocusManager.instance.primaryFocus?.context
+          ?.findAncestorWidgetOfExactType<OutlinedButton>();
+      final button = focusedButton();
+      expect(button, isNotNull);
+      await tester.sendKeyEvent(LogicalKeyboardKey.select);
+      await tester.pumpAndSettle();
+      expect(find.text('party'), findsOneWidget);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text('party'), findsNothing);
+      expect(focusedButton(), isNotNull, reason: 'focus left the button');
+    });
+
     testWidgets('a title with no history offers nothing', (tester) async {
       await pump(tester, null);
       await open(tester);
       expect(find.text('Remove from history'), findsNothing);
+    });
+  });
+
+  group('Settings and Help & Support', () {
+    Future<void> pumpHelp(WidgetTester tester) async {
+      tester.view.physicalSize = const Size(900, 2400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(theme: GlassTheme.dark, home: const HelpSupportScreen()),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('Settings is preferences; information is in Help', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(900, 2400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final accent = AccentSettingsController();
+      addTearDown(accent.dispose);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: GlassTheme.dark,
+          home: Scaffold(
+            body: SettingsScreen(
+              accentSettings: accent,
+              onPlaybackSettings: () {},
+              onAppearanceSettings: () {},
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      for (final moved in [
+        'About Reelish',
+        'Credits & attribution',
+        'Open-source licenses',
+        'Privacy policy',
+        'Terms of use',
+        'Support development',
+      ]) {
+        expect(find.text(moved), findsNothing, reason: moved);
+      }
+      expect(find.text('Help & Support'), findsOneWidget);
+      // The privacy policy sends people here to delete their account.
+      expect(find.text('Profile and account'), findsOneWidget);
+    });
+
+    testWidgets('Share usage statistics stays in Settings, under General', (
+      tester,
+    ) async {
+      // Local builds have no analytics configured, so the switch is hidden.
+      final analytics = AnalyticsService.instance;
+      analytics.available.value = true;
+      addTearDown(() => analytics.available.value = false);
+      tester.view.physicalSize = const Size(900, 2400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final accent = AccentSettingsController();
+      addTearDown(accent.dispose);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: GlassTheme.dark,
+          home: Scaffold(
+            body: SettingsScreen(
+              accentSettings: accent,
+              onPlaybackSettings: () {},
+              onAppearanceSettings: () {},
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      double top(String text) => tester.getTopLeft(find.text(text)).dy;
+      expect(find.text('Share usage statistics'), findsOneWidget);
+      // The privacy policy promises it can be turned off in Settings.
+      expect(
+        top('Share usage statistics'),
+        greaterThan(top('Join a watch party')),
+      );
+      expect(top('Share usage statistics'), lessThan(top('PLAYBACK')));
+    });
+
+    for (final (entry, screen) in const [
+      ('About Reelish', AboutScreen),
+      ('Support development', SupportDevelopmentScreen),
+      ('Privacy policy', LegalInformationScreen),
+      ('Terms of use', LegalInformationScreen),
+    ]) {
+      testWidgets('Help opens $entry, and Back returns', (tester) async {
+        await pumpHelp(tester);
+        await tester.tap(find.text(entry));
+        await tester.pumpAndSettle();
+        expect(find.byType(screen), findsOneWidget);
+        await tester.binding.handlePopRoute();
+        await tester.pumpAndSettle();
+        expect(find.byType(screen), findsNothing);
+        expect(find.byType(HelpSupportScreen), findsOneWidget);
+      });
+    }
+
+    testWidgets('Credits and licenses are reached through About', (
+      tester,
+    ) async {
+      await pumpHelp(tester);
+      await tester.tap(find.text('About Reelish'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Credits & attribution'));
+      await tester.pumpAndSettle();
+      expect(find.byType(CreditsScreen), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('Open-source licenses'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text('Open-source licenses'), findsOneWidget);
     });
   });
 

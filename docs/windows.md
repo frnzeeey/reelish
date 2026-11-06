@@ -28,7 +28,7 @@ updating and uninstalling never touch either.
 
 ### In-app updates
 
-**Settings → About → Application updates** shows the installed version, the
+**Settings → Help & Support → About Reelish → Application updates** shows the installed version, the
 update status, when GitHub was last checked, and the action for the current
 state. Reelish checks automatically about 20 seconds after it starts (and on
 resume), at most every 6 hours; the switch there turns that off. **Check for

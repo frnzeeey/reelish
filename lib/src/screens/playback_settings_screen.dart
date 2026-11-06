@@ -22,10 +22,7 @@ import '../widgets/tv/tv_focus.dart';
 
 import 'account_settings_screen.dart';
 import 'app_icon_settings_screen.dart';
-import 'app_information_screens.dart';
 import 'help_support_screen.dart';
-import 'credits_screen.dart';
-import 'legal_information_screen.dart';
 import 'notification_settings_screen.dart';
 import 'subtitle_addons_screen.dart';
 import 'watch_party/join_party_screen.dart';
@@ -126,6 +123,8 @@ class SettingsScreen extends StatelessWidget {
             description: 'Enter a code to watch in sync with friends',
             onTap: () => _open(context, (_) => const JoinPartyScreen()),
           ),
+          // Android with analytics configured only; absent elsewhere.
+          const _UsageStatisticsTile(),
         ],
       ),
       SettingsSection(
@@ -145,74 +144,16 @@ class SettingsScreen extends StatelessWidget {
           ),
         ],
       ),
-      SettingsSection(
-        label: 'ABOUT & INFORMATION',
-        children: [
-          // No version here: this tab is built during Home startup, which
-          // must not wait on a platform call. About reads it on demand.
-          SettingsTile(
-            icon: Symbols.info_rounded,
-            title: 'About Reelish',
-            description: 'Version, build and updates',
-            onTap: () => _open(context, (_) => const AboutScreen()),
-          ),
-          SettingsTile(
-            icon: Symbols.handshake_rounded,
-            title: 'Credits & attribution',
-            description: 'TMDB, third-party services and acknowledgments',
-            onTap: () => _open(context, (_) => const CreditsScreen()),
-          ),
-          SettingsTile(
-            icon: Symbols.code_rounded,
-            title: 'Open-source licenses',
-            description: 'Licenses for Flutter, packages and fonts',
-            onTap: () => showAppLicenses(context),
-          ),
-        ],
-      ),
-      SettingsSection(
-        label: 'LEGAL',
-        children: [
-          SettingsTile(
-            icon: Symbols.shield_rounded,
-            title: 'Privacy policy',
-            description:
-                'What stays on your device and what is sent to services',
-            onTap: () => _open(
-              context,
-              (_) =>
-                  const LegalInformationScreen(document: LegalDocument.privacy),
-            ),
-          ),
-          // Android with analytics configured only; absent elsewhere.
-          const _UsageStatisticsTile(),
-          SettingsTile(
-            icon: Symbols.gavel_rounded,
-            title: 'Terms of use',
-            description: 'Rules for using the app, add-ons and media sources',
-            onTap: () => _open(
-              context,
-              (_) =>
-                  const LegalInformationScreen(document: LegalDocument.terms),
-            ),
-          ),
-        ],
-      ),
+      // Everything about Reelish rather than its behaviour lives here: help,
+      // About, credits, and the privacy policy and terms.
       SettingsSection(
         label: 'SUPPORT',
         children: [
           SettingsTile(
             icon: Symbols.support_rounded,
             title: 'Help & Support',
-            description: 'Get help, report problems, and learn about Reelish',
+            description: 'FAQs, contact, About, privacy policy and terms',
             onTap: () => _open(context, (_) => const HelpSupportScreen()),
-          ),
-          SettingsTile(
-            icon: Symbols.favorite_rounded,
-            title: 'Support development',
-            description: 'Optional help with development and server costs',
-            onTap: () =>
-                _open(context, (_) => const SupportDevelopmentScreen()),
           ),
         ],
       ),

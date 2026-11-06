@@ -189,7 +189,7 @@ abstract final class AppUpdateFlow {
     }
   }
 
-  /// Settings → About on Windows: offers [update], or (with [confirm] false,
+  /// About on Windows: offers [update], or (with [confirm] false,
   /// after the user already chose to update there) starts it directly.
   static Future<void> updateFromSettings(
     BuildContext context,

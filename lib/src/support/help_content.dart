@@ -171,7 +171,7 @@ const faqEntries = <FaqEntry>[
     FaqCategory.updates,
     'How do I update Reelish?',
     'Reelish checks for updates on its own, or you can choose Settings › '
-        'About Reelish › Check for updates. On Android it downloads the '
+        'Help & Support › About Reelish › Check for updates. On Android it downloads the '
         'update and opens Android\'s installer; allow "Install unknown apps" '
         'for Reelish once. On Windows the update installs, or a portable copy '
         'is saved as a ZIP.',

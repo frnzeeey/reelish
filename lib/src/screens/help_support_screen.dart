@@ -74,7 +74,7 @@ class HelpSupportScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) => SettingsScaffold(
     title: 'Help & Support',
-    subtitle: 'Get help, report problems, and learn about Reelish.',
+    subtitle: 'Answers, contact, and everything about Reelish.',
     icon: Symbols.support_rounded,
     children: [
       SettingsSection(
@@ -132,7 +132,7 @@ class HelpSupportScreen extends StatelessWidget {
         ],
       ),
       SettingsSection(
-        label: 'APP INFORMATION',
+        label: 'ABOUT REELISH',
         children: [
           SettingsTile(
             icon: Symbols.info_rounded,
@@ -147,8 +147,23 @@ class HelpSupportScreen extends StatelessWidget {
             onTap: () => _openExternal(context, SupportConfig.releaseNotes),
           ),
           SettingsTile(
+            icon: Symbols.favorite_rounded,
+            title: 'Support development',
+            description: 'Optional help with development and server costs',
+            onTap: () =>
+                _push(context, (_) => const SupportDevelopmentScreen()),
+          ),
+        ],
+      ),
+      // A heading, not a page of its own: each document is one tap from here.
+      SettingsSection(
+        label: 'LEGAL',
+        children: [
+          SettingsTile(
             icon: Symbols.shield_rounded,
             title: 'Privacy policy',
+            description:
+                'What stays on your device and what is sent to services',
             onTap: () => _push(
               context,
               (_) =>
@@ -158,6 +173,7 @@ class HelpSupportScreen extends StatelessWidget {
           SettingsTile(
             icon: Symbols.gavel_rounded,
             title: 'Terms of use',
+            description: 'Rules for using the app, add-ons and media sources',
             onTap: () => _push(
               context,
               (_) =>

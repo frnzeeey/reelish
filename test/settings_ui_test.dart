@@ -138,12 +138,7 @@ void main() {
       'Appearance',
       'Playback',
       'Subtitle addons',
-      'About Reelish',
-      'Credits & attribution',
-      'Open-source licenses',
-      'Privacy policy',
-      'Terms of use',
-      'Support development',
+      'Help & Support',
     ]) {
       await _scrollTo(tester, find.text(label));
       expect(find.text(label), findsOneWidget, reason: label);

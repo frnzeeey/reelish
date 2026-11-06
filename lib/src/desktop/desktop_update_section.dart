@@ -10,7 +10,7 @@ import '../widgets/settings/settings_components.dart';
 import '../widgets/update_dialog.dart';
 import 'desktop_update_dialogs.dart';
 
-/// Settings → About on Windows: version, update status, last check, the
+/// About on Windows: version, update status, last check, the
 /// update action for the current state, and the automatic-check switch.
 class WindowsUpdateSection extends StatefulWidget {
   const WindowsUpdateSection({

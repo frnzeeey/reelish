@@ -24,7 +24,7 @@ graph LR
   desktop["desktop"] -->|1| account["account"]
   desktop["desktop"] -->|12| models["models"]
   desktop["desktop"] -->|2| navigation["navigation"]
-  desktop["desktop"] -->|9| screens["screens"]
+  desktop["desktop"] -->|6| screens["screens"]
   desktop["desktop"] -->|2| screens_watch_party["screens/watch_party"]
   desktop["desktop"] -->|14| services["services"]
   desktop["desktop"] -->|14| theme["theme"]
@@ -129,7 +129,7 @@ graph LR
 | `account` | `models` (1), `platform` (1), `services` (2) |
 | `analytics` | nothing outside itself |
 | `app` | `services` (5) |
-| `desktop` | `account` (1), `models` (12), `navigation` (2), `screens` (9), `screens/watch_party` (2), `services` (14), `theme` (14), `viewmodels` (4), `watch_party` (1), `widgets` (16), `widgets/settings` (3) |
+| `desktop` | `account` (1), `models` (12), `navigation` (2), `screens` (6), `screens/watch_party` (2), `services` (14), `theme` (14), `viewmodels` (4), `watch_party` (1), `widgets` (16), `widgets/settings` (3) |
 | `models` | nothing outside itself |
 | `navigation` | nothing outside itself |
 | `notifications` | `account` (4), `analytics` (2), `platform` (1), `services` (2) |
@@ -166,7 +166,7 @@ The files imported by the most other `lib/` files. A change to one of these reac
 | [`lib/src/widgets/artwork_image.dart`](../../lib/src/widgets/artwork_image.dart) | 14 | 5 |
 | [`lib/src/account/account_controller.dart`](../../lib/src/account/account_controller.dart) | 13 | 8 |
 | [`lib/src/services/tmdb_service.dart`](../../lib/src/services/tmdb_service.dart) | 12 | 17 |
-| [`lib/src/analytics/analytics_service.dart`](../../lib/src/analytics/analytics_service.dart) | 11 | 2 |
+| [`lib/src/analytics/analytics_service.dart`](../../lib/src/analytics/analytics_service.dart) | 11 | 3 |
 | [`lib/src/analytics/analytics_events.dart`](../../lib/src/analytics/analytics_events.dart) | 10 | 2 |
 | [`lib/src/desktop/desktop_widgets.dart`](../../lib/src/desktop/desktop_widgets.dart) | 10 | 5 |
 | [`lib/src/models/media_details.dart`](../../lib/src/models/media_details.dart) | 9 | 6 |

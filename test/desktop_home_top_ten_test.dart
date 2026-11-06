@@ -293,6 +293,7 @@ void main() {
         'add-source',
         'row:top10',
         'row:trending',
+        'join-party',
         'row:movies',
         'row:series',
         'row:releases',
@@ -305,6 +306,7 @@ void main() {
         containsAll([
           'hero',
           'row:top10',
+          'join-party',
           'row:movies',
           'row:series',
           'row:releases',

@@ -10,7 +10,7 @@ through Google Analytics for Firebase. Windows sends nothing.
 | Event catalog and parameter rules | `lib/src/analytics/analytics_events.dart` |
 | Consent, the channel, deduplication | `lib/src/analytics/analytics_service.dart` |
 | One-time question | `lib/src/widgets/analytics_consent_dialog.dart`, asked from Home after its first frame, before the update check |
-| Settings switch | "Share usage statistics" under Settings › Legal (`playback_settings_screen.dart`), shown only where analytics can run |
+| Settings switch | "Share usage statistics" under Settings › General (`playback_settings_screen.dart`), shown only where analytics can run |
 | Native side | `android/app/src/main/kotlin/com/example/onfeed/AnalyticsChannel.kt` (method channel `onfeed/analytics`) |
 | Build configuration | `REELISH_FIREBASE_*` in `android/app/build.gradle.kts`; manifest switches in `AndroidManifest.xml` |
 

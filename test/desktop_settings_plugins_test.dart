@@ -5,6 +5,8 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:onfeed/src/desktop/desktop_plugins_page.dart';
 import 'package:onfeed/src/desktop/desktop_settings_page.dart';
 import 'package:onfeed/src/models/provider_plugin.dart';
+import 'package:onfeed/src/screens/app_information_screens.dart';
+import 'package:onfeed/src/screens/help_support_screen.dart';
 import 'package:onfeed/src/screens/playback_settings_screen.dart';
 import 'package:onfeed/src/screens/plugin_library_screen.dart';
 import 'package:onfeed/src/services/accent_settings_controller.dart';
@@ -116,7 +118,7 @@ void main() {
       for (final section in DesktopSettingsSection.values) {
         expect(find.text(section.title), findsWidgets, reason: section.title);
       }
-      expect(find.text('Open-source licenses'), findsOneWidget);
+      expect(find.text('Join a watch party'), findsOneWidget);
       expect(find.byType(AppearanceSettingsScreen), findsOneWidget);
       // The pane is the way back, so the page has no Back of its own.
       expect(find.byTooltip('Back'), findsNothing);
@@ -141,11 +143,36 @@ void main() {
 
     testWidgets('the keyboard moves through the categories', (tester) async {
       await _pump(tester, page());
-      Focus.of(tester.element(find.text('Terms of use'))).requestFocus();
+      Focus.of(tester.element(find.text('Help & Support'))).requestFocus();
       await tester.pump();
       await tester.sendKeyEvent(LogicalKeyboardKey.enter);
       await tester.pumpAndSettle();
-      expect(find.textContaining('Content disclaimer'), findsWidgets);
+      expect(find.byType(HelpSupportScreen), findsOneWidget);
+    });
+
+    testWidgets('About, opened from Help, has its own way back', (
+      tester,
+    ) async {
+      await _pump(tester, page());
+      await tester.tap(find.text('Help & Support'));
+      await tester.pumpAndSettle();
+      // Inside the pane the rail is the way back.
+      expect(find.byTooltip('Back'), findsNothing);
+
+      await tester.scrollUntilVisible(
+        find.text('About Reelish'),
+        200,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.tap(find.text('About Reelish'));
+      await tester.pumpAndSettle();
+      expect(find.byType(AboutScreen), findsOneWidget);
+
+      // Over the window it needs one, or the page has no way out.
+      await tester.tap(find.byTooltip('Back').last);
+      await tester.pumpAndSettle();
+      expect(find.byType(AboutScreen), findsNothing);
+      expect(find.byType(HelpSupportScreen), findsOneWidget);
     });
 
     testWidgets('a title cut to fit stays clear of its external-link icon', (
@@ -153,8 +180,8 @@ void main() {
     ) async {
       // The page's width in a 1024 px window, beside the compact rail.
       await _pump(tester, page(), size: const Size(944, 700));
-      final title = tester.getRect(find.text('Open-source licenses'));
-      // The licenses row's icon (other rows open something too).
+      final title = tester.getRect(find.text('Join a watch party'));
+      // The row's icon (other rows open something too).
       final icon = find
           .byIcon(Symbols.open_in_new_rounded)
           .evaluate()

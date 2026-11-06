@@ -108,7 +108,7 @@ workflow is what prevents such a release from existing.
   `gh release download vX.Y.Z -p 'reelish.apk*' && sha256sum -c reelish.apk.sha256`
 - The release author is `github-actions[bot]`, and the notes link the
   workflow run that built it.
-- In the app, **Settings > About** shows the tag and commit compiled into
+- In the app, **Settings > Help & Support > About Reelish** shows the tag and commit compiled into
   the build.
 
 ## Repository secrets
@@ -180,5 +180,5 @@ SHA-256 digest GitHub reports for it, then the APK itself is checked as
 described under "Never release by hand".
 
 Checks run in the background after the home screen appears and on resume,
-at most once every 6 hours; **Settings > About > Check for updates** always
+at most once every 6 hours; **Settings > Help & Support > About Reelish > Check for updates** always
 asks GitHub. A failed check never blocks the app.

@@ -5,10 +5,7 @@ import '../account/account_controller.dart';
 import '../navigation/app_transitions.dart';
 import '../screens/account_settings_screen.dart';
 import '../screens/notification_settings_screen.dart';
-import '../screens/app_information_screens.dart';
 import '../screens/help_support_screen.dart';
-import '../screens/credits_screen.dart';
-import '../screens/legal_information_screen.dart';
 import '../screens/playback_settings_screen.dart';
 import '../screens/subtitle_addons_screen.dart';
 import '../screens/watch_party/join_party_screen.dart';
@@ -46,31 +43,10 @@ enum DesktopSettingsSection {
     'Stremio subtitle sources searched while you watch',
     Symbols.closed_caption_rounded,
   ),
-  about('About Reelish', 'Version, build and updates', Symbols.info_rounded),
-  credits(
-    'Credits & attribution',
-    'TMDB, third-party services and acknowledgments',
-    Symbols.handshake_rounded,
-  ),
-  privacy(
-    'Privacy policy',
-    'What stays on your device and what is sent to services',
-    Symbols.shield_rounded,
-  ),
-  terms(
-    'Terms of use',
-    'Rules for using the app, add-ons and media sources',
-    Symbols.gavel_rounded,
-  ),
   help(
     'Help & Support',
-    'Get help, report problems, and learn about Reelish',
+    'FAQs, contact, About, privacy policy and terms',
     Symbols.support_rounded,
-  ),
-  support(
-    'Support development',
-    'Optional help with development and server costs',
-    Symbols.favorite_rounded,
   );
 
   const DesktopSettingsSection(this.title, this.description, this.icon);
@@ -83,7 +59,7 @@ enum DesktopSettingsSection {
 /// Settings on Windows: the categories of the phone and TV Settings list
 /// on the left, the chosen one beside them, so a change and its effect are
 /// on screen together. Each category is the same page the other platforms
-/// open (Appearance, Playback, Subtitle addons, About, …), so every setting,
+/// open (Appearance, Playback, Subtitle addons, Help, …), so every setting,
 /// value and saved preference is the one they use. Pages those open further
 /// still open over the window, where Esc closes them.
 class DesktopSettingsPage extends StatefulWidget {
@@ -119,12 +95,7 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
       'PLAYBACK',
       [DesktopSettingsSection.playback, DesktopSettingsSection.subtitles],
     ),
-    (
-      'ABOUT & INFORMATION',
-      [DesktopSettingsSection.about, DesktopSettingsSection.credits],
-    ),
-    ('LEGAL', [DesktopSettingsSection.privacy, DesktopSettingsSection.terms]),
-    ('SUPPORT', [DesktopSettingsSection.help, DesktopSettingsSection.support]),
+    ('SUPPORT', [DesktopSettingsSection.help]),
   ];
 
   Widget _page(DesktopSettingsSection section) => switch (section) {
@@ -146,16 +117,7 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
       onBack: () {},
     ),
     DesktopSettingsSection.subtitles => const SubtitleAddonsScreen(),
-    DesktopSettingsSection.about => const AboutScreen(),
-    DesktopSettingsSection.credits => const CreditsScreen(),
-    DesktopSettingsSection.privacy => const LegalInformationScreen(
-      document: LegalDocument.privacy,
-    ),
-    DesktopSettingsSection.terms => const LegalInformationScreen(
-      document: LegalDocument.terms,
-    ),
     DesktopSettingsSection.help => const HelpSupportScreen(),
-    DesktopSettingsSection.support => const SupportDevelopmentScreen(),
   };
 
   @override
@@ -168,7 +130,7 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
           SizedBox(
             width: railWidth,
             child: FocusTraversalGroup(
-              // A dozen rows: all built, so each is a Tab stop at once.
+              // Few rows: all built, so each is a Tab stop at once.
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(20, 0, 12, 28),
                 child: Column(
@@ -201,14 +163,6 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
                               builder: (_) => const JoinPartyScreen(),
                             ),
                           ),
-                        ),
-                      if (label == 'ABOUT & INFORMATION')
-                        _RailItem.action(
-                          title: 'Open-source licenses',
-                          description:
-                              'Licenses for Flutter, packages and fonts',
-                          icon: Symbols.code_rounded,
-                          onTap: () => showAppLicenses(context),
                         ),
                     ],
                   ],
