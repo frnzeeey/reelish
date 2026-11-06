@@ -356,6 +356,9 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
   /// stream drops during playback.
   final Map<String, List<DateTime>> _runtimeRetries = {};
 
+  /// Fresh lookups left for links that stopped working during this session.
+  final LinkRefreshBudget _linkRefresh = LinkRefreshBudget();
+
   /// Off restores the behaviour before stall recovery: a stream that stops
   /// delivering without an error leaves the spinner up until the viewer acts.
   static const _recoverStalls = true;
@@ -477,6 +480,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
           '${PlaybackLog.describe(source)}',
     );
     if (!mounted) return;
+    _metrics.interrupted();
     final previousOpen = _openCancellation;
     if (previousOpen != null && !previousOpen.isCompleted) {
       previousOpen.complete();
@@ -496,6 +500,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
       // Cleanup failure should not prevent trying the newly selected source.
     }
     if (old != null) {
+      _metrics.closed(attemptClock.elapsed);
       PlaybackLog.log(
         'Player',
         'previous player closed after ${attemptClock.elapsedMilliseconds}ms',
@@ -568,6 +573,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
             'since screen open) type=${playable.streamType.name} '
             'engine=${attemptEngine.id.name}',
       );
+      _metrics.opened(attemptClock.elapsed);
       _controller = c;
       _bindEmbeddedSubtitles(c);
       // Track menus are optional. Query both concurrently and never make
@@ -650,6 +656,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
       // A play request the engine never answers would leave the viewer on
       // the loading screen. It fails as an engine problem, so the other
       // engine gets the same source before another source is tried.
+      _metrics.playRequested();
       await c.play().timeout(
         const Duration(seconds: 10),
         onTimeout: () => throw const EngineStartTimeout(),
@@ -813,10 +820,13 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
     // screen until the player closed. The next player turns it back on.
     if (_desktop) _setKeepScreenOn(false);
     _unbindEmbeddedSubtitles();
+    _metrics.interrupted();
+    final closeClock = Stopwatch()..start();
     try {
       await failedController?.dispose();
       await _torrentSession?.stop();
     } catch (_) {}
+    if (failedController != null) _metrics.closed(closeClock.elapsed);
     _torrentSession = null;
     if (!mounted || generation != _initializationGeneration) return;
 
@@ -831,10 +841,16 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
           'detail="${_safePlaybackError(error.toString())}"',
     );
     if (failure.kind == PlaybackFailureKind.cancelled) return;
+    if (wasPlaying) {
+      _metrics.recovering();
+      _linkRefresh.played(_sourceKey(failedCandidate));
+    }
 
-    // Reconnecting cannot help a picture that was never drawn.
+    // Reconnecting cannot help a picture that was never drawn, or a link the
+    // server has refused.
     if (wasPlaying &&
         failure.kind != PlaybackFailureKind.rendering &&
+        !failure.linkRejected &&
         _allowReconnect(failedCandidate)) {
       final attempt = _runtimeRetries[_sourceKey(failedCandidate)]!.length;
       final delay = Duration(seconds: attempt == 1 ? 1 : 3);
@@ -860,6 +876,8 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
     if (await _refreshAfterCachedFailure(failedCandidate)) return;
     // Rediscovery can take seconds; the viewer may have left or picked
     // another source meanwhile.
+    if (!mounted || generation != _initializationGeneration) return;
+    if (await _refreshDeadLink(failedCandidate, failure)) return;
     if (!mounted || generation != _initializationGeneration) return;
 
     final alternateEngine = PlayerEngineFactory.alternateFor(failedEngine);
@@ -908,6 +926,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
 
     if (!mounted || generation != _initializationGeneration) return;
     final attempted = _playbackCoordinator.attemptedCount;
+    _metrics.gaveUp();
     setState(() {
       _error = true;
       _errorMessage = attempted > 1
@@ -1271,6 +1290,22 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
     _cachedRefreshAttempted = true;
     PlaybackLog.log('Fallback', 'cached link failed; rediscovering sources');
     return _rediscoverAndPlay();
+  }
+
+  /// A source that was playing and no longer opens usually has an expired
+  /// link. Asks the providers for a fresh one and returns to the same source
+  /// where it can, before anything else is tried. [_initialize] resumes at
+  /// the last position.
+  Future<bool> _refreshDeadLink(
+    StreamSource failed,
+    PlaybackFailure failure,
+  ) async {
+    if (failed.isTorrent || !_linkRefresh.take(_sourceKey(failed), failure)) {
+      return false;
+    }
+    PlaybackLog.log('Fallback', 'link stopped working; rediscovering sources');
+    setState(() => _ready = false);
+    return _rediscoverAndPlay(prefer: failed);
   }
 
   late final TorrentSourcePreparer _torrents = TorrentSourcePreparer(
@@ -2943,6 +2978,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
       return;
     }
     _metrics.buffering(_ready && c.value.isPlaying && c.value.isBuffering);
+    _metrics.playing(_ready && c.value.isPlaying && !c.value.isBuffering);
     // Playing (not paused, not being scrubbed) yet buffering in place.
     _stallWatchdog?.update(
       stalled:

@@ -88,6 +88,31 @@ class EnginePreference {
   }
 }
 
+/// Bounds fresh provider lookups for links that stopped working during a
+/// session. Signed links expire, so a source that played can fail to reopen
+/// after a long pause or a dropped connection; only a source that really
+/// played qualifies, and only twice per session.
+class LinkRefreshBudget {
+  static const maxPerSession = 2;
+
+  final Set<String> _played = {};
+  int _used = 0;
+
+  /// [sourceKey] was playing when it failed.
+  void played(String sourceKey) => _played.add(sourceKey);
+
+  /// Spends one refresh when one may help [sourceKey] after [failure].
+  bool take(String sourceKey, PlaybackFailure failure) {
+    if (_used >= maxPerSession ||
+        !_played.contains(sourceKey) ||
+        !failure.linkMayHaveDied) {
+      return false;
+    }
+    _used++;
+    return true;
+  }
+}
+
 class PlaybackFailure {
   const PlaybackFailure(this.kind, this.original, {this.statusCode});
 
@@ -112,6 +137,25 @@ class PlaybackFailure {
     PlaybackFailureKind.decoder ||
     PlaybackFailureKind.rendering ||
     PlaybackFailureKind.engine ||
+    PlaybackFailureKind.source ||
+    PlaybackFailureKind.unknown => true,
+    _ => false,
+  };
+
+  /// The server refused this link or no longer has it. A reconnect would get
+  /// the same answer; a fresh link from the provider may not.
+  bool get linkRejected =>
+      kind == PlaybackFailureKind.http &&
+      const {401, 403, 404, 410}.contains(statusCode);
+
+  /// Whether this failure can mean that a link which was playing stopped
+  /// working, as opposed to a problem with the media itself.
+  bool get linkMayHaveDied => switch (kind) {
+    PlaybackFailureKind.preparation ||
+    PlaybackFailureKind.http ||
+    PlaybackFailureKind.network ||
+    PlaybackFailureKind.timeout ||
+    PlaybackFailureKind.manifest ||
     PlaybackFailureKind.source ||
     PlaybackFailureKind.unknown => true,
     _ => false,

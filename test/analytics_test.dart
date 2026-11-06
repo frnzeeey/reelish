@@ -237,6 +237,9 @@ void main() {
         'rebuffers': 1,
         'rebuffer_ms': 500,
         'stalls': 0,
+        'rebuffer_pct': 100,
+        'recoveries': 0,
+        'recovered': 0,
         'watched_pct': 90,
         'watch_party': 0,
       });
@@ -260,6 +263,22 @@ void main() {
             .parameters['outcome'],
         'abandoned',
       );
+    });
+
+    test('playback that fails for good after starting is interrupted, unless '
+        'a later source plays', () {
+      final metrics = PlaybackMetrics()
+        ..firstFrame('mediaKit')
+        ..recovering()
+        ..gaveUp();
+      Map<String, Object> parameters() =>
+          metrics.event(contentType: 'movie', itemId: '1').parameters;
+      expect(parameters()['outcome'], 'interrupted');
+      expect(parameters()['recoveries'], 1);
+      expect(parameters()['recovered'], 0);
+
+      metrics.firstFrame('mediaKit');
+      expect(parameters()['outcome'], 'played');
     });
 
     test('a session is reported once', () async {

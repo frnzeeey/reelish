@@ -31,6 +31,9 @@ enum PlaybackOutcome {
 
   /// Closed before a first frame, without a failure.
   abandoned,
+
+  /// A first frame was shown, then playback failed for good.
+  interrupted,
 }
 
 class AnalyticsEvent {
@@ -77,6 +80,10 @@ class AnalyticsEvent {
     int rebuffers = 0,
     int rebufferMs = 0,
     int stalls = 0,
+    int? playToFrameMs,
+    int? rebufferPercent,
+    int recoveries = 0,
+    int recovered = 0,
     String failure = '',
     int? watchedPercent,
     bool watchParty = false,
@@ -89,6 +96,10 @@ class AnalyticsEvent {
     'rebuffers': rebuffers,
     'rebuffer_ms': rebufferMs,
     'stalls': stalls,
+    'play_to_frame_ms': ?playToFrameMs,
+    'rebuffer_pct': ?rebufferPercent,
+    'recoveries': recoveries,
+    'recovered': recovered,
     if (failure.isNotEmpty) 'failure': failure,
     'watched_pct': ?watchedPercent,
     'watch_party': watchParty ? 1 : 0,

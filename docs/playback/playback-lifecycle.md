@@ -17,7 +17,7 @@ stateDiagram-v2
   Playing --> Paused: viewer pauses
   Paused --> Playing: viewer resumes
   Playing --> Recovering: engine error / no picture
-  Recovering --> Opening: reconnect, other engine or next source
+  Recovering --> Opening: reconnect, fresh link, other engine or next source
   Recovering --> Failed: budget spent or not retryable
   Failed --> Opening: Retry / pick a source
   Playing --> Switching: next episode / episode panel
