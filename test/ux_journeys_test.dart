@@ -16,6 +16,7 @@ import 'package:onfeed/src/screens/app_information_screens.dart';
 import 'package:onfeed/src/screens/credits_screen.dart';
 import 'package:onfeed/src/screens/first_run_consent_screen.dart';
 import 'package:onfeed/src/screens/legal_information_screen.dart';
+import 'package:onfeed/src/screens/supporters_screen.dart';
 import 'package:onfeed/src/screens/playback_settings_screen.dart';
 import 'package:onfeed/src/screens/help_support_screen.dart';
 import 'package:onfeed/src/screens/home_screen.dart';
@@ -805,7 +806,7 @@ void main() {
         'Open-source licenses',
         'Privacy policy',
         'Terms of use',
-        'Support development',
+        'Reelish Supporters',
       ]) {
         expect(find.text(moved), findsNothing, reason: moved);
       }
@@ -851,7 +852,7 @@ void main() {
 
     for (final (entry, screen) in const [
       ('About Reelish', AboutScreen),
-      ('Support development', SupportDevelopmentScreen),
+      ('Reelish Supporters', SupportersScreen),
       ('Privacy policy', LegalInformationScreen),
       ('Terms of use', LegalInformationScreen),
     ]) {

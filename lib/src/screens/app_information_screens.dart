@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
 import '../theme/reelish_icons.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -158,64 +157,6 @@ class AboutScreen extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    ],
-  );
-}
-
-class SupportDevelopmentScreen extends StatelessWidget {
-  const SupportDevelopmentScreen({super.key});
-
-  static final _coffeeUri = Uri.https('www.buymeacoffee.com', '/frnzegl');
-
-  Future<void> _openCoffeePage(BuildContext context) async {
-    if (!await launchUrl(_coffeeUri, mode: LaunchMode.externalApplication) &&
-        context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not open the support page.')),
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) => SettingsScaffold(
-    title: 'Support development',
-    subtitle: 'Completely optional.',
-    icon: ReelishIcons.heart,
-    children: [
-      const SettingsSection(
-        label: 'A LITTLE SUPPORT GOES A LONG WAY',
-        children: [
-          SettingsParagraph(
-            text:
-                'If you enjoy Reelish, you can help with ongoing development '
-                'and server costs. Support is completely optional and does not '
-                'unlock features or content.',
-          ),
-        ],
-      ),
-      SizedBox(
-        height: 54,
-        child: FilledButton.icon(
-          onPressed: () => _openCoffeePage(context),
-          icon: const Icon(ReelishIcons.coffee),
-          label: const Text('Buy me a coffee'),
-          style: FilledButton.styleFrom(
-            textStyle: const TextStyle(
-              fontFamily: GlassTheme.fontFamily,
-              fontWeight: FontWeight.w700,
-            ),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-          ),
-        ),
-      ),
-      const SizedBox(height: 8),
-      const Text(
-        'Opens buymeacoffee.com in your browser.',
-        textAlign: TextAlign.center,
-        style: TextStyle(color: GlassTheme.muted, fontSize: 11.5),
       ),
     ],
   );

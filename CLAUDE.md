@@ -62,6 +62,11 @@ the interface once per launch:
   cannot safely rotate a refresh token; a lost Trakt grant answers 409, not
   401, so the app is not signed out. Docs: `docs/backend/README.md`
   (routes, Watch Party protocol) and `docs/backend/operations.md`.
+- **Supporters:** the Supporter Badge is set only by Buy Me a Coffee's signed
+  webhook, or the owner's `backend/scripts/grant-supporter.mjs`; never by the
+  app. A donation names its account through a code in the donor's message,
+  since the platform has no metadata. It unlocks nothing. Docs:
+  `docs/backend/supporters.md`.
 - **Environments:** `staging` and `production` in `backend/wrangler.toml`
   (release builds point at production via the `REELISH_API_URL` repository
   variable). Deploy and migrate staging first; touch production only when

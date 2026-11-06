@@ -116,6 +116,11 @@ its own).
 | `GET /api/v1/me` | Bearer | `{user, traktLinked, sessionId}` |
 | `DELETE /api/v1/me` | Bearer | Revoke Trakt access, delete the account and its sessions |
 | `GET /api/v1/trakt/watchlist` | Bearer | `{items: [{type, tmdbId, listedAt}]}` (`movie` or `series`) |
+| `POST /api/v1/webhooks/buymeacoffee` | Signature | Buy Me a Coffee events ([supporters](supporters.md)); 503 until configured |
+| `GET /api/v1/supporters/me` | Bearer | `{code, status, since, recognition}`; `status` is `none`, `pending` or `verified` |
+| `POST /api/v1/supporters/claim` | Bearer | Asks for a review; shows as pending, grants nothing |
+| `PUT /api/v1/supporters/recognition` | Bearer | `{listed, name}`; supporters only (409) |
+| `GET /api/v1/supporters/public` | Bearer | `{supporters: [{name, since}]}`, opted-in only |
 | `POST /api/v1/trakt/watchlist` | Bearer | `{add, remove}` (≤ 100 `{type, tmdbId}` each) → `{added, removed, notFound}`; 409 `trakt_limit` or `trakt_reauth_required` |
 | `POST /api/v1/notifications/token` | Bearer | `{token}`: an episode-check token for this session (replaces the previous one) |
 | `POST /api/v1/notifications/episodes` | Alert token | `{series: [tmdbId] (≤ 150), popular}` → each series' `lastEpisode`, and TMDB's popular series when asked |

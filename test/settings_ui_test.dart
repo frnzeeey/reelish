@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:onfeed/src/screens/app_information_screens.dart';
 import 'package:onfeed/src/screens/credits_screen.dart';
 import 'package:onfeed/src/screens/legal_information_screen.dart';
+import 'package:onfeed/src/screens/supporters_screen.dart';
 import 'package:onfeed/src/screens/playback_settings_screen.dart';
 import 'package:onfeed/src/screens/subtitle_addons_screen.dart';
 import 'package:onfeed/src/services/accent_settings_controller.dart';
@@ -232,7 +233,7 @@ void main() {
     addTearDown(accent.dispose);
     final screens = <String, Widget>{
       'About': const AboutScreen(),
-      'Support': const SupportDevelopmentScreen(),
+      'Supporters': const SupportersScreen(),
       'Privacy': const LegalInformationScreen(document: LegalDocument.privacy),
       'Terms': const LegalInformationScreen(document: LegalDocument.terms),
       'Subtitles': const SubtitleAddonsScreen(),

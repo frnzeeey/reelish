@@ -290,6 +290,38 @@ class AccountApi {
     return id;
   }
 
+  Future<Map<String, dynamic>> supporterStatus(String accessToken) =>
+      _send('GET', '/supporters/me', token: accessToken);
+
+  Future<Map<String, dynamic>> requestSupporterReview(String accessToken) =>
+      _send('POST', '/supporters/claim', token: accessToken, body: const {});
+
+  Future<Map<String, dynamic>> setSupporterRecognition(
+    String accessToken, {
+    required bool listed,
+    required String name,
+  }) => _send(
+    'PUT',
+    '/supporters/recognition',
+    token: accessToken,
+    body: {'listed': listed, 'name': name},
+  );
+
+  Future<List<({String name, String since})>> publicSupporters(
+    String accessToken,
+  ) async {
+    final body = await _send('GET', '/supporters/public', token: accessToken);
+    final people = body['supporters'];
+    return [
+      if (people is List)
+        for (final person in people)
+          if (person is Map &&
+              person['name'] is String &&
+              person['since'] is String)
+            (name: person['name'] as String, since: person['since'] as String),
+    ];
+  }
+
   Future<void> logout(String accessToken) =>
       _send('POST', '/auth/logout', token: accessToken);
 

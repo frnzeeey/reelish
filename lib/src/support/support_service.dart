@@ -19,6 +19,18 @@ abstract final class SupportConfig {
     'REELISH_SUPPORT_EMAIL',
     defaultValue: 'reelishofficial@gmail.com',
   );
+
+  /// The Buy Me a Coffee page. Every link to it comes from here.
+  static const donationUrl = String.fromEnvironment(
+    'REELISH_DONATION_URL',
+    defaultValue: 'https://www.buymeacoffee.com/frnzegl',
+  );
+  static Uri get donationPage => Uri.parse(donationUrl);
+
+  /// The page's address without the scheme, for reading off a screen.
+  static String get donationPageLabel =>
+      donationUrl.replaceFirst(RegExp('^https?://(www\\.)?'), '');
+
   static Uri get projectPage => Uri.parse(AppMetadata.projectUrl);
   static Uri get releaseNotes =>
       Uri.parse('${AppMetadata.projectUrl}/releases');

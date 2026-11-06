@@ -17,6 +17,7 @@ import '../theme/glass_theme.dart';
 import '../widgets/settings/settings_components.dart';
 import 'app_information_screens.dart';
 import 'legal_information_screen.dart';
+import 'supporters_screen.dart';
 
 void _push(BuildContext context, WidgetBuilder builder) => unawaited(
   Navigator.of(
@@ -150,10 +151,9 @@ class HelpSupportScreen extends StatelessWidget {
           ),
           SettingsTile(
             icon: ReelishIcons.heart,
-            title: 'Support development',
+            title: 'Reelish Supporters',
             description: 'Optional help with development and server costs',
-            onTap: () =>
-                _push(context, (_) => const SupportDevelopmentScreen()),
+            onTap: () => _push(context, (_) => const SupportersScreen()),
           ),
           // Windows only: there, errors stay in a log on this computer.
           if (CrashReporter.instance.localLog case final log?)

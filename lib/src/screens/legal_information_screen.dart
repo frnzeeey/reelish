@@ -344,9 +344,26 @@ class _LegalInformationScreenState extends State<LegalInformationScreen> {
           'it from Help & Support.',
     ),
     (
+      'Supporting Reelish (optional)',
+      'Donations are made on Buy Me a Coffee, which handles your payment and '
+          'your details under its own policies; Reelish never sees your card. '
+          'When you donate, Buy Me a Coffee tells the Reelish API that a '
+          'donation succeeded. If your message contains your supporter code, '
+          'your account receives the Supporter Badge. Reelish keeps only a '
+          'one-way reference to the donation, its date and whether it was '
+          'refunded, and not the amount, your name, your email address or your '
+          'message. Your badge and the date you became a supporter are stored '
+          'with your account and are deleted with it. A refunded donation no '
+          'longer counts. You appear on the supporters list only if you turn '
+          'that on, under a name you choose, which anyone using Reelish can '
+          'see; you can turn it off at any time. If you ask for a review by '
+          'email, the email is used only to check your donation.',
+    ),
+    (
       'Third-party services and add-ons',
       'Trakt, TMDB, Cloudflare (which hosts the Reelish API), Google '
-          '(usage statistics and crash reports, only if you agree), OpenSubtitles, '
+          '(usage statistics and crash reports, only if you agree), Buy Me a '
+          'Coffee (only if you donate), OpenSubtitles, '
           'add-on publishers, media hosts, torrent peers, GitHub, and your '
           'device platform operate independently. Their privacy practices, '
           'logs, retention and locations are governed by their own policies. '

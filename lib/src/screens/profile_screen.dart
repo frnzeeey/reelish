@@ -5,19 +5,25 @@
 // nothing itself: managing the account goes to the existing Profile and
 // account page.
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../theme/reelish_icons.dart';
 
 import '../account/account_controller.dart';
 import '../account/profile_controller.dart';
+import '../account/supporter_controller.dart';
 import '../models/media_item.dart';
 import '../navigation/app_transitions.dart';
+import '../platform/device_capabilities.dart';
 import '../services/storage_service.dart';
 import '../theme/design_tokens.dart';
 import '../theme/glass_theme.dart';
 import '../widgets/profile_avatar.dart';
 import '../widgets/settings/settings_components.dart';
+import '../widgets/supporter_badge.dart';
 import 'account_settings_screen.dart';
+import 'supporters_screen.dart';
 
 /// What the library holds, counted from this device's history and My list.
 @immutable
@@ -291,6 +297,7 @@ class _ProfileHero extends StatelessWidget {
                             // Trakt usernames often repeat the person's name,
                             // so the badge names the service, not the user.
                             const _TraktBadge(),
+                            const _SupporterLine(),
                             const SizedBox(height: AppSpace.sm),
                             FilledButton.icon(
                               style: FilledButton.styleFrom(
@@ -347,6 +354,48 @@ class _ProfileHero extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The badge of a verified supporter, and nothing for anyone else: a profile
+/// is no place to ask for money. Tapping it opens the Supporters page.
+class _SupporterLine extends StatefulWidget {
+  const _SupporterLine();
+
+  @override
+  State<_SupporterLine> createState() => _SupporterLineState();
+}
+
+class _SupporterLineState extends State<_SupporterLine> {
+  final _supporters = SupporterController.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_supporters.refresh());
+  }
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: _supporters,
+    builder: (context, _) {
+      if (!_supporters.isSupporter) return const SizedBox.shrink();
+      return Padding(
+        padding: const EdgeInsets.only(top: AppSpace.xs),
+        child: SupporterBadge(
+          tv: DeviceCapabilities.isTv,
+          onTap: () => unawaited(
+            Navigator.push(
+              context,
+              AppPageRoute<void>(
+                context: context,
+                builder: (_) => const SupportersScreen(),
+              ),
+            ),
+          ),
+        ),
+      );
+    },
+  );
 }
 
 /// The account behind the profile: signed in with Trakt. The username
