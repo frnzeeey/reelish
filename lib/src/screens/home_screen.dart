@@ -987,6 +987,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           episode: episode,
           imdbId: imdbId,
           details: details,
+          advisory: _tmdb.contentAdvisory(item),
           // Every episode change (the panel, Previous/Next, auto-play)
           // goes through this same flow.
           onPlayEpisode: season == null || episode == null

@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../account/account_controller.dart';
 import '../account/backend_config.dart';
+import '../models/content_advisory.dart';
 import '../models/media_details.dart';
 import '../models/media_item.dart';
 import 'media_catalog_rules.dart';
@@ -595,6 +596,31 @@ class TmdbService {
           : (value) => onRevalidated(MediaDetails.fromTmdb(value)),
     );
     return MediaDetails.fromTmdb(data);
+  }
+
+  /// The title's age rating and any content descriptors for the player, or
+  /// null when there are none or they could not be fetched. Never throws;
+  /// playback does not wait for this or need it. An episode gets its series'
+  /// rating: TMDB does not rate episodes.
+  Future<ContentAdvisory?> contentAdvisory(MediaItem item) async {
+    try {
+      final series = item.type == 'series';
+      final resolvedId = int.tryParse(item.id) == null
+          ? await resolveTmdbId(item)
+          : item.id;
+      final id = Uri.encodeComponent(resolvedId.isEmpty ? item.id : resolvedId);
+      final data = await _get(
+        series ? '/tv/$id/content_ratings' : '/movie/$id/release_dates',
+        ttl: TmdbCacheTtl.metadata,
+        priority: _TmdbRequestPriority.deferred,
+      );
+      final region = PlatformDispatcher.instance.locale.countryCode;
+      return series
+          ? ContentAdvisory.fromSeries(data, region: region)
+          : ContentAdvisory.fromMovie(data, region: region);
+    } catch (_) {
+      return null;
+    }
   }
 
   /// The movie or series with TMDB id [tmdbId] as a list item, for titles

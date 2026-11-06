@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../models/content_advisory.dart';
 import '../models/episode_context.dart';
 import '../models/media_details.dart';
 import '../models/media_item.dart';
@@ -27,6 +28,7 @@ class PlayerScreen extends StatelessWidget {
     this.episode,
     this.imdbId,
     this.details,
+    this.advisory,
   });
   final MediaItem item;
   final StreamSource source;
@@ -44,6 +46,7 @@ class PlayerScreen extends StatelessWidget {
   final int? episode;
   final Future<String>? imdbId;
   final Future<MediaDetails?>? details;
+  final Future<ContentAdvisory?>? advisory;
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -66,6 +69,7 @@ class PlayerScreen extends StatelessWidget {
       episode: episode,
       imdbId: imdbId,
       details: details,
+      advisory: advisory,
     ),
   );
 }

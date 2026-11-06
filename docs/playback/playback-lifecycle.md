@@ -110,6 +110,8 @@ engine and torrent session (`_releaseEngine`), and calls `onPlayEpisode`,
 which runs `HomeScreen._openItem` again with an `EpisodeHandOff`: the new
 player replaces the old route, and the old one does not save again on
 dispose (`_progressHandedOff`), so the new episode stays "watched last".
+Being a new player, it also shows its own
+[content advisory](../features/content-advisory.md).
 
 ## Closing (`dispose`)
 

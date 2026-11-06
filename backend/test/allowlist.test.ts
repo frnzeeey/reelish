@@ -26,6 +26,11 @@ describe('TMDB allowlist', () => {
     ok('/movie/550/recommendations', 'page=2');
     ok('/tv/1399/images', 'include_image_language=en,null');
     ok('/tv/1399/season/3');
+    ok('/movie/550/release_dates');
+    ok('/tv/1399/content_ratings', 'language=en-US');
+    refused('/tv/1399/release_dates');
+    refused('/movie/550/content_ratings');
+    refused('/movie/550/release_dates', 'page=2');
     ok('/search/multi', 'query=the%20bear&page=2');
     ok('/find/tt0944947', 'external_source=imdb_id');
   });

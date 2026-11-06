@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 import 'package:flutter_go_torrent_streamer/flutter_go_torrent_streamer.dart';
 import 'package:video_player_media_kit/video_player_media_kit.dart';
+import '../../models/content_advisory.dart';
 import '../../diagnostics/crash_reporter.dart';
 import '../../diagnostics/playback_diagnostics.dart';
 import '../../models/episode_context.dart';
@@ -32,8 +33,10 @@ import '../../services/network_target_policy.dart';
 import '../../services/subtitle_addon_service.dart';
 import '../../services/subtitle_loader.dart';
 import '../../services/torrent_source_preparer.dart';
+import '../../theme/design_tokens.dart';
 import '../../watch_party/party_player_sync.dart';
 import 'audio_track_sheet.dart';
+import 'content_advisory_overlay.dart';
 import 'episode_panel.dart';
 import 'external_cue_clock.dart';
 import 'gesture_touch_layer.dart';
@@ -86,6 +89,7 @@ class CustomVideoPlayer extends StatefulWidget {
     this.episode,
     this.imdbId,
     this.details,
+    this.advisory,
   });
   final MediaItem item;
   final StreamSource source;
@@ -125,6 +129,10 @@ class CustomVideoPlayer extends StatefulWidget {
   /// the pause screen shows what the item itself carries until it resolves.
   final Future<MediaDetails?>? details;
 
+  /// The age rating and content advisory shown as playback starts. Optional;
+  /// playback never waits for it.
+  final Future<ContentAdvisory?>? advisory;
+
   /// Where a title resumes from its history entry: its saved position, or
   /// the beginning once watched (a rewatch, not the credits), as episodes
   /// do. A length that was never saved keeps the position.
@@ -152,6 +160,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
   /// Controls visibility. A notifier, so showing or hiding controls rebuilds
   /// only the overlay, never the video surface or the rest of the player.
   final ValueNotifier<bool> _controlsVisible = ValueNotifier(true);
+  final _advisory = ContentAdvisoryController();
 
   /// Controls lock against accidental touches. Session-only: every player
   /// (and so every episode) starts unlocked. It blocks touches, never
@@ -381,6 +390,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
   @override
   void initState() {
     super.initState();
+    unawaited(widget.advisory?.then(_advisory.provide, onError: (Object _) {}));
     _playback = widget.playbackSettings.value;
     _speed = _playback.defaultPlaybackSpeed;
     _subtitlePosition = ValueNotifier(_playback.subtitlePosition);
@@ -785,6 +795,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
       if (!noted && value.position > start) {
         noted = true;
         _metrics.firstFrame(engine.id.name);
+        _advisory.playbackStarted();
         CrashReporter.instance.setContext(
           CrashContext.playbackState,
           'playing',
@@ -2904,6 +2915,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
     // stopped listening to the settings it writes.
     _volumeApply?.cancel();
     if (_volumeSave != null) _saveVolume();
+    _advisory.dispose();
     CrashReporter.instance
       ..setContext(CrashContext.playbackState, null)
       ..setContext(CrashContext.playbackEngine, null);
@@ -2997,6 +3009,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
         final value = _controller?.value;
         if (mounted && value != null && _canShowPauseScreen(value)) {
           _pauseOverlay.value = true;
+          _advisory.dismiss();
         }
       });
     }
@@ -3323,6 +3336,15 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
                     ),
                   ),
                 ),
+              ),
+            // Under the controls, which never overlap it: it sits below the
+            // top bar, and below the party badge in a party.
+            if (playable)
+              ContentAdvisoryOverlay(
+                controller: _advisory,
+                controlsVisible: _controlsShown,
+                tv: _tv,
+                extraTop: _party == null ? 0 : AppSpace.xxl,
               ),
             // 6. Controls: always mounted while playable, faded in and out.
             // Locking hides them without unmounting.

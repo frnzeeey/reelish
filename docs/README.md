@@ -39,6 +39,7 @@ search the generated references below: every file, class and function in
 | [Caching](features/caching.md) | TMDB response and artwork caches: policies, decision, measurements |
 | [Usage statistics](features/analytics.md) | Opt-in Firebase Analytics on Android: events, privacy, setup, DebugView, cost |
 | [Icon system](design/icon-system.md) | Reelish's own icons: design rules, solid forms, how to add one, the gallery |
+| [Content advisory](features/content-advisory.md) | The age rating card at playback start: TMDB coverage, sourcing rules, behaviour |
 | [Crash reporting](features/crash-reporting.md) | Opt-in Crashlytics on Android, the Windows error log, what is reported, testing, symbols |
 
 ## Playback
