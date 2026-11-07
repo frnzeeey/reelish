@@ -12,7 +12,6 @@ import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../theme/supporter_themes.dart';
 import 'account_controller.dart';
 import 'avatar_image.dart';
 
@@ -85,8 +84,7 @@ class ProfileController extends ChangeNotifier {
   /// [attach]ed at startup.
   static ProfileController instance = ProfileController();
 
-  /// SharedPreferences key:
-  /// `{userId: {displayName, avatar, preset, photo, theme}}`.
+  /// SharedPreferences key: `{userId: {displayName, avatar, preset, photo}}`.
   static const storageKey = 'onfeed.profile.v1';
 
   /// Display names are shown in a few places; long ones would be cut.
@@ -102,13 +100,6 @@ class ProfileController extends ChangeNotifier {
   ProfileAvatar _avatar = const ProfileAvatar.initials();
   String? _photoFile;
   File? _photo;
-  String? _themeId;
-
-  /// The Supporter profile theme saved for this account: a
-  /// [SupporterTheme.id], [SupporterTheme.classicId], or null when none was
-  /// chosen. Saving one is harmless for anyone: it is drawn only for a
-  /// verified supporter (see [SupporterTheme.resolve]).
-  String? get themeId => _themeId;
 
   /// The name the user chose, or null to show the Trakt username.
   String? get displayName => _displayName;
@@ -138,7 +129,6 @@ class ProfileController extends ChangeNotifier {
     _avatar = const ProfileAvatar.trakt();
     _photoFile = null;
     _photo = null;
-    _themeId = null;
     if (userId != null) {
       // Saved by this app, but read defensively: a bad entry means defaults.
       try {
@@ -154,11 +144,6 @@ class ProfileController extends ChangeNotifier {
               _photoFile = photoFile;
               _photo = file;
             }
-          }
-          final theme = entry['theme'];
-          if (theme == SupporterTheme.classicId ||
-              (theme is String && SupporterTheme.byId(theme) != null)) {
-            _themeId = theme as String;
           }
           _avatar = switch (entry['avatar']) {
             'preset' when AvatarPreset.byId('${entry['preset']}') != null =>
@@ -182,16 +167,6 @@ class ProfileController extends ChangeNotifier {
   /// name goes back to the Trakt username.
   Future<void> setDisplayName(String raw) async {
     _displayName = cleanDisplayName(raw);
-    notifyListeners();
-    await _save();
-  }
-
-  /// Saves a profile theme choice; an unknown id is ignored.
-  Future<void> setTheme(String id) async {
-    if (id != SupporterTheme.classicId && SupporterTheme.byId(id) == null) {
-      return;
-    }
-    _themeId = id;
     notifyListeners();
     await _save();
   }
@@ -306,7 +281,6 @@ class ProfileController extends ChangeNotifier {
           : _avatar.kind.name,
       if (_avatar.presetId != null) 'preset': _avatar.presetId,
       if (_photoFile != null) 'photo': _photoFile,
-      if (_themeId != null) 'theme': _themeId,
     };
     await (await SharedPreferences.getInstance()).setString(
       storageKey,

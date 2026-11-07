@@ -166,7 +166,9 @@ class _AppIconSettingsScreenState extends State<AppIconSettingsScreen> {
         ),
         SettingsSection(
           label: 'SUPPORTER COLLECTION',
-          description: _controller.supporter
+          description: _controller.founder
+              ? 'As the Founder, every icon is yours.'
+              : _controller.supporter
               ? 'Thank you for supporting Reelish. Every icon is yours.'
               : 'A thank-you to Reelish Supporters. Tap an icon to see how '
                     'to unlock it.',

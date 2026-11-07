@@ -3,6 +3,11 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../theme/reelish_icons.dart';
+import '../account/supporter_controller.dart';
+import '../theme/supporter_themes.dart';
+import '../widgets/account_badges.dart';
+import '../widgets/supporter_theme_picker.dart';
+import 'supporters_screen.dart';
 
 import '../analytics/analytics_service.dart';
 import '../diagnostics/crash_reporter.dart';
@@ -177,15 +182,47 @@ class AppearanceSettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) => SettingsPage(
     title: 'Appearance',
-    subtitle: 'Choose the accent used across the app.',
+    subtitle: 'Choose the theme and accent used across the app.',
     icon: ReelishIcons.palette,
     onBack: onBack,
     children: [
       AnimatedBuilder(
         animation: controller,
+        builder: (context, _) {
+          final unlocked = controller.supporters.has(SupporterPerk.appThemes);
+          return SettingsSection(
+            label: 'THEMES',
+            description: unlocked
+                ? 'A theme sets the accent across Reelish and dresses your '
+                      'profile. Classic uses the accent you pick below.'
+                : 'For Reelish Supporters: a theme sets the accent across '
+                      'Reelish and dresses your profile.',
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(14),
+                child: SupporterThemePicker(
+                  savedId: controller.theme?.id,
+                  classicAccent: controller.accent,
+                  locked: !unlocked,
+                  onLocked: () => unawaited(_explainThemes(context)),
+                  onSelect: (id) => unawaited(
+                    controller.setTheme(
+                      id == SupporterTheme.classicId ? null : id,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+      AnimatedBuilder(
+        animation: controller,
         builder: (context, _) => SettingsSection(
           label: 'ACCENT COLOR',
-          description: 'Used for highlights, selections and controls.',
+          description: controller.theme == null
+              ? 'Used for highlights, selections and controls.'
+              : 'Your theme sets the accent now. Pick one to use it instead.',
           children: [
             Padding(
               padding: const EdgeInsets.all(14),
@@ -200,19 +237,24 @@ class AppearanceSettingsScreen extends StatelessWidget {
                       for (final accent in GlassTheme.accents)
                         _AccentChoice(
                           accent: accent,
-                          selected: accent.id == controller.value.id,
+                          // Not while a theme sets the accent.
+                          selected:
+                              controller.theme == null &&
+                              accent.id == controller.accent.id,
                           width: itemWidth,
                           onTap: () => controller.update(accent),
                         ),
                       // Last: the user's own colour, or a colour wheel
                       // until one is picked.
                       _AccentChoice(
-                        accent: controller.value.isCustom
-                            ? controller.value
+                        accent: controller.accent.isCustom
+                            ? controller.accent
                             : AccentPalette.custom(GlassTheme.coral.primary),
-                        selected: controller.value.isCustom,
+                        selected:
+                            controller.theme == null &&
+                            controller.accent.isCustom,
                         width: itemWidth,
-                        swatch: controller.value.isCustom
+                        swatch: controller.accent.isCustom
                             ? null
                             : const _ColorWheelSwatch(),
                         onTap: () => _editCustom(context),
@@ -257,9 +299,45 @@ class AppearanceSettingsScreen extends StatelessWidget {
   Future<void> _editCustom(BuildContext context) async {
     final chosen = await showDialog<AccentPalette>(
       context: context,
-      builder: (_) => _CustomAccentDialog(initial: controller.value.primary),
+      builder: (_) => _CustomAccentDialog(initial: controller.accent.primary),
     );
     if (chosen != null) await controller.update(chosen);
+  }
+
+  /// A theme, for someone who cannot use one yet: what themes are, and the
+  /// way to support. Asked for by a tap, never shown unprompted.
+  Future<void> _explainThemes(BuildContext context) async {
+    final support = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        icon: const SupporterEmblem(size: 32),
+        title: const Text('App themes'),
+        content: const Text(
+          'Themes set the accent across Reelish and dress your profile. They '
+          'are a thank-you to Reelish Supporters. Every accent color below '
+          'stays free for everyone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Not now'),
+          ),
+          FilledButton(
+            // The remote starts on the action the dialog is about.
+            autofocus: true,
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Become a Supporter'),
+          ),
+        ],
+      ),
+    );
+    if (support != true || !context.mounted) return;
+    await Navigator.of(context).push(
+      AppPageRoute<void>(
+        context: context,
+        builder: (_) => SupportersScreen(controller: controller.supporters),
+      ),
+    );
   }
 }
 

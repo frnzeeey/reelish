@@ -12,6 +12,7 @@ import { ApiError, json, readJsonBody, shortText } from './http';
 import { audit, log } from './audit';
 import { sha256 } from './crypto';
 import { requireLiveSession, type Principal } from './sessions';
+import { entitlementOf, type Entitlement } from './entitlements';
 
 const provider = 'buymeacoffee';
 const maxWebhookBytes = 64 * 1024;
@@ -25,19 +26,6 @@ const codePattern = new RegExp(
 );
 
 const now = () => Math.floor(Date.now() / 1000);
-
-/**
- * A verified donation that has not been refunded: the account may host a
- * Watch Party. Read fresh on each check, so a refund applies at once.
- */
-export async function isActiveSupporter(env: Env, userId: string): Promise<boolean> {
-  const row = await env.DB.prepare(
-    `SELECT 1 AS ok FROM supporter_profiles WHERE user_id = ? AND supporter_since IS NOT NULL`,
-  )
-    .bind(userId)
-    .first<{ ok: number }>();
-  return row !== null;
-}
 
 export function newSupportCode(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(8));
@@ -239,7 +227,11 @@ async function ensureProfile(env: Env, userId: string): Promise<ProfileRow> {
   throw new ApiError(500, 'internal', 'Could not prepare your supporter code.');
 }
 
-const statusBody = (row: ProfileRow) => ({
+/**
+ * The donation's status, and the entitlement the app shows perks by: a
+ * Founder's is 'founder' whether or not they donated.
+ */
+const statusBody = (row: ProfileRow, entitlement: Entitlement) => ({
   code: row.support_code,
   status:
     row.supporter_since !== null
@@ -249,11 +241,15 @@ const statusBody = (row: ProfileRow) => ({
         : 'none',
   since: row.supporter_since,
   recognition: { listed: row.public_listed === 1, name: row.public_name ?? '' },
+  entitlement,
 });
+
+const status = async (env: Env, userId: string, requestId: string) =>
+  json(statusBody(await ensureProfile(env, userId), await entitlementOf(env, userId)), requestId);
 
 /** GET /supporters/me */
 export async function getStatus(env: Env, principal: Principal, requestId: string): Promise<Response> {
-  return json(statusBody(await ensureProfile(env, principal.userId)), requestId);
+  return status(env, principal.userId, requestId);
 }
 
 /**
@@ -272,7 +268,7 @@ export async function requestReview(env: Env, principal: Principal, requestId: s
     .bind(time, time, principal.userId)
     .run();
   await audit(env, 'supporter_review_requested', principal);
-  return json(statusBody(await ensureProfile(env, principal.userId)), requestId);
+  return status(env, principal.userId, requestId);
 }
 
 /** PUT /supporters/recognition: the opt-in place on the public list. */
@@ -298,7 +294,7 @@ export async function setRecognition(
   )
     .bind(listed ? 1 : 0, listed ? name : null, now(), principal.userId)
     .run();
-  return json(statusBody(await ensureProfile(env, principal.userId)), requestId);
+  return status(env, principal.userId, requestId);
 }
 
 /** GET /supporters/public: only people who chose to appear, by chosen name. */

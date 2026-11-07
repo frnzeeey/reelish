@@ -154,6 +154,18 @@ class _SupportersScreenState extends State<SupportersScreen>
         children: [
           _Hero(status: status, onSupport: () => unawaited(_support(status))),
           const SizedBox(height: AppSpace.lg),
+          // The Founder has every perk already; supporting stays possible.
+          if (_supporters.entitlement == Entitlement.founder)
+            const SettingsSection(
+              label: 'FOUNDER',
+              children: [
+                SettingsParagraph(
+                  text:
+                      'As the Founder, every Supporter perk is yours, now and '
+                      'as new ones arrive. No donation needed.',
+                ),
+              ],
+            ),
           if (status == null && _supporters.failed)
             SettingsSection(
               label: 'YOUR SUPPORT',
@@ -213,7 +225,9 @@ class _SupportersScreenState extends State<SupportersScreen>
               ),
               _Benefit(
                 icon: ReelishIcons.sparkle,
-                text: 'You can dress your profile in an exclusive theme.',
+                text:
+                    'You can choose an app theme: its own accent across '
+                    'Reelish, and a profile to match.',
               ),
               _Benefit(
                 icon: ReelishIcons.grid,

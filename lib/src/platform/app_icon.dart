@@ -28,7 +28,7 @@ enum AppIconGroup {
   /// Free for everyone.
   free,
 
-  /// The supporter collection's own artwork, matching the profile themes
+  /// The supporter collection's own artwork, matching the app themes
   /// (tool/branding/generate_signature_icons.mjs).
   signature,
 
@@ -128,7 +128,10 @@ class AppIconController extends ChangeNotifier {
 
   /// Whether the supporter icons show as unlocked: the last status known
   /// for this account. Only for display; [select] asks the server.
-  bool get supporter => _supporters.isSupporter;
+  bool get supporter => _supporters.has(SupporterPerk.appIcons);
+
+  /// The Founder, who has every supporter perk without donating.
+  bool get founder => _supporters.entitlement == Entitlement.founder;
 
   /// Whether [preset] can be chosen from the screen as things stand.
   bool unlocked(AppIconPreset preset) => preset.free || supporter;
@@ -175,7 +178,9 @@ class AppIconController extends ChangeNotifier {
       if (!preset.free) {
         await _supporters.refresh();
         if (_supporters.failed) return AppIconChange.unverified;
-        if (!_supporters.isSupporter) return AppIconChange.supportersOnly;
+        if (!_supporters.has(SupporterPerk.appIcons)) {
+          return AppIconChange.supportersOnly;
+        }
       }
       _current = await _service.select(id);
       if (_current == id) {

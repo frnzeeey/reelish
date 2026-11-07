@@ -62,19 +62,23 @@ the interface once per launch:
   cannot safely rotate a refresh token; a lost Trakt grant answers 409, not
   401, so the app is not signed out. Docs: `docs/backend/README.md`
   (routes, Watch Party protocol) and `docs/backend/operations.md`.
-- **Badges** (`backend/src/badges.ts`, `docs/backend/badges.md`) are identity and
-  never a permission; nothing may check one before allowing an action. Founder
-  comes from the `FOUNDER_TRAKT_UUID` Worker secret, never a name or client data.
+- **Badges** (`backend/src/badges.ts`, `docs/backend/badges.md`) are identity:
+  nothing checks a badge before allowing an action. Founder comes from the
+  `FOUNDER_TRAKT_UUID` Worker secret, never a name or client data.
+- **Entitlements** (`backend/src/entitlements.ts`, `docs/backend/entitlements.md`):
+  `free`, `supporter` (verified donation) or `founder`, who inherits the
+  Supporter entitlement whole. Every supporter perk is one rule: `requirePerk`
+  on the server, `SupporterController.has(SupporterPerk.x)` in the app. Never
+  gate a perk on `isSupporter`, a badge or the Founder by name.
 - **Supporters:** the Supporter Badge is set only by Buy Me a Coffee's signed
   webhook, or the owner's `backend/scripts/grant-supporter.mjs`; never by the
   app. A donation names its account through a code in the donor's message,
-  since the platform has no metadata. Its one server-checked privilege is hosting a Watch
-  Party: `createParty` checks the donation record (`isActiveSupporter`), never
-  the badge or client data; joining stays open to everyone. Supporters also
-  get profile themes (`supporter_themes.dart`), drawn only while
-  `SupporterController` reports a verified donation, and every launcher icon
-  (`app_icon.dart`: Default and Slate stay free; a supporter icon is applied
-  only after a fresh server check). Docs: `docs/backend/supporters.md`,
+  since the platform has no metadata. Supporter perks: hosting a Watch Party
+  (enforced by `createParty`; joining stays open to everyone), app themes in Settings > Appearance
+  (`supporter_themes.dart`, applied by `AccentSettingsController`: the accent
+  and the profile card) and every launcher icon (`app_icon.dart`: Default
+  and Slate stay free; a supporter icon is applied only after a fresh server
+  check). Docs: `docs/backend/supporters.md`,
   `docs/features/supporter-themes.md`, `docs/features/app-icons.md`.
 - **Environments:** `staging` and `production` in `backend/wrangler.toml`
   (release builds point at production via the `REELISH_API_URL` repository

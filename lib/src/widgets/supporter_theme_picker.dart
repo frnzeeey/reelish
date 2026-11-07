@@ -1,6 +1,7 @@
-// Chooses a Supporter profile theme: a swatch per theme, each a small copy of
-// the card it gives, plus Classic for the usual profile. Works by touch, remote,
-// mouse, keyboard and game controller alike (each swatch is a TvFocusable).
+// Chooses an app theme: a swatch per theme, each a small copy of the card it
+// gives, plus Classic for the accent the user picked. Locked for accounts
+// without the perk: the themes still show, and a tap explains. Works by touch,
+// remote, mouse, keyboard and game controller (each swatch is a TvFocusable).
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -17,16 +18,32 @@ class SupporterThemePicker extends StatelessWidget {
     super.key,
     required this.savedId,
     required this.onSelect,
+    this.locked = false,
+    this.onLocked,
+    this.classicAccent,
   });
 
-  /// The saved choice, as [ProfileController.themeId] keeps it.
+  /// The accent Classic returns to, for its swatch; the current accent when
+  /// null. Under a theme the current accent is the theme's, so the
+  /// Appearance page passes the one the user picked.
+  final AccentPalette? classicAccent;
+
+  /// The theme in use, or null for Classic.
   final String? savedId;
+
+  /// Called with a theme id, or [SupporterTheme.classicId].
   final ValueChanged<String> onSelect;
+
+  /// For accounts without the perk: each theme shows with a lock and calls
+  /// [onLocked] instead, and Classic is left out.
+  final bool locked;
+  final VoidCallback? onLocked;
 
   @override
   Widget build(BuildContext context) {
-    final current =
-        SupporterTheme.resolve(savedId)?.id ?? SupporterTheme.classicId;
+    final current = locked
+        ? null
+        : SupporterTheme.byId(savedId)?.id ?? SupporterTheme.classicId;
     // Even columns: all six in a row where they fit, else three, else two.
     const spacing = AppSpace.md;
     final narrowest = DeviceCapabilities.isTv
@@ -57,15 +74,20 @@ class SupporterThemePicker extends StatelessWidget {
                 name: theme.name,
                 theme: theme,
                 selected: current == theme.id,
-                onSelect: () => onSelect(theme.id),
+                locked: locked,
+                onSelect: locked
+                    ? () => onLocked?.call()
+                    : () => onSelect(theme.id),
               ),
-            _Swatch(
-              width: width,
-              name: 'Classic',
-              theme: null,
-              selected: current == SupporterTheme.classicId,
-              onSelect: () => onSelect(SupporterTheme.classicId),
-            ),
+            if (!locked)
+              _Swatch(
+                width: width,
+                name: 'Classic',
+                theme: null,
+                classicAccent: classicAccent,
+                selected: current == SupporterTheme.classicId,
+                onSelect: () => onSelect(SupporterTheme.classicId),
+              ),
           ],
         );
       },
@@ -80,10 +102,14 @@ class _Swatch extends StatelessWidget {
     required this.theme,
     required this.selected,
     required this.onSelect,
+    this.locked = false,
+    this.classicAccent,
   });
 
   final double width;
   final String name;
+  final bool locked;
+  final AccentPalette? classicAccent;
 
   /// Null for Classic: the usual card, in the app's accent.
   final SupporterTheme? theme;
@@ -93,14 +119,20 @@ class _Swatch extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = this.theme;
-    final ink = theme?.ink ?? GlassTheme.coralBright;
+    final classic = classicAccent;
+    final accent = classic?.primary ?? GlassTheme.primary;
+    final ink = theme?.ink ?? classic?.bright ?? GlassTheme.coralBright;
     final duration = AppMotion.resolve(context, AppMotion.standard);
     final ringSize = width * .26;
     return TvFocusable(
       onSelect: onSelect,
       borderRadius: AppRadius.md,
       focusScale: 1.04,
-      semanticLabel: selected ? '$name theme, selected' : '$name theme',
+      semanticLabel: locked
+          ? '$name theme, for Reelish Supporters'
+          : selected
+          ? '$name theme, selected'
+          : '$name theme',
       child: SizedBox(
         width: width,
         child: Column(
@@ -137,7 +169,7 @@ class _Swatch extends StatelessWidget {
                           center: const Alignment(-.8, -.85),
                           radius: 1.1,
                           colors: [
-                            GlassTheme.primary.withValues(alpha: .24),
+                            accent.withValues(alpha: .24),
                             const Color(0xFF17171E),
                             const Color(0xFF121218),
                           ],
@@ -160,9 +192,7 @@ class _Swatch extends StatelessWidget {
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color: GlassTheme.primary.withValues(
-                                    alpha: .7,
-                                  ),
+                                  color: accent.withValues(alpha: .7),
                                   width: 1.5,
                                 ),
                               ),
@@ -173,6 +203,12 @@ class _Swatch extends StatelessWidget {
                             ),
                     ),
                   ),
+                  if (locked)
+                    const Positioned(
+                      right: AppSpace.xs,
+                      bottom: AppSpace.xs,
+                      child: _Lock(),
+                    ),
                   Positioned(
                     right: AppSpace.xs,
                     top: AppSpace.xs,
@@ -230,5 +266,21 @@ class _Face extends StatelessWidget {
       color: Colors.white.withValues(alpha: .16),
     ),
     child: const SizedBox.expand(),
+  );
+}
+
+/// The small lock on a theme someone cannot use yet, in the Supporter gold.
+class _Lock extends StatelessWidget {
+  const _Lock();
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(3),
+    decoration: BoxDecoration(
+      shape: BoxShape.circle,
+      color: GlassTheme.surface,
+      border: Border.all(color: const Color(0x66F5B942)),
+    ),
+    child: const Icon(ReelishIcons.lock, size: 11, color: Color(0xFFFFD98A)),
   );
 }

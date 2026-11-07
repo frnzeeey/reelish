@@ -98,7 +98,7 @@ class _CreatePartyScreenState extends State<CreatePartyScreen> {
     if (_refused) return _Hosting.supportersOnly;
     final status = _supporters.status;
     if (status != null) {
-      return status.state == SupporterState.verified
+      return _supporters.has(SupporterPerk.hostWatchParty)
           ? _Hosting.allowed
           : _Hosting.supportersOnly;
     }

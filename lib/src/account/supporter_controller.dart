@@ -1,7 +1,8 @@
-// The signed-in account's place in the Reelish Supporters Program. The Reelish
-// API decides it; this only reads it, and keeps a copy per account so a badge
-// shows at once and offline. The copy is display only and unlocks nothing: the
-// server's answer replaces it, and the public list comes from the server.
+// The signed-in account's place in the Reelish Supporters Program, and its
+// entitlement: whether it has the supporter perks. The Reelish API decides both
+// (backend/src/entitlements.ts); this only reads them, and keeps a copy per
+// account so they show at once and offline. The copy only chooses what to show:
+// the server enforces what it can, and a supporter app icon asks it afresh.
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -13,6 +14,20 @@ import 'backend_config.dart';
 
 enum SupporterState { none, pending, verified }
 
+/// What the account may use: free features; those plus every supporter perk;
+/// or, for the Founder, the Supporter entitlement as a whole plus the Founder
+/// identity. The Founder never needs a donation.
+enum Entitlement { free, supporter, founder }
+
+/// Every supporter perk. Each is unlocked by the same entitlement, so the
+/// Founder has every one, including any added later.
+///
+/// Adding one: name it here and in `SupporterPerk` in
+/// backend/src/entitlements.ts, check [SupporterController.has] in the app,
+/// and call `requirePerk` wherever the server enforces it. Nothing names the
+/// Founder: inheritance happens in the entitlement.
+enum SupporterPerk { hostWatchParty, appThemes, appIcons }
+
 /// The account's status, as the server reported it.
 @immutable
 class SupporterStatus {
@@ -22,6 +37,7 @@ class SupporterStatus {
     this.since,
     this.listed = false,
     this.publicName = '',
+    this.entitlement = Entitlement.free,
   });
 
   /// Pasted into the Buy Me a Coffee message to name this account.
@@ -35,18 +51,33 @@ class SupporterStatus {
   final bool listed;
   final String publicName;
 
+  /// As the server decided it. The donation's [state] stays honest: a
+  /// Founder who never donated is `none` with [Entitlement.founder].
+  final Entitlement entitlement;
+
   static SupporterStatus? fromJson(Object? value) {
     if (value is! Map) return null;
     final code = value['code'];
     if (code is! String || code.isEmpty) return null;
     final since = value['since'];
     final recognition = value['recognition'];
+    final state = switch (value['status']) {
+      'verified' => SupporterState.verified,
+      'pending' => SupporterState.pending,
+      _ => SupporterState.none,
+    };
     return SupporterStatus(
       code: code,
-      state: switch (value['status']) {
-        'verified' => SupporterState.verified,
-        'pending' => SupporterState.pending,
-        _ => SupporterState.none,
+      state: state,
+      entitlement: switch (value['entitlement']) {
+        'founder' => Entitlement.founder,
+        'supporter' => Entitlement.supporter,
+        'free' => Entitlement.free,
+        // An API or a saved copy from before entitlements: the donation.
+        _ =>
+          state == SupporterState.verified
+              ? Entitlement.supporter
+              : Entitlement.free,
       },
       since: since is int
           ? DateTime.fromMillisecondsSinceEpoch(since * 1000, isUtc: true)
@@ -63,6 +94,7 @@ class SupporterStatus {
     'status': state.name,
     'since': since == null ? null : since!.millisecondsSinceEpoch ~/ 1000,
     'recognition': {'listed': listed, 'name': publicName},
+    'entitlement': entitlement.name,
   };
 }
 
@@ -92,9 +124,28 @@ class SupporterController extends ChangeNotifier {
   /// The last refresh failed, so [status] may be out of date or missing.
   bool get failed => _failed;
 
+  /// A verified donation: the Supporters page and the badge go by this.
   bool get isSupporter => _status?.state == SupporterState.verified;
 
+  /// The entitlement the server last reported for this account.
+  Entitlement get entitlement => _status?.entitlement ?? Entitlement.free;
+
+  /// Whether this account has [perk]. Every perk is the Supporter
+  /// entitlement, which the Founder inherits, so this is the one check any
+  /// supporter feature makes.
+  bool has(SupporterPerk perk) => entitlement != Entitlement.free;
+
   Future<void>? _refreshing;
+
+  /// Shows this account's saved status without asking the server: for
+  /// launch, so a theme's accent is right on the first screen.
+  Future<void> restoreSaved() async {
+    final userId = _account.userId;
+    if (userId == null || _loadedFor == userId) return;
+    _loadedFor = userId;
+    _status = await _readCache(userId);
+    notifyListeners();
+  }
 
   /// Shows the saved status for this account, then asks the server. A call
   /// while one is running waits for that one, so its caller sees the

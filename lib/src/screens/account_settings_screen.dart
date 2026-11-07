@@ -17,6 +17,7 @@ import '../platform/device_capabilities.dart';
 import '../theme/design_tokens.dart';
 import '../theme/glass_theme.dart';
 import '../widgets/profile_avatar.dart';
+import '../widgets/profile_avatar_picker.dart';
 import '../widgets/settings/settings_components.dart';
 import '../widgets/tv/tv_focus.dart';
 
@@ -252,7 +253,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
               enabled: _busy == null,
               onTap: _editName,
             ),
-            _AvatarPicker(
+            ProfileAvatarPicker(
               profile: _profile,
               name: _profile.nameOr(widget.account.username),
               enabled: _busy == null,
@@ -621,155 +622,6 @@ class _DangerTile extends StatelessWidget {
       ),
     ),
   );
-}
-
-/// The avatar choices: the saved photo, initials, and each preset.
-class _AvatarPicker extends StatelessWidget {
-  const _AvatarPicker({
-    required this.profile,
-    required this.name,
-    required this.enabled,
-    required this.traktUrl,
-  });
-
-  final ProfileController profile;
-  final String name;
-  final bool enabled;
-
-  /// The Trakt picture, offered first when the account has one.
-  final String? traktUrl;
-
-  @override
-  Widget build(BuildContext context) {
-    final tv = DeviceCapabilities.usesTvLayout && !DeviceCapabilities.isDesktop;
-    final size = tv ? 56.0 : 48.0;
-    final photo = profile.photo;
-    // Without a Trakt picture, the default shows the initial: mark that.
-    final shown = profile.avatar.kind == AvatarKind.trakt && traktUrl == null
-        ? const ProfileAvatar.initials()
-        : profile.avatar;
-    Widget choice(ProfileAvatar avatar, String label) => _AvatarChoice(
-      label: label,
-      selected: shown == avatar,
-      enabled: enabled,
-      onTap: () => profile.setAvatar(avatar),
-      child: ProfileAvatarView(
-        avatar: avatar,
-        name: name,
-        photo: photo == null ? null : FileImage(photo),
-        traktUrl: traktUrl,
-        size: size,
-      ),
-    );
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Avatar',
-            style: TextStyle(
-              fontSize: AppTextSize.titleSmall,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: AppSpace.sm),
-          Wrap(
-            spacing: AppSpace.xs,
-            runSpacing: AppSpace.xs,
-            children: [
-              if (traktUrl != null)
-                choice(const ProfileAvatar.trakt(), 'Trakt picture'),
-              if (photo != null)
-                choice(const ProfileAvatar.photo(), 'Your photo'),
-              choice(const ProfileAvatar.initials(), 'Initial'),
-              for (final preset in AvatarPreset.all)
-                choice(ProfileAvatar.preset(preset.id), preset.label),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// One avatar in the picker: an accent ring marks the chosen one, and a
-/// white ring the focused one (keyboard, gamepad and D-pad).
-class _AvatarChoice extends StatefulWidget {
-  const _AvatarChoice({
-    required this.label,
-    required this.selected,
-    required this.enabled,
-    required this.onTap,
-    required this.child,
-  });
-
-  final String label;
-  final bool selected;
-  final bool enabled;
-  final VoidCallback onTap;
-  final Widget child;
-
-  @override
-  State<_AvatarChoice> createState() => _AvatarChoiceState();
-}
-
-class _AvatarChoiceState extends State<_AvatarChoice> {
-  bool _focused = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final ring = _focused
-        ? Colors.white
-        : widget.selected
-        ? GlassTheme.primary
-        : Colors.transparent;
-    return Semantics(
-      button: true,
-      selected: widget.selected,
-      label: widget.label,
-      child: Tooltip(
-        message: widget.label,
-        child: InkWell(
-          customBorder: const CircleBorder(),
-          onTap: widget.enabled ? widget.onTap : null,
-          onFocusChange: (focused) => setState(() => _focused = focused),
-          child: AnimatedContainer(
-            duration: AppMotion.resolve(context, AppMotion.hover),
-            padding: const EdgeInsets.all(3),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: ring, width: 2.5),
-            ),
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                widget.child,
-                if (widget.selected)
-                  Positioned(
-                    right: -2,
-                    bottom: -2,
-                    child: Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: GlassTheme.primary,
-                        border: Border.all(color: GlassTheme.surface, width: 2),
-                      ),
-                      child: const Icon(
-                        ReelishIcons.check,
-                        size: 12,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 /// Edits the display name on phone and Windows; TV uses

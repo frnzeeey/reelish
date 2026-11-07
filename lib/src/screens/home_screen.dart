@@ -5,6 +5,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import '../theme/reelish_icons.dart';
 import '../account/account_badges.dart';
+import '../account/supporter_controller.dart';
 import '../models/app_update.dart';
 import '../models/episode_context.dart';
 import '../models/episode_progress.dart';
@@ -176,6 +177,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       // One GET /me per launch: badges, and the Trakt username and avatar as
       // they are now, wherever they changed. Nothing waits for it.
       unawaited(AccountBadges.instance.refresh());
+      // The entitlement as the server sees it now: perks and app themes.
+      unawaited(SupporterController.instance.refresh());
     });
   }
 
@@ -2500,6 +2503,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         builder: (pageContext) => Scaffold(
           backgroundColor: GlassTheme.background,
           body: ProfileScreen(
+            appearance: widget.accentSettings,
             storage: _storage,
             onBack: () => Navigator.of(pageContext).pop(),
             onOpenLibrary: () {
@@ -2601,6 +2605,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             TvDestination.profile => TvReadableWidth(
               maxWidth: 900,
               child: ProfileScreen(
+                appearance: widget.accentSettings,
                 storage: _storage,
                 refreshToken: _libraryRefreshToken,
                 onOpenLibrary: () =>
@@ -2728,6 +2733,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 860),
                 child: ProfileScreen(
+                  appearance: widget.accentSettings,
                   storage: _storage,
                   refreshToken: _libraryRefreshToken,
                   onOpenLibrary: () =>

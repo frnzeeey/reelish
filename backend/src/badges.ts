@@ -1,5 +1,7 @@
 // The badges on an account, always worked out here. Each has its own source, and
-// none grants any permission: they say who someone is, never what they may do.
+// no badge is ever checked to allow an action: they say who someone is. What an
+// account may use is decided in entitlements.ts, where the Founder inherits the
+// Supporter entitlement.
 //
 //   founder    the Trakt account named by the FOUNDER_TRAKT_UUID secret
 //   supporter  a verified donation (supporters.ts)
@@ -13,7 +15,7 @@ import type { Env } from './env';
 
 export type AccountBadge = 'founder' | 'supporter';
 
-const isFounderUuid = (env: Env, uuid: string | undefined): boolean =>
+export const isFounderUuid = (env: Env, uuid: string | undefined): boolean =>
   !!env.FOUNDER_TRAKT_UUID && uuid === env.FOUNDER_TRAKT_UUID;
 
 /** The account's badges, in display order. */

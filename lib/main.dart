@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'src/account/account_controller.dart';
+import 'src/account/supporter_controller.dart';
 import 'src/account/profile_controller.dart';
 import 'src/account/watchlist_sync.dart';
 import 'src/diagnostics/crash_reporter.dart';
@@ -117,6 +118,13 @@ class _StartupScreenState extends State<_StartupScreen> {
       // A local secure-storage read; the network is not touched.
       AccountController.instance.restore(),
     ]);
+    // A local read: the saved supporter status, so an app theme's accent is
+    // right on the first screen. The server is asked once Home has drawn.
+    try {
+      await SupporterController.instance.restoreSaved();
+    } catch (_) {
+      // The accent the user picked shows until the server answers.
+    }
     // The device-local profile follows whichever Trakt account is signed in.
     ProfileController.instance.attach(AccountController.instance);
     // My list and the Trakt watchlist, when the user turned that on.

@@ -117,7 +117,7 @@ its own).
 | `GET /api/v1/trakt/watchlist` | Bearer | `{items: [{type, tmdbId, listedAt}]}` (`movie` or `series`) |
 | `POST /api/v1/webhooks/buymeacoffee` | Signature | Buy Me a Coffee events ([supporters](supporters.md)); 503 until configured |
 | `GET /api/v1/me` | Bearer | `{user: {id, username, avatarUrl, profileCheckedAt, createdAt}, traktLinked, sessionId, badges}`; reads Trakt again when the profile is a day old ([Trakt profile](../features/trakt-profile.md)); `badges` holds `founder` and `supporter` ([badges](badges.md)) |
-| `GET /api/v1/supporters/me` | Bearer | `{code, status, since, recognition}`; `status` is `none`, `pending` or `verified` |
+| `GET /api/v1/supporters/me` | Bearer | `{code, status, since, recognition, entitlement}`; `status` is `none`, `pending` or `verified` (the donation); `entitlement` is `free`, `supporter` or `founder` ([entitlements](entitlements.md)) |
 | `POST /api/v1/supporters/claim` | Bearer | Asks for a review; shows as pending, grants nothing |
 | `PUT /api/v1/supporters/recognition` | Bearer | `{listed, name}`; supporters only (409) |
 | `GET /api/v1/supporters/public` | Bearer | `{supporters: [{name, since}]}`, opted-in only |

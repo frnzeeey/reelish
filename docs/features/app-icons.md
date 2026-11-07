@@ -28,14 +28,16 @@ alias changes; the screen says so.
 
 The two free icons are full-quality icons, not lesser versions. Slate is the
 dark counterpart of the coral default. The Signature icons are the supporter
-collection's own artwork and match the [profile themes](supporter-themes.md).
+collection's own artwork and match the [app themes](supporter-themes.md).
 
 Everyone sees the whole collection. Someone who is not a supporter sees the
 supporter icons in full with a small lock, and a tap opens a short sheet with
 a way to the Supporters page; nothing changes without that tap.
 
 `AppIconController.select` applies a supporter icon only after asking the
-server (`SupporterController.refresh`) and getting a verified donation back.
+server (`SupporterController.refresh`) and getting back an
+[entitlement](../backend/entitlements.md) with the `appIcons` perk (supporters,
+and the Founder).
 A saved status never unlocks one: if the server cannot be reached, or nobody
 is signed in, the answer is `unverified` and the icon stays as it is. A donation
 waiting for review does not count. The lock marks use the last known status,

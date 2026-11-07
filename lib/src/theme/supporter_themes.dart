@@ -1,12 +1,14 @@
-// Profile themes for Reelish Supporters. Each restyles only the profile card:
-// its backdrop, the ring around the avatar and the card's own accents. The
-// accent the user picked for the rest of the app is untouched, and text stays
-// white on a dark surface, so a theme never costs readability.
+// App themes for Reelish Supporters (Settings > Appearance). A theme sets the
+// accent across the app and dresses the profile card: its backdrop, the ring
+// around the avatar and the card's own accents. Text stays white on a dark
+// surface, and each accent keeps the contrast every accent keeps, so a theme
+// never costs readability.
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
 import 'design_tokens.dart';
+import 'glass_theme.dart';
 
 /// The ornament a theme adds to its backdrop, drawn once and cheaply.
 enum ThemeOrnament { none, stars, aurora, sheen }
@@ -39,6 +41,19 @@ class SupporterTheme {
   /// Light text and outlines that belong to the theme.
   final Color ink;
   final ThemeOrnament ornament;
+
+  /// The accent the theme sets across the app: its main light, made to read
+  /// on the page background as every accent does.
+  AccentPalette get accent {
+    final base = AccentPalette.custom(glow);
+    return AccentPalette(
+      id: 'theme:$id',
+      label: name,
+      primary: base.primary,
+      bright: base.bright,
+      dark: base.dark,
+    );
+  }
 
   static const royalViolet = SupporterTheme(
     id: 'royal_violet',
@@ -92,11 +107,8 @@ class SupporterTheme {
 
   static const all = [royalViolet, celestial, aurora, roseLuxe, goldenHour];
 
-  /// Saved when a supporter turns themes off for the usual profile.
+  /// The picker's choice for no theme: the accent the user picked.
   static const classicId = 'classic';
-
-  /// What a supporter sees before choosing.
-  static const standard = royalViolet;
 
   static SupporterTheme? byId(String? id) {
     for (final theme in all) {
@@ -104,11 +116,6 @@ class SupporterTheme {
     }
     return null;
   }
-
-  /// The theme to draw for a saved choice: none when the supporter chose the
-  /// classic look, [standard] when they have not chosen yet.
-  static SupporterTheme? resolve(String? savedId) =>
-      savedId == classicId ? null : byId(savedId) ?? standard;
 }
 
 /// A theme's backdrop: its two lights over the tinted base, and its ornament.
