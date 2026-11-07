@@ -82,16 +82,16 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/screens/sign_in_screen.dart`](#libsrcscreenssign_in_screendart) | Shared | 805 | Trakt sign-in, shown before Home whenever no session is stored. |
 | [`lib/src/screens/splash_screen.dart`](#libsrcscreenssplash_screendart) | Shared | 383 | The launch splash and `SplashGate`, which runs startup work before the first screen. |
 | [`lib/src/screens/subtitle_addons_screen.dart`](#libsrcscreenssubtitle_addons_screendart) | Shared | 236 | Stremio subtitle addons the player searches while you watch. |
-| [`lib/src/screens/supporters_screen.dart`](#libsrcscreenssupporters_screendart) | Shared | 715 | Reelish Supporters: a place to thank the people who fund Reelish, and to support it. |
+| [`lib/src/screens/supporters_screen.dart`](#libsrcscreenssupporters_screendart) | Shared | 719 | Reelish Supporters: a place to thank the people who fund Reelish, and to support it. |
 | [`lib/src/screens/tv/tv_browse.dart`](#libsrcscreenstvtv_browsedart) | Android TV | 864 | TV browsing building blocks: the featured-title frame, focusable poster rows and grids, and their messages. |
 | [`lib/src/screens/tv/tv_details_screen.dart`](#libsrcscreenstvtv_details_screendart) | Android TV | 639 | A movie or series on TV: the backdrop fills the screen behind the title, details and actions, with Play focused; a series lists its seasons and episodes below. |
 | [`lib/src/screens/tv/tv_home_shell.dart`](#libsrcscreenstvtv_home_shelldart) | Android TV | 466 | The TV interface's frame: a navigation rail on the left and the selected page beside it. |
 | [`lib/src/screens/tv/tv_pages.dart`](#libsrcscreenstvtv_pagesdart) | Android TV | 683 | The TV Home, Movies/Series catalog, Search and My library pages. |
-| [`lib/src/screens/watch_party/create_party_screen.dart`](#libsrcscreenswatch_partycreate_party_screendart) | Shared | 312 | Starts a watch party for a movie or episode: the room's settings, then the waiting room with the code to share. |
+| [`lib/src/screens/watch_party/create_party_screen.dart`](#libsrcscreenswatch_partycreate_party_screendart) | Shared | 621 | Starts a watch party for a movie or episode: the room's settings, then the waiting room with the code to share. |
 | [`lib/src/screens/watch_party/join_party_screen.dart`](#libsrcscreenswatch_partyjoin_party_screendart) | Shared | 445 | Joins a watch party by its 8-digit code: typed or pasted, previewed (title, host, how full), then the waiting room. |
 | [`lib/src/screens/watch_party/party_desktop.dart`](#libsrcscreenswatch_partyparty_desktopdart) | Shared | 225 | The watch party screens' Windows layout pieces: a page frame centred in the window with the action beside the content (not a bar across the whole width), the poster, a short "how it works" strip, and the room code as eight boxes. |
 | [`lib/src/screens/watch_party/party_launcher.dart`](#libsrcscreenswatch_partyparty_launcherdart) | Shared | 14 | How the waiting room opens the player. |
-| [`lib/src/screens/watch_party/party_widgets.dart`](#libsrcscreenswatch_partyparty_widgetsdart) | Shared | 534 | Pieces the watch party screens share: the title card, a participant's avatar and row, the room code, and plain words for errors and statuses. |
+| [`lib/src/screens/watch_party/party_widgets.dart`](#libsrcscreenswatch_partyparty_widgetsdart) | Shared | 535 | Pieces the watch party screens share: the title card, a participant's avatar and row, the room code, and plain words for errors and statuses. |
 | [`lib/src/screens/watch_party/waiting_room_screen.dart`](#libsrcscreenswatch_partywaiting_room_screendart) | Shared | 670 | The party's waiting room: the code to share, the title, who has joined and what their players are doing, and the host's controls. |
 | [`lib/src/services/accent_settings_controller.dart`](#libsrcservicesaccent_settings_controllerdart) | Shared | 34 | Loads, applies and saves the accent colour. |
 | [`lib/src/services/app_metadata.dart`](#libsrcservicesapp_metadatadart) | Shared | 19 | Version and build details for the running app. |
@@ -247,7 +247,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Packages:** `http`
 
-**Imported by:** `src/account/account_badges.dart`, `src/account/account_controller.dart`, `src/account/supporter_controller.dart`, `src/account/watchlist_sync.dart`, `src/notifications/episode_alerts.dart`, `src/notifications/episode_check.dart`, `src/screens/account_settings_screen.dart`, `src/screens/watch_party/party_widgets.dart`, `src/support/support_service.dart`, `src/watch_party/watch_party_controller.dart`
+**Imported by:** `src/account/account_badges.dart`, `src/account/account_controller.dart`, `src/account/supporter_controller.dart`, `src/account/watchlist_sync.dart`, `src/notifications/episode_alerts.dart`, `src/notifications/episode_check.dart`, `src/screens/account_settings_screen.dart`, `src/screens/watch_party/create_party_screen.dart`, `src/screens/watch_party/party_widgets.dart`, `src/support/support_service.dart`, `src/watch_party/watch_party_controller.dart`
 
 **Tests importing it:** `test/account_badges_test.dart`, `test/account_test.dart`, `test/episode_alerts_test.dart`, `test/help_support_test.dart`, `test/profile_screen_test.dart`, `test/supporters_test.dart`, `test/ux_journeys_test.dart`, `test/watch_party_test.dart`, `test/watchlist_sync_test.dart`
 
@@ -357,9 +357,9 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Packages:** `flutter`, `shared_preferences`
 
-**Imported by:** `src/screens/supporters_screen.dart`
+**Imported by:** `src/screens/supporters_screen.dart`, `src/screens/watch_party/create_party_screen.dart`
 
-**Tests importing it:** `test/supporters_test.dart`
+**Tests importing it:** `test/supporters_test.dart`, `test/watch_party_test.dart`
 
 ## lib/src/account/watchlist_sync.dart
 
@@ -1373,7 +1373,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/screens/supporters_screen.dart
 
-**Source:** [`lib/src/screens/supporters_screen.dart`](../../lib/src/screens/supporters_screen.dart) · **Platform:** Shared · **Lines:** 715 · **Branches on:** isTv
+**Source:** [`lib/src/screens/supporters_screen.dart`](../../lib/src/screens/supporters_screen.dart) · **Platform:** Shared · **Lines:** 719 · **Branches on:** isTv
 
 **Purpose:** Reelish Supporters: a place to thank the people who fund Reelish, and to support it.
 
@@ -1385,7 +1385,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Packages:** `flutter`, `url_launcher`
 
-**Imported by:** `src/screens/help_support_screen.dart`, `src/screens/profile_screen.dart`
+**Imported by:** `src/screens/help_support_screen.dart`, `src/screens/profile_screen.dart`, `src/screens/watch_party/create_party_screen.dart`
 
 **Tests importing it:** `test/settings_ui_test.dart`, `test/supporters_test.dart`, `test/ux_journeys_test.dart`
 
@@ -1455,13 +1455,13 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/screens/watch_party/create_party_screen.dart
 
-**Source:** [`lib/src/screens/watch_party/create_party_screen.dart`](../../lib/src/screens/watch_party/create_party_screen.dart) · **Platform:** Shared · **Lines:** 312 · **Branches on:** isTv, isDesktop
+**Source:** [`lib/src/screens/watch_party/create_party_screen.dart`](../../lib/src/screens/watch_party/create_party_screen.dart) · **Platform:** Shared · **Lines:** 621 · **Branches on:** isTv, isDesktop
 
 **Purpose:** Starts a watch party for a movie or episode: the room's settings, then the waiting room with the code to share.
 
-**Declares:** `CreatePartyScreen` (Widget), `_CreatePartyScreenState` (Widget state)
+**Declares:** `CreatePartyScreen` (Widget), `_CreatePartyScreenState` (Widget state), `_Hosting` (Enum), `PartyHostingForSupporters` (Widget)
 
-**Imports (project):** `src/navigation/app_transitions.dart`, `src/platform/device_capabilities.dart`, `src/screens/watch_party/party_desktop.dart`, `src/screens/watch_party/party_widgets.dart`, `src/screens/watch_party/waiting_room_screen.dart`, `src/theme/design_tokens.dart`, `src/theme/glass_theme.dart`, `src/theme/reelish_icons.dart`, `src/watch_party/party_models.dart`, `src/watch_party/watch_party_controller.dart`, `src/widgets/settings/settings_components.dart`
+**Imports (project):** `src/account/account_api.dart`, `src/account/supporter_controller.dart`, `src/navigation/app_transitions.dart`, `src/platform/device_capabilities.dart`, `src/screens/supporters_screen.dart`, `src/screens/watch_party/join_party_screen.dart`, `src/screens/watch_party/party_desktop.dart`, `src/screens/watch_party/party_widgets.dart`, `src/screens/watch_party/waiting_room_screen.dart`, `src/theme/design_tokens.dart`, `src/theme/glass_theme.dart`, `src/theme/reelish_icons.dart`, `src/watch_party/party_models.dart`, `src/watch_party/watch_party_controller.dart`, `src/widgets/account_badges.dart`, `src/widgets/settings/settings_components.dart`
 
 **Packages:** `flutter`
 
@@ -1481,7 +1481,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Packages:** `flutter`
 
-**Imported by:** `src/desktop/desktop_settings_page.dart`, `src/screens/home_screen.dart`, `src/screens/playback_settings_screen.dart`
+**Imported by:** `src/desktop/desktop_settings_page.dart`, `src/screens/home_screen.dart`, `src/screens/playback_settings_screen.dart`, `src/screens/watch_party/create_party_screen.dart`
 
 **Tests importing it:** `test/ux_journeys_test.dart`, `test/watch_party_test.dart`
 
@@ -1519,7 +1519,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/screens/watch_party/party_widgets.dart
 
-**Source:** [`lib/src/screens/watch_party/party_widgets.dart`](../../lib/src/screens/watch_party/party_widgets.dart) · **Platform:** Shared · **Lines:** 534
+**Source:** [`lib/src/screens/watch_party/party_widgets.dart`](../../lib/src/screens/watch_party/party_widgets.dart) · **Platform:** Shared · **Lines:** 535
 
 **Purpose:** Pieces the watch party screens share: the title card, a participant's avatar and row, the room code, and plain words for errors and statuses.
 
@@ -2329,7 +2329,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Packages:** `flutter`
 
-**Imported by:** `src/screens/profile_screen.dart`, `src/screens/supporters_screen.dart`, `src/screens/watch_party/waiting_room_screen.dart`
+**Imported by:** `src/screens/profile_screen.dart`, `src/screens/supporters_screen.dart`, `src/screens/watch_party/create_party_screen.dart`, `src/screens/watch_party/waiting_room_screen.dart`
 
 **Tests importing it:** `test/account_badges_test.dart`, `test/supporters_test.dart`
 

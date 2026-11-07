@@ -26,6 +26,19 @@ const codePattern = new RegExp(
 
 const now = () => Math.floor(Date.now() / 1000);
 
+/**
+ * A verified donation that has not been refunded: the account may host a
+ * Watch Party. Read fresh on each check, so a refund applies at once.
+ */
+export async function isActiveSupporter(env: Env, userId: string): Promise<boolean> {
+  const row = await env.DB.prepare(
+    `SELECT 1 AS ok FROM supporter_profiles WHERE user_id = ? AND supporter_since IS NOT NULL`,
+  )
+    .bind(userId)
+    .first<{ ok: number }>();
+  return row !== null;
+}
+
 export function newSupportCode(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(8));
   // 30 divides 240 evenly, so dropping higher bytes leaves no bias.

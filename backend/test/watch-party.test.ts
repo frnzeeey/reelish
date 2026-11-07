@@ -18,8 +18,26 @@ async function create(token: string, body: Record<string, unknown> = {}) {
   return response;
 }
 
+/** Marks an account as having a verified donation, as the webhook does. */
+async function makeSupporter(userId: string) {
+  await testEnv.DB.prepare(
+    `INSERT INTO supporter_profiles (user_id, support_code, supporter_since, created_at, updated_at)
+     VALUES (?, ?, 1000, 1000, 1000)
+     ON CONFLICT (user_id) DO UPDATE SET supporter_since = 1000`,
+  )
+    .bind(userId, `RS-${crypto.randomUUID().slice(0, 8)}`)
+    .run();
+}
+
+/** An account that may host: hosting is for supporters. */
+async function supporter(options: { uuid?: string } = {}) {
+  const account = await signIn(options);
+  await makeSupporter(account.user.id);
+  return account;
+}
+
 async function host(settings: Record<string, unknown> = {}) {
-  const account = await signIn();
+  const account = await supporter();
   const response = await create(account.session.accessToken, { settings });
   expect(response.status).toBe(201);
   const { code } = (await response.json()) as { code: string };
@@ -117,7 +135,7 @@ describe('Watch party rooms', () => {
 
   it('requires a signed-in account and valid content', async () => {
     expect((await call('/api/v1/party', { body: { content: movie } })).status).toBe(401);
-    const { session } = await signIn();
+    const { session } = await supporter();
     const bad = await create(session.accessToken, { content: { tmdbId: 'x', type: 'movie', title: 'A' } });
     expect(await codeOf(bad)).toBe('invalid_content');
     const noEpisode = await create(session.accessToken, { content: { tmdbId: 1, type: 'series', title: 'A' } });
@@ -400,7 +418,7 @@ describe('Watch party rooms', () => {
   });
 
   it('a signed-out session cannot host with its still-valid token', async () => {
-    const { session } = await signIn();
+    const { session } = await supporter();
     await call('/api/v1/auth/logout', { method: 'POST', token: session.accessToken });
     const response = await create(session.accessToken, { content: movie });
     expect(response.status).toBe(401);
@@ -428,7 +446,7 @@ describe('The Founder badge in a party', () => {
 
   it('comes from the account, and a client cannot claim it', async () => {
     await testEnv.DB.prepare('DELETE FROM users WHERE trakt_uuid = ?').bind('founder-uuid').run();
-    const founder = await signIn({ uuid: 'founder-uuid' });
+    const founder = await supporter({ uuid: 'founder-uuid' });
     const created = await create(founder.session.accessToken);
     const { code } = (await created.json()) as { code: string };
     const owner = await connect(founder.session.accessToken, code);
@@ -449,5 +467,75 @@ describe('The Founder badge in a party', () => {
     )) as unknown as { participants: { pid: string; founder?: boolean }[] };
     expect(seen.participants).toHaveLength(2);
     expect(founderIn(seen)).toBe(1);
+  });
+});
+
+describe('Hosting is for supporters; joining is for everyone', () => {
+  it('an account without a donation cannot create a room, however it asks', async () => {
+    const { session } = await signIn();
+    const attempts = [
+      { body: {} },
+      { body: { supporter: true, badges: ['supporter'], settings: { supporter: true } } },
+      { body: {}, headers: { 'X-Party-Supporter': '1', 'X-Supporter': 'true' } },
+    ];
+    for (const attempt of attempts) {
+      const response = await call('/api/v1/party', {
+        token: session.accessToken,
+        headers: attempt.headers,
+        body: { content: movie, ...attempt.body },
+      });
+      expect(response.status).toBe(403);
+      expect(await codeOf(response)).toBe('supporter_required');
+    }
+  });
+
+  it('a donation waiting for review does not count', async () => {
+    const { session, user } = await signIn();
+    await testEnv.DB.prepare(
+      `INSERT INTO supporter_profiles (user_id, support_code, claim_requested_at, created_at, updated_at)
+       VALUES (?, ?, 1000, 1000, 1000)`,
+    )
+      .bind(user.id, `RS-${crypto.randomUUID().slice(0, 8)}`)
+      .run();
+    expect((await create(session.accessToken)).status).toBe(403);
+  });
+
+  it('a supporter hosts, and anyone joins and stays in sync', async () => {
+    const { code, token } = await host();
+    const viewer = await signIn();
+    // Not a supporter, and nothing asks them to be one.
+    expect((await call(`/api/v1/party/${code}`, { token: viewer.session.accessToken })).status).toBe(200);
+    const hostClient = await connect(token, code);
+    const guest = await connect(viewer.session.accessToken, code);
+    hostClient.send({ t: 'start' });
+    await guest.next('room', (m) => (m.room as { phase: string }).phase === 'watching');
+    hostClient.send({ t: 'control', action: 'play', positionMs: 0 });
+    hostClient.send({ t: 'control', action: 'pause', positionMs: 4000 });
+    hostClient.send({ t: 'control', action: 'seek', positionMs: 90_000 });
+    const seek = await guest.next('state', (m) => (m.playback as { positionMs: number }).positionMs === 90_000);
+    expect(seek.playback).toMatchObject({ status: 'paused', positionMs: 90_000 });
+  });
+
+  it('when support ends, no new room; the open one carries on', async () => {
+    const first = await host();
+    const viewer = await signIn();
+    const guest = await connect(viewer.session.accessToken, first.code);
+    await testEnv.DB.prepare('UPDATE supporter_profiles SET supporter_since = NULL WHERE user_id = ?')
+      .bind(first.account.user.id)
+      .run();
+
+    const again = await create(first.token);
+    expect(again.status).toBe(403);
+    expect(await codeOf(again)).toBe('supporter_required');
+    // The refused request ended nothing: the room is still there.
+    expect((await call(`/api/v1/party/${first.code}`, { token: viewer.session.accessToken })).status).toBe(200);
+    expect(guest.closed).toBeNull();
+  });
+
+  it('becoming a supporter allows hosting at once', async () => {
+    const { session, user } = await signIn();
+    expect((await create(session.accessToken)).status).toBe(403);
+    await makeSupporter(user.id);
+    expect((await create(session.accessToken)).status).toBe(201);
   });
 });

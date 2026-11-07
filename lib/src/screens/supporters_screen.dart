@@ -1,6 +1,6 @@
 // Reelish Supporters: a place to thank the people who fund Reelish, and to
-// support it. Supporting is optional and unlocks nothing; this page asks once,
-// here, and never interrupts anyone. Shared by phone, TV and Windows.
+// support it. Supporting is optional; its one privilege is hosting a Watch Party
+// (anyone can join one). This page asks once, here, and never interrupts anyone. Shared by phone, TV and Windows.
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -208,6 +208,10 @@ class _SupportersScreenState extends State<SupportersScreen>
                     'You receive the Reelish Supporter Badge, which never expires.',
               ),
               _Benefit(
+                icon: ReelishIcons.celebration,
+                text: 'You can host Watch Parties and invite anyone to join.',
+              ),
+              _Benefit(
                 icon: ReelishIcons.people,
                 text: 'You can be recognized here, if you choose to be.',
               ),
@@ -221,10 +225,10 @@ class _SupportersScreenState extends State<SupportersScreen>
               ),
               SettingsParagraph(
                 text:
-                    'Everything in Reelish stays available to everyone, '
-                    'whether or not you donate. Every supporter gets the same '
-                    'badge, whatever the amount. A refunded donation no longer '
-                    'counts.',
+                    'Everything else in Reelish stays available to everyone, '
+                    'and anyone can join a Watch Party. Every supporter gets '
+                    'the same badge and can host, whatever the amount. A '
+                    'refunded donation no longer counts.',
               ),
             ],
           ),

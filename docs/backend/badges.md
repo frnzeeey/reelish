@@ -1,7 +1,9 @@
 # Account badges
 
 Badges say who someone is. They never grant a permission, and nothing in the API
-checks one before allowing an action. Reelish has no role or admin system, and
+checks one before allowing an action. Hosting a Watch Party is for supporters,
+but the server reads the donation record for that (`isActiveSupporter` in
+`backend/src/supporters.ts`), not the badge. Reelish has no role or admin system, and
 this is deliberately not the start of one: anything needing privileges must have
 its own check.
 

@@ -68,7 +68,9 @@ the interface once per launch:
 - **Supporters:** the Supporter Badge is set only by Buy Me a Coffee's signed
   webhook, or the owner's `backend/scripts/grant-supporter.mjs`; never by the
   app. A donation names its account through a code in the donor's message,
-  since the platform has no metadata. It unlocks nothing. Docs:
+  since the platform has no metadata. Its one privilege is hosting a Watch
+  Party: `createParty` checks the donation record (`isActiveSupporter`), never
+  the badge or client data; joining stays open to everyone. Docs:
   `docs/backend/supporters.md`.
 - **Environments:** `staging` and `production` in `backend/wrangler.toml`
   (release builds point at production via the `REELISH_API_URL` repository

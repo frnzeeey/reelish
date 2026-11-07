@@ -128,7 +128,7 @@ its own).
 | `GET /api/v1/sessions` | Bearer | The account's signed-in devices |
 | `DELETE /api/v1/sessions/{id}` | Bearer | End one of the account's own sessions |
 | `GET /api/v1/tmdb/{tmdb path}` | Bearer | Allowlisted TMDB v3 request (below) |
-| `POST /api/v1/party` | Bearer | `{content, settings?, profile?}` → `201 {code, expiresAt, settings}`; ends the caller's previous party |
+| `POST /api/v1/party` | Bearer | Supporters only (`403 supporter_required` otherwise). `{content, settings?, profile?}` → `201 {code, expiresAt, settings}`; ends the caller's previous party |
 | `GET /api/v1/party/{code}` | Bearer | `{code, phase, content, host, participants, capacity}`; 404 `party_not_found` |
 | `GET /api/v1/party/{code}/socket` | Bearer | WebSocket upgrade into the room (below); 409 `party_full`, 403 `party_removed` |
 | `POST /api/v1/support/reports` | Bearer | `{kind, category, platform, title, description, steps?, diagnostics?}` (16 KB; `kind` is `bug` or `feedback`) → `201 {id, createdAt}`; a repeat within 10 minutes → `200 {id, duplicate: true}`; 429 `report_limit` after 5 a day per account (`backend/src/support.ts`) |
@@ -155,6 +155,12 @@ host who disconnects keeps the room for 60 seconds; then the
 longest-connected participant hosts. `PARTY_MAX_CAPACITY` (default 5) caps
 every room. When a Free plan daily limit is spent, room calls fail with
 503 `party_unavailable` and normal watching is unaffected.
+
+Only supporters create rooms: `createParty` reads the account's donation
+record (one D1 read, at creation only) and answers 403 `supporter_required`
+otherwise. Anyone signed in can preview and join. A room carries on if its
+host's support ends, and a handover (by the host, or after the grace above)
+may pass it to anyone; neither extends its 12 hours.
 
 The `content` is `{tmdbId, type: "movie"|"series", season, episode, title,
 posterPath?}` (season and episode for series). Participants are named by

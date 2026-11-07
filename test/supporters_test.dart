@@ -180,7 +180,12 @@ void main() {
       expect(find.text(_code), findsOneWidget);
       expect(find.text('I forgot to add my code'), findsOneWidget);
       expect(find.byType(SupporterBadge), findsNothing);
-      expect(find.textContaining('whether or not you donate'), findsOneWidget);
+      // One privilege, said plainly, and joining stays open to everyone.
+      expect(find.textContaining('host Watch Parties'), findsOneWidget);
+      expect(
+        find.textContaining('anyone can join a Watch Party'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('thanks a supporter, with their badge and date', (
