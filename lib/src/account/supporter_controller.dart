@@ -94,8 +94,15 @@ class SupporterController extends ChangeNotifier {
 
   bool get isSupporter => _status?.state == SupporterState.verified;
 
-  /// Shows the saved status for this account, then asks the server.
-  Future<void> refresh() async {
+  Future<void>? _refreshing;
+
+  /// Shows the saved status for this account, then asks the server. A call
+  /// while one is running waits for that one, so its caller sees the
+  /// server's answer rather than the saved status.
+  Future<void> refresh() =>
+      _refreshing ??= _refresh().whenComplete(() => _refreshing = null);
+
+  Future<void> _refresh() async {
     final userId = _account.userId;
     if (userId == null) {
       _status = null;

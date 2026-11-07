@@ -13,15 +13,18 @@ import '../theme/reelish_icons.dart';
 import '../account/account_controller.dart';
 import '../account/profile_controller.dart';
 import '../account/account_badges.dart';
+import '../account/supporter_controller.dart';
 import '../models/media_item.dart';
 import '../navigation/app_transitions.dart';
 import '../platform/device_capabilities.dart';
 import '../services/storage_service.dart';
 import '../theme/design_tokens.dart';
 import '../theme/glass_theme.dart';
+import '../theme/supporter_themes.dart';
 import '../widgets/profile_avatar.dart';
 import '../widgets/settings/settings_components.dart';
 import '../widgets/account_badges.dart';
+import '../widgets/supporter_theme_picker.dart';
 import 'account_settings_screen.dart';
 import 'supporters_screen.dart';
 
@@ -68,6 +71,7 @@ class ProfileScreen extends StatefulWidget {
     this.account,
     this.profile,
     this.badges,
+    this.supporters,
   });
 
   final StorageService storage;
@@ -87,6 +91,10 @@ class ProfileScreen extends StatefulWidget {
   final AccountBadges? badges;
   final ProfileController? profile;
 
+  /// Whether the account is a verified supporter, for the profile themes;
+  /// [SupporterController.instance] when null.
+  final SupporterController? supporters;
+
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
@@ -99,11 +107,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   ProfileController get _profile =>
       widget.profile ?? ProfileController.instance;
   late final AccountBadges _badges = widget.badges ?? AccountBadges.instance;
+  late final SupporterController _supporters =
+      widget.supporters ?? SupporterController.instance;
 
   @override
   void initState() {
     super.initState();
     unawaited(_badges.refresh());
+    unawaited(_supporters.refresh());
   }
 
   /// Local reads only: no network request.
@@ -170,9 +181,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-    listenable: Listenable.merge([_account, _profile]),
+    listenable: Listenable.merge([_account, _profile, _supporters]),
     builder: (context, _) {
       final signedIn = _account.status == AccountStatus.signedIn;
+      // Themes are for verified supporters, as the server last said. The
+      // saved choice stays put when support ends, and comes back with it.
+      final supporter = _supporters.isSupporter;
+      final theme = supporter ? SupporterTheme.resolve(_profile.themeId) : null;
       return SettingsPage(
         title: 'Profile',
         subtitle: 'Your account and your viewing at a glance.',
@@ -187,16 +202,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   account: _account,
                   profile: _profile,
                   badges: _badges,
+                  theme: theme,
                   onEdit: _openAccount,
                   activity: FutureBuilder<ProfileActivity>(
                     future: _activity,
                     builder: (context, snapshot) => _ActivityRow(
+                      // The counts take the theme's light inside its card.
+                      color: theme?.ink,
                       activity: snapshot.data,
                       failed: snapshot.hasError,
                       onOpen: widget.onOpenLibrary,
                     ),
                   ),
                 ),
+                if (supporter)
+                  SettingsSection(
+                    label: 'PROFILE THEME',
+                    description:
+                        'For Reelish Supporters. Only your profile changes; '
+                        'the rest of Reelish keeps your accent.',
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(AppSpace.lg),
+                        child: SupporterThemePicker(
+                          savedId: _profile.themeId,
+                          onSelect: (id) => unawaited(_profile.setTheme(id)),
+                        ),
+                      ),
+                    ],
+                  ),
                 SettingsSection(children: [_SignOutTile(onTap: _signOut)]),
               ],
       );
@@ -215,10 +249,13 @@ class _ProfileHero extends StatelessWidget {
     required this.account,
     required this.profile,
     required this.badges,
+    required this.theme,
     required this.onEdit,
     required this.activity,
   });
 
+  /// A supporter's chosen theme, or null for the usual card.
+  final SupporterTheme? theme;
   final String? displayName;
   final String? username;
   final AccountController account;
@@ -230,6 +267,7 @@ class _ProfileHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final accent = GlassTheme.primary;
+    final theme = this.theme;
     final name = displayName ?? username ?? 'Reelish';
     // In line with the sections below (the page gives the side margins).
     return Padding(
@@ -240,125 +278,169 @@ class _ProfileHero extends StatelessWidget {
       child: Container(
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
+          color: const Color(0xFF121218),
           borderRadius: BorderRadius.circular(SettingsMetrics.sectionRadius),
-          border: Border.all(color: Colors.white.withValues(alpha: .08)),
-          // The accent glows from behind the avatar into the card's surface.
-          gradient: RadialGradient(
-            center: const Alignment(-.8, -.85),
-            radius: 1.1,
-            colors: [
-              accent.withValues(alpha: .24),
-              const Color(0xFF17171E),
-              const Color(0xFF121218),
-            ],
-            stops: const [0, .5, 1],
+          border: Border.all(
+            color: theme == null
+                ? Colors.white.withValues(alpha: .08)
+                : theme.glow.withValues(alpha: .32),
           ),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+        child: Stack(
           children: [
-            Padding(
-              padding: const EdgeInsets.all(AppSpace.lg),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final compact = constraints.maxWidth < 360;
-                  final size = compact ? 68.0 : 88.0;
-                  return Row(
-                    children: [
-                      // The ring sets the avatar off the glow behind it.
-                      Container(
-                        padding: const EdgeInsets.all(3),
+            // One backdrop fades into the next when the theme changes.
+            Positioned.fill(
+              child: AnimatedSwitcher(
+                duration: AppMotion.resolve(context, AppMotion.emphasized),
+                child: theme == null
+                    ? DecoratedBox(
+                        key: const ValueKey('classic'),
+                        // The accent glows from behind the avatar into the
+                        // card's surface.
                         decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: accent.withValues(alpha: .7),
-                            width: 2,
+                          gradient: RadialGradient(
+                            center: const Alignment(-.8, -.85),
+                            radius: 1.1,
+                            colors: [
+                              accent.withValues(alpha: .24),
+                              const Color(0xFF17171E),
+                              const Color(0xFF121218),
+                            ],
+                            stops: const [0, .5, 1],
                           ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: accent.withValues(alpha: .28),
-                              blurRadius: 24,
-                            ),
-                          ],
                         ),
-                        child: MyProfileAvatar(
-                          size: size,
-                          account: account,
-                          profile: profile,
-                        ),
+                      )
+                    : SupporterThemeBackdrop(
+                        key: ValueKey(theme.id),
+                        theme: theme,
                       ),
-                      SizedBox(width: compact ? AppSpace.md : AppSpace.lg),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            ListenableBuilder(
-                              listenable: badges,
-                              builder: (context, _) => _ProfileName(
-                                name: name,
-                                // A username has no spaces to wrap at: one
-                                // line, shortened, rather than split mid-word.
-                                maxLines: displayName == null ? 1 : 2,
-                                compact: compact,
-                                founder: badges.has(AccountBadge.founder),
-                              ),
-                            ),
-                            const SizedBox(height: AppSpace.xs),
-                            // Trakt usernames often repeat the person's name,
-                            // so the badge names the service, not the user.
-                            const _TraktBadge(),
-                            _BadgeLine(badges: badges),
-                            const SizedBox(height: AppSpace.sm),
-                            FilledButton.icon(
-                              style: FilledButton.styleFrom(
-                                backgroundColor: accent.withValues(alpha: .16),
-                                foregroundColor: GlassTheme.coralBright,
-                              ),
-                              onPressed: onEdit,
-                              icon: const Icon(
-                                ReelishIcons.manageAccounts,
-                                size: 18,
-                              ),
-                              label: const Text(
-                                'Manage account',
-                                style: TextStyle(fontWeight: FontWeight.w700),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  );
-                },
               ),
             ),
-            if (displayName == null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpace.lg,
-                  0,
-                  AppSpace.lg,
-                  AppSpace.md,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(AppSpace.lg),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final compact = constraints.maxWidth < 360;
+                      final size = compact ? 68.0 : 88.0;
+                      return Row(
+                        children: [
+                          // The ring sets the avatar off the glow behind it.
+                          if (theme != null)
+                            SupporterAvatarRing(
+                              theme: theme,
+                              child: MyProfileAvatar(
+                                size: size,
+                                account: account,
+                                profile: profile,
+                              ),
+                            )
+                          else
+                            Container(
+                              padding: const EdgeInsets.all(3),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: accent.withValues(alpha: .7),
+                                  width: 2,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: accent.withValues(alpha: .28),
+                                    blurRadius: 24,
+                                  ),
+                                ],
+                              ),
+                              child: MyProfileAvatar(
+                                size: size,
+                                account: account,
+                                profile: profile,
+                              ),
+                            ),
+                          SizedBox(width: compact ? AppSpace.md : AppSpace.lg),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                ListenableBuilder(
+                                  listenable: badges,
+                                  builder: (context, _) => _ProfileName(
+                                    name: name,
+                                    // A username has no spaces to wrap at: one
+                                    // line, shortened, rather than split mid-word.
+                                    maxLines: displayName == null ? 1 : 2,
+                                    compact: compact,
+                                    founder: badges.has(AccountBadge.founder),
+                                  ),
+                                ),
+                                const SizedBox(height: AppSpace.xs),
+                                // Trakt usernames often repeat the person's name,
+                                // so the badge names the service, not the user.
+                                const _TraktBadge(),
+                                _BadgeLine(badges: badges),
+                                const SizedBox(height: AppSpace.sm),
+                                FilledButton.icon(
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: (theme?.glow ?? accent)
+                                        .withValues(alpha: .18),
+                                    foregroundColor:
+                                        theme?.ink ?? GlassTheme.coralBright,
+                                  ),
+                                  onPressed: onEdit,
+                                  icon: const Icon(
+                                    ReelishIcons.manageAccounts,
+                                    size: 18,
+                                  ),
+                                  label: const Text(
+                                    'Manage account',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
                 ),
-                child: Row(
-                  children: [
-                    Icon(ReelishIcons.badge, size: 18, color: accent),
-                    const SizedBox(width: AppSpace.sm),
-                    const Expanded(
-                      child: Text(
-                        'Add a display name so friends recognise you in '
-                        'watch parties.',
-                        style: TextStyle(
-                          color: GlassTheme.muted,
-                          fontSize: AppTextSize.label,
-                        ),
-                      ),
+                if (displayName == null)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpace.lg,
+                      0,
+                      AppSpace.lg,
+                      AppSpace.md,
                     ),
-                  ],
-                ),
-              ),
-            Divider(height: 1, color: Colors.white.withValues(alpha: .07)),
-            activity,
+                    child: Row(
+                      children: [
+                        Icon(
+                          ReelishIcons.badge,
+                          size: 18,
+                          color: theme?.ink ?? accent,
+                        ),
+                        const SizedBox(width: AppSpace.sm),
+                        const Expanded(
+                          child: Text(
+                            'Add a display name so friends recognise you in '
+                            'watch parties.',
+                            style: TextStyle(
+                              color: GlassTheme.muted,
+                              fontSize: AppTextSize.label,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                Divider(height: 1, color: Colors.white.withValues(alpha: .07)),
+                activity,
+              ],
+            ),
           ],
         ),
       ),
@@ -518,8 +600,11 @@ class _ActivityRow extends StatelessWidget {
     required this.activity,
     required this.failed,
     required this.onOpen,
+    this.color,
   });
 
+  /// The counts' colour; the accent when null.
+  final Color? color;
   final ProfileActivity? activity;
   final bool failed;
   final VoidCallback? onOpen;
@@ -544,7 +629,7 @@ class _ActivityRow extends StatelessWidget {
             dimension: 22,
             child: CircularProgressIndicator(
               strokeWidth: 2.4,
-              color: GlassTheme.primary,
+              color: color ?? GlassTheme.primary,
             ),
           ),
         ),
@@ -573,6 +658,7 @@ class _ActivityRow extends StatelessWidget {
                     ),
                   Expanded(
                     child: _Stat(
+                      color: color ?? GlassTheme.primary,
                       count: count,
                       label: label,
                       icon: icon,
@@ -608,12 +694,14 @@ class _ActivityRow extends StatelessWidget {
 
 class _Stat extends StatelessWidget {
   const _Stat({
+    required this.color,
     required this.count,
     required this.label,
     required this.icon,
     this.onTap,
   });
 
+  final Color color;
   final int count;
   final String label;
   final IconData icon;
@@ -634,7 +722,7 @@ class _Stat extends StatelessWidget {
             Text(
               '$count',
               style: TextStyle(
-                color: GlassTheme.primary,
+                color: color,
                 fontSize: AppTextSize.headline,
                 fontWeight: FontWeight.w800,
                 fontFeatures: const [FontFeature.tabularFigures()],

@@ -40,6 +40,8 @@ search the generated references below: every file, class and function in
 | [Usage statistics](features/analytics.md) | Opt-in Firebase Analytics on Android: events, privacy, setup, DebugView, cost |
 | [Account badges](backend/badges.md) | Founder and Supporter: where each comes from, and why neither is a permission |
 | [Supporters](backend/supporters.md) | The Supporter Badge: Buy Me a Coffee webhooks, supporter codes, reviews, setup |
+| [Supporter themes](features/supporter-themes.md) | Profile themes for verified supporters: entitlement, saving, rendering |
+| [App icons](features/app-icons.md) | Launcher icon switching, the free and supporter icons, and their assets |
 | [Icon system](design/icon-system.md) | Reelish's own icons: design rules, solid forms, how to add one, the gallery |
 | [Content advisory](features/content-advisory.md) | The age rating card at playback start: TMDB coverage, sourcing rules, behaviour |
 | [Crash reporting](features/crash-reporting.md) | Opt-in Crashlytics on Android, the Windows error log, what is reported, testing, symbols |

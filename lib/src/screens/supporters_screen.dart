@@ -212,6 +212,14 @@ class _SupportersScreenState extends State<SupportersScreen>
                 text: 'You can host Watch Parties and invite anyone to join.',
               ),
               _Benefit(
+                icon: ReelishIcons.sparkle,
+                text: 'You can dress your profile in an exclusive theme.',
+              ),
+              _Benefit(
+                icon: ReelishIcons.grid,
+                text: 'On Android phones and tablets, every app icon is yours.',
+              ),
+              _Benefit(
                 icon: ReelishIcons.people,
                 text: 'You can be recognized here, if you choose to be.',
               ),
@@ -227,7 +235,7 @@ class _SupportersScreenState extends State<SupportersScreen>
                 text:
                     'Everything else in Reelish stays available to everyone, '
                     'and anyone can join a Watch Party. Every supporter gets '
-                    'the same badge and can host, whatever the amount. A '
+                    'the same badge and privileges, whatever the amount. A '
                     'refunded donation no longer counts.',
               ),
             ],

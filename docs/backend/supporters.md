@@ -1,8 +1,10 @@
 # Reelish Supporters
 
 Donors on Buy Me a Coffee receive a permanent Supporter Badge on their Reelish
-account. It carries one privilege: hosting a Watch Party. Joining a party, and
-everything else in the app, stays open to everyone.
+account. It carries these privileges: hosting a Watch Party, checked by the server,
+a choice of [profile themes](../features/supporter-themes.md), and the full
+collection of [app icons](../features/app-icons.md) on Android phones. Joining a party, and everything else in the app,
+stays open to everyone.
 
 | Piece | Where |
 |---|---|

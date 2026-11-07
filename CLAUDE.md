@@ -68,10 +68,14 @@ the interface once per launch:
 - **Supporters:** the Supporter Badge is set only by Buy Me a Coffee's signed
   webhook, or the owner's `backend/scripts/grant-supporter.mjs`; never by the
   app. A donation names its account through a code in the donor's message,
-  since the platform has no metadata. Its one privilege is hosting a Watch
+  since the platform has no metadata. Its one server-checked privilege is hosting a Watch
   Party: `createParty` checks the donation record (`isActiveSupporter`), never
-  the badge or client data; joining stays open to everyone. Docs:
-  `docs/backend/supporters.md`.
+  the badge or client data; joining stays open to everyone. Supporters also
+  get profile themes (`supporter_themes.dart`), drawn only while
+  `SupporterController` reports a verified donation, and every launcher icon
+  (`app_icon.dart`: Default and Slate stay free; a supporter icon is applied
+  only after a fresh server check). Docs: `docs/backend/supporters.md`,
+  `docs/features/supporter-themes.md`, `docs/features/app-icons.md`.
 - **Environments:** `staging` and `production` in `backend/wrangler.toml`
   (release builds point at production via the `REELISH_API_URL` repository
   variable). Deploy and migrate staging first; touch production only when
