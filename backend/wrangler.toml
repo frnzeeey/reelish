@@ -53,9 +53,19 @@ simple = { limit = 20, period = 60 }
 name = "PARTY_ROOMS"
 class_name = "WatchPartyRoom"
 
+# Reaches Trakt from another region when this one is refused (src/trakt.ts).
+# Used only then; costs nothing while idle.
+[[durable_objects.bindings]]
+name = "TRAKT_EGRESS"
+class_name = "TraktEgress"
+
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["WatchPartyRoom"]
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["TraktEgress"]
 
 # Daily at 03:17 UTC: erase security log rows past retention (src/retention.ts).
 [triggers]
@@ -79,7 +89,7 @@ ratelimits = [
   { name = "SYNC_LIMITER", namespace_id = "2004", simple = { limit = 30, period = 60 } },
   { name = "PARTY_LIMITER", namespace_id = "2005", simple = { limit = 20, period = 60 } },
 ]
-durable_objects = { bindings = [{ name = "PARTY_ROOMS", class_name = "WatchPartyRoom" }] }
+durable_objects = { bindings = [{ name = "PARTY_ROOMS", class_name = "WatchPartyRoom" }, { name = "TRAKT_EGRESS", class_name = "TraktEgress" }] }
 observability = { enabled = true }
 triggers = { crons = ["17 3 * * *"] }
 
@@ -98,6 +108,6 @@ ratelimits = [
   { name = "SYNC_LIMITER", namespace_id = "3004", simple = { limit = 30, period = 60 } },
   { name = "PARTY_LIMITER", namespace_id = "3005", simple = { limit = 20, period = 60 } },
 ]
-durable_objects = { bindings = [{ name = "PARTY_ROOMS", class_name = "WatchPartyRoom" }] }
+durable_objects = { bindings = [{ name = "PARTY_ROOMS", class_name = "WatchPartyRoom" }, { name = "TRAKT_EGRESS", class_name = "TraktEgress" }] }
 observability = { enabled = true }
 triggers = { crons = ["17 3 * * *"] }

@@ -11,7 +11,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/icon_gallery.dart`](#libicon_gallerydart) | Shared | 172 | A development screen showing every Reelish icon side by side, for checking the set after changing it. |
 | [`lib/main.dart`](#libmaindart) | Shared | 152 | App entry point: initialises the player engines, builds `ReelishApp` (theme, navigator, Windows shortcuts and gamepad) and the startup gate that shows first-run consent or `HomeScreen`. |
 | [`lib/src/account/account_api.dart`](#libsrcaccountaccount_apidart) | Shared | 380 | HTTP calls to the Reelish API's account routes, with timeouts and a typed error for every failure the UI distinguishes. |
-| [`lib/src/account/account_controller.dart`](#libsrcaccountaccount_controllerdart) | Shared | 343 | The signed-in Trakt account: restores the stored session at launch, hands out fresh access tokens (one shared refresh at a time), runs the device sign-in, and signs out. |
+| [`lib/src/account/account_controller.dart`](#libsrcaccountaccount_controllerdart) | Shared | 345 | The signed-in Trakt account: restores the stored session at launch, hands out fresh access tokens (one shared refresh at a time), runs the device sign-in, and signs out. |
 | [`lib/src/account/avatar_image.dart`](#libsrcaccountavatar_imagedart) | Shared | 110 | Turns a picked image (untrusted) into a small square PNG avatar: size and dimensions are checked before decoding, only a reduced copy is ever decoded, and re-encoding drops all of the original's metadata. |
 | [`lib/src/account/backend_config.dart`](#libsrcaccountbackend_configdart) | Shared | 25 | Where the Reelish API lives. |
 | [`lib/src/account/profile_controller.dart`](#libsrcaccountprofile_controllerdart) | Shared | 294 | The user's Reelish profile on this device: a display name and an avatar (initials, a preset, or their own photo). |
@@ -252,7 +252,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/account/account_controller.dart
 
-**Source:** [`lib/src/account/account_controller.dart`](../../lib/src/account/account_controller.dart) · **Platform:** Shared · **Lines:** 343 · **Branches on:** isTv, isDesktop
+**Source:** [`lib/src/account/account_controller.dart`](../../lib/src/account/account_controller.dart) · **Platform:** Shared · **Lines:** 345 · **Branches on:** isTv, isDesktop
 
 **Purpose:** The signed-in Trakt account: restores the stored session at launch, hands out fresh access tokens (one shared refresh at a time), runs the device sign-in, and signs out.
 

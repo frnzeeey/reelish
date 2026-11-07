@@ -1,6 +1,7 @@
 // Bindings, variables and secrets the Worker runs with.
 
 import type { WatchPartyRoom } from './party-room';
+import type { TraktEgress } from './trakt-egress';
 
 export interface Env {
   DB: D1Database;
@@ -13,6 +14,8 @@ export interface Env {
   PARTY_LIMITER: RateLimit;
   /** One watch party room per code (SQLite-backed Durable Objects). */
   PARTY_ROOMS: DurableObjectNamespace<WatchPartyRoom>;
+  /** Reaches Trakt from another region when this one is refused. */
+  TRAKT_EGRESS: DurableObjectNamespace<TraktEgress>;
 
   ENVIRONMENT: string;
   TRAKT_API_URL: string;

@@ -79,7 +79,7 @@ Top-level functions and methods in `lib/`, A–Z by name, then by declaring type
 | `_cachedInstalledVersion` | `GitHubUpdateService` (static) | [`github_update_service.dart:495`](../../lib/src/services/github_update_service.dart#L495) | yes | `static Future<String?> _cachedInstalledVersion(StorageService storage) async` | The installed version the cached result was computed for: null when nothing is cached, empty for results saved before this was recorded. |
 | `cachedProviderManifest` | `StorageService` | [`storage_service.dart:125`](../../lib/src/services/storage_service.dart#L125) | yes | `Future<CachedManifest?> cachedProviderManifest(String url) async` | The last downloaded copy of the provider manifest at `url` with the validators its host sent, for a conditional request; null when none. |
 | `caches` | `ArtworkCache` (static) | [`artwork_image.dart:48`](../../lib/src/widgets/artwork_image.dart#L48) |  | `static bool caches(String url)` | Only TMDB's own HTTPS image host is cached on disk. |
-| `cancel` | `DeviceSignIn` | [`account_controller.dart:333`](../../lib/src/account/account_controller.dart#L333) |  | `void cancel()` |  |
+| `cancel` | `DeviceSignIn` | [`account_controller.dart:335`](../../lib/src/account/account_controller.dart#L335) |  | `void cancel()` |  |
 | `cancel` | `StreamDiscovery` | [`stream_discovery.dart:99`](../../lib/src/services/stream_discovery.dart#L99) |  | `void cancel()` |  |
 | `cancel` | `UpdateDownloadCancellation` | [`github_update_service.dart:23`](../../lib/src/services/github_update_service.dart#L23) |  | `void cancel()` |  |
 | `cancelDownload` | `WindowsUpdateController` | [`windows_update_controller.dart:270`](../../lib/src/services/windows_update_controller.dart#L270) |  | `void cancelDownload()` |  |
