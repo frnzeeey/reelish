@@ -187,9 +187,10 @@ void main() {
       await show(tester, {
         'badges': ['founder'],
       });
-      expect(find.byType(ui.FounderBadge), findsOneWidget);
+      // Said once: the crown and the title under the name, no second pill.
       expect(find.text(ui.FounderBadge.title), findsOneWidget);
-      expect(find.text(ui.FounderBadge.label), findsOneWidget);
+      expect(find.byType(ui.FounderEmblem), findsOneWidget);
+      expect(find.text(ui.FounderBadge.label), findsNothing);
       expect(find.byType(ui.SupporterBadge), findsNothing);
     });
 
@@ -197,7 +198,7 @@ void main() {
       await show(tester, {
         'badges': ['founder', 'supporter'],
       });
-      expect(find.byType(ui.FounderBadge), findsOneWidget);
+      expect(find.text(ui.FounderBadge.title), findsOneWidget);
       expect(find.byType(ui.SupporterBadge), findsOneWidget);
     });
 
@@ -213,7 +214,7 @@ void main() {
         'badges': ['supporter'],
       });
       expect(find.byType(ui.SupporterBadge), findsOneWidget);
-      expect(find.byType(ui.FounderBadge), findsNothing);
+      expect(find.text(ui.FounderBadge.title), findsNothing);
     });
 
     testWidgets('fits a small phone with a long name and both badges', (

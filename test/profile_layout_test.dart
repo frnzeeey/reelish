@@ -14,9 +14,11 @@ import 'package:onfeed/src/account/session_store.dart';
 import 'package:onfeed/src/account/supporter_controller.dart';
 import 'package:onfeed/src/platform/device_capabilities.dart';
 import 'package:onfeed/src/screens/profile_screen.dart';
+import 'package:onfeed/src/screens/supporters_screen.dart';
 import 'package:onfeed/src/services/accent_settings_controller.dart';
 import 'package:onfeed/src/services/storage_service.dart';
 import 'package:onfeed/src/theme/glass_theme.dart';
+import 'package:onfeed/src/widgets/account_badges.dart';
 import 'package:onfeed/src/widgets/profile_avatar_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -113,23 +115,41 @@ Future<ProfileController> _show(
   return profile;
 }
 
+Future<void> _font(String family, List<String> paths) async {
+  final loader = FontLoader(family);
+  for (final path in paths) {
+    loader.addFont(
+      Future.value(ByteData.sublistView(File(path).readAsBytesSync())),
+    );
+  }
+  await loader.load();
+}
+
 void main() {
+  setUpAll(() async {
+    // The real fonts: the test font is far wider, so it would put the
+    // capsule under every name.
+    await _font('ReelishIcons', ['assets/fonts/ReelishIcons.otf']);
+    await _font('Montserrat', [
+      for (final weight in ['Regular', 'Medium', 'SemiBold', 'Bold'])
+        'assets/fonts/Montserrat-$weight.ttf',
+    ]);
+  });
   tearDown(() => GlassTheme.setAccent(GlassTheme.coral));
 
-  group('Three parts', () {
-    testWidgets('identity, then Personalize, Membership and Account', (
-      tester,
-    ) async {
+  group('Identity, Personalize and Account', () {
+    testWidgets('every part once, and nothing repeated', (tester) async {
       await _show(tester);
-      for (final label in ['PERSONALIZE', 'MEMBERSHIP', 'ACCOUNT']) {
-        expect(find.text(label), findsOneWidget, reason: label);
-      }
-      expect(find.text('Avatar'), findsOneWidget);
-      expect(find.text('Avatar 3'), findsOneWidget);
+      expect(find.text('PERSONALIZE'), findsOneWidget);
+      expect(find.text('ACCOUNT'), findsOneWidget);
+      // The identity card says who you are; no section repeats it.
+      expect(find.text('MEMBERSHIP'), findsNothing);
+      // One way into the avatar picker: the button on the avatar.
+      expect(find.byTooltip('Change avatar'), findsOneWidget);
+      expect(find.text('Avatar'), findsNothing);
       expect(find.text('Theme'), findsOneWidget);
       expect(find.text('Manage account'), findsOneWidget);
       expect(find.text('Sign out'), findsOneWidget);
-      // The identity card comes first.
       expect(
         tester.getTopLeft(find.text('Sam')).dy,
         lessThan(tester.getTopLeft(find.text('PERSONALIZE')).dy),
@@ -142,28 +162,53 @@ void main() {
     });
   });
 
-  group('Membership', () {
-    for (final (entitlement, badges, title) in [
-      ('free', <String>[], 'Reelish Supporters'),
-      ('supporter', ['supporter'], 'Supporter perks'),
-      ('founder', ['founder'], 'Founder'),
-    ]) {
-      testWidgets('$entitlement: "$title"', (tester) async {
-        await _show(tester, entitlement: entitlement, badges: badges);
-        expect(find.text(title), findsOneWidget);
-      });
-    }
+  group('Identity capsules', () {
+    testWidgets('a free account carries none', (tester) async {
+      await _show(tester);
+      expect(find.byType(FounderBadge), findsNothing);
+      expect(find.byType(SupporterBadge), findsNothing);
+    });
 
-    testWidgets('a Founder who never donated shows no Supporter badge', (
+    testWidgets('a supporter carries the Supporter capsule', (tester) async {
+      await _show(tester, entitlement: 'supporter', badges: ['supporter']);
+      expect(find.byType(SupporterBadge), findsOneWidget);
+      expect(find.text(SupporterBadge.shortLabel), findsOneWidget);
+      expect(find.byType(FounderBadge), findsNothing);
+    });
+
+    testWidgets('the Founder carries Founder & Developer, once, under the '
+        'name', (tester) async {
+      await _show(tester, entitlement: 'founder', badges: ['founder']);
+      expect(find.byType(FounderBadge), findsOneWidget);
+      expect(find.text(FounderBadge.title), findsOneWidget);
+      // Founder without a donation: no Supporter capsule they did not earn.
+      expect(find.byType(SupporterBadge), findsNothing);
+      final name = tester.getRect(find.text('Sam'));
+      final capsule = tester.getRect(find.byType(FounderBadge));
+      // Under the name, centred with it.
+      expect(capsule.top, greaterThan(name.bottom));
+      expect((capsule.center.dx - name.center.dx).abs(), lessThan(2));
+    });
+
+    testWidgets('Founder and Supporter capsules share one geometry', (
       tester,
     ) async {
-      await _show(tester, entitlement: 'founder', badges: ['founder']);
-      expect(find.text('REELISH FOUNDER'), findsOneWidget);
-      expect(find.text('Reelish Supporter'), findsNothing);
-      expect(
-        find.textContaining('Every Supporter perk is yours'),
-        findsOneWidget,
+      await _show(
+        tester,
+        entitlement: 'founder',
+        badges: ['founder', 'supporter'],
       );
+      expect(
+        tester.getSize(find.byType(FounderBadge)).height,
+        tester.getSize(find.byType(SupporterBadge)).height,
+      );
+    });
+
+    testWidgets('a capsule opens the Supporters page', (tester) async {
+      await _show(tester, entitlement: 'founder', badges: ['founder']);
+      await tester.tap(find.byType(FounderBadge));
+      await tester.pumpAndSettle();
+      expect(find.byType(SupportersScreen), findsOneWidget);
     });
   });
 
@@ -212,13 +257,22 @@ void main() {
 
   group('Every interface', () {
     testWidgets(
-      'Windows: the identity beside the rest',
+      'Windows: the identity across the top, the sections side by side',
       (tester) async {
         await _show(tester, size: const Size(1280, 900));
+        final avatar = tester.getCenter(find.byTooltip('Change avatar'));
         final name = tester.getCenter(find.text('Sam'));
-        final avatarTile = tester.getCenter(find.text('Avatar'));
-        expect(avatarTile.dx, greaterThan(name.dx));
-        expect(avatarTile.dy, lessThan(name.dy + 200));
+        // An empty library: its one line sits with the name, beside the avatar.
+        final hint = tester.getTopLeft(
+          find.text('Titles you watch and add to My list show up here.'),
+        );
+        expect(name.dx, greaterThan(avatar.dx));
+        expect(hint.dx, greaterThan(avatar.dx));
+        expect(hint.dy, greaterThan(name.dy));
+        final theme = tester.getTopLeft(find.text('Theme'));
+        final account = tester.getTopLeft(find.text('Manage account'));
+        expect(theme.dy, account.dy);
+        expect(account.dx, greaterThan(theme.dx));
         expect(tester.takeException(), isNull);
       },
       variant: TargetPlatformVariant.only(TargetPlatform.windows),
@@ -227,7 +281,7 @@ void main() {
     testWidgets('a phone stacks the parts', (tester) async {
       await _show(tester);
       expect(
-        tester.getTopLeft(find.text('Avatar')).dy,
+        tester.getTopLeft(find.text('Theme')).dy,
         greaterThan(tester.getBottomLeft(find.text('Sam')).dy),
       );
     });

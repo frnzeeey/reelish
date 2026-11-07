@@ -1,5 +1,7 @@
-// The badges an account can carry. Each has its own emblem, colours and words,
-// and shares only the pill they sit on. The colours stay the same whichever
+// The badges an account can carry, as identity capsules. Every capsule shares
+// one geometry (CapsuleMetrics): height, padding, emblem size and type. Each
+// badge has its own emblem, colours and finish, so Founder and Supporter are
+// told apart by more than their words. The colours stay the same whichever
 // accent the viewer picked, so a badge means one thing everywhere.
 import 'package:flutter/material.dart';
 
@@ -28,65 +30,97 @@ class _Emblem extends StatelessWidget {
   );
 }
 
-/// The emblem and name on a quiet pill.
-class _BadgePill extends StatelessWidget {
-  const _BadgePill({
+/// The geometry every identity capsule shares, so badges line up beside a
+/// name and with each other on every interface.
+abstract final class CapsuleMetrics {
+  static double height(bool tv) => tv ? 34 : 26;
+  static double emblem(bool tv) => tv ? 18 : 14;
+  static double text(bool tv) => tv ? AppTextSize.body : AppTextSize.label;
+  static double padding(bool tv) => tv ? AppSpace.md : 10;
+  static const gap = 6.0;
+}
+
+/// An emblem and a name in a fully rounded capsule. [fill] is a gradient so a
+/// badge can carry a finish of its own; [onTap] makes the whole capsule a
+/// button, with a focus ring for the remote and keyboard.
+class _Capsule extends StatelessWidget {
+  const _Capsule({
     required this.emblem,
     required this.label,
     required this.ink,
     required this.fill,
     required this.outline,
     required this.tv,
-    this.letterSpacing,
+    required this.semantics,
+    this.onTap,
   });
 
   final Widget emblem;
   final String label;
   final Color ink;
-  final Color fill;
+  final Gradient fill;
   final Color outline;
   final bool tv;
-  final double? letterSpacing;
+  final String semantics;
+  final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) => DecoratedBox(
-    decoration: BoxDecoration(
-      color: fill,
-      borderRadius: BorderRadius.circular(AppRadius.pill),
-      border: Border.all(color: outline),
-    ),
-    child: Padding(
-      padding: EdgeInsets.symmetric(
-        horizontal: tv ? AppSpace.sm : AppSpace.xs + 2,
-        vertical: tv ? AppSpace.xxs + 2 : AppSpace.xxs,
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          emblem,
-          const SizedBox(width: AppSpace.xxs + 2),
-          // A badge's name is never cut short: it shrinks to fit a narrow
-          // card instead.
-          Flexible(
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Text(
-                label,
-                maxLines: 1,
-                style: TextStyle(
-                  color: ink,
-                  fontSize: tv ? AppTextSize.body : AppTextSize.label,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: letterSpacing,
+  Widget build(BuildContext context) {
+    final shape = StadiumBorder(side: BorderSide(color: outline));
+    final body = SizedBox(
+      height: CapsuleMetrics.height(tv),
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: CapsuleMetrics.padding(tv)),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            emblem,
+            const SizedBox(width: CapsuleMetrics.gap),
+            // A badge's name is never cut short: it shrinks to fit instead.
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  style: TextStyle(
+                    color: ink,
+                    fontSize: CapsuleMetrics.text(tv),
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: .2,
+                    height: 1,
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
-  );
+    );
+    return Semantics(
+      label: semantics,
+      button: onTap != null,
+      excludeSemantics: true,
+      child: Material(
+        type: MaterialType.transparency,
+        shape: shape,
+        clipBehavior: Clip.antiAlias,
+        child: Ink(
+          decoration: ShapeDecoration(gradient: fill, shape: shape),
+          child: onTap == null
+              ? body
+              : InkWell(
+                  onTap: onTap,
+                  customBorder: const StadiumBorder(),
+                  focusColor: ink.withValues(alpha: .18),
+                  hoverColor: ink.withValues(alpha: .08),
+                  child: body,
+                ),
+        ),
+      ),
+    );
+  }
 }
 
 /// The Reelish crown, in violet.
@@ -109,9 +143,10 @@ class FounderEmblem extends StatelessWidget {
 /// The identity of the person who created Reelish. It belongs to one account,
 /// and grants no permission of any kind.
 class FounderBadge extends StatelessWidget {
-  const FounderBadge({super.key, this.tv = false});
+  const FounderBadge({super.key, this.tv = false, this.onTap});
 
   final bool tv;
+  final VoidCallback? onTap;
 
   static const label = 'REELISH FOUNDER';
   static const title = 'Founder & Developer';
@@ -123,18 +158,21 @@ class FounderBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Tooltip(
     message: description,
-    child: Semantics(
-      label: '$title. $description',
-      excludeSemantics: true,
-      child: _BadgePill(
-        emblem: FounderEmblem(size: tv ? 22 : 16),
-        label: label,
-        ink: ink,
-        fill: const Color(0x1F9B7BEF),
-        outline: const Color(0x599B7BEF),
-        tv: tv,
-        letterSpacing: .6,
+    child: _Capsule(
+      emblem: FounderEmblem(size: CapsuleMetrics.emblem(tv) + 2),
+      label: title,
+      ink: const Color(0xFFE6DCFF),
+      // Deep violet into a lighter one: the Founder's finish, which no other
+      // badge has.
+      fill: const LinearGradient(
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
+        colors: [Color(0x528460E8), Color(0x249B7BEF)],
       ),
+      outline: const Color(0x80B79CF7),
+      tv: tv,
+      semantics: '$title. $description',
+      onTap: onTap,
     ),
   );
 }
@@ -158,34 +196,32 @@ class SupporterEmblem extends StatelessWidget {
 
 /// One badge for everyone who supports Reelish.
 class SupporterBadge extends StatelessWidget {
-  const SupporterBadge({super.key, this.tv = false, this.onTap});
+  const SupporterBadge({
+    super.key,
+    this.tv = false,
+    this.onTap,
+    this.short = false,
+  });
 
   final bool tv;
   final VoidCallback? onTap;
 
+  /// "Supporter" rather than "Reelish Supporter", beside a name.
+  final bool short;
+
   static const label = 'Reelish Supporter';
+  static const shortLabel = 'Supporter';
 
   @override
-  Widget build(BuildContext context) {
-    final pill = _BadgePill(
-      emblem: SupporterEmblem(size: tv ? 22 : 16),
-      label: label,
-      ink: const Color(0xFFFFD98A),
-      fill: const Color(0x1FF5B942),
-      outline: const Color(0x59F5B942),
-      tv: tv,
-    );
-    return Semantics(
-      label: label,
-      button: onTap != null,
-      excludeSemantics: true,
-      child: onTap == null
-          ? pill
-          : InkWell(
-              onTap: onTap,
-              borderRadius: BorderRadius.circular(AppRadius.pill),
-              child: pill,
-            ),
-    );
-  }
+  Widget build(BuildContext context) => _Capsule(
+    emblem: SupporterEmblem(size: CapsuleMetrics.emblem(tv) + 2),
+    label: short ? shortLabel : label,
+    ink: const Color(0xFFFFDC92),
+    // A flat warm tint: plainer than the Founder's finish, on purpose.
+    fill: const LinearGradient(colors: [Color(0x26F5B942), Color(0x26F5B942)]),
+    outline: const Color(0x66F5B942),
+    tv: tv,
+    semantics: label,
+    onTap: onTap,
+  );
 }

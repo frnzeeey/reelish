@@ -4,7 +4,7 @@
 
 Top-level functions and methods in `lib/`, A–Z by name, then by declaring type. Included: every public function and method, and private ones that carry a doc comment (those are the behaviour the authors chose to explain). Left out: undocumented private helpers, framework overrides (`build`, `initState`, `dispose`, …) without a doc comment, constructors, getters and setters. **Signature** is the declaration as written, collapsed onto one line. **Async** marks functions that return a `Future` or `Stream` or are declared `async`. Callers are not listed: names such as `load` are too common to match reliably; search the code for `.name(` instead.
 
-823 entries: 59 top-level, 764 methods.
+827 entries: 59 top-level, 768 methods.
 
 [A](#a) · [B](#b) · [C](#c) · [D](#d) · [E](#e) · [F](#f) · [G](#g) · [H](#h) · [I](#i) · [K](#k) · [L](#l) · [M](#m) · [N](#n) · [O](#o) · [P](#p) · [Q](#q) · [R](#r) · [S](#s) · [T](#t) · [U](#u) · [V](#v) · [W](#w)
 
@@ -28,6 +28,7 @@ Top-level functions and methods in `lib/`, A–Z by name, then by declaring type
 | `add` | `SeekCost` | [`playback_sync.dart:109`](../../lib/src/watch_party/playback_sync.dart#L109) |  | `void add(int measuredMs)` |  |
 | `add` | `StreamDiscovery` | [`stream_discovery.dart:76`](../../lib/src/services/stream_discovery.dart#L76) |  | `void add(StreamSource source)` |  |
 | `addCandidate` | `PlaybackCoordinator` | [`playback_coordinator.dart:345`](../../lib/src/services/playback_coordinator.dart#L345) |  | `bool addCandidate(StreamSource source)` |  |
+| `_addName` | `_IdentityCard` | [`profile_screen.dart:548`](../../lib/src/screens/profile_screen.dart#L548) |  | `Widget _addName(bool tv, {required bool start})` | Without a name of their own, the prompt is also the way to set one. |
 | `addons` | `SubtitleAddonService` | [`subtitle_addon_service.dart:102`](../../lib/src/services/subtitle_addon_service.dart#L102) | yes | `Future<List<SubtitleAddon>> addons() async` |  |
 | `airedBy` | `EpisodeRef` | [`episode_context.dart:45`](../../lib/src/models/episode_context.dart#L45) |  | `bool airedBy(DateTime now)` | Whether providers can have streams for it yet. |
 | `airedBy` | `TvEpisode` | [`tv_season.dart:60`](../../lib/src/models/tv_season.dart#L60) |  | `bool airedBy(DateTime now)` | Whether it has been broadcast by `now`. |
@@ -58,7 +59,6 @@ Top-level functions and methods in `lib/`, A–Z by name, then by declaring type
 
 | Function | Declared in | Source | Async | Signature | Summary |
 |---|---|---|---|---|---|
-| `_badgePills` | `_IdentityCard` | [`profile_screen.dart:623`](../../lib/src/screens/profile_screen.dart#L623) |  | `List<Widget> _badgePills(BuildContext context, bool tv)` | The account's badges, and nothing for an account with none. |
 | `_banner` | `_WaitingRoomScreenState` | [`waiting_room_screen.dart:175`](../../lib/src/screens/watch_party/waiting_room_screen.dart#L175) |  | `Widget? _banner(PartyRoom room)` | A connection problem, above everything else. |
 | `begin` | `PerfTimeline` (static) | [`perf_timeline.dart:24`](../../lib/src/services/perf_timeline.dart#L24) |  | `static void begin(String span)` | Starts (or restarts) a named span. |
 | `beginAttempt` | `PlaybackCoordinator` | [`playback_coordinator.dart:361`](../../lib/src/services/playback_coordinator.dart#L361) |  | `bool beginAttempt(StreamSource source, PlayerEngineId engine)` |  |
@@ -214,6 +214,7 @@ Top-level functions and methods in `lib/`, A–Z by name, then by declaring type
 |---|---|---|---|---|---|
 | `_editCustom` | `AppearanceSettingsScreen` | [`playback_settings_screen.dart:299`](../../lib/src/screens/playback_settings_screen.dart#L299) | yes | `Future<void> _editCustom(BuildContext context) async` | Opens the custom accent editor from the current custom colour (or the current accent) and applies what the user chooses. |
 | `_emailSupport` | top level | [`help_support_screen.dart:44`](../../lib/src/screens/help_support_screen.dart#L44) | yes | `Future<void> _emailSupport(BuildContext context) async` | Opens an email to support. |
+| `emblem` | `CapsuleMetrics` (static) | [`account_badges.dart:37`](../../lib/src/widgets/account_badges.dart#L37) |  | `static double emblem(bool tv)` |  |
 | `encodeSegment` | `SubtitleAddon` (static) | [`subtitle_addon.dart:80`](../../lib/src/models/subtitle_addon.dart#L80) |  | `static String encodeSegment(String value)` | Encodes one URL path segment: only `A-Z a-z 0-9 - _ . |
 | `end` | `PerfTimeline` (static) | [`perf_timeline.dart:29`](../../lib/src/services/perf_timeline.dart#L29) |  | `static void end(String span, String milestone, {bool finish = false})` | Logs the time since `span` began; `finish` ends the span. |
 | `endParty` | `WatchPartyController` | [`watch_party_controller.dart:733`](../../lib/src/watch_party/watch_party_controller.dart#L733) | yes | `Future<void> endParty() async` | Host: ends the party for everyone. |
@@ -320,6 +321,7 @@ Top-level functions and methods in `lib/`, A–Z by name, then by declaring type
 | `hasValidTmdbId` | `MediaCatalogFilter` (static) | [`media_catalog_rules.dart:53`](../../lib/src/services/media_catalog_rules.dart#L53) |  | `static bool hasValidTmdbId(MediaItem item)` | TMDB ids are positive integers; parsed TMDB records without one are skipped before they reach any list. |
 | `headerFor` | `_ProviderCookieJar` | [`provider_fetch_bridge.dart:1047`](../../lib/src/services/provider_fetch_bridge.dart#L1047) |  | `String headerFor(Uri uri)` |  |
 | `heartbeat` | `WatchPartyController` | [`watch_party_controller.dart:692`](../../lib/src/watch_party/watch_party_controller.dart#L692) |  | `void heartbeat(int positionMs)` | The host's position while playing, for drift (every few seconds). |
+| `height` | `CapsuleMetrics` (static) | [`account_badges.dart:36`](../../lib/src/widgets/account_badges.dart#L36) |  | `static double height(bool tv)` |  |
 | `heightFor` | `MediaCard` (static) | [`media_card.dart:57`](../../lib/src/widgets/media_card.dart#L57) |  | `static double heightFor(BuildContext context, double width)` | A card `width` wide: its 2:3 poster and the caption. |
 | `heightFor` | `PluginCard` (static) | [`plugin_card.dart:29`](../../lib/src/widgets/plugin_library/plugin_card.dart#L29) |  | `static double heightFor(BuildContext context)` | `height` grown with the text size, so large accessibility text fits. |
 | `heightFor` | `_SpotlightRail` (static) | [`desktop_hero.dart:754`](../../lib/src/desktop/desktop_hero.dart#L754) |  | `static double heightFor(double cardHeight)` |  |
@@ -536,6 +538,7 @@ Top-level functions and methods in `lib/`, A–Z by name, then by declaring type
 
 | Function | Declared in | Source | Async | Signature | Summary |
 |---|---|---|---|---|---|
+| `padding` | `CapsuleMetrics` (static) | [`account_badges.dart:39`](../../lib/src/widgets/account_badges.dart#L39) |  | `static double padding(bool tv)` |  |
 | `_pagedGrid` | `_HomeScreenState` | [`home_screen.dart:1351`](../../lib/src/screens/home_screen.dart#L1351) |  | `Widget _pagedGrid(String title, PagedFeedController feed, { required bool showPlaceholder})` | A whole catalog as a grid that pages as it nears its end. |
 | `_pagedRow` | `_HomeScreenState` | [`home_screen.dart:1197`](../../lib/src/screens/home_screen.dart#L1197) |  | `Widget _pagedRow(String title, PagedFeedController feed, { bool showRanks = false, bool showPlaceholder = true, bool reserveSpace = false})` | One catalog row, rebuilt only by its own controller. |
 | `parse` | `AccountBadges` (static) | [`account_badges.dart:62`](../../lib/src/account/account_badges.dart#L62) |  | `static Set<AccountBadge> parse(Object? body)` | Reads `/me`; a name the app does not know is left out. |
@@ -590,7 +593,7 @@ Top-level functions and methods in `lib/`, A–Z by name, then by declaring type
 | `providerKnownScripts` | `StorageService` | [`storage_service.dart:162`](../../lib/src/services/storage_service.dart#L162) | yes | `Future<Map<String, Set<String>>> providerKnownScripts() async` | Script URLs each repository listed when it was installed (or approved later), by repository URL. |
 | `providerRepositoryUrls` | `StorageService` | [`storage_service.dart:47`](../../lib/src/services/storage_service.dart#L47) | yes | `Future<List<String>> providerRepositoryUrls() async` |  |
 | `providerScriptHashes` | `StorageService` | [`storage_service.dart:80`](../../lib/src/services/storage_service.dart#L80) | yes | `Future<Map<String, String>> providerScriptHashes() async` | SHA-256 of each provider script the viewer has allowed to run, by script URL. |
-| `publicList` | `SupporterController` | [`supporter_controller.dart:213`](../../lib/src/account/supporter_controller.dart#L213) | yes | `Future<List<PublicSupporter>> publicList() async` | The people who chose to appear; throws when it cannot be loaded. |
+| `publicList` | `SupporterController` | [`supporter_controller.dart:216`](../../lib/src/account/supporter_controller.dart#L216) | yes | `Future<List<PublicSupporter>> publicList() async` | The people who chose to appear; throws when it cannot be loaded. |
 | `publicSupporters` | `AccountApi` | [`account_api.dart:314`](../../lib/src/account/account_api.dart#L314) | yes | `Future<List<({String name, String since})` |  |
 | `_publicTrackers` | `TorrentSourcePreparer` | [`torrent_source_preparer.dart:139`](../../lib/src/services/torrent_source_preparer.dart#L139) | yes | `Future<List<String>> _publicTrackers(StreamSource source) async` | Up to eight provider-supplied trackers that resolve to public addresses, checked four at a time. |
 
@@ -769,7 +772,7 @@ Top-level functions and methods in `lib/`, A–Z by name, then by declaring type
 | `setFullscreen` | `DesktopWindow` (static) | [`desktop_window.dart:17`](../../lib/src/platform/desktop_window.dart#L17) | yes | `static Future<void> setFullscreen(bool value) async` |  |
 | `setPhoto` | `ProfileController` | [`profile_controller.dart:188`](../../lib/src/account/profile_controller.dart#L188) | yes | `Future<void> setPhoto(Uint8List bytes) async` | Makes `bytes` (a picked image, untrusted) the avatar: checked, cut to a square and re-encoded by `AvatarImage`, which also drops the original's metadata such as its location. |
 | `setPluginEnabled` | `ProviderPluginService` | [`provider_plugin_service.dart:234`](../../lib/src/services/provider_plugin_service.dart#L234) | yes | `Future<void> setPluginEnabled(ProviderRepository repository, ProviderPlugin plugin, bool enabled) async` |  |
-| `setRecognition` | `SupporterController` | [`supporter_controller.dart:190`](../../lib/src/account/supporter_controller.dart#L190) | yes | `Future<bool> setRecognition({required bool listed, String name = ''})` | Joins or leaves the public list. |
+| `setRecognition` | `SupporterController` | [`supporter_controller.dart:193`](../../lib/src/account/supporter_controller.dart#L193) | yes | `Future<bool> setRecognition({required bool listed, String name = ''})` | Joins or leaves the public list. |
 | `setSources` | `EpisodeAlerts` | [`episode_alerts.dart:312`](../../lib/src/notifications/episode_alerts.dart#L312) | yes | `Future<void> setSources({bool? myList, bool? watching, bool? popular})` |  |
 | `setSupporterRecognition` | `AccountApi` | [`account_api.dart:303`](../../lib/src/account/account_api.dart#L303) | yes | `Future<Map<String, dynamic>> setSupporterRecognition(String accessToken, { required bool listed, required String name})` |  |
 | `setTheme` | `AccentSettingsController` | [`accent_settings_controller.dart:78`](../../lib/src/services/accent_settings_controller.dart#L78) | yes | `Future<void> setTheme(String? id) async` | Uses the theme `id`, or none for null. |
@@ -851,6 +854,7 @@ Top-level functions and methods in `lib/`, A–Z by name, then by declaring type
 | `take` | `LinkRefreshBudget` | [`playback_coordinator.dart:105`](../../lib/src/services/playback_coordinator.dart#L105) |  | `bool take(String sourceKey, PlaybackFailure failure)` | Spends one refresh when one may help `sourceKey` after `failure`. |
 | `takeOpeningPosition` | `PartyPlayerSync` | [`party_player_sync.dart:201`](../../lib/src/watch_party/party_player_sync.dart#L201) |  | `Duration? takeOpeningPosition()` | Where a player opening now should start, from the room's latest state, or null before the room has started. |
 | `testNativeCrash` | `CrashReporter` | [`crash_reporter.dart:307`](../../lib/src/diagnostics/crash_reporter.dart#L307) | yes | `Future<void> testNativeCrash() async` | Test-only (see `testTriggers`): ends the process from the Android side, as a real crash would. |
+| `text` | `CapsuleMetrics` (static) | [`account_badges.dart:38`](../../lib/src/widgets/account_badges.dart#L38) |  | `static double text(bool tv)` |  |
 | `_thumbnail` | `_ResumeTileState` | [`desktop_shell.dart:1150`](../../lib/src/desktop/desktop_shell.dart#L1150) |  | `Widget _thumbnail(BuildContext context, double dpr, bool active, Duration duration)` | The poster, a slim progress bar along its foot, and, on hover or focus, a resume glyph over a light shade with the art eased forward. |
 | `titleOf` | `SubtitleMenu` (static) | [`subtitle_picker_sheet.dart:102`](../../lib/src/widgets/player/subtitle_picker_sheet.dart#L102) |  | `static String titleOf(SubtitleTrack track)` | `English`, `English (SDH)`. |
 | `tmdbDate` | `MediaFreshnessRules` (static) | [`media_catalog_rules.dart:162`](../../lib/src/services/media_catalog_rules.dart#L162) |  | `static String tmdbDate(DateTime value)` | `yyyy-mm-dd`, the date format TMDB filters expect. |
@@ -891,7 +895,7 @@ Top-level functions and methods in `lib/`, A–Z by name, then by declaring type
 | Function | Declared in | Source | Async | Signature | Summary |
 |---|---|---|---|---|---|
 | `unlocked` | `AppIconController` | [`app_icon.dart:137`](../../lib/src/platform/app_icon.dart#L137) |  | `bool unlocked(AppIconPreset preset)` | Whether `preset` can be chosen from the screen as things stand. |
-| `_update` | `SupporterController` | [`supporter_controller.dart:187`](../../lib/src/account/supporter_controller.dart#L187) | yes | `Future<bool> requestReview()` | Asks for a review of a donation made without the code. |
+| `_update` | `SupporterController` | [`supporter_controller.dart:190`](../../lib/src/account/supporter_controller.dart#L190) | yes | `Future<bool> requestReview()` | Asks for a review of a donation made without the code. |
 | `update` | `AccentSettingsController` | [`accent_settings_controller.dart:64`](../../lib/src/services/accent_settings_controller.dart#L64) | yes | `Future<void> update(AccentPalette value) async` | Uses `value` as the accent. |
 | `update` | `EpisodeAlertStore` (static) | [`episode_check.dart:94`](../../lib/src/notifications/episode_check.dart#L94) | yes | `static Future<void> update(String userId, void Function(Map<String, Object?> entry) change) async` |  |
 | `update` | `GamepadNavigator` | [`desktop_gamepad.dart:49`](../../lib/src/platform/desktop_gamepad.dart#L49) |  | `void update(int buttons, int stickX, int stickY)` | The latest state of every connected controller, merged. |

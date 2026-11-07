@@ -17,7 +17,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/account/backend_config.dart`](#libsrcaccountbackend_configdart) | Shared | 25 | Where the Reelish API lives. |
 | [`lib/src/account/profile_controller.dart`](#libsrcaccountprofile_controllerdart) | Shared | 304 | The user's Reelish profile on this device: a display name and an avatar (initials, a preset, or their own photo). |
 | [`lib/src/account/session_store.dart`](#libsrcaccountsession_storedart) | Shared | 167 | Keeps the Reelish session in the platform's secure storage (Android Keystore, Windows DPAPI), never in SharedPreferences. |
-| [`lib/src/account/supporter_controller.dart`](#libsrcaccountsupporter_controllerdart) | Shared | 247 | The signed-in account's place in the Reelish Supporters Program, and its entitlement: whether it has the supporter perks. |
+| [`lib/src/account/supporter_controller.dart`](#libsrcaccountsupporter_controllerdart) | Shared | 250 | The signed-in account's place in the Reelish Supporters Program, and its entitlement: whether it has the supporter perks. |
 | [`lib/src/account/trakt_avatar.dart`](#libsrcaccounttrakt_avatardart) | Shared | 30 | Trakt's avatar URL, checked on the device the way the Reelish API checks it (backend/src/trakt.ts, cleanAvatarUrl): HTTPS on Trakt's image hosts or Gravatar, with no credentials or unusual port, and never Trakt's stand-in picture. |
 | [`lib/src/account/watchlist_sync.dart`](#libsrcaccountwatchlist_syncdart) | Shared | 313 | Keeps My list and the Trakt watchlist in step, when the user turns it on. |
 | [`lib/src/analytics/analytics_events.dart`](#libsrcanalyticsanalytics_eventsdart) | Shared | 171 | The complete list of analytics events Reelish sends, in one place. |
@@ -79,7 +79,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/screens/plugin_details_screen.dart`](#libsrcscreensplugin_details_screendart) | Shared | 544 | A plugin-library repository's details page, from which it can be installed. |
 | [`lib/src/screens/plugin_library_screen.dart`](#libsrcscreensplugin_library_screendart) | Shared | 766 | Browse the community provider catalog and hand a manifest to the existing installer: the library as its own page, opened from Plugins on phone and TV. |
 | [`lib/src/screens/plugins_screen.dart`](#libsrcscreensplugins_screendart) | Shared | 919 | The phone and TV Plugins page: installed repositories, enabling providers, script updates and the plugin library. |
-| [`lib/src/screens/profile_screen.dart`](#libsrcscreensprofile_screendart) | Shared | 1089 | The signed-in person's page, in three parts: who they are (avatar, name, badges, their viewing at a glance), how Reelish looks for them (avatar, app theme, app icon) and their account. |
+| [`lib/src/screens/profile_screen.dart`](#libsrcscreensprofile_screendart) | Shared | 1051 | The signed-in person's page, in three parts: who they are (avatar, name, badges, their viewing at a glance), how Reelish looks for them (avatar, app theme, app icon) and their account. |
 | [`lib/src/screens/sign_in_screen.dart`](#libsrcscreenssign_in_screendart) | Shared | 805 | Trakt sign-in, shown before Home whenever no session is stored. |
 | [`lib/src/screens/splash_screen.dart`](#libsrcscreenssplash_screendart) | Shared | 383 | The launch splash and `SplashGate`, which runs startup work before the first screen. |
 | [`lib/src/screens/subtitle_addons_screen.dart`](#libsrcscreenssubtitle_addons_screendart) | Shared | 236 | Stremio subtitle addons the player searches while you watch. |
@@ -144,7 +144,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/watch_party/party_player_sync.dart`](#libsrcwatch_partyparty_player_syncdart) | Shared | 667 | Keeps one player in step with its watch party. |
 | [`lib/src/watch_party/playback_sync.dart`](#libsrcwatch_partyplayback_syncdart) | Shared | 156 | The arithmetic of watch party sync, kept free of Flutter and sockets so it can be tested exactly: the server clock as seen from this device, where the room's timeline is now, and what a player should do about a gap. |
 | [`lib/src/watch_party/watch_party_controller.dart`](#libsrcwatch_partywatch_party_controllerdart) | Shared | 801 | This device's place in a watch party: the room's WebSocket (reconnected with backoff and a fresh session token), the clock offset to the server, and the room as last described. |
-| [`lib/src/widgets/account_badges.dart`](#libsrcwidgetsaccount_badgesdart) | Shared | 191 | The badges an account can carry. |
+| [`lib/src/widgets/account_badges.dart`](#libsrcwidgetsaccount_badgesdart) | Shared | 227 | The badges an account can carry, as identity capsules. |
 | [`lib/src/widgets/analytics_consent_dialog.dart`](#libsrcwidgetsanalytics_consent_dialogdart) | Shared | 67 | The one-time question about sharing usage statistics (Android phones, Android TV and Google TV, when the build has analytics configured). |
 | [`lib/src/widgets/app_update_flow.dart`](#libsrcwidgetsapp_update_flowdart) | Shared | 497 | Coordinates the update UI: prompt → download → install permission → Android installer. |
 | [`lib/src/widgets/artwork_image.dart`](#libsrcwidgetsartwork_imagedart) | Shared | 295 | Movie and series artwork from TMDB's image CDN, kept on disk so a launch does not download every poster again. |
@@ -351,7 +351,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/account/supporter_controller.dart
 
-**Source:** [`lib/src/account/supporter_controller.dart`](../../lib/src/account/supporter_controller.dart) · **Platform:** Shared · **Lines:** 247
+**Source:** [`lib/src/account/supporter_controller.dart`](../../lib/src/account/supporter_controller.dart) · **Platform:** Shared · **Lines:** 250
 
 **Purpose:** The signed-in account's place in the Reelish Supporters Program, and its entitlement: whether it has the supporter perks.
 
@@ -1327,11 +1327,11 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/screens/profile_screen.dart
 
-**Source:** [`lib/src/screens/profile_screen.dart`](../../lib/src/screens/profile_screen.dart) · **Platform:** Shared · **Lines:** 1089 · **Branches on:** isTv, usesTvLayout
+**Source:** [`lib/src/screens/profile_screen.dart`](../../lib/src/screens/profile_screen.dart) · **Platform:** Shared · **Lines:** 1051 · **Branches on:** isTv, usesTvLayout
 
 **Purpose:** The signed-in person's page, in three parts: who they are (avatar, name, badges, their viewing at a glance), how Reelish looks for them (avatar, app theme, app icon) and their account.
 
-**Declares:** `_ActivityRow` (Widget), `_EditableAvatar` (Widget), `_IdentityCard` (Widget), `_MembershipTile` (Widget), `ProfileActivity` (Class), `_ProfileName` (Widget), `ProfileScreen` (Widget), `_ProfileScreenState` (Widget state), `_Sheet` (Widget), `_SignedOut` (Widget), `_SignOutTile` (Widget), `_Stat` (Widget), `_TraktBadge` (Widget)
+**Declares:** `_ActivityRow` (Widget), `_EditableAvatar` (Widget), `_IdentityCard` (Widget), `ProfileActivity` (Class), `_ProfileName` (Widget), `ProfileScreen` (Widget), `_ProfileScreenState` (Widget state), `_Sheet` (Widget), `_SignedOut` (Widget), `_SignOutTile` (Widget), `_Stat` (Widget), `_TraktBadge` (Widget)
 
 **Imports (project):** `src/account/account_badges.dart`, `src/account/account_controller.dart`, `src/account/profile_controller.dart`, `src/account/supporter_controller.dart`, `src/models/media_item.dart`, `src/navigation/app_transitions.dart`, `src/platform/app_icon.dart`, `src/platform/device_capabilities.dart`, `src/screens/account_settings_screen.dart`, `src/screens/app_icon_settings_screen.dart`, `src/screens/playback_settings_screen.dart`, `src/screens/supporters_screen.dart`, `src/services/accent_settings_controller.dart`, `src/services/storage_service.dart`, `src/theme/design_tokens.dart`, `src/theme/glass_theme.dart`, `src/theme/reelish_icons.dart`, `src/theme/supporter_themes.dart`, `src/widgets/account_badges.dart`, `src/widgets/profile_avatar.dart`, `src/widgets/profile_avatar_picker.dart`, `src/widgets/settings/settings_components.dart`
 
@@ -1405,7 +1405,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Imported by:** `src/screens/app_icon_settings_screen.dart`, `src/screens/help_support_screen.dart`, `src/screens/playback_settings_screen.dart`, `src/screens/profile_screen.dart`, `src/screens/watch_party/create_party_screen.dart`
 
-**Tests importing it:** `test/settings_ui_test.dart`, `test/supporters_test.dart`, `test/ux_journeys_test.dart`
+**Tests importing it:** `test/profile_layout_test.dart`, `test/settings_ui_test.dart`, `test/supporters_test.dart`, `test/ux_journeys_test.dart`
 
 ## lib/src/screens/tv/tv_browse.dart
 
@@ -2353,11 +2353,11 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/widgets/account_badges.dart
 
-**Source:** [`lib/src/widgets/account_badges.dart`](../../lib/src/widgets/account_badges.dart) · **Platform:** Shared · **Lines:** 191
+**Source:** [`lib/src/widgets/account_badges.dart`](../../lib/src/widgets/account_badges.dart) · **Platform:** Shared · **Lines:** 227
 
-**Purpose:** The badges an account can carry.
+**Purpose:** The badges an account can carry, as identity capsules.
 
-**Declares:** `_BadgePill` (Widget), `_Emblem` (Widget), `FounderBadge` (Widget), `FounderEmblem` (Widget), `SupporterBadge` (Widget), `SupporterEmblem` (Widget)
+**Declares:** `_Capsule` (Widget), `CapsuleMetrics` (Class), `_Emblem` (Widget), `FounderBadge` (Widget), `FounderEmblem` (Widget), `SupporterBadge` (Widget), `SupporterEmblem` (Widget)
 
 **Imports (project):** `src/theme/design_tokens.dart`, `src/theme/reelish_icons.dart`
 
@@ -2365,7 +2365,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Imported by:** `src/screens/app_icon_settings_screen.dart`, `src/screens/playback_settings_screen.dart`, `src/screens/profile_screen.dart`, `src/screens/supporters_screen.dart`, `src/screens/watch_party/create_party_screen.dart`, `src/screens/watch_party/waiting_room_screen.dart`
 
-**Tests importing it:** `test/account_badges_test.dart`, `test/supporters_test.dart`
+**Tests importing it:** `test/account_badges_test.dart`, `test/profile_layout_test.dart`, `test/supporters_test.dart`
 
 ## lib/src/widgets/analytics_consent_dialog.dart
 

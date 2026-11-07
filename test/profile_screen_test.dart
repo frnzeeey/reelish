@@ -140,7 +140,7 @@ void main() {
     expect(find.bySemanticsLabel('1 In progress'), findsOneWidget);
     expect(calls, isEmpty, reason: 'no network request to show the page');
 
-    await tester.tap(find.text('On My list'));
+    await tester.tap(find.bySemanticsLabel('1 On My list'));
     expect(libraryOpened, 1);
     // A summary, not a second menu of what the main navigation offers.
     for (final duplicate in [

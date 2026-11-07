@@ -154,6 +154,9 @@ class SupporterController extends ChangeNotifier {
       _refreshing ??= _refresh().whenComplete(() => _refreshing = null);
 
   Future<void> _refresh() async {
+    // Screens start this as they open, while a build is under way; waiting a
+    // microtask means no listener is told to rebuild in the middle of it.
+    await Future<void>.value();
     final userId = _account.userId;
     if (userId == null) {
       _status = null;
