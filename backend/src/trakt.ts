@@ -39,6 +39,33 @@ export interface DeviceCode {
 export interface TraktIdentity {
   uuid: string;
   username: string;
+  /** Null when the account has no avatar of its own. */
+  avatarUrl: string | null;
+}
+
+const avatarHosts = /^(?:[a-z0-9-]+\.)*trakt\.tv$|^(?:secure\.)?gravatar\.com$/;
+
+/**
+ * Trakt's avatar URL, when it is one: HTTPS on Trakt's own image hosts or
+ * Gravatar, without credentials or an odd port. Trakt's stand-in picture for
+ * an account without an avatar counts as none, so the app shows its own.
+ */
+export function cleanAvatarUrl(value: unknown): string | null {
+  if (typeof value !== 'string' || value.length > 500) return null;
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== 'https:' || url.username || url.password || url.port) return null;
+  if (!avatarHosts.test(url.hostname)) return null;
+  if (url.pathname.includes('/placeholders/')) return null;
+  // Trakt hands out Gravatar links that fall back to its stand-in picture.
+  // With d=404 a real Gravatar still shows, and a missing one fails, so the
+  // app draws its own initial instead.
+  if (url.hostname.endsWith('gravatar.com')) url.searchParams.set('d', '404');
+  return url.toString();
 }
 
 export type DevicePoll =
@@ -245,14 +272,20 @@ export async function fetchIdentity(env: Env, accessToken: string, deps: TraktDe
     log('warn', 'trakt.identity_failed', { status: response.status });
     throw new ApiError(502, 'trakt_unavailable', 'Could not read the Trakt account.');
   }
-  const settings = await jsonOf<{ user?: { username?: unknown; ids?: { uuid?: unknown } } }>(response, '/users/settings');
+  const settings = await jsonOf<{
+    user?: { username?: unknown; ids?: { uuid?: unknown }; images?: { avatar?: { full?: unknown } } };
+  }>(response, '/users/settings');
   const uuid = settings.user?.ids?.uuid;
   const username = settings.user?.username;
   // Without Trakt's stable id the account cannot be keyed safely.
   if (typeof uuid !== 'string' || !/^[A-Za-z0-9-]{8,64}$/.test(uuid) || typeof username !== 'string') {
     throw new ApiError(502, 'trakt_identity_unavailable', 'Trakt did not return an account id.');
   }
-  return { uuid, username: username.slice(0, 100) };
+  return {
+    uuid,
+    username: username.slice(0, 100),
+    avatarUrl: cleanAvatarUrl(settings.user?.images?.avatar?.full),
+  };
 }
 
 const aadFor = (userId: string, field: string) => `trakt:${userId}:${field}`;

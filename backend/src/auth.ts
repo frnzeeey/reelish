@@ -13,8 +13,9 @@ import {
 } from './sessions';
 import {
   fetchIdentity, forgetTraktTokens, outOfBand, pollDeviceToken, saveTraktTokens,
-  startDeviceCode, type TraktDeps,
+  startDeviceCode, type TraktDeps, type TraktIdentity,
 } from './trakt';
+import { refreshProfileIfStale } from './profile';
 
 const platforms = new Set(['android', 'android_tv', 'windows']);
 const now = () => Math.floor(Date.now() / 1000);
@@ -138,26 +139,31 @@ export async function pollDevice(env: Env, request: Request, requestId: string, 
     throw new ApiError(410, 'sign_in_expired', 'The code is no longer valid; start again.');
   }
   const identity = await fetchIdentity(env, result.tokens.access_token, deps);
-  const userId = await upsertUser(env, identity.uuid, identity.username);
+  const userId = await upsertUser(env, identity);
   await saveTraktTokens(env, userId, result.tokens, outOfBand);
   const tokens = await createSession(env, userId, { name: row.device_name, platform: row.platform });
   await audit(env, 'auth.signed_in', { userId, sessionId: tokens.sessionId, detail: row.platform });
   return json({
     status: 'authorized',
     session: sessionBody(tokens),
-    user: { id: userId, username: identity.username },
+    user: { id: userId, username: identity.username, avatarUrl: identity.avatarUrl },
   }, requestId);
 }
 
-export async function upsertUser(env: Env, traktUuid: string, username: string): Promise<string> {
+/** Saves the Trakt account as it is now: a sign-in is also a profile read. */
+export async function upsertUser(env: Env, identity: TraktIdentity): Promise<string> {
   const at = now();
   const row = await env.DB.prepare(
-    `INSERT INTO users (id, trakt_uuid, trakt_username, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?)
+    `INSERT INTO users (id, trakt_uuid, trakt_username, trakt_avatar_url, trakt_profile_checked_at,
+       created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(trakt_uuid) DO UPDATE SET trakt_username = excluded.trakt_username,
+       trakt_avatar_url = excluded.trakt_avatar_url,
+       trakt_profile_checked_at = excluded.trakt_profile_checked_at,
        updated_at = excluded.updated_at
      RETURNING id`,
-  ).bind(crypto.randomUUID(), traktUuid, username, at, at).first<{ id: string }>();
+  ).bind(crypto.randomUUID(), identity.uuid, identity.username, identity.avatarUrl, at, at, at)
+    .first<{ id: string }>();
   if (!row) throw new ApiError(500, 'internal', 'Could not save the account.');
   return row.id;
 }
@@ -185,15 +191,31 @@ export async function logoutAll(env: Env, principal: Principal, requestId: strin
 }
 
 /** GET /me */
-export async function me(env: Env, principal: Principal, requestId: string) {
+export async function me(env: Env, principal: Principal, requestId: string, deps: TraktDeps = {}) {
   await requireLiveSession(env, principal);
-  const user = await env.DB.prepare(`SELECT id, trakt_username, created_at FROM users WHERE id = ?`)
-    .bind(principal.userId).first<{ id: string; trakt_username: string; created_at: number }>();
+  // Trakt is read again at most once a day; usually this is one quick write.
+  await refreshProfileIfStale(env, principal.userId, deps);
+  const user = await env.DB.prepare(
+    `SELECT id, trakt_username, trakt_avatar_url, trakt_profile_checked_at, created_at
+     FROM users WHERE id = ?`,
+  ).bind(principal.userId).first<{
+    id: string;
+    trakt_username: string;
+    trakt_avatar_url: string | null;
+    trakt_profile_checked_at: number | null;
+    created_at: number;
+  }>();
   if (!user) throw new ApiError(401, 'session_revoked', 'Sign in again.');
   const trakt = await env.DB.prepare(`SELECT 1 AS linked FROM trakt_credentials WHERE user_id = ?`)
     .bind(principal.userId).first();
   return json({
-    user: { id: user.id, username: user.trakt_username, createdAt: user.created_at },
+    user: {
+      id: user.id,
+      username: user.trakt_username,
+      avatarUrl: user.trakt_avatar_url,
+      profileCheckedAt: user.trakt_profile_checked_at,
+      createdAt: user.created_at,
+    },
     traktLinked: !!trakt,
     sessionId: principal.sessionId,
     badges: await badgesOf(env, principal.userId),

@@ -42,6 +42,7 @@ search the generated references below: every file, class and function in
 | [Supporters](backend/supporters.md) | The Supporter Badge: Buy Me a Coffee webhooks, supporter codes, reviews, setup |
 | [Supporter themes](features/supporter-themes.md) | Profile themes for verified supporters: entitlement, saving, rendering |
 | [App icons](features/app-icons.md) | Launcher icon switching, the free and supporter icons, and their assets |
+| [Trakt profile](features/trakt-profile.md) | The Trakt username and avatar on every device: storage, refresh, failures, cost |
 | [Icon system](design/icon-system.md) | Reelish's own icons: design rules, solid forms, how to add one, the gallery |
 | [Content advisory](features/content-advisory.md) | The age rating card at playback start: TMDB coverage, sourcing rules, behaviour |
 | [Crash reporting](features/crash-reporting.md) | Opt-in Crashlytics on Android, the Windows error log, what is reported, testing, symbols |

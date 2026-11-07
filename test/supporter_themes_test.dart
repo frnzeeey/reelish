@@ -87,7 +87,7 @@ Future<(ProfileController, SupporterController)> _show(
     );
     await account.restore();
     supporters = SupporterController(account: account, api: api);
-    badges = AccountBadges(account: account, api: api);
+    badges = AccountBadges(account: account);
     profile = ProfileController(directory: () async => files);
     await profile.loadFor(_userId);
   });

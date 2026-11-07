@@ -46,7 +46,7 @@ graph LR
   platform["platform"] -->|1| account["account"]
   platform["platform"] -->|2| analytics["analytics"]
   platform["platform"] -->|1| widgets["widgets"]
-  screens["screens"] -->|14| account["account"]
+  screens["screens"] -->|15| account["account"]
   screens["screens"] -->|3| analytics["analytics"]
   screens["screens"] -->|1| app["app"]
   screens["screens"] -->|7| desktop["desktop"]
@@ -149,7 +149,7 @@ graph LR
 | `navigation` | `theme` (1) |
 | `notifications` | `account` (4), `analytics` (2), `platform` (1), `services` (2) |
 | `platform` | `account` (1), `analytics` (2), `widgets` (1) |
-| `screens` | `account` (14), `analytics` (3), `app` (1), `desktop` (7), `diagnostics` (3), `models` (23), `navigation` (7), `notifications` (2), `platform` (11), `screens/tv` (3), `screens/watch_party` (4), `services` (32), `support` (3), `theme` (50), `viewmodels` (3), `watch_party` (2), `widgets` (29), `widgets/player` (4), `widgets/plugin_library` (14), `widgets/settings` (15), `widgets/tv` (5) |
+| `screens` | `account` (15), `analytics` (3), `app` (1), `desktop` (7), `diagnostics` (3), `models` (23), `navigation` (7), `notifications` (2), `platform` (11), `screens/tv` (3), `screens/watch_party` (4), `services` (32), `support` (3), `theme` (50), `viewmodels` (3), `watch_party` (2), `widgets` (29), `widgets/player` (4), `widgets/plugin_library` (14), `widgets/settings` (15), `widgets/tv` (5) |
 | `screens/tv` | `models` (5), `navigation` (1), `screens/watch_party` (1), `services` (5), `theme` (9), `viewmodels` (4), `watch_party` (1), `widgets` (4), `widgets/settings` (1), `widgets/tv` (5) |
 | `screens/watch_party` | `account` (4), `desktop` (2), `models` (1), `navigation` (2), `platform` (3), `screens` (1), `theme` (15), `watch_party` (9), `widgets` (5), `widgets/settings` (3), `widgets/tv` (1) |
 | `services` | `account` (2), `analytics` (6), `models` (35), `platform` (2), `theme` (1) |
@@ -169,7 +169,7 @@ The files imported by the most other `lib/` files. A change to one of these reac
 
 | File | Imported by (lib files) | Imported by (tests) |
 |---|---|---|
-| [`lib/src/theme/glass_theme.dart`](../../lib/src/theme/glass_theme.dart) | 77 | 35 |
+| [`lib/src/theme/glass_theme.dart`](../../lib/src/theme/glass_theme.dart) | 77 | 36 |
 | [`lib/src/theme/reelish_icons.dart`](../../lib/src/theme/reelish_icons.dart) | 74 | 8 |
 | [`lib/src/theme/design_tokens.dart`](../../lib/src/theme/design_tokens.dart) | 43 | 1 |
 | [`lib/src/models/media_item.dart`](../../lib/src/models/media_item.dart) | 32 | 38 |
@@ -178,12 +178,12 @@ The files imported by the most other `lib/` files. A change to one of these reac
 | [`lib/src/models/stream_source.dart`](../../lib/src/models/stream_source.dart) | 18 | 14 |
 | [`lib/src/widgets/settings/settings_components.dart`](../../lib/src/widgets/settings/settings_components.dart) | 18 | 2 |
 | [`lib/src/widgets/tv/tv_focus.dart`](../../lib/src/widgets/tv/tv_focus.dart) | 16 | 7 |
-| [`lib/src/account/account_controller.dart`](../../lib/src/account/account_controller.dart) | 15 | 12 |
+| [`lib/src/account/account_controller.dart`](../../lib/src/account/account_controller.dart) | 15 | 13 |
 | [`lib/src/watch_party/party_models.dart`](../../lib/src/watch_party/party_models.dart) | 14 | 4 |
 | [`lib/src/widgets/artwork_image.dart`](../../lib/src/widgets/artwork_image.dart) | 14 | 5 |
 | [`lib/src/analytics/analytics_service.dart`](../../lib/src/analytics/analytics_service.dart) | 13 | 5 |
 | [`lib/src/services/tmdb_service.dart`](../../lib/src/services/tmdb_service.dart) | 12 | 18 |
-| [`lib/src/account/account_api.dart`](../../lib/src/account/account_api.dart) | 11 | 11 |
+| [`lib/src/account/account_api.dart`](../../lib/src/account/account_api.dart) | 10 | 12 |
 | [`lib/src/analytics/analytics_events.dart`](../../lib/src/analytics/analytics_events.dart) | 10 | 2 |
 | [`lib/src/desktop/desktop_widgets.dart`](../../lib/src/desktop/desktop_widgets.dart) | 10 | 5 |
 | [`lib/src/navigation/app_transitions.dart`](../../lib/src/navigation/app_transitions.dart) | 10 | 1 |
@@ -192,8 +192,8 @@ The files imported by the most other `lib/` files. A change to one of these reac
 | [`lib/src/services/network_target_policy.dart`](../../lib/src/services/network_target_policy.dart) | 9 | 17 |
 | [`lib/src/services/paged_feed_controller.dart`](../../lib/src/services/paged_feed_controller.dart) | 9 | 5 |
 | [`lib/src/widgets/brand_logo.dart`](../../lib/src/widgets/brand_logo.dart) | 9 | 1 |
-| [`lib/src/account/backend_config.dart`](../../lib/src/account/backend_config.dart) | 8 | 1 |
-| [`lib/src/account/profile_controller.dart`](../../lib/src/account/profile_controller.dart) | 8 | 5 |
+| [`lib/src/account/profile_controller.dart`](../../lib/src/account/profile_controller.dart) | 8 | 6 |
+| [`lib/src/diagnostics/crash_reporter.dart`](../../lib/src/diagnostics/crash_reporter.dart) | 8 | 1 |
 
 ## Package usage
 

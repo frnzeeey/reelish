@@ -82,8 +82,11 @@ the interface once per launch:
   the user explicitly says so. Ship migrations to production before a
   release that depends on them.
 - **App side:** `lib/src/account/` (`AccountController` with `accessToken()`
-  refresh, `AccountApi`, `ProfileController` — display name and avatar are
-  device-local per account, a photo is never uploaded). `AccountGate`
+  refresh, `AccountApi`, `ProfileController` — display name and chosen avatar
+  are device-local per account, a photo is never uploaded). The Trakt username
+  and avatar URL come from Trakt through `/me` (`backend/src/profile.ts`, D1,
+  re-read at most daily) and are kept in the stored session;
+  `docs/features/trakt-profile.md`. `AccountGate`
   (`sign_in_screen.dart`) shows sign-in whenever no one is signed in, so
   there is no guest state inside the app.
 - **Watch Party:** one SQLite-backed Durable Object per 8-digit code

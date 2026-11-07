@@ -5,6 +5,8 @@ import 'dart:convert';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import 'trakt_avatar.dart';
+
 /// One signed-in device's session as the backend issued it.
 class StoredSession {
   const StoredSession({
@@ -15,6 +17,7 @@ class StoredSession {
     required this.refreshExpiresAt,
     required this.userId,
     required this.username,
+    this.traktAvatarUrl,
   });
 
   final String sessionId;
@@ -25,7 +28,11 @@ class StoredSession {
   final String refreshToken;
   final int refreshExpiresAt;
   final String userId;
+
+  /// The Trakt username and avatar as the Reelish API last gave them: the
+  /// copy that shows at once and offline. Trakt is the source of truth.
   final String username;
+  final String? traktAvatarUrl;
 
   bool get refreshExpired =>
       refreshExpiresAt <= DateTime.now().millisecondsSinceEpoch ~/ 1000;
@@ -42,6 +49,22 @@ class StoredSession {
     refreshExpiresAt: session['refreshExpiresAt'] as int,
     userId: userId,
     username: username,
+    traktAvatarUrl: traktAvatarUrl,
+  );
+
+  /// The same session with the Trakt profile the API now reports.
+  StoredSession withProfile({
+    required String username,
+    required String? traktAvatarUrl,
+  }) => StoredSession(
+    sessionId: sessionId,
+    accessToken: accessToken,
+    accessExpiresAt: accessExpiresAt,
+    refreshToken: refreshToken,
+    refreshExpiresAt: refreshExpiresAt,
+    userId: userId,
+    username: username,
+    traktAvatarUrl: traktAvatarUrl,
   );
 
   static StoredSession fromResponse(
@@ -55,6 +78,7 @@ class StoredSession {
     refreshExpiresAt: session['refreshExpiresAt'] as int,
     userId: user['id'] as String,
     username: user['username'] as String,
+    traktAvatarUrl: cleanTraktAvatarUrl(user['avatarUrl']),
   );
 
   Map<String, Object> toJson() => {
@@ -65,6 +89,7 @@ class StoredSession {
     'refreshExpiresAt': refreshExpiresAt,
     'userId': userId,
     'username': username,
+    'traktAvatarUrl': ?traktAvatarUrl,
   };
 
   static StoredSession? tryParse(String? text) {
@@ -79,6 +104,8 @@ class StoredSession {
         refreshExpiresAt: json['refreshExpiresAt'] as int,
         userId: json['userId'] as String,
         username: json['username'] as String,
+        // Absent in sessions saved by earlier versions.
+        traktAvatarUrl: cleanTraktAvatarUrl(json['traktAvatarUrl']),
       );
     } catch (_) {
       return null;

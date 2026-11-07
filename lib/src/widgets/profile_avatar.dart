@@ -1,5 +1,5 @@
-// The user's avatar as chosen in their profile: their photo, a preset, or
-// the first letter of their name on the accent.
+// The user's avatar as chosen in their profile: their Trakt picture, their
+// photo, a preset, or the first letter of their name on the accent.
 
 import 'package:flutter/material.dart';
 
@@ -35,6 +35,7 @@ class MyProfileAvatar extends StatelessWidget {
           avatar: profile.avatar,
           name: profile.nameOr(account.username),
           photo: photo == null ? null : FileImage(photo),
+          traktUrl: account.traktAvatarUrl,
           size: size,
           shadow: shadow,
         );
@@ -50,6 +51,7 @@ class ProfileAvatarView extends StatelessWidget {
     required this.avatar,
     required this.name,
     this.photo,
+    this.traktUrl,
     this.size = 56,
     this.shadow = false,
   });
@@ -57,6 +59,9 @@ class ProfileAvatarView extends StatelessWidget {
   final ProfileAvatar avatar;
   final String name;
   final ImageProvider? photo;
+
+  /// The Trakt picture, for [AvatarKind.trakt]; the initial without one.
+  final String? traktUrl;
   final double size;
   final bool shadow;
 
@@ -65,7 +70,9 @@ class ProfileAvatarView extends StatelessWidget {
     final preset = avatar.kind == AvatarKind.preset
         ? AvatarPreset.byId(avatar.presetId)
         : null;
-    final usePhoto = avatar.kind == AvatarKind.photo && photo != null;
+    final traktUrl = avatar.kind == AvatarKind.trakt ? this.traktUrl : null;
+    final usePhoto =
+        (avatar.kind == AvatarKind.photo && photo != null) || traktUrl != null;
     final colors = [GlassTheme.coralBright, GlassTheme.primary];
     final initial = name.trim().isEmpty
         ? '?'
@@ -129,7 +136,22 @@ class ProfileAvatarView extends StatelessWidget {
                 ]
               : null,
         ),
-        child: usePhoto
+        child: traktUrl != null
+            ? Image.network(
+                traktUrl,
+                width: size,
+                height: size,
+                cacheWidth: decodeWidth,
+                fit: BoxFit.cover,
+                gaplessPlayback: true,
+                // The initial until it arrives, and if it never does.
+                frameBuilder: (context, child, frame, synchronous) =>
+                    frame == null && !synchronous
+                    ? _Initial(initial, size)
+                    : child,
+                errorBuilder: (_, _, _) => _Initial(initial, size),
+              )
+            : usePhoto
             ? Image(
                 image: ResizeImage(photo!, width: decodeWidth),
                 width: size,

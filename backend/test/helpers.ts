@@ -56,7 +56,9 @@ let accountCounter = 0;
  * Signs a new Trakt account in through the device flow and returns its
  * Reelish session. Trakt is faked; [uuid] is the account's stable id.
  */
-export async function signIn(options: { uuid?: string; username?: string; platform?: string } = {}) {
+export async function signIn(
+  options: { uuid?: string; username?: string; platform?: string; avatar?: string } = {},
+) {
   accountCounter += 1;
   const uuid = options.uuid ?? `uuid-${accountCounter}-${crypto.randomUUID()}`;
   const username = options.username ?? `viewer${accountCounter}`;
@@ -80,7 +82,13 @@ export async function signIn(options: { uuid?: string; username?: string; platfo
       });
     }
     if (url.pathname === '/users/settings') {
-      return jsonResponse({ user: { username, ids: { slug: username, uuid } } });
+      return jsonResponse({
+        user: {
+          username,
+          ids: { slug: username, uuid },
+          ...(options.avatar ? { images: { avatar: { full: options.avatar } } } : {}),
+        },
+      });
     }
     return new Response('unexpected', { status: 500 });
   });
@@ -94,7 +102,7 @@ export async function signIn(options: { uuid?: string; username?: string; platfo
   const body = (await poll.json()) as {
     status: string;
     session: { accessToken: string; refreshToken: string; sessionId: string };
-    user: { id: string; username: string };
+    user: { id: string; username: string; avatarUrl: string | null };
   };
   vi.restoreAllMocks();
   return { ...body, uuid, pollToken };

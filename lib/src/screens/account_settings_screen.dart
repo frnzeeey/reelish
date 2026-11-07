@@ -231,7 +231,11 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
       icon: ReelishIcons.account,
       onBack: widget.onBack,
       children: [
-        _ProfileCard(profile: _profile, username: widget.account.username),
+        _ProfileCard(
+          profile: _profile,
+          username: widget.account.username,
+          traktUrl: widget.account.traktAvatarUrl,
+        ),
         SettingsSection(
           label: 'PROFILE',
           description:
@@ -252,6 +256,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
               profile: _profile,
               name: _profile.nameOr(widget.account.username),
               enabled: _busy == null,
+              traktUrl: widget.account.traktAvatarUrl,
             ),
             if (_canPickPhoto)
               SettingsTile(
@@ -394,10 +399,15 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
 /// Who is signed in: their avatar, display name (or Trakt username), the
 /// username beneath a chosen name, and where the sign-in lives.
 class _ProfileCard extends StatelessWidget {
-  const _ProfileCard({required this.profile, required this.username});
+  const _ProfileCard({
+    required this.profile,
+    required this.username,
+    required this.traktUrl,
+  });
 
   final ProfileController profile;
   final String? username;
+  final String? traktUrl;
 
   /// Long names wrap at underscores, not mid-word: a zero-width space
   /// follows each.
@@ -434,6 +444,7 @@ class _ProfileCard extends StatelessWidget {
                 avatar: profile.avatar,
                 name: name,
                 photo: photo == null ? null : FileImage(photo),
+                traktUrl: traktUrl,
                 size: 60,
                 shadow: true,
               ),
@@ -618,26 +629,35 @@ class _AvatarPicker extends StatelessWidget {
     required this.profile,
     required this.name,
     required this.enabled,
+    required this.traktUrl,
   });
 
   final ProfileController profile;
   final String name;
   final bool enabled;
 
+  /// The Trakt picture, offered first when the account has one.
+  final String? traktUrl;
+
   @override
   Widget build(BuildContext context) {
     final tv = DeviceCapabilities.usesTvLayout && !DeviceCapabilities.isDesktop;
     final size = tv ? 56.0 : 48.0;
     final photo = profile.photo;
+    // Without a Trakt picture, the default shows the initial: mark that.
+    final shown = profile.avatar.kind == AvatarKind.trakt && traktUrl == null
+        ? const ProfileAvatar.initials()
+        : profile.avatar;
     Widget choice(ProfileAvatar avatar, String label) => _AvatarChoice(
       label: label,
-      selected: profile.avatar == avatar,
+      selected: shown == avatar,
       enabled: enabled,
       onTap: () => profile.setAvatar(avatar),
       child: ProfileAvatarView(
         avatar: avatar,
         name: name,
         photo: photo == null ? null : FileImage(photo),
+        traktUrl: traktUrl,
         size: size,
       ),
     );
@@ -658,6 +678,8 @@ class _AvatarPicker extends StatelessWidget {
             spacing: AppSpace.xs,
             runSpacing: AppSpace.xs,
             children: [
+              if (traktUrl != null)
+                choice(const ProfileAvatar.trakt(), 'Trakt picture'),
               if (photo != null)
                 choice(const ProfileAvatar.photo(), 'Your photo'),
               choice(const ProfileAvatar.initials(), 'Initial'),

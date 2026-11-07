@@ -11,6 +11,7 @@ import '../platform/device_capabilities.dart';
 import 'account_api.dart';
 import 'backend_config.dart';
 import 'session_store.dart';
+import 'trakt_avatar.dart';
 
 enum AccountStatus { restoring, signedOut, signedIn }
 
@@ -37,7 +38,12 @@ class AccountController extends ChangeNotifier {
   AccountStatus get status => _status;
 
   StoredSession? _session;
+
+  /// The Trakt username, kept current by [fetchMe].
   String? get username => _session?.username;
+
+  /// The Trakt avatar's URL, or null when the account has none.
+  String? get traktAvatarUrl => _session?.traktAvatarUrl;
 
   /// The Reelish account id, which keys this device's profile.
   String? get userId => _session?.userId;
@@ -92,6 +98,59 @@ class AccountController extends ChangeNotifier {
 
   /// Called when the API rejected a token that looked valid.
   Future<String?> onUnauthorized() => accessToken(forceRefresh: true);
+
+  Future<Map<String, dynamic>?>? _fetchingMe;
+
+  /// The account as the Reelish API sees it (GET /me), or null when signed
+  /// out or unreachable; callers at the same time share one request. It
+  /// brings in the Trakt username and avatar, so a change made on Trakt, or
+  /// seen first by another device, reaches this one.
+  Future<Map<String, dynamic>?> fetchMe() =>
+      _fetchingMe ??= _fetchMe().whenComplete(() => _fetchingMe = null);
+
+  Future<Map<String, dynamic>?> _fetchMe() async {
+    final userId = _session?.userId;
+    if (userId == null) return null;
+    try {
+      final token = await accessToken();
+      if (token == null) return null;
+      final body = await _api.me(token);
+      await _applyProfile(userId, body);
+      return body;
+    } catch (_) {
+      // Offline or the service is down: the saved profile stays.
+      return null;
+    }
+  }
+
+  /// Takes the username and avatar from [body] when they belong to the
+  /// signed-in account. An empty name never replaces a real one; an older
+  /// API without avatars leaves the saved one alone.
+  Future<void> _applyProfile(String userId, Map<String, dynamic> body) async {
+    final current = _session;
+    final user = body['user'];
+    if (current == null || current.userId != userId) return;
+    if (user is! Map || user['id'] != userId) return;
+    final name = user['username'];
+    final username = name is String && name.trim().isNotEmpty
+        ? name
+        : current.username;
+    final avatar = user.containsKey('avatarUrl')
+        ? cleanTraktAvatarUrl(user['avatarUrl'])
+        : current.traktAvatarUrl;
+    if (username == current.username && avatar == current.traktAvatarUrl) {
+      return;
+    }
+    final next = current.withProfile(
+      username: username,
+      traktAvatarUrl: avatar,
+    );
+    await _store.write(next);
+    // Signed out, or another account signed in, meanwhile.
+    if (_session?.sessionId != current.sessionId) return;
+    _session = next;
+    notifyListeners();
+  }
 
   /// The sign-in this device offers first: the browser where there is one
   /// to hand, a code on TV hardware.

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import '../theme/reelish_icons.dart';
+import '../account/account_badges.dart';
 import '../models/app_update.dart';
 import '../models/episode_context.dart';
 import '../models/episode_progress.dart';
@@ -172,6 +173,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       PerfTimeline.markOnce('HOME_USABLE');
       unawaited(_startupPrompts());
+      // One GET /me per launch: badges, and the Trakt username and avatar as
+      // they are now, wherever they changed. Nothing waits for it.
+      unawaited(AccountBadges.instance.refresh());
     });
   }
 
