@@ -75,6 +75,8 @@ interface Attachment {
   pid: string;
   name: string;
   avatar: string | null;
+  /** Set by the Worker from the account; no client message can change it. */
+  founder: boolean;
   status: ParticipantStatus;
   joinedAt: number;
   tokens: number;
@@ -281,6 +283,7 @@ export class WatchPartyRoom extends DurableObject<Env> {
       pid,
       name: userId === room.hostUserId ? room.host.name : 'Viewer',
       avatar: userId === room.hostUserId ? room.host.avatar : null,
+      founder: request.headers.get('X-Party-Founder') === '1',
       status: 'joined',
       joinedAt: now,
       tokens: bucketSize,
@@ -620,6 +623,7 @@ export class WatchPartyRoom extends DurableObject<Env> {
         pid: a.pid,
         name: a.name,
         avatar: a.avatar,
+        ...(a.founder ? { founder: true } : {}),
         host: a.userId === room.hostUserId,
         status: a.status,
       }));

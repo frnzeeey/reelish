@@ -175,3 +175,19 @@ On the free plan, requests beyond the daily limit fail until the next
 day; the paid plan avoids that. TMDB's API is free for non-commercial use
 under its terms, which still apply when the key is hidden; check them
 before any commercial use.
+
+## Trakt refused a region (error 1015)
+
+Trakt sits behind a Cloudflare rate limit that is counted per Cloudflare region
+and appears to be shared by every Worker there, so a busy region can refuse all
+of Trakt for minutes at a time, whatever this app's own traffic. A refused call
+answers 429 with the body `error code: 1015`, where a limit from Trakt itself
+answers with JSON.
+
+`call()` in `backend/src/trakt.ts` then retries from the regions in
+`egressRegions`, through the `TraktEgress` Durable Object, which stays in the
+region where it was created. The edge refused the request, so Trakt never acted
+on it and a retry is safe. Measured in November 2026, Miami, Lisbon and Sydney
+got through every time while Singapore, Dallas and Frankfurt rarely did. Regions
+change: `trakt.rerouted` shows the fallback working, and
+`trakt.refused_in_every_region` means the list needs updating.

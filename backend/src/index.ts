@@ -16,6 +16,7 @@ import * as support from './support';
 import * as supporters from './supporters';
 
 export { WatchPartyRoom } from './party-room';
+export { TraktEgress } from './trakt-egress';
 
 const version = '/api/v1';
 

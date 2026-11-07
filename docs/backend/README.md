@@ -117,6 +117,7 @@ its own).
 | `DELETE /api/v1/me` | Bearer | Revoke Trakt access, delete the account and its sessions |
 | `GET /api/v1/trakt/watchlist` | Bearer | `{items: [{type, tmdbId, listedAt}]}` (`movie` or `series`) |
 | `POST /api/v1/webhooks/buymeacoffee` | Signature | Buy Me a Coffee events ([supporters](supporters.md)); 503 until configured |
+| `GET /api/v1/me` | Bearer | `{user, traktLinked, sessionId, badges}`; `badges` holds `founder` and `supporter` ([badges](badges.md)) |
 | `GET /api/v1/supporters/me` | Bearer | `{code, status, since, recognition}`; `status` is `none`, `pending` or `verified` |
 | `POST /api/v1/supporters/claim` | Bearer | Asks for a review; shows as pending, grants nothing |
 | `PUT /api/v1/supporters/recognition` | Bearer | `{listed, name}`; supporters only (409) |

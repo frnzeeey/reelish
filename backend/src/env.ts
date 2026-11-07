@@ -1,6 +1,7 @@
 // Bindings, variables and secrets the Worker runs with.
 
 import type { WatchPartyRoom } from './party-room';
+import type { TraktEgress } from './trakt-egress';
 
 export interface Env {
   DB: D1Database;
@@ -13,6 +14,8 @@ export interface Env {
   PARTY_LIMITER: RateLimit;
   /** One watch party room per code (SQLite-backed Durable Objects). */
   PARTY_ROOMS: DurableObjectNamespace<WatchPartyRoom>;
+  /** Reaches Trakt from another region when this one is refused. */
+  TRAKT_EGRESS: DurableObjectNamespace<TraktEgress>;
 
   ENVIRONMENT: string;
   TRAKT_API_URL: string;
@@ -46,6 +49,11 @@ export interface Env {
    * webhook refuses everything and the rest of the API runs as usual.
    */
   BMC_WEBHOOK_SECRET?: string;
+  /**
+   * The Trakt uuid of the Founder's account (badges.ts). A secret so that it
+   * stays out of the repository, and optional: without it nobody is Founder.
+   */
+  FOUNDER_TRAKT_UUID?: string;
 }
 
 /** Fails fast, with no secret values in the message, when one is missing. */

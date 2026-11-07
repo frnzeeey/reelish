@@ -290,6 +290,10 @@ class AccountApi {
     return id;
   }
 
+  /// The account as the server sees it, including its badges.
+  Future<Map<String, dynamic>> me(String accessToken) =>
+      _send('GET', '/me', token: accessToken);
+
   Future<Map<String, dynamic>> supporterStatus(String accessToken) =>
       _send('GET', '/supporters/me', token: accessToken);
 

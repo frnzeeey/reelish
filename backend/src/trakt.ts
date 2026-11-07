@@ -11,6 +11,12 @@ const timeoutMs = 10_000;
 /** Trakt rate limits in bursts; a short Retry-After is waited out. */
 const maxAttempts = 3;
 const maxRetryWaitMs = 3_000;
+/**
+ * Regions tried when Trakt's edge refuses this one, in order. All three reached
+ * Trakt every time while Singapore, Dallas and Frankfurt were mostly refused.
+ */
+export const egressRegions = ['enam', 'weur', 'oc'] as const;
+export type EgressRegion = (typeof egressRegions)[number];
 /** Refresh this long before Trakt's expiry. */
 const refreshMarginSeconds = 5 * 60;
 
@@ -44,6 +50,8 @@ export type DevicePoll =
 export interface TraktDeps {
   fetch?: typeof fetch;
   wait?: (ms: number) => Promise<void>;
+  /** Stands in for reaching Trakt from another region. */
+  egress?: (region: EgressRegion, url: string, init: RequestInit) => Promise<Response>;
 }
 
 async function call(
@@ -61,18 +69,23 @@ async function call(
   if (init.accessToken) headers.Authorization = `Bearer ${init.accessToken}`;
   const wait = deps.wait ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
   for (let attempt = 1; ; attempt++) {
+    const url = `${env.TRAKT_API_URL}${path}`;
+    const request = (): RequestInit => ({
+      method: init.method,
+      headers,
+      body: init.body === undefined ? undefined : JSON.stringify(init.body),
+      redirect: 'manual',
+      signal: AbortSignal.timeout(timeoutMs),
+    });
     let response: Response;
     try {
-      response = await (deps.fetch ?? fetch)(`${env.TRAKT_API_URL}${path}`, {
-        method: init.method,
-        headers,
-        body: init.body === undefined ? undefined : JSON.stringify(init.body),
-        redirect: 'manual',
-        signal: AbortSignal.timeout(timeoutMs),
-      });
+      response = await (deps.fetch ?? fetch)(url, request());
     } catch (error) {
       log('warn', 'trakt.unreachable', { path, message: String(error) });
       throw new ApiError(502, 'trakt_unavailable', 'Trakt is not responding.');
+    }
+    if (await refusedByEdge(response)) {
+      response = (await fromAnotherRegion(env, path, url, request, deps)) ?? response;
     }
     // A rate-limited request was refused before Trakt acted on it (an
     // authorization code stays unused), so it is safe to send again.
@@ -90,6 +103,47 @@ async function call(
     await wait(delay);
   }
 }
+
+/**
+ * Trakt's Cloudflare edge limits requests per region, and every Worker in a
+ * region seems to share that allowance, so a busy one can refuse all of Trakt
+ * for minutes (error 1015). It has nothing to do with this app's own traffic.
+ */
+async function refusedByEdge(response: Response): Promise<boolean> {
+  if (response.status !== 429) return false;
+  return (await response.clone().text()).includes('error code: 1015');
+}
+
+/** Retries from healthy regions. The edge refused it, so Trakt never acted. */
+async function fromAnotherRegion(
+  env: Env,
+  path: string,
+  url: string,
+  request: () => RequestInit,
+  deps: TraktDeps,
+): Promise<Response | null> {
+  for (const region of egressRegions) {
+    try {
+      const response = await (deps.egress ?? egressFetch(env))(region, url, request());
+      if (await refusedByEdge(response)) continue;
+      log('info', 'trakt.rerouted', { path, region });
+      return response;
+    } catch (error) {
+      log('warn', 'trakt.reroute_failed', { path, region, message: String(error) });
+    }
+  }
+  log('warn', 'trakt.refused_in_every_region', { path });
+  return null;
+}
+
+/** Fetches through a Durable Object that lives in [region]. */
+const egressFetch =
+  (env: Env) =>
+  (region: EgressRegion, url: string, init: RequestInit): Promise<Response> => {
+    const namespace = env.TRAKT_EGRESS;
+    const stub = namespace.get(namespace.idFromName(region), { locationHint: region });
+    return stub.fetch(new Request(url, init));
+  };
 
 async function jsonOf<T>(response: Response, path: string): Promise<T> {
   try {

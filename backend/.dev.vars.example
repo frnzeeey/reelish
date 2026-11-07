@@ -6,3 +6,5 @@ TRAKT_CLIENT_SECRET=replace-with-trakt-client-secret
 SESSION_SIGNING_KEY=replace-with-32-random-bytes-base64
 TOKEN_ENCRYPTION_KEY=replace-with-32-random-bytes-base64
 BMC_WEBHOOK_SECRET=replace-with-the-webhook-signing-secret
+# Optional: the Trakt uuid of the Founder's account.
+FOUNDER_TRAKT_UUID=

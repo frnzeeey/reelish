@@ -62,6 +62,9 @@ the interface once per launch:
   cannot safely rotate a refresh token; a lost Trakt grant answers 409, not
   401, so the app is not signed out. Docs: `docs/backend/README.md`
   (routes, Watch Party protocol) and `docs/backend/operations.md`.
+- **Badges** (`backend/src/badges.ts`, `docs/backend/badges.md`) are identity and
+  never a permission; nothing may check one before allowing an action. Founder
+  comes from the `FOUNDER_TRAKT_UUID` Worker secret, never a name or client data.
 - **Supporters:** the Supporter Badge is set only by Buy Me a Coffee's signed
   webhook, or the owner's `backend/scripts/grant-supporter.mjs`; never by the
   app. A donation names its account through a code in the donor's message,

@@ -18,6 +18,7 @@ export default defineConfig({
           TOKEN_ENCRYPTION_KEY: key(2),
           PUBLIC_URL: 'https://api.reelish.test',
           BMC_WEBHOOK_SECRET: 'test-bmc-secret',
+          FOUNDER_TRAKT_UUID: 'founder-uuid',
         },
       },
     })),

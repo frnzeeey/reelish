@@ -170,6 +170,19 @@ void main() {
     });
   });
 
+  test('says Trakt is busy when no region can reach it', () async {
+    final account = _controller(
+      (_) async => _json({
+        'error': {'code': 'trakt_unavailable', 'message': 'Could not start.'},
+      }, 502),
+    );
+    final signIn = account.startSignIn(method: SignInMethod.code);
+    addTearDown(signIn.dispose);
+    await pumpEventQueue();
+    expect(signIn.phase, DeviceSignInPhase.failed);
+    expect(signIn.error, contains('Trakt is busy'));
+  });
+
   group('Device sign-in', () {
     testWidgets('polls at the interval until approved, then signs in', (
       tester,

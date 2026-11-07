@@ -421,3 +421,33 @@ describe('Watch party rooms', () => {
     expect(logged).not.toContain(code);
   });
 });
+
+describe('The Founder badge in a party', () => {
+  const founderIn = (message: { participants: { pid: string; founder?: boolean }[] }) =>
+    message.participants.filter((person) => person.founder).length;
+
+  it('comes from the account, and a client cannot claim it', async () => {
+    await testEnv.DB.prepare('DELETE FROM users WHERE trakt_uuid = ?').bind('founder-uuid').run();
+    const founder = await signIn({ uuid: 'founder-uuid' });
+    const created = await create(founder.session.accessToken);
+    const { code } = (await created.json()) as { code: string };
+    const owner = await connect(founder.session.accessToken, code);
+
+    // A guest asks for it every way a client can.
+    const guest = await signIn();
+    const response = await call(`/api/v1/party/${code}/socket`, {
+      token: guest.session.accessToken,
+      headers: { Upgrade: 'websocket', 'X-Party-Founder': '1' },
+    });
+    expect(response.status).toBe(101);
+    const client = new Client(response.webSocket!);
+    await client.next('welcome');
+    client.send({ t: 'hello', name: 'Founder', avatar: null, founder: true });
+    const seen = (await owner.next(
+      'participants',
+      (m) => (m.participants as { name: string }[]).some((person) => person.name === 'Founder'),
+    )) as unknown as { participants: { pid: string; founder?: boolean }[] };
+    expect(seen.participants).toHaveLength(2);
+    expect(founderIn(seen)).toBe(1);
+  });
+});

@@ -82,7 +82,7 @@ graph LR
   screens_watch_party["screens/watch_party"] -->|3| platform["platform"]
   screens_watch_party["screens/watch_party"] -->|15| theme["theme"]
   screens_watch_party["screens/watch_party"] -->|9| watch_party["watch_party"]
-  screens_watch_party["screens/watch_party"] -->|3| widgets["widgets"]
+  screens_watch_party["screens/watch_party"] -->|4| widgets["widgets"]
   screens_watch_party["screens/watch_party"] -->|3| widgets_settings["widgets/settings"]
   screens_watch_party["screens/watch_party"] -->|1| widgets_tv["widgets/tv"]
   services["services"] -->|2| account["account"]
@@ -148,7 +148,7 @@ graph LR
 | `platform` | `analytics` (2), `widgets` (1) |
 | `screens` | `account` (12), `analytics` (3), `app` (1), `desktop` (7), `diagnostics` (3), `models` (23), `navigation` (6), `notifications` (2), `platform` (11), `screens/tv` (3), `screens/watch_party` (4), `services` (32), `support` (3), `theme` (49), `viewmodels` (3), `watch_party` (2), `widgets` (27), `widgets/player` (4), `widgets/plugin_library` (14), `widgets/settings` (15), `widgets/tv` (5) |
 | `screens/tv` | `models` (5), `navigation` (1), `screens/watch_party` (1), `services` (5), `theme` (9), `viewmodels` (4), `watch_party` (1), `widgets` (4), `widgets/settings` (1), `widgets/tv` (5) |
-| `screens/watch_party` | `account` (2), `desktop` (2), `models` (1), `navigation` (2), `platform` (3), `theme` (15), `watch_party` (9), `widgets` (3), `widgets/settings` (3), `widgets/tv` (1) |
+| `screens/watch_party` | `account` (2), `desktop` (2), `models` (1), `navigation` (2), `platform` (3), `theme` (15), `watch_party` (9), `widgets` (4), `widgets/settings` (3), `widgets/tv` (1) |
 | `services` | `account` (2), `analytics` (6), `models` (35), `platform` (2), `theme` (1) |
 | `support` | `account` (3), `platform` (1), `services` (1) |
 | `theme` | nothing outside itself |
@@ -166,31 +166,31 @@ The files imported by the most other `lib/` files. A change to one of these reac
 
 | File | Imported by (lib files) | Imported by (tests) |
 |---|---|---|
-| [`lib/src/theme/glass_theme.dart`](../../lib/src/theme/glass_theme.dart) | 76 | 33 |
+| [`lib/src/theme/glass_theme.dart`](../../lib/src/theme/glass_theme.dart) | 76 | 34 |
 | [`lib/src/theme/reelish_icons.dart`](../../lib/src/theme/reelish_icons.dart) | 73 | 8 |
 | [`lib/src/theme/design_tokens.dart`](../../lib/src/theme/design_tokens.dart) | 41 | 1 |
 | [`lib/src/models/media_item.dart`](../../lib/src/models/media_item.dart) | 32 | 38 |
 | [`lib/src/platform/device_capabilities.dart`](../../lib/src/platform/device_capabilities.dart) | 29 | 13 |
-| [`lib/src/services/storage_service.dart`](../../lib/src/services/storage_service.dart) | 20 | 22 |
+| [`lib/src/services/storage_service.dart`](../../lib/src/services/storage_service.dart) | 20 | 23 |
 | [`lib/src/models/stream_source.dart`](../../lib/src/models/stream_source.dart) | 18 | 14 |
 | [`lib/src/widgets/settings/settings_components.dart`](../../lib/src/widgets/settings/settings_components.dart) | 18 | 2 |
+| [`lib/src/account/account_controller.dart`](../../lib/src/account/account_controller.dart) | 15 | 10 |
 | [`lib/src/widgets/tv/tv_focus.dart`](../../lib/src/widgets/tv/tv_focus.dart) | 15 | 7 |
-| [`lib/src/account/account_controller.dart`](../../lib/src/account/account_controller.dart) | 14 | 9 |
-| [`lib/src/watch_party/party_models.dart`](../../lib/src/watch_party/party_models.dart) | 14 | 3 |
+| [`lib/src/watch_party/party_models.dart`](../../lib/src/watch_party/party_models.dart) | 14 | 4 |
 | [`lib/src/widgets/artwork_image.dart`](../../lib/src/widgets/artwork_image.dart) | 14 | 5 |
 | [`lib/src/analytics/analytics_service.dart`](../../lib/src/analytics/analytics_service.dart) | 13 | 5 |
 | [`lib/src/services/tmdb_service.dart`](../../lib/src/services/tmdb_service.dart) | 12 | 18 |
+| [`lib/src/account/account_api.dart`](../../lib/src/account/account_api.dart) | 10 | 9 |
 | [`lib/src/analytics/analytics_events.dart`](../../lib/src/analytics/analytics_events.dart) | 10 | 2 |
 | [`lib/src/desktop/desktop_widgets.dart`](../../lib/src/desktop/desktop_widgets.dart) | 10 | 5 |
-| [`lib/src/account/account_api.dart`](../../lib/src/account/account_api.dart) | 9 | 8 |
 | [`lib/src/models/media_details.dart`](../../lib/src/models/media_details.dart) | 9 | 6 |
 | [`lib/src/models/plugin_catalog.dart`](../../lib/src/models/plugin_catalog.dart) | 9 | 1 |
 | [`lib/src/navigation/app_transitions.dart`](../../lib/src/navigation/app_transitions.dart) | 9 | 1 |
 | [`lib/src/services/network_target_policy.dart`](../../lib/src/services/network_target_policy.dart) | 9 | 17 |
 | [`lib/src/services/paged_feed_controller.dart`](../../lib/src/services/paged_feed_controller.dart) | 9 | 5 |
 | [`lib/src/widgets/brand_logo.dart`](../../lib/src/widgets/brand_logo.dart) | 9 | 1 |
-| [`lib/src/account/profile_controller.dart`](../../lib/src/account/profile_controller.dart) | 8 | 3 |
-| [`lib/src/diagnostics/crash_reporter.dart`](../../lib/src/diagnostics/crash_reporter.dart) | 8 | 1 |
+| [`lib/src/account/backend_config.dart`](../../lib/src/account/backend_config.dart) | 8 | 1 |
+| [`lib/src/account/profile_controller.dart`](../../lib/src/account/profile_controller.dart) | 8 | 4 |
 
 ## Package usage
 
@@ -199,7 +199,7 @@ Each third-party package imported by `lib/`, A–Z, with the files that import i
 | Package | Imported by |
 |---|---|
 | `crypto` | `src/account/profile_controller.dart`, `src/services/github_update_service.dart`, `src/services/provider_plugin_service.dart` |
-| `flutter` | 144 files, including `icon_gallery.dart`, `main.dart`, `src/account/account_controller.dart`, `src/account/avatar_image.dart`, `src/account/profile_controller.dart`, `src/account/supporter_controller.dart` |
+| `flutter` | 145 files, including `icon_gallery.dart`, `main.dart`, `src/account/account_badges.dart`, `src/account/account_controller.dart`, `src/account/avatar_image.dart`, `src/account/profile_controller.dart` |
 | `flutter_cache_manager` | `src/widgets/artwork_image.dart` |
 | `flutter_go_torrent_streamer` | `src/services/torrent_source_preparer.dart`, `src/widgets/player/custom_video_player.dart` |
 | `flutter_js` | `src/services/provider_fetch_bridge.dart`, `src/services/provider_runner.dart` |
@@ -209,7 +209,7 @@ Each third-party package imported by `lib/`, A–Z, with the files that import i
 | `image_picker` | `src/screens/account_settings_screen.dart` |
 | `package_info_plus` | `src/screens/app_information_screens.dart`, `src/screens/credits_screen.dart`, `src/services/app_metadata.dart`, `src/services/github_update_service.dart` |
 | `path_provider` | `src/account/profile_controller.dart`, `src/diagnostics/local_error_log.dart`, `src/services/github_update_service.dart`, `src/services/plugin_library_service.dart`, `src/services/storage_service.dart`, `src/services/tmdb_response_cache.dart` |
-| `shared_preferences` | `src/account/profile_controller.dart`, `src/account/supporter_controller.dart`, `src/account/watchlist_sync.dart`, `src/analytics/analytics_service.dart`, `src/desktop/desktop_shell.dart`, `src/diagnostics/crash_reporter.dart`, `src/notifications/episode_check.dart`, `src/screens/first_run_consent_screen.dart`, `src/services/storage_service.dart` |
+| `shared_preferences` | `src/account/account_badges.dart`, `src/account/profile_controller.dart`, `src/account/supporter_controller.dart`, `src/account/watchlist_sync.dart`, `src/analytics/analytics_service.dart`, `src/desktop/desktop_shell.dart`, `src/diagnostics/crash_reporter.dart`, `src/notifications/episode_check.dart`, `src/screens/first_run_consent_screen.dart`, `src/services/storage_service.dart` |
 | `url_launcher` | `src/account/account_controller.dart`, `src/desktop/desktop_update_section.dart`, `src/screens/credits_screen.dart`, `src/screens/help_support_screen.dart`, `src/screens/legal_information_screen.dart`, `src/screens/plugin_details_screen.dart`, `src/screens/sign_in_screen.dart`, `src/screens/supporters_screen.dart` |
 | `video_player` | `src/services/playback_coordinator.dart`, `src/services/player_engine.dart`, `src/widgets/player/audio_track_sheet.dart`, `src/widgets/player/custom_video_player.dart`, `src/widgets/player/player_controls.dart`, `src/widgets/player/player_progress_bar.dart`, `src/widgets/player/player_settings_sheet.dart` |
 | `video_player_android` | `src/services/player_engine.dart` |

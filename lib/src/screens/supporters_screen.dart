@@ -14,7 +14,7 @@ import '../theme/design_tokens.dart';
 import '../theme/glass_theme.dart';
 import '../theme/reelish_icons.dart';
 import '../widgets/settings/settings_components.dart';
-import '../widgets/supporter_badge.dart';
+import '../widgets/account_badges.dart';
 
 class SupportersScreen extends StatefulWidget {
   const SupportersScreen({super.key, this.controller, this.openLink});

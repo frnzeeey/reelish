@@ -320,6 +320,8 @@ class DeviceSignIn extends ChangeNotifier {
         ? 'Could not reach Reelish. Check your connection and try again.'
         : exception.code == 'sign_in_failed'
         ? 'Trakt could not finish signing you in. Try again.'
+        : exception.code == 'trakt_unavailable'
+        ? 'Trakt is busy right now. Try again in a few minutes.'
         : 'Sign-in is not available right now. Try again later.';
     _update(DeviceSignInPhase.failed);
   }
