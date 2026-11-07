@@ -1,0 +1,258 @@
+// Generates the Signature launcher icons, the supporter collection's own
+// artwork (Settings > Appearance > App icon). Each matches a Supporter profile
+// theme (lib/src/theme/supporter_themes.dart). Unlike the colour presets
+// (generate_icon_presets.ps1, which samples a flat gradient from a source
+// tile), these backgrounds carry ornaments, so they are painted here:
+//
+//   cd tool/icons && npm ci && cd ../.. && node tool/branding/generate_signature_icons.mjs
+//
+// Writes, per icon:
+//   android/app/src/main/res/drawable-nodpi/ic_launcher_background_<id>.png
+//       the 432 px (108 dp at xxxhdpi) adaptive background
+//   android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_<id>.xml
+//       that background with the shared foreground mark and themed layer
+//   android/app/src/main/res/mipmap-<density>/ic_launcher_<id>.png
+//       the visible icon, for launchers without adaptive icons
+//   assets/images/app_icons/<id>.png
+//       a 192 px preview for the settings screen
+//
+// The visible icon is the middle two thirds of the 108 dp canvas, as a
+// launcher's mask shows it, so the previews match the home screen. The mark is
+// the shared foreground, inset 20% as in every other preset, which keeps it
+// inside the safe zone under any mask. Ornaments are deterministic.
+import { createRequire } from 'node:module';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
+const require = createRequire(join(root, 'tool', 'icons', 'package.json'));
+const CanvasKitInit = require('canvaskit-wasm');
+const CK = await CanvasKitInit();
+
+const res = join(root, 'android', 'app', 'src', 'main', 'res');
+const previews = join(root, 'assets', 'images', 'app_icons');
+const size = 432;
+const densities = { mdpi: 48, hdpi: 72, xhdpi: 96, xxhdpi: 144, xxxhdpi: 192 };
+
+const hex = (value, alpha = 1) => {
+  const n = parseInt(value.slice(1), 16);
+  return CK.Color((n >> 16) & 255, (n >> 8) & 255, n & 255, alpha);
+};
+
+/** A seeded generator, so every run paints the same sky. */
+function seeded(seed) {
+  let state = seed >>> 0;
+  return () => {
+    state = (state * 1664525 + 1013904223) >>> 0;
+    return state / 2 ** 32;
+  };
+}
+
+function linear(canvas, from, to, colors, stops) {
+  const paint = new CK.Paint();
+  paint.setShader(CK.Shader.MakeLinearGradient(from, to, colors, stops, CK.TileMode.Clamp));
+  canvas.drawRect(CK.XYWHRect(0, 0, size, size), paint);
+  paint.delete();
+}
+
+function glow(canvas, x, y, radius, color) {
+  const paint = new CK.Paint();
+  paint.setShader(CK.Shader.MakeRadialGradient([x, y], radius,
+    [color, CK.Color4f(color[0], color[1], color[2], 0)], null, CK.TileMode.Clamp));
+  canvas.drawRect(CK.XYWHRect(0, 0, size, size), paint);
+  paint.delete();
+}
+
+/** A soft diagonal highlight across the visible icon. */
+function sheen(canvas, color) {
+  const path = new CK.Path();
+  path.moveTo(size * .56, 0).lineTo(size * .76, 0)
+    .lineTo(size * .40, size).lineTo(size * .20, size).close();
+  const paint = new CK.Paint();
+  paint.setAntiAlias(true);
+  paint.setShader(CK.Shader.MakeLinearGradient([0, size * .15], [0, size * .85],
+    [color, CK.Color4f(color[0], color[1], color[2], 0)], null, CK.TileMode.Clamp));
+  paint.setMaskFilter(CK.MaskFilter.MakeBlur(CK.BlurStyle.Normal, 6, true));
+  canvas.drawPath(path, paint);
+  paint.delete();
+  path.delete();
+}
+
+function stars(canvas, color, count, seed) {
+  const random = seeded(seed);
+  const paint = new CK.Paint();
+  paint.setAntiAlias(true);
+  for (let i = 0; i < count; i++) {
+    const bright = random();
+    paint.setColor(CK.Color4f(color[0], color[1], color[2], .2 + bright * .6));
+    canvas.drawCircle(random() * size, random() * size, .8 + bright * 1.8, paint);
+  }
+  paint.delete();
+}
+
+/** A four-pointed glint, for the brightest stars. */
+function glint(canvas, x, y, radius, color) {
+  const path = new CK.Path();
+  const w = radius * .22;
+  path.moveTo(x, y - radius).quadTo(x + w, y - w, x + radius, y)
+    .quadTo(x + w, y + w, x, y + radius).quadTo(x - w, y + w, x - radius, y)
+    .quadTo(x - w, y - w, x, y - radius).close();
+  const paint = new CK.Paint();
+  paint.setAntiAlias(true);
+  paint.setColor(color);
+  canvas.drawPath(path, paint);
+  paint.delete();
+  path.delete();
+}
+
+function ribbon(canvas, offset, color) {
+  const path = new CK.Path();
+  path.moveTo(0, size * (offset + .28))
+    .cubicTo(size * .3, size * (offset - .12), size * .62, size * (offset + .36), size, size * (offset - .02))
+    .lineTo(size, size * (offset + .14))
+    .cubicTo(size * .62, size * (offset + .52), size * .3, size * (offset + .04), 0, size * (offset + .44))
+    .close();
+  const paint = new CK.Paint();
+  paint.setAntiAlias(true);
+  paint.setShader(CK.Shader.MakeLinearGradient([0, 0], [size, 0],
+    [CK.Color4f(color[0], color[1], color[2], 0), color, CK.Color4f(color[0], color[1], color[2], 0)],
+    [0, .5, 1], CK.TileMode.Clamp));
+  paint.setMaskFilter(CK.MaskFilter.MakeBlur(CK.BlurStyle.Normal, 16, true));
+  canvas.drawPath(path, paint);
+  paint.delete();
+  path.delete();
+}
+
+/** Soft out-of-focus lights, like bokeh behind a subject. */
+function bokeh(canvas, color, seed) {
+  const random = seeded(seed);
+  const paint = new CK.Paint();
+  paint.setAntiAlias(true);
+  paint.setMaskFilter(CK.MaskFilter.MakeBlur(CK.BlurStyle.Normal, 3, true));
+  for (let i = 0; i < 9; i++) {
+    paint.setColor(CK.Color4f(color[0], color[1], color[2], .08 + random() * .14));
+    canvas.drawCircle(random() * size, random() * size, size * (.05 + random() * .09), paint);
+  }
+  paint.delete();
+}
+
+/** Beams fanning from the upper left, like a cinema spotlight. */
+function rays(canvas, color) {
+  const paint = new CK.Paint();
+  paint.setAntiAlias(true);
+  paint.setMaskFilter(CK.MaskFilter.MakeBlur(CK.BlurStyle.Normal, 8, true));
+  for (const [from, to] of [[.18, .30], [.42, .52], [.66, .74]]) {
+    const path = new CK.Path();
+    path.moveTo(-size * .1, -size * .1)
+      .lineTo(size * 1.2, size * from * 1.2)
+      .lineTo(size * 1.2, size * to * 1.2)
+      .close();
+    paint.setShader(CK.Shader.MakeLinearGradient([0, 0], [size, size],
+      [color, CK.Color4f(color[0], color[1], color[2], 0)], null, CK.TileMode.Clamp));
+    canvas.drawPath(path, paint);
+    path.delete();
+  }
+  paint.delete();
+}
+
+const icons = {
+  royal_violet: (c) => {
+    linear(c, [0, 0], [size, size], [hex('#9C7DF5'), hex('#5B45D6'), hex('#2A2178')], [0, .55, 1]);
+    glow(c, size * .26, size * .22, size * .5, hex('#D9CCFF', .34));
+    rays(c, hex('#EFE8FF', .42));
+  },
+  celestial: (c) => {
+    linear(c, [0, 0], [0, size], [hex('#25397F'), hex('#121A45'), hex('#080B1E')], [0, .55, 1]);
+    glow(c, size * .34, size * .3, size * .6, hex('#5E8BFF', .42));
+    stars(c, hex('#DCE6FF'), 90, 7);
+    glint(c, size * .72, size * .27, 13, hex('#F2F6FF', .95));
+    glint(c, size * .27, size * .74, 9, hex('#E4ECFF', .85));
+    glint(c, size * .78, size * .7, 6, hex('#E4ECFF', .8));
+  },
+  aurora: (c) => {
+    linear(c, [0, 0], [size, size], [hex('#0F3038'), hex('#0E1D2C'), hex('#1A1238')], [0, .5, 1]);
+    ribbon(c, .2, hex('#2CE0C4', .75));
+    ribbon(c, .48, hex('#8A6CFF', .7));
+    stars(c, hex('#D8FFF6'), 26, 11);
+  },
+  rose_luxe: (c) => {
+    linear(c, [0, 0], [size, size], [hex('#EE97B8'), hex('#B4467A'), hex('#5E1C3E')], [0, .55, 1]);
+    glow(c, size * .3, size * .28, size * .5, hex('#FFE0EC', .3));
+    bokeh(c, hex('#FFE6F0'), 5);
+  },
+  golden_hour: (c) => {
+    linear(c, [0, 0], [0, size], [hex('#7A3E2A'), hex('#C0743A'), hex('#E8B26A')], [0, .6, 1]);
+    // A low sun on the horizon, warming the lower half.
+    glow(c, size * .66, size * .7, size * .5, hex('#FFD49A', .6));
+    glow(c, size * .66, size * .7, size * .13, hex('#FFF3DC', .85));
+  },
+};
+
+const adaptive = (id) => `<?xml version="1.0" encoding="utf-8"?>
+<!-- Generated by tool/branding/generate_signature_icons.mjs. -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+  <background android:drawable="@drawable/ic_launcher_background_${id}"/>
+  <foreground>
+      <inset
+          android:drawable="@drawable/ic_launcher_foreground"
+          android:inset="20%" />
+  </foreground>
+  <monochrome>
+      <inset
+          android:drawable="@drawable/ic_launcher_monochrome"
+          android:inset="20%" />
+  </monochrome>
+</adaptive-icon>
+`;
+
+const foreground = CK.MakeImageFromEncoded(
+  readFileSync(join(res, 'drawable-xxxhdpi', 'ic_launcher_foreground.png')));
+
+function snapshot(draw, width, height = width) {
+  const surface = CK.MakeSurface(width, height);
+  draw(surface.getCanvas());
+  surface.flush();
+  const image = surface.makeImageSnapshot();
+  surface.delete();
+  return image;
+}
+
+function savePng(image, path) {
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, image.encodeToBytes());
+}
+
+for (const [id, paint] of Object.entries(icons)) {
+  const background = snapshot(paint, size);
+  savePng(background, join(res, 'drawable-nodpi', `ic_launcher_background_${id}.png`));
+  writeFileSync(join(res, 'mipmap-anydpi-v26', `ic_launcher_${id}.xml`), adaptive(id));
+
+  // The whole adaptive icon, as a launcher composes it.
+  const composed = snapshot((c) => {
+    c.drawImage(background, 0, 0, null);
+    const inset = size * .2;
+    c.drawImageRectCubic(foreground, CK.XYWHRect(0, 0, foreground.width(), foreground.height()),
+      CK.XYWHRect(inset, inset, size - inset * 2, size - inset * 2), 1 / 3, 1 / 3, null);
+  }, size);
+
+  // The visible middle two thirds, on a rounded tile like the other presets.
+  const visible = CK.XYWHRect(size / 6, size / 6, size * 2 / 3, size * 2 / 3);
+  const tile = (pixels) => snapshot((c) => {
+    c.clipRRect(CK.RRectXY(CK.XYWHRect(0, 0, pixels, pixels), pixels * .22, pixels * .22),
+      CK.ClipOp.Intersect, true);
+    c.drawImageRectCubic(composed, visible, CK.XYWHRect(0, 0, pixels, pixels), 1 / 3, 1 / 3, null);
+  }, pixels);
+  for (const [density, pixels] of Object.entries(densities)) {
+    const image = tile(pixels);
+    savePng(image, join(res, `mipmap-${density}`, `ic_launcher_${id}.png`));
+    image.delete();
+  }
+  const preview = tile(192);
+  savePng(preview, join(previews, `${id}.png`));
+  preview.delete();
+  composed.delete();
+  background.delete();
+  console.log(`signature ${id}`);
+}
+foreground.delete();

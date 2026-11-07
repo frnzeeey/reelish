@@ -111,7 +111,7 @@ export async function webCallback(env: Env, url: URL, deps: TraktDeps = {}): Pro
       return page('failed');
     }
     const identity = await fetchIdentity(env, tokens.access_token, deps);
-    const userId = await upsertUser(env, identity.uuid, identity.username);
+    const userId = await upsertUser(env, identity);
     await saveTraktTokens(env, userId, tokens, callbackUrl(env));
     await finish('authorized', userId);
     await audit(env, 'auth.web_approved', { userId, detail: claimed.platform });
@@ -164,15 +164,15 @@ export async function pollWeb(env: Env, request: Request, requestId: string) {
   if ((claimed.meta.changes ?? 0) !== 1) {
     throw new ApiError(410, 'sign_in_expired', 'The sign-in expired; start again.');
   }
-  const user = await env.DB.prepare(`SELECT id, trakt_username FROM users WHERE id = ?`)
-    .bind(row.user_id).first<{ id: string; trakt_username: string }>();
+  const user = await env.DB.prepare(`SELECT id, trakt_username, trakt_avatar_url FROM users WHERE id = ?`)
+    .bind(row.user_id).first<{ id: string; trakt_username: string; trakt_avatar_url: string | null }>();
   if (!user) throw new ApiError(410, 'sign_in_expired', 'The sign-in expired; start again.');
   const tokens = await createSession(env, user.id, { name: row.device_name, platform: row.platform });
   await audit(env, 'auth.signed_in', { userId: user.id, sessionId: tokens.sessionId, detail: `${row.platform}:web` });
   return json({
     status: 'authorized',
     session: sessionBody(tokens),
-    user: { id: user.id, username: user.trakt_username },
+    user: { id: user.id, username: user.trakt_username, avatarUrl: user.trakt_avatar_url },
   }, requestId);
 }
 

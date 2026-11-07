@@ -48,7 +48,7 @@ Future<(AccountBadges, AccountController)> _badges(
     store: MemorySessionStore(_session(userId, username: username)),
   );
   await account.restore();
-  return (AccountBadges(account: account, api: api), account);
+  return (AccountBadges(account: account), account);
 }
 
 void main() {

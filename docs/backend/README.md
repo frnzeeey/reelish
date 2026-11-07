@@ -113,12 +113,11 @@ its own).
 | `POST /api/v1/auth/refresh` | — | `{refreshToken}` → `{session}` (the old refresh token stops working) |
 | `POST /api/v1/auth/logout` | Bearer | End this session |
 | `POST /api/v1/auth/logout-all` | Bearer | End every session of the account |
-| `GET /api/v1/me` | Bearer | `{user, traktLinked, sessionId}` |
 | `DELETE /api/v1/me` | Bearer | Revoke Trakt access, delete the account and its sessions |
 | `GET /api/v1/trakt/watchlist` | Bearer | `{items: [{type, tmdbId, listedAt}]}` (`movie` or `series`) |
 | `POST /api/v1/webhooks/buymeacoffee` | Signature | Buy Me a Coffee events ([supporters](supporters.md)); 503 until configured |
-| `GET /api/v1/me` | Bearer | `{user, traktLinked, sessionId, badges}`; `badges` holds `founder` and `supporter` ([badges](badges.md)) |
-| `GET /api/v1/supporters/me` | Bearer | `{code, status, since, recognition}`; `status` is `none`, `pending` or `verified` |
+| `GET /api/v1/me` | Bearer | `{user: {id, username, avatarUrl, profileCheckedAt, createdAt}, traktLinked, sessionId, badges}`; reads Trakt again when the profile is a day old ([Trakt profile](../features/trakt-profile.md)); `badges` holds `founder` and `supporter` ([badges](badges.md)) |
+| `GET /api/v1/supporters/me` | Bearer | `{code, status, since, recognition, entitlement}`; `status` is `none`, `pending` or `verified` (the donation); `entitlement` is `free`, `supporter` or `founder` ([entitlements](entitlements.md)) |
 | `POST /api/v1/supporters/claim` | Bearer | Asks for a review; shows as pending, grants nothing |
 | `PUT /api/v1/supporters/recognition` | Bearer | `{listed, name}`; supporters only (409) |
 | `GET /api/v1/supporters/public` | Bearer | `{supporters: [{name, since}]}`, opted-in only |
@@ -128,7 +127,7 @@ its own).
 | `GET /api/v1/sessions` | Bearer | The account's signed-in devices |
 | `DELETE /api/v1/sessions/{id}` | Bearer | End one of the account's own sessions |
 | `GET /api/v1/tmdb/{tmdb path}` | Bearer | Allowlisted TMDB v3 request (below) |
-| `POST /api/v1/party` | Bearer | `{content, settings?, profile?}` → `201 {code, expiresAt, settings}`; ends the caller's previous party |
+| `POST /api/v1/party` | Bearer | Supporters only (`403 supporter_required` otherwise). `{content, settings?, profile?}` → `201 {code, expiresAt, settings}`; ends the caller's previous party |
 | `GET /api/v1/party/{code}` | Bearer | `{code, phase, content, host, participants, capacity}`; 404 `party_not_found` |
 | `GET /api/v1/party/{code}/socket` | Bearer | WebSocket upgrade into the room (below); 409 `party_full`, 403 `party_removed` |
 | `POST /api/v1/support/reports` | Bearer | `{kind, category, platform, title, description, steps?, diagnostics?}` (16 KB; `kind` is `bug` or `feedback`) → `201 {id, createdAt}`; a repeat within 10 minutes → `200 {id, duplicate: true}`; 429 `report_limit` after 5 a day per account (`backend/src/support.ts`) |
@@ -155,6 +154,12 @@ host who disconnects keeps the room for 60 seconds; then the
 longest-connected participant hosts. `PARTY_MAX_CAPACITY` (default 5) caps
 every room. When a Free plan daily limit is spent, room calls fail with
 503 `party_unavailable` and normal watching is unaffected.
+
+Only supporters create rooms: `createParty` reads the account's donation
+record (one D1 read, at creation only) and answers 403 `supporter_required`
+otherwise. Anyone signed in can preview and join. A room carries on if its
+host's support ends, and a handover (by the host, or after the grace above)
+may pass it to anyone; neither extends its 12 hours.
 
 The `content` is `{tmdbId, type: "movie"|"series", season, episode, title,
 posterPath?}` (season and episode for series). Participants are named by

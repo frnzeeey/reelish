@@ -4,23 +4,49 @@
 // the only record of the choice, so what Settings shows is what the
 // launcher shows. Windows embeds its icon in the executable and Android TV
 // shows the banner, so neither offers this.
+//
+// Default and Slate are free for everyone. The rest, the Signature artwork and
+// the colours, are a thank-you to Reelish Supporters: applying one asks the
+// server first (SupporterController), so neither a saved status nor changed
+// local data can unlock it. An icon already on the launcher is never changed
+// behind the user's back (that can remove their home-screen shortcut), so one
+// chosen while supporting stays until they choose another.
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import 'device_capabilities.dart';
+import '../account/supporter_controller.dart';
 import '../analytics/analytics_events.dart';
 import '../analytics/analytics_service.dart';
+
+/// Which part of the collection an icon belongs to.
+enum AppIconGroup {
+  /// Free for everyone.
+  free,
+
+  /// The supporter collection's own artwork, matching the app themes
+  /// (tool/branding/generate_signature_icons.mjs).
+  signature,
+
+  /// The supporter collection's colours of the Reelish tile.
+  colour,
+}
 
 /// One launcher icon. [id] is shared with AppIconSwitcher.kt.
 @immutable
 class AppIconPreset {
-  const AppIconPreset(this.id, this.label);
+  const AppIconPreset(this.id, this.label, [this.group = AppIconGroup.colour]);
 
   final String id;
   final String label;
+  final AppIconGroup group;
+
+  /// Free for everyone; otherwise for Reelish Supporters.
+  bool get free => group == AppIconGroup.free;
 
   /// A 192 px preview (tool/branding/generate_icon_presets.ps1).
   String get preview => 'assets/images/app_icons/$id.png';
@@ -28,7 +54,13 @@ class AppIconPreset {
   static const defaultId = 'default';
 
   static const all = [
-    AppIconPreset(defaultId, 'Default'),
+    AppIconPreset(defaultId, 'Default', AppIconGroup.free),
+    AppIconPreset('slate', 'Slate', AppIconGroup.free),
+    AppIconPreset('royal_violet', 'Royal Violet', AppIconGroup.signature),
+    AppIconPreset('celestial', 'Celestial', AppIconGroup.signature),
+    AppIconPreset('aurora', 'Aurora', AppIconGroup.signature),
+    AppIconPreset('rose_luxe', 'Rose Luxe', AppIconGroup.signature),
+    AppIconPreset('golden_hour', 'Golden Hour', AppIconGroup.signature),
     AppIconPreset('amber', 'Amber'),
     AppIconPreset('orange', 'Orange'),
     AppIconPreset('rose', 'Rose'),
@@ -38,7 +70,6 @@ class AppIconPreset {
     AppIconPreset('teal', 'Teal'),
     AppIconPreset('green', 'Green'),
     AppIconPreset('lime', 'Lime'),
-    AppIconPreset('slate', 'Slate'),
   ];
 
   static AppIconPreset byId(String? id) =>
@@ -68,12 +99,48 @@ class AppIconService {
   ).id;
 }
 
+/// How an attempt to change the icon ended.
+enum AppIconChange {
+  /// The system confirms the icon is now the launcher's.
+  applied,
+
+  /// The system refused or failed; the previous icon stays.
+  failed,
+
+  /// The server says this account is not a supporter.
+  supportersOnly,
+
+  /// Supporter status could not be checked (offline, signed out, server
+  /// down), so a supporter icon was not applied.
+  unverified,
+}
+
 /// The selection for the settings screen.
 class AppIconController extends ChangeNotifier {
-  AppIconController({AppIconService? service})
-    : _service = service ?? const AppIconService();
+  AppIconController({AppIconService? service, SupporterController? supporters})
+    : _service = service ?? const AppIconService(),
+      _supporters = supporters ?? SupporterController.instance {
+    _supporters.addListener(notifyListeners);
+  }
 
   final AppIconService _service;
+  final SupporterController _supporters;
+
+  /// Whether the supporter icons show as unlocked: the last status known
+  /// for this account. Only for display; [select] asks the server.
+  bool get supporter => _supporters.has(SupporterPerk.appIcons);
+
+  /// The Founder, who has every supporter perk without donating.
+  bool get founder => _supporters.entitlement == Entitlement.founder;
+
+  /// Whether [preset] can be chosen from the screen as things stand.
+  bool unlocked(AppIconPreset preset) => preset.free || supporter;
+
+  @override
+  void dispose() {
+    _supporters.removeListener(notifyListeners);
+    super.dispose();
+  }
 
   String _current = AppIconPreset.defaultId;
   String get current => _current;
@@ -86,6 +153,8 @@ class AppIconController extends ChangeNotifier {
   bool get loaded => _loaded;
 
   Future<void> load() async {
+    // The status for the lock marks; nothing waits for it.
+    unawaited(_supporters.refresh());
     try {
       _current = await _service.current();
     } catch (_) {
@@ -96,25 +165,35 @@ class AppIconController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Applies [id]. True only when the system confirms that icon is now the
-  /// launcher's.
-  Future<bool> select(String id) async {
-    if (_applying != null || id == _current) return id == _current;
+  /// Applies [id]. A supporter icon is applied only once the server confirms
+  /// the account is a supporter now.
+  Future<AppIconChange> select(String id) async {
+    if (id == _current) return AppIconChange.applied;
+    if (_applying != null) return AppIconChange.failed;
+    final preset = AppIconPreset.all.where((p) => p.id == id).firstOrNull;
+    if (preset == null) return AppIconChange.failed;
     _applying = id;
     notifyListeners();
     try {
+      if (!preset.free) {
+        await _supporters.refresh();
+        if (_supporters.failed) return AppIconChange.unverified;
+        if (!_supporters.has(SupporterPerk.appIcons)) {
+          return AppIconChange.supportersOnly;
+        }
+      }
       _current = await _service.select(id);
       if (_current == id) {
         AnalyticsService.instance.log(
           AnalyticsEvent.featureUsed(AnalyticsFeature.appIconChange),
         );
       }
-      return _current == id;
+      return _current == id ? AppIconChange.applied : AppIconChange.failed;
     } catch (_) {
       try {
         _current = await _service.current();
       } catch (_) {}
-      return false;
+      return AppIconChange.failed;
     } finally {
       _applying = null;
       notifyListeners();

@@ -7,23 +7,19 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'account_api.dart';
 import 'account_controller.dart';
-import 'backend_config.dart';
 
 enum AccountBadge { founder, supporter }
 
 class AccountBadges extends ChangeNotifier {
-  AccountBadges({AccountController? account, AccountApi? api})
-    : _account = account ?? AccountController.instance,
-      _api = api ?? AccountApi(baseUrl: BackendConfig.apiUrl);
+  AccountBadges({AccountController? account})
+    : _account = account ?? AccountController.instance;
 
   static final instance = AccountBadges();
 
   static const _cachePrefix = 'reelish.badges.v1.';
 
   final AccountController _account;
-  final AccountApi _api;
 
   Set<AccountBadge> _badges = const {};
   String? _loadedFor;
@@ -46,9 +42,10 @@ class AccountBadges extends ChangeNotifier {
     if (_loading) return;
     _loading = true;
     try {
-      final token = await _account.accessToken();
-      if (token == null) return;
-      final badges = parse(await _api.me(token));
+      // The same request brings in the Trakt username and avatar.
+      final body = await _account.fetchMe();
+      if (body == null) return;
+      final badges = parse(body);
       // The account may have changed while this was on its way.
       if (_account.userId != userId) return;
       _set(badges);

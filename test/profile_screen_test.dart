@@ -222,6 +222,9 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    // In the Account section, below the identity card.
+    await tester.ensureVisible(find.text('Manage account'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Manage account'));
     await tester.pumpAndSettle();
     expect(find.byType(AccountSettingsScreen), findsOneWidget);

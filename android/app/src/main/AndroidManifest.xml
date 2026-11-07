@@ -223,6 +223,48 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity-alias>
+        <!-- The Signature icons, the supporter collection's own artwork
+             (tool/branding/generate_signature_icons.mjs). -->
+        <activity-alias android:name=".IconRoyalViolet" android:targetActivity=".ReelishActivity"
+            android:icon="@mipmap/ic_launcher_royal_violet" android:roundIcon="@mipmap/ic_launcher_royal_violet"
+            android:exported="true" android:enabled="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".IconCelestial" android:targetActivity=".ReelishActivity"
+            android:icon="@mipmap/ic_launcher_celestial" android:roundIcon="@mipmap/ic_launcher_celestial"
+            android:exported="true" android:enabled="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".IconAurora" android:targetActivity=".ReelishActivity"
+            android:icon="@mipmap/ic_launcher_aurora" android:roundIcon="@mipmap/ic_launcher_aurora"
+            android:exported="true" android:enabled="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".IconRoseLuxe" android:targetActivity=".ReelishActivity"
+            android:icon="@mipmap/ic_launcher_rose_luxe" android:roundIcon="@mipmap/ic_launcher_rose_luxe"
+            android:exported="true" android:enabled="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".IconGoldenHour" android:targetActivity=".ReelishActivity"
+            android:icon="@mipmap/ic_launcher_golden_hour" android:roundIcon="@mipmap/ic_launcher_golden_hour"
+            android:exported="true" android:enabled="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity-alias>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

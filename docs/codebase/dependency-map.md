@@ -11,7 +11,7 @@ An arrow `A --> B` means files in A import files in B; the label is how many imp
 ```mermaid
 graph LR
   lib_icon_gallery_dart["lib/icon_gallery.dart"] -->|2| theme["theme"]
-  lib_main_dart["lib/main.dart"] -->|3| account["account"]
+  lib_main_dart["lib/main.dart"] -->|4| account["account"]
   lib_main_dart["lib/main.dart"] -->|1| diagnostics["diagnostics"]
   lib_main_dart["lib/main.dart"] -->|1| notifications["notifications"]
   lib_main_dart["lib/main.dart"] -->|3| platform["platform"]
@@ -42,25 +42,26 @@ graph LR
   notifications["notifications"] -->|2| analytics["analytics"]
   notifications["notifications"] -->|1| platform["platform"]
   notifications["notifications"] -->|2| services["services"]
+  platform["platform"] -->|1| account["account"]
   platform["platform"] -->|2| analytics["analytics"]
   platform["platform"] -->|1| widgets["widgets"]
-  screens["screens"] -->|12| account["account"]
+  screens["screens"] -->|17| account["account"]
   screens["screens"] -->|3| analytics["analytics"]
   screens["screens"] -->|1| app["app"]
   screens["screens"] -->|7| desktop["desktop"]
   screens["screens"] -->|3| diagnostics["diagnostics"]
   screens["screens"] -->|23| models["models"]
-  screens["screens"] -->|6| navigation["navigation"]
+  screens["screens"] -->|7| navigation["navigation"]
   screens["screens"] -->|2| notifications["notifications"]
-  screens["screens"] -->|11| platform["platform"]
+  screens["screens"] -->|12| platform["platform"]
   screens["screens"] -->|3| screens_tv["screens/tv"]
   screens["screens"] -->|4| screens_watch_party["screens/watch_party"]
-  screens["screens"] -->|32| services["services"]
+  screens["screens"] -->|33| services["services"]
   screens["screens"] -->|3| support["support"]
-  screens["screens"] -->|49| theme["theme"]
+  screens["screens"] -->|51| theme["theme"]
   screens["screens"] -->|3| viewmodels["viewmodels"]
   screens["screens"] -->|2| watch_party["watch_party"]
-  screens["screens"] -->|27| widgets["widgets"]
+  screens["screens"] -->|32| widgets["widgets"]
   screens["screens"] -->|4| widgets_player["widgets/player"]
   screens["screens"] -->|14| widgets_plugin_library["widgets/plugin_library"]
   screens["screens"] -->|15| widgets_settings["widgets/settings"]
@@ -75,21 +76,22 @@ graph LR
   screens_tv["screens/tv"] -->|4| widgets["widgets"]
   screens_tv["screens/tv"] -->|1| widgets_settings["widgets/settings"]
   screens_tv["screens/tv"] -->|5| widgets_tv["widgets/tv"]
-  screens_watch_party["screens/watch_party"] -->|2| account["account"]
+  screens_watch_party["screens/watch_party"] -->|4| account["account"]
   screens_watch_party["screens/watch_party"] -->|2| desktop["desktop"]
   screens_watch_party["screens/watch_party"] -->|1| models["models"]
   screens_watch_party["screens/watch_party"] -->|2| navigation["navigation"]
   screens_watch_party["screens/watch_party"] -->|3| platform["platform"]
+  screens_watch_party["screens/watch_party"] -->|1| screens["screens"]
   screens_watch_party["screens/watch_party"] -->|15| theme["theme"]
   screens_watch_party["screens/watch_party"] -->|9| watch_party["watch_party"]
-  screens_watch_party["screens/watch_party"] -->|4| widgets["widgets"]
+  screens_watch_party["screens/watch_party"] -->|5| widgets["widgets"]
   screens_watch_party["screens/watch_party"] -->|3| widgets_settings["widgets/settings"]
   screens_watch_party["screens/watch_party"] -->|1| widgets_tv["widgets/tv"]
-  services["services"] -->|2| account["account"]
+  services["services"] -->|3| account["account"]
   services["services"] -->|6| analytics["analytics"]
   services["services"] -->|35| models["models"]
   services["services"] -->|2| platform["platform"]
-  services["services"] -->|1| theme["theme"]
+  services["services"] -->|2| theme["theme"]
   support["support"] -->|3| account["account"]
   support["support"] -->|1| platform["platform"]
   support["support"] -->|1| services["services"]
@@ -100,16 +102,16 @@ graph LR
   watch_party["watch_party"] -->|2| analytics["analytics"]
   watch_party["watch_party"] -->|1| diagnostics["diagnostics"]
   watch_party["watch_party"] -->|1| models["models"]
-  widgets["widgets"] -->|2| account["account"]
+  widgets["widgets"] -->|3| account["account"]
   widgets["widgets"] -->|4| analytics["analytics"]
   widgets["widgets"] -->|1| desktop["desktop"]
   widgets["widgets"] -->|1| diagnostics["diagnostics"]
   widgets["widgets"] -->|3| models["models"]
-  widgets["widgets"] -->|3| platform["platform"]
+  widgets["widgets"] -->|5| platform["platform"]
   widgets["widgets"] -->|4| services["services"]
-  widgets["widgets"] -->|21| theme["theme"]
+  widgets["widgets"] -->|28| theme["theme"]
   widgets["widgets"] -->|1| widgets_settings["widgets/settings"]
-  widgets["widgets"] -->|1| widgets_tv["widgets/tv"]
+  widgets["widgets"] -->|2| widgets_tv["widgets/tv"]
   widgets_player["widgets/player"] -->|1| account["account"]
   widgets_player["widgets/player"] -->|2| diagnostics["diagnostics"]
   widgets_player["widgets/player"] -->|19| models["models"]
@@ -136,7 +138,7 @@ graph LR
 | From folder | Imports from (count) |
 |---|---|
 | `lib/icon_gallery.dart` | `theme` (2) |
-| `lib/main.dart` | `account` (3), `diagnostics` (1), `notifications` (1), `platform` (3), `screens` (4), `services` (3), `theme` (1), `widgets/tv` (1) |
+| `lib/main.dart` | `account` (4), `diagnostics` (1), `notifications` (1), `platform` (3), `screens` (4), `services` (3), `theme` (1), `widgets/tv` (1) |
 | `account` | `models` (1), `platform` (1), `services` (2) |
 | `analytics` | `diagnostics` (1) |
 | `app` | `services` (5) |
@@ -145,16 +147,16 @@ graph LR
 | `models` | nothing outside itself |
 | `navigation` | `theme` (1) |
 | `notifications` | `account` (4), `analytics` (2), `platform` (1), `services` (2) |
-| `platform` | `analytics` (2), `widgets` (1) |
-| `screens` | `account` (12), `analytics` (3), `app` (1), `desktop` (7), `diagnostics` (3), `models` (23), `navigation` (6), `notifications` (2), `platform` (11), `screens/tv` (3), `screens/watch_party` (4), `services` (32), `support` (3), `theme` (49), `viewmodels` (3), `watch_party` (2), `widgets` (27), `widgets/player` (4), `widgets/plugin_library` (14), `widgets/settings` (15), `widgets/tv` (5) |
+| `platform` | `account` (1), `analytics` (2), `widgets` (1) |
+| `screens` | `account` (17), `analytics` (3), `app` (1), `desktop` (7), `diagnostics` (3), `models` (23), `navigation` (7), `notifications` (2), `platform` (12), `screens/tv` (3), `screens/watch_party` (4), `services` (33), `support` (3), `theme` (51), `viewmodels` (3), `watch_party` (2), `widgets` (32), `widgets/player` (4), `widgets/plugin_library` (14), `widgets/settings` (15), `widgets/tv` (5) |
 | `screens/tv` | `models` (5), `navigation` (1), `screens/watch_party` (1), `services` (5), `theme` (9), `viewmodels` (4), `watch_party` (1), `widgets` (4), `widgets/settings` (1), `widgets/tv` (5) |
-| `screens/watch_party` | `account` (2), `desktop` (2), `models` (1), `navigation` (2), `platform` (3), `theme` (15), `watch_party` (9), `widgets` (4), `widgets/settings` (3), `widgets/tv` (1) |
-| `services` | `account` (2), `analytics` (6), `models` (35), `platform` (2), `theme` (1) |
+| `screens/watch_party` | `account` (4), `desktop` (2), `models` (1), `navigation` (2), `platform` (3), `screens` (1), `theme` (15), `watch_party` (9), `widgets` (5), `widgets/settings` (3), `widgets/tv` (1) |
+| `services` | `account` (3), `analytics` (6), `models` (35), `platform` (2), `theme` (2) |
 | `support` | `account` (3), `platform` (1), `services` (1) |
 | `theme` | nothing outside itself |
 | `viewmodels` | `analytics` (2), `models` (11), `services` (13) |
 | `watch_party` | `account` (4), `analytics` (2), `diagnostics` (1), `models` (1) |
-| `widgets` | `account` (2), `analytics` (4), `desktop` (1), `diagnostics` (1), `models` (3), `platform` (3), `services` (4), `theme` (21), `widgets/settings` (1), `widgets/tv` (1) |
+| `widgets` | `account` (3), `analytics` (4), `desktop` (1), `diagnostics` (1), `models` (3), `platform` (5), `services` (4), `theme` (28), `widgets/settings` (1), `widgets/tv` (2) |
 | `widgets/player` | `account` (1), `diagnostics` (2), `models` (19), `platform` (7), `services` (15), `theme` (25), `watch_party` (3), `widgets` (5), `widgets/tv` (1) |
 | `widgets/plugin_library` | `models` (4), `platform` (1), `services` (5), `theme` (30), `widgets` (1) |
 | `widgets/settings` | `theme` (7), `widgets` (1), `widgets/tv` (1) |
@@ -166,31 +168,31 @@ The files imported by the most other `lib/` files. A change to one of these reac
 
 | File | Imported by (lib files) | Imported by (tests) |
 |---|---|---|
-| [`lib/src/theme/glass_theme.dart`](../../lib/src/theme/glass_theme.dart) | 76 | 34 |
-| [`lib/src/theme/reelish_icons.dart`](../../lib/src/theme/reelish_icons.dart) | 73 | 8 |
-| [`lib/src/theme/design_tokens.dart`](../../lib/src/theme/design_tokens.dart) | 41 | 1 |
+| [`lib/src/theme/glass_theme.dart`](../../lib/src/theme/glass_theme.dart) | 79 | 38 |
+| [`lib/src/theme/reelish_icons.dart`](../../lib/src/theme/reelish_icons.dart) | 75 | 8 |
+| [`lib/src/theme/design_tokens.dart`](../../lib/src/theme/design_tokens.dart) | 44 | 1 |
 | [`lib/src/models/media_item.dart`](../../lib/src/models/media_item.dart) | 32 | 38 |
-| [`lib/src/platform/device_capabilities.dart`](../../lib/src/platform/device_capabilities.dart) | 29 | 13 |
-| [`lib/src/services/storage_service.dart`](../../lib/src/services/storage_service.dart) | 20 | 23 |
+| [`lib/src/platform/device_capabilities.dart`](../../lib/src/platform/device_capabilities.dart) | 31 | 15 |
+| [`lib/src/services/storage_service.dart`](../../lib/src/services/storage_service.dart) | 20 | 25 |
 | [`lib/src/models/stream_source.dart`](../../lib/src/models/stream_source.dart) | 18 | 14 |
 | [`lib/src/widgets/settings/settings_components.dart`](../../lib/src/widgets/settings/settings_components.dart) | 18 | 2 |
-| [`lib/src/account/account_controller.dart`](../../lib/src/account/account_controller.dart) | 15 | 10 |
-| [`lib/src/widgets/tv/tv_focus.dart`](../../lib/src/widgets/tv/tv_focus.dart) | 15 | 7 |
-| [`lib/src/watch_party/party_models.dart`](../../lib/src/watch_party/party_models.dart) | 14 | 4 |
+| [`lib/src/widgets/tv/tv_focus.dart`](../../lib/src/widgets/tv/tv_focus.dart) | 16 | 7 |
+| [`lib/src/account/account_controller.dart`](../../lib/src/account/account_controller.dart) | 15 | 15 |
+| [`lib/src/watch_party/party_models.dart`](../../lib/src/watch_party/party_models.dart) | 14 | 5 |
 | [`lib/src/widgets/artwork_image.dart`](../../lib/src/widgets/artwork_image.dart) | 14 | 5 |
 | [`lib/src/analytics/analytics_service.dart`](../../lib/src/analytics/analytics_service.dart) | 13 | 5 |
 | [`lib/src/services/tmdb_service.dart`](../../lib/src/services/tmdb_service.dart) | 12 | 18 |
-| [`lib/src/account/account_api.dart`](../../lib/src/account/account_api.dart) | 10 | 9 |
+| [`lib/src/account/account_api.dart`](../../lib/src/account/account_api.dart) | 10 | 14 |
 | [`lib/src/analytics/analytics_events.dart`](../../lib/src/analytics/analytics_events.dart) | 10 | 2 |
 | [`lib/src/desktop/desktop_widgets.dart`](../../lib/src/desktop/desktop_widgets.dart) | 10 | 5 |
+| [`lib/src/navigation/app_transitions.dart`](../../lib/src/navigation/app_transitions.dart) | 10 | 1 |
+| [`lib/src/account/profile_controller.dart`](../../lib/src/account/profile_controller.dart) | 9 | 7 |
+| [`lib/src/account/supporter_controller.dart`](../../lib/src/account/supporter_controller.dart) | 9 | 6 |
 | [`lib/src/models/media_details.dart`](../../lib/src/models/media_details.dart) | 9 | 6 |
 | [`lib/src/models/plugin_catalog.dart`](../../lib/src/models/plugin_catalog.dart) | 9 | 1 |
-| [`lib/src/navigation/app_transitions.dart`](../../lib/src/navigation/app_transitions.dart) | 9 | 1 |
 | [`lib/src/services/network_target_policy.dart`](../../lib/src/services/network_target_policy.dart) | 9 | 17 |
 | [`lib/src/services/paged_feed_controller.dart`](../../lib/src/services/paged_feed_controller.dart) | 9 | 5 |
 | [`lib/src/widgets/brand_logo.dart`](../../lib/src/widgets/brand_logo.dart) | 9 | 1 |
-| [`lib/src/account/backend_config.dart`](../../lib/src/account/backend_config.dart) | 8 | 1 |
-| [`lib/src/account/profile_controller.dart`](../../lib/src/account/profile_controller.dart) | 8 | 4 |
 
 ## Package usage
 
@@ -199,7 +201,7 @@ Each third-party package imported by `lib/`, A–Z, with the files that import i
 | Package | Imported by |
 |---|---|
 | `crypto` | `src/account/profile_controller.dart`, `src/services/github_update_service.dart`, `src/services/provider_plugin_service.dart` |
-| `flutter` | 145 files, including `icon_gallery.dart`, `main.dart`, `src/account/account_badges.dart`, `src/account/account_controller.dart`, `src/account/avatar_image.dart`, `src/account/profile_controller.dart` |
+| `flutter` | 148 files, including `icon_gallery.dart`, `main.dart`, `src/account/account_badges.dart`, `src/account/account_controller.dart`, `src/account/avatar_image.dart`, `src/account/profile_controller.dart` |
 | `flutter_cache_manager` | `src/widgets/artwork_image.dart` |
 | `flutter_go_torrent_streamer` | `src/services/torrent_source_preparer.dart`, `src/widgets/player/custom_video_player.dart` |
 | `flutter_js` | `src/services/provider_fetch_bridge.dart`, `src/services/provider_runner.dart` |

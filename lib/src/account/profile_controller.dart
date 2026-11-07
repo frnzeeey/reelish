@@ -45,7 +45,9 @@ class AvatarPreset {
   }
 }
 
-enum AvatarKind { initials, preset, photo }
+/// [trakt] is the Trakt account's own picture, the same on every device;
+/// without one it shows the initial. It is what a profile starts with.
+enum AvatarKind { initials, preset, photo, trakt }
 
 /// What the avatar shows. [presetId] goes with [AvatarKind.preset].
 @immutable
@@ -53,6 +55,7 @@ class ProfileAvatar {
   const ProfileAvatar.initials() : kind = AvatarKind.initials, presetId = null;
   const ProfileAvatar.preset(String this.presetId) : kind = AvatarKind.preset;
   const ProfileAvatar.photo() : kind = AvatarKind.photo, presetId = null;
+  const ProfileAvatar.trakt() : kind = AvatarKind.trakt, presetId = null;
 
   final AvatarKind kind;
   final String? presetId;
@@ -123,7 +126,7 @@ class ProfileController extends ChangeNotifier {
   Future<void> loadFor(String? userId) async {
     _userId = userId;
     _displayName = null;
-    _avatar = const ProfileAvatar.initials();
+    _avatar = const ProfileAvatar.trakt();
     _photoFile = null;
     _photo = null;
     if (userId != null) {
@@ -146,7 +149,11 @@ class ProfileController extends ChangeNotifier {
             'preset' when AvatarPreset.byId('${entry['preset']}') != null =>
               ProfileAvatar.preset('${entry['preset']}'),
             'photo' when _photo != null => const ProfileAvatar.photo(),
-            _ => const ProfileAvatar.initials(),
+            // Chosen on purpose since Trakt pictures arrived.
+            'initial' => const ProfileAvatar.initials(),
+            // 'initials' was saved by every profile before, chosen or not:
+            // it now shows the Trakt picture, or the initial without one.
+            _ => const ProfileAvatar.trakt(),
           };
         }
       } catch (_) {
@@ -268,7 +275,10 @@ class ProfileController extends ChangeNotifier {
     }
     all[userId] = {
       if (_displayName != null) 'displayName': _displayName,
-      'avatar': _avatar.kind.name,
+      // 'initial', not 'initials': that older value now means the default.
+      'avatar': _avatar.kind == AvatarKind.initials
+          ? 'initial'
+          : _avatar.kind.name,
       if (_avatar.presetId != null) 'preset': _avatar.presetId,
       if (_photoFile != null) 'photo': _photoFile,
     };

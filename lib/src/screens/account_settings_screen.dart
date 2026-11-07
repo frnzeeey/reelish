@@ -17,6 +17,7 @@ import '../platform/device_capabilities.dart';
 import '../theme/design_tokens.dart';
 import '../theme/glass_theme.dart';
 import '../widgets/profile_avatar.dart';
+import '../widgets/profile_avatar_picker.dart';
 import '../widgets/settings/settings_components.dart';
 import '../widgets/tv/tv_focus.dart';
 
@@ -231,7 +232,11 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
       icon: ReelishIcons.account,
       onBack: widget.onBack,
       children: [
-        _ProfileCard(profile: _profile, username: widget.account.username),
+        _ProfileCard(
+          profile: _profile,
+          username: widget.account.username,
+          traktUrl: widget.account.traktAvatarUrl,
+        ),
         SettingsSection(
           label: 'PROFILE',
           description:
@@ -248,10 +253,11 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
               enabled: _busy == null,
               onTap: _editName,
             ),
-            _AvatarPicker(
+            ProfileAvatarPicker(
               profile: _profile,
               name: _profile.nameOr(widget.account.username),
               enabled: _busy == null,
+              traktUrl: widget.account.traktAvatarUrl,
             ),
             if (_canPickPhoto)
               SettingsTile(
@@ -394,10 +400,15 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
 /// Who is signed in: their avatar, display name (or Trakt username), the
 /// username beneath a chosen name, and where the sign-in lives.
 class _ProfileCard extends StatelessWidget {
-  const _ProfileCard({required this.profile, required this.username});
+  const _ProfileCard({
+    required this.profile,
+    required this.username,
+    required this.traktUrl,
+  });
 
   final ProfileController profile;
   final String? username;
+  final String? traktUrl;
 
   /// Long names wrap at underscores, not mid-word: a zero-width space
   /// follows each.
@@ -434,6 +445,7 @@ class _ProfileCard extends StatelessWidget {
                 avatar: profile.avatar,
                 name: name,
                 photo: photo == null ? null : FileImage(photo),
+                traktUrl: traktUrl,
                 size: 60,
                 shadow: true,
               ),
@@ -610,144 +622,6 @@ class _DangerTile extends StatelessWidget {
       ),
     ),
   );
-}
-
-/// The avatar choices: the saved photo, initials, and each preset.
-class _AvatarPicker extends StatelessWidget {
-  const _AvatarPicker({
-    required this.profile,
-    required this.name,
-    required this.enabled,
-  });
-
-  final ProfileController profile;
-  final String name;
-  final bool enabled;
-
-  @override
-  Widget build(BuildContext context) {
-    final tv = DeviceCapabilities.usesTvLayout && !DeviceCapabilities.isDesktop;
-    final size = tv ? 56.0 : 48.0;
-    final photo = profile.photo;
-    Widget choice(ProfileAvatar avatar, String label) => _AvatarChoice(
-      label: label,
-      selected: profile.avatar == avatar,
-      enabled: enabled,
-      onTap: () => profile.setAvatar(avatar),
-      child: ProfileAvatarView(
-        avatar: avatar,
-        name: name,
-        photo: photo == null ? null : FileImage(photo),
-        size: size,
-      ),
-    );
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Avatar',
-            style: TextStyle(
-              fontSize: AppTextSize.titleSmall,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: AppSpace.sm),
-          Wrap(
-            spacing: AppSpace.xs,
-            runSpacing: AppSpace.xs,
-            children: [
-              if (photo != null)
-                choice(const ProfileAvatar.photo(), 'Your photo'),
-              choice(const ProfileAvatar.initials(), 'Initial'),
-              for (final preset in AvatarPreset.all)
-                choice(ProfileAvatar.preset(preset.id), preset.label),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// One avatar in the picker: an accent ring marks the chosen one, and a
-/// white ring the focused one (keyboard, gamepad and D-pad).
-class _AvatarChoice extends StatefulWidget {
-  const _AvatarChoice({
-    required this.label,
-    required this.selected,
-    required this.enabled,
-    required this.onTap,
-    required this.child,
-  });
-
-  final String label;
-  final bool selected;
-  final bool enabled;
-  final VoidCallback onTap;
-  final Widget child;
-
-  @override
-  State<_AvatarChoice> createState() => _AvatarChoiceState();
-}
-
-class _AvatarChoiceState extends State<_AvatarChoice> {
-  bool _focused = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final ring = _focused
-        ? Colors.white
-        : widget.selected
-        ? GlassTheme.primary
-        : Colors.transparent;
-    return Semantics(
-      button: true,
-      selected: widget.selected,
-      label: widget.label,
-      child: Tooltip(
-        message: widget.label,
-        child: InkWell(
-          customBorder: const CircleBorder(),
-          onTap: widget.enabled ? widget.onTap : null,
-          onFocusChange: (focused) => setState(() => _focused = focused),
-          child: AnimatedContainer(
-            duration: AppMotion.resolve(context, AppMotion.hover),
-            padding: const EdgeInsets.all(3),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: ring, width: 2.5),
-            ),
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                widget.child,
-                if (widget.selected)
-                  Positioned(
-                    right: -2,
-                    bottom: -2,
-                    child: Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: GlassTheme.primary,
-                        border: Border.all(color: GlassTheme.surface, width: 2),
-                      ),
-                      child: const Icon(
-                        ReelishIcons.check,
-                        size: 12,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 /// Edits the display name on phone and Windows; TV uses

@@ -1,9 +1,9 @@
-// The signed-in person's page: who they are, their viewing at a glance, and
-// their account. It is not a menu: Library, Settings and Watch Party are one
-// step away in the main navigation, so they are not listed here again. The
-// counts open the library, since that is where those titles are. It changes
-// nothing itself: managing the account goes to the existing Profile and
-// account page.
+// The signed-in person's page, in three parts: who they are (avatar, name,
+// badges, their viewing at a glance), how Reelish looks for them (avatar, app
+// theme, app icon) and their account. It is not a menu: Library, Settings and
+// Watch Party are one step away in the main navigation, so they are not listed
+// here again; the counts open the library, since that is where those titles
+// are. Phones stack the parts; TV and Windows put the identity beside the rest.
 
 import 'dart:async';
 
@@ -13,16 +13,23 @@ import '../theme/reelish_icons.dart';
 import '../account/account_controller.dart';
 import '../account/profile_controller.dart';
 import '../account/account_badges.dart';
+import '../account/supporter_controller.dart';
 import '../models/media_item.dart';
 import '../navigation/app_transitions.dart';
+import '../platform/app_icon.dart';
 import '../platform/device_capabilities.dart';
+import '../services/accent_settings_controller.dart';
 import '../services/storage_service.dart';
 import '../theme/design_tokens.dart';
 import '../theme/glass_theme.dart';
+import '../theme/supporter_themes.dart';
 import '../widgets/profile_avatar.dart';
+import '../widgets/profile_avatar_picker.dart';
 import '../widgets/settings/settings_components.dart';
 import '../widgets/account_badges.dart';
 import 'account_settings_screen.dart';
+import 'app_icon_settings_screen.dart';
+import 'playback_settings_screen.dart';
 import 'supporters_screen.dart';
 
 /// What the library holds, counted from this device's history and My list.
@@ -68,6 +75,7 @@ class ProfileScreen extends StatefulWidget {
     this.account,
     this.profile,
     this.badges,
+    this.appearance,
   });
 
   final StorageService storage;
@@ -87,6 +95,10 @@ class ProfileScreen extends StatefulWidget {
   final AccountBadges? badges;
   final ProfileController? profile;
 
+  /// The app's look: its theme, when one applies, dresses the identity card,
+  /// and Personalize opens its settings. Without it those are left out.
+  final AccentSettingsController? appearance;
+
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
@@ -99,6 +111,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   ProfileController get _profile =>
       widget.profile ?? ProfileController.instance;
   late final AccountBadges _badges = widget.badges ?? AccountBadges.instance;
+
+  /// The entitlement, for the membership tile: the appearance's when given
+  /// (the same instance the app uses), else the app's.
+  SupporterController get _supporters =>
+      widget.appearance?.supporters ?? SupporterController.instance;
 
   @override
   void initState() {
@@ -122,20 +139,105 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (oldWidget.refreshToken != widget.refreshToken) _activity = _load();
   }
 
-  void _open(WidgetBuilder builder) => Navigator.of(
-    context,
-  ).push(AppPageRoute<void>(context: context, builder: builder));
-
-  void _openAccount() => _open(
-    // A Scaffold, as Settings opens it: the page needs a Material above it.
-    (context) => Scaffold(
-      backgroundColor: GlassTheme.background,
-      body: AccountSettingsScreen(
-        account: _account,
-        onBack: () => Navigator.of(context).pop(),
+  /// Opens a page over this one, in a Scaffold as Settings opens them: the
+  /// page needs a Material above it.
+  void _open(Widget Function(VoidCallback back) page) => unawaited(
+    Navigator.of(context).push(
+      AppPageRoute<void>(
+        context: context,
+        builder: (context) => Scaffold(
+          backgroundColor: GlassTheme.background,
+          body: page(() => Navigator.of(context).pop()),
+        ),
       ),
     ),
   );
+
+  void _openAccount() =>
+      _open((back) => AccountSettingsScreen(account: _account, onBack: back));
+
+  void _openAppearance(AccentSettingsController appearance) => _open(
+    (back) => AppearanceSettingsScreen(controller: appearance, onBack: back),
+  );
+
+  void _openAppIcon() => _open((back) => AppIconSettingsScreen(onBack: back));
+
+  void _openSupporters() => unawaited(
+    Navigator.of(context).push(
+      AppPageRoute<void>(
+        context: context,
+        builder: (_) => SupportersScreen(controller: _supporters),
+      ),
+    ),
+  );
+
+  /// The avatar choices in place: a sheet on phones, a dialog where there is
+  /// a remote or a mouse. A choice saves at once.
+  Future<void> _chooseAvatar() async {
+    Widget picker(BuildContext context, {bool heading = true}) =>
+        ListenableBuilder(
+          listenable: Listenable.merge([_profile, _account]),
+          builder: (context, _) => ProfileAvatarPicker(
+            profile: _profile,
+            name: _profile.nameOr(_account.username),
+            enabled: true,
+            traktUrl: _account.traktAvatarUrl,
+            showHeading: heading,
+          ),
+        );
+    final more = DeviceCapabilities.isTv
+        ? 'Name and more'
+        : 'Name, photo and more';
+    final openAccount = DeviceCapabilities.usesTvLayout
+        ? await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Avatar'),
+              contentPadding: const EdgeInsets.fromLTRB(8, 12, 8, 0),
+              content: SizedBox(
+                width: 520,
+                child: picker(context, heading: false),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: Text(more),
+                ),
+                FilledButton(
+                  autofocus: true,
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Done'),
+                ),
+              ],
+            ),
+          )
+        : await showModalBottomSheet<bool>(
+            context: context,
+            backgroundColor: Colors.transparent,
+            useSafeArea: true,
+            isScrollControlled: true,
+            builder: (context) => _Sheet(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  picker(context),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpace.md,
+                    ),
+                    child: TextButton.icon(
+                      onPressed: () => Navigator.pop(context, true),
+                      icon: const Icon(ReelishIcons.manageAccounts, size: 18),
+                      label: Text(more),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+    if (openAccount == true && mounted) _openAccount();
+  }
 
   Future<void> _signOut() async {
     final confirmed =
@@ -168,54 +270,202 @@ class _ProfileScreenState extends State<ProfileScreen> {
     await _account.signOut();
   }
 
+  String _avatarLabel() {
+    final avatar = _profile.avatar;
+    return switch (avatar.kind) {
+      AvatarKind.trakt when _account.traktAvatarUrl != null => 'Trakt picture',
+      AvatarKind.photo => 'Your photo',
+      AvatarKind.preset =>
+        AvatarPreset.byId(avatar.presetId)?.label ?? 'Initial',
+      _ => 'Initial',
+    };
+  }
+
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-    listenable: Listenable.merge([_account, _profile]),
+    listenable: Listenable.merge([
+      _account,
+      _profile,
+      _supporters,
+      ?widget.appearance,
+    ]),
     builder: (context, _) {
       final signedIn = _account.status == AccountStatus.signedIn;
+      if (!signedIn) {
+        return SettingsPage(
+          title: 'Profile',
+          onBack: widget.onBack,
+          footer: null,
+          children: const [_SignedOut()],
+        );
+      }
+      final appearance = widget.appearance;
+      final identity = _IdentityCard(
+        displayName: _profile.displayName,
+        username: _account.username,
+        account: _account,
+        profile: _profile,
+        badges: _badges,
+        theme: appearance?.theme,
+        onChangeAvatar: () => unawaited(_chooseAvatar()),
+        activity: FutureBuilder<ProfileActivity>(
+          future: _activity,
+          builder: (context, snapshot) => _ActivityRow(
+            // The counts take the theme's light inside its card.
+            color: appearance?.theme?.ink,
+            activity: snapshot.data,
+            failed: snapshot.hasError,
+            onOpen: widget.onOpenLibrary,
+          ),
+        ),
+      );
+      final sections = [
+        SettingsSection(
+          label: 'PERSONALIZE',
+          children: [
+            SettingsTile(
+              icon: ReelishIcons.face,
+              title: 'Avatar',
+              value: _avatarLabel(),
+              onTap: () => unawaited(_chooseAvatar()),
+            ),
+            if (appearance != null)
+              SettingsTile(
+                icon: ReelishIcons.palette,
+                title: 'Theme',
+                value: appearance.theme?.name ?? appearance.accent.label,
+                description: appearance.theme == null
+                    ? (_supporters.has(SupporterPerk.appThemes)
+                          ? 'Your accent; a theme sets one for you'
+                          : 'Your accent color')
+                    : 'Sets the accent and this card',
+                onTap: () => _openAppearance(appearance),
+              ),
+            // Android phones and tablets only (see AppIconService).
+            if (AppIconService.supported)
+              SettingsTile(
+                icon: ReelishIcons.grid,
+                title: 'App icon',
+                description: 'The icon on your home screen',
+                onTap: _openAppIcon,
+              ),
+          ],
+        ),
+        SettingsSection(
+          label: 'MEMBERSHIP',
+          children: [
+            _MembershipTile(
+              entitlement: _supporters.entitlement,
+              onTap: _openSupporters,
+            ),
+          ],
+        ),
+        SettingsSection(
+          label: 'ACCOUNT',
+          children: [
+            SettingsTile(
+              icon: ReelishIcons.manageAccounts,
+              title: 'Manage account',
+              description: 'Display name, photo, Trakt sync and devices',
+              onTap: _openAccount,
+            ),
+            _SignOutTile(onTap: _signOut),
+          ],
+        ),
+      ];
       return SettingsPage(
         title: 'Profile',
-        subtitle: 'Your account and your viewing at a glance.',
+        subtitle: 'Who you are, how Reelish looks, and your account.',
         onBack: widget.onBack,
         footer: null,
-        children: !signedIn
-            ? const [_SignedOut()]
-            : [
-                _ProfileHero(
-                  displayName: _profile.displayName,
-                  username: _account.username,
-                  account: _account,
-                  profile: _profile,
-                  badges: _badges,
-                  onEdit: _openAccount,
-                  activity: FutureBuilder<ProfileActivity>(
-                    future: _activity,
-                    builder: (context, snapshot) => _ActivityRow(
-                      activity: snapshot.data,
-                      failed: snapshot.hasError,
-                      onOpen: widget.onOpenLibrary,
+        children: [
+          LayoutBuilder(
+            builder: (context, constraints) {
+              // TV and Windows: the identity beside the rest, not a phone
+              // layout stretched across the screen.
+              final wide =
+                  DeviceCapabilities.usesTvLayout &&
+                  constraints.maxWidth >= 720;
+              if (!wide) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [identity, ...sections],
+                );
+              }
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(width: constraints.maxWidth * .42, child: identity),
+                  const SizedBox(width: AppSpace.lg),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: sections,
                     ),
                   ),
-                ),
-                SettingsSection(children: [_SignOutTile(onTap: _signOut)]),
-              ],
+                ],
+              );
+            },
+          ),
+        ],
       );
     },
   );
 }
 
-/// Who is signed in, in one card: the avatar with an accent ring, the name,
-/// the Trakt account and Edit profile, with their activity along the foot.
-/// Without a display name the Trakt username is the name, shown once, and
-/// a line suggests adding one (friends see it in watch parties).
-class _ProfileHero extends StatelessWidget {
-  const _ProfileHero({
+/// A bottom sheet's surface, as the app's other sheets draw it.
+class _Sheet extends StatelessWidget {
+  const _Sheet({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: GlassTheme.surface,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xxl)),
+      side: BorderSide(color: GlassTheme.border),
+    ),
+    child: SafeArea(
+      top: false,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.only(top: AppSpace.sm, bottom: AppSpace.sm),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white24,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            child,
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+/// Who is signed in, centred in one card: a large avatar with a button to
+/// change it, the name, the Founder's title, the account's badges, and their
+/// viewing along the foot. Without a display name the Trakt username is the
+/// name, shown once, and a line suggests adding one (friends see it in watch
+/// parties). An app theme dresses the card.
+class _IdentityCard extends StatelessWidget {
+  const _IdentityCard({
     required this.displayName,
     required this.username,
     required this.account,
     required this.profile,
     required this.badges,
-    required this.onEdit,
+    required this.theme,
+    required this.onChangeAvatar,
     required this.activity,
   });
 
@@ -224,12 +474,17 @@ class _ProfileHero extends StatelessWidget {
   final AccountController account;
   final ProfileController profile;
   final AccountBadges badges;
-  final VoidCallback onEdit;
+
+  /// The app theme, when one applies.
+  final SupporterTheme? theme;
+  final VoidCallback onChangeAvatar;
   final Widget activity;
 
   @override
   Widget build(BuildContext context) {
     final accent = GlassTheme.primary;
+    final theme = this.theme;
+    final tv = DeviceCapabilities.isTv;
     final name = displayName ?? username ?? 'Reelish';
     // In line with the sections below (the page gives the side margins).
     return Padding(
@@ -240,135 +495,219 @@ class _ProfileHero extends StatelessWidget {
       child: Container(
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
+          color: const Color(0xFF121218),
           borderRadius: BorderRadius.circular(SettingsMetrics.sectionRadius),
-          border: Border.all(color: Colors.white.withValues(alpha: .08)),
-          // The accent glows from behind the avatar into the card's surface.
-          gradient: RadialGradient(
-            center: const Alignment(-.8, -.85),
-            radius: 1.1,
-            colors: [
-              accent.withValues(alpha: .24),
-              const Color(0xFF17171E),
-              const Color(0xFF121218),
-            ],
-            stops: const [0, .5, 1],
+          border: Border.all(
+            color: theme == null
+                ? Colors.white.withValues(alpha: .08)
+                : theme.glow.withValues(alpha: .32),
           ),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+        child: Stack(
           children: [
-            Padding(
-              padding: const EdgeInsets.all(AppSpace.lg),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final compact = constraints.maxWidth < 360;
-                  final size = compact ? 68.0 : 88.0;
-                  return Row(
-                    children: [
-                      // The ring sets the avatar off the glow behind it.
-                      Container(
-                        padding: const EdgeInsets.all(3),
+            // One backdrop fades into the next when the theme changes.
+            Positioned.fill(
+              child: AnimatedSwitcher(
+                duration: AppMotion.resolve(context, AppMotion.emphasized),
+                child: theme == null
+                    ? DecoratedBox(
+                        key: const ValueKey('classic'),
+                        // The accent glows from behind the avatar.
                         decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: accent.withValues(alpha: .7),
-                            width: 2,
+                          gradient: RadialGradient(
+                            center: const Alignment(0, -.75),
+                            radius: 1.1,
+                            colors: [
+                              accent.withValues(alpha: .26),
+                              const Color(0xFF17171E),
+                              const Color(0xFF121218),
+                            ],
+                            stops: const [0, .5, 1],
                           ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: accent.withValues(alpha: .28),
-                              blurRadius: 24,
-                            ),
-                          ],
                         ),
-                        child: MyProfileAvatar(
-                          size: size,
-                          account: account,
-                          profile: profile,
-                        ),
+                      )
+                    : SupporterThemeBackdrop(
+                        key: ValueKey(theme.id),
+                        theme: theme,
                       ),
-                      SizedBox(width: compact ? AppSpace.md : AppSpace.lg),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            ListenableBuilder(
-                              listenable: badges,
-                              builder: (context, _) => _ProfileName(
-                                name: name,
-                                // A username has no spaces to wrap at: one
-                                // line, shortened, rather than split mid-word.
-                                maxLines: displayName == null ? 1 : 2,
-                                compact: compact,
-                                founder: badges.has(AccountBadge.founder),
-                              ),
-                            ),
-                            const SizedBox(height: AppSpace.xs),
-                            // Trakt usernames often repeat the person's name,
-                            // so the badge names the service, not the user.
-                            const _TraktBadge(),
-                            _BadgeLine(badges: badges),
-                            const SizedBox(height: AppSpace.sm),
-                            FilledButton.icon(
-                              style: FilledButton.styleFrom(
-                                backgroundColor: accent.withValues(alpha: .16),
-                                foregroundColor: GlassTheme.coralBright,
-                              ),
-                              onPressed: onEdit,
-                              icon: const Icon(
-                                ReelishIcons.manageAccounts,
-                                size: 18,
-                              ),
-                              label: const Text(
-                                'Manage account',
-                                style: TextStyle(fontWeight: FontWeight.w700),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  );
-                },
               ),
             ),
-            if (displayName == null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpace.lg,
-                  0,
-                  AppSpace.lg,
-                  AppSpace.md,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpace.lg,
+                    AppSpace.xl,
+                    AppSpace.lg,
+                    AppSpace.lg,
+                  ),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final compact = constraints.maxWidth < 300;
+                      final size = tv
+                          ? 120.0
+                          : compact
+                          ? 88.0
+                          : 108.0;
+                      return Column(
+                        children: [
+                          _EditableAvatar(
+                            size: size,
+                            theme: theme,
+                            account: account,
+                            profile: profile,
+                            onChange: onChangeAvatar,
+                          ),
+                          const SizedBox(height: AppSpace.md),
+                          ListenableBuilder(
+                            listenable: badges,
+                            builder: (context, _) => _ProfileName(
+                              name: name,
+                              // A username has no spaces to wrap at: one
+                              // line, shortened, rather than split mid-word.
+                              maxLines: displayName == null ? 1 : 2,
+                              compact: compact,
+                              founder: badges.has(AccountBadge.founder),
+                            ),
+                          ),
+                          const SizedBox(height: AppSpace.sm),
+                          // Trakt usernames often repeat the person's name,
+                          // so the badge names the service, not the user.
+                          // Badges arrive from the server after the first
+                          // frame; the pills follow them.
+                          ListenableBuilder(
+                            listenable: badges,
+                            builder: (context, _) => Wrap(
+                              alignment: WrapAlignment.center,
+                              spacing: AppSpace.xs,
+                              runSpacing: AppSpace.xs,
+                              children: [
+                                const _TraktBadge(),
+                                ..._badgePills(context, tv),
+                              ],
+                            ),
+                          ),
+                          if (displayName == null) ...[
+                            const SizedBox(height: AppSpace.md),
+                            Text(
+                              'Add a display name so friends recognise you in '
+                              'watch parties.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: GlassTheme.muted,
+                                fontSize: tv
+                                    ? AppTextSize.body
+                                    : AppTextSize.label,
+                                height: 1.4,
+                              ),
+                            ),
+                          ],
+                        ],
+                      );
+                    },
+                  ),
                 ),
-                child: Row(
-                  children: [
-                    Icon(ReelishIcons.badge, size: 18, color: accent),
-                    const SizedBox(width: AppSpace.sm),
-                    const Expanded(
-                      child: Text(
-                        'Add a display name so friends recognise you in '
-                        'watch parties.',
-                        style: TextStyle(
-                          color: GlassTheme.muted,
-                          fontSize: AppTextSize.label,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            Divider(height: 1, color: Colors.white.withValues(alpha: .07)),
-            activity,
+                Divider(height: 1, color: Colors.white.withValues(alpha: .07)),
+                activity,
+              ],
+            ),
           ],
         ),
       ),
     );
   }
+
+  /// The account's badges, and nothing for an account with none. A
+  /// supporter's opens the Supporters page.
+  List<Widget> _badgePills(BuildContext context, bool tv) => [
+    if (badges.has(AccountBadge.founder)) FounderBadge(tv: tv),
+    if (badges.has(AccountBadge.supporter))
+      SupporterBadge(
+        tv: tv,
+        onTap: () => unawaited(
+          Navigator.push(
+            context,
+            AppPageRoute<void>(
+              context: context,
+              builder: (_) => const SupportersScreen(),
+            ),
+          ),
+        ),
+      ),
+  ];
 }
 
-/// The name, with the Founder's crown beside it and title below. The title
-/// reads as part of who they are, so it sits with the name rather than among
-/// the badges.
+/// The avatar, large, in the theme's frame or an accent ring, with a small
+/// button on it to change it.
+class _EditableAvatar extends StatelessWidget {
+  const _EditableAvatar({
+    required this.size,
+    required this.theme,
+    required this.account,
+    required this.profile,
+    required this.onChange,
+  });
+
+  final double size;
+  final SupporterTheme? theme;
+  final AccountController account;
+  final ProfileController profile;
+  final VoidCallback onChange;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = this.theme;
+    final accent = GlassTheme.primary;
+    final avatar = MyProfileAvatar(
+      size: size,
+      account: account,
+      profile: profile,
+    );
+    final framed = theme != null
+        ? SupporterAvatarRing(theme: theme, child: avatar)
+        : Container(
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: accent.withValues(alpha: .7), width: 2),
+              boxShadow: [
+                BoxShadow(color: accent.withValues(alpha: .28), blurRadius: 28),
+              ],
+            ),
+            child: avatar,
+          );
+    final button = DeviceCapabilities.isTv ? 44.0 : 36.0;
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        framed,
+        Positioned(
+          right: -2,
+          bottom: -2,
+          child: SizedBox.square(
+            dimension: button,
+            child: IconButton.filled(
+              tooltip: 'Change avatar',
+              padding: EdgeInsets.zero,
+              style: IconButton.styleFrom(
+                backgroundColor: GlassTheme.elevatedSurface,
+                foregroundColor: theme?.ink ?? GlassTheme.coralBright,
+                side: const BorderSide(color: GlassTheme.border),
+              ),
+              onPressed: onChange,
+              icon: Icon(ReelishIcons.edit, size: button * .46),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// The name, centred, with the Founder's crown beside it and title below.
+/// The title reads as part of who they are, so it sits with the name rather
+/// than among the badges.
 class _ProfileName extends StatelessWidget {
   const _ProfileName({
     required this.name,
@@ -384,17 +723,22 @@ class _ProfileName extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final size = compact ? AppTextSize.titleLarge : AppTextSize.headline;
+    final size = DeviceCapabilities.isTv
+        ? AppTextSize.display
+        : compact
+        ? AppTextSize.titleLarge
+        : AppTextSize.headline;
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Flexible(
               child: Text(
                 name,
                 maxLines: maxLines,
                 overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: size,
                   fontWeight: FontWeight.w800,
@@ -407,18 +751,20 @@ class _ProfileName extends StatelessWidget {
               const SizedBox(width: AppSpace.xs),
               Tooltip(
                 message: FounderBadge.description,
-                child: FounderEmblem(size: size),
+                child: FounderEmblem(size: size * .9),
               ),
             ],
           ],
         ),
         if (founder) ...[
-          const SizedBox(height: 2),
-          const Text(
+          const SizedBox(height: AppSpace.xxs),
+          Text(
             FounderBadge.title,
             style: TextStyle(
               color: FounderBadge.ink,
-              fontSize: AppTextSize.bodySmall,
+              fontSize: DeviceCapabilities.isTv
+                  ? AppTextSize.body
+                  : AppTextSize.bodySmall,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -428,52 +774,43 @@ class _ProfileName extends StatelessWidget {
   }
 }
 
-/// The account's badges, and nothing for an account with none: a profile is no
-/// place to ask for money. A supporter's opens the Supporters page.
-class _BadgeLine extends StatelessWidget {
-  const _BadgeLine({required this.badges});
+/// The account's place among Reelish's supporters: what it has, and the way
+/// to the Supporters page. One quiet tile, never a banner.
+class _MembershipTile extends StatelessWidget {
+  const _MembershipTile({required this.entitlement, required this.onTap});
 
-  final AccountBadges badges;
+  final Entitlement entitlement;
+  final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    final tv = DeviceCapabilities.isTv;
-    return ListenableBuilder(
-      listenable: badges,
-      builder: (context, _) {
-        final founder = badges.has(AccountBadge.founder);
-        final supporter = badges.has(AccountBadge.supporter);
-        if (!founder && !supporter) return const SizedBox.shrink();
-        return Padding(
-          padding: const EdgeInsets.only(top: AppSpace.xs),
-          child: Wrap(
-            spacing: AppSpace.xs,
-            runSpacing: AppSpace.xs,
-            children: [
-              if (founder) FounderBadge(tv: tv),
-              if (supporter)
-                SupporterBadge(
-                  tv: tv,
-                  onTap: () => unawaited(
-                    Navigator.push(
-                      context,
-                      AppPageRoute<void>(
-                        context: context,
-                        builder: (_) => const SupportersScreen(),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        );
-      },
-    );
-  }
+  Widget build(BuildContext context) => switch (entitlement) {
+    Entitlement.founder => SettingsTile(
+      icon: ReelishIcons.founder,
+      title: 'Founder',
+      description: 'Every Supporter perk is yours, now and as new ones arrive',
+      onTap: onTap,
+    ),
+    Entitlement.supporter => SettingsTile(
+      icon: ReelishIcons.supporter,
+      title: 'Supporter perks',
+      description:
+          'App themes, every app icon and hosting Watch Parties. '
+          'Thank you.',
+      onTap: onTap,
+    ),
+    Entitlement.free => SettingsTile(
+      icon: ReelishIcons.heart,
+      title: 'Reelish Supporters',
+      description:
+          'Support Reelish for app themes, every app icon and '
+          'hosting Watch Parties',
+      onTap: onTap,
+    ),
+  };
 }
 
 /// The account behind the profile: signed in with Trakt. The username
-/// itself is on the Profile and account page.
+/// itself is on the account page.
 class _TraktBadge extends StatelessWidget {
   const _TraktBadge();
 
@@ -488,9 +825,9 @@ class _TraktBadge extends StatelessWidget {
     child: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Icon(
+        Icon(
           ReelishIcons.verifiedFilled,
-          size: 14,
+          size: DeviceCapabilities.isTv ? 18 : 14,
           color: GlassTheme.muted,
         ),
         const SizedBox(width: 5),
@@ -499,9 +836,11 @@ class _TraktBadge extends StatelessWidget {
             'Signed in with Trakt',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
+            style: TextStyle(
               color: GlassTheme.muted,
-              fontSize: AppTextSize.label,
+              fontSize: DeviceCapabilities.isTv
+                  ? AppTextSize.body
+                  : AppTextSize.label,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -518,8 +857,11 @@ class _ActivityRow extends StatelessWidget {
     required this.activity,
     required this.failed,
     required this.onOpen,
+    this.color,
   });
 
+  /// The counts' colour; the accent when null.
+  final Color? color;
   final ProfileActivity? activity;
   final bool failed;
   final VoidCallback? onOpen;
@@ -544,7 +886,7 @@ class _ActivityRow extends StatelessWidget {
             dimension: 22,
             child: CircularProgressIndicator(
               strokeWidth: 2.4,
-              color: GlassTheme.primary,
+              color: color ?? GlassTheme.primary,
             ),
           ),
         ),
@@ -555,65 +897,77 @@ class _ActivityRow extends StatelessWidget {
       (activity.watched, 'Watched', ReelishIcons.history),
       (activity.inProgress, 'In progress', ReelishIcons.playCircle),
     ];
-    return Padding(
-      padding: const EdgeInsets.all(AppSpace.xs),
-      child: Column(
-        children: [
-          IntrinsicHeight(
-            child: Row(
-              children: [
-                for (final (index, (count, label, icon)) in stats.indexed) ...[
-                  // Thin rules between the three, as on a scoreboard.
-                  if (index > 0)
-                    VerticalDivider(
-                      width: 1,
-                      indent: AppSpace.md,
-                      endIndent: AppSpace.md,
-                      color: Colors.white.withValues(alpha: .07),
-                    ),
-                  Expanded(
-                    child: _Stat(
-                      count: count,
-                      label: label,
-                      icon: icon,
-                      onTap: onOpen,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          if (activity.isEmpty)
-            const Padding(
-              padding: EdgeInsets.fromLTRB(
-                AppSpace.md,
-                0,
-                AppSpace.md,
-                AppSpace.md,
-              ),
-              child: Text(
-                'Titles you watch and add to My list show up here.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: GlassTheme.muted,
-                  fontSize: AppTextSize.label,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final showIcons = constraints.maxWidth / 3 >= 100;
+        return Padding(
+          padding: const EdgeInsets.all(AppSpace.xs),
+          child: Column(
+            children: [
+              IntrinsicHeight(
+                child: Row(
+                  children: [
+                    for (final (index, (count, label, icon))
+                        in stats.indexed) ...[
+                      // Thin rules between the three, as on a scoreboard.
+                      if (index > 0)
+                        VerticalDivider(
+                          width: 1,
+                          indent: AppSpace.md,
+                          endIndent: AppSpace.md,
+                          color: Colors.white.withValues(alpha: .07),
+                        ),
+                      Expanded(
+                        child: _Stat(
+                          showIcon: showIcons,
+                          color: color ?? GlassTheme.primary,
+                          count: count,
+                          label: label,
+                          icon: icon,
+                          onTap: onOpen,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
-            ),
-        ],
-      ),
+              if (activity.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    AppSpace.md,
+                    0,
+                    AppSpace.md,
+                    AppSpace.md,
+                  ),
+                  child: Text(
+                    'Titles you watch and add to My list show up here.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: GlassTheme.muted,
+                      fontSize: AppTextSize.label,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
 
 class _Stat extends StatelessWidget {
   const _Stat({
+    this.showIcon = true,
+    required this.color,
     required this.count,
     required this.label,
     required this.icon,
     this.onTap,
   });
 
+  final bool showIcon;
+  final Color color;
   final int count;
   final String label;
   final IconData icon;
@@ -634,7 +988,7 @@ class _Stat extends StatelessWidget {
             Text(
               '$count',
               style: TextStyle(
-                color: GlassTheme.primary,
+                color: color,
                 fontSize: AppTextSize.headline,
                 fontWeight: FontWeight.w800,
                 fontFeatures: const [FontFeature.tabularFigures()],
@@ -644,8 +998,11 @@ class _Stat extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(icon, size: 14, color: GlassTheme.muted),
-                const SizedBox(width: 5),
+                // On a narrow phone the label keeps its room; the icon goes.
+                if (showIcon) ...[
+                  Icon(icon, size: 14, color: GlassTheme.muted),
+                  const SizedBox(width: 5),
+                ],
                 Flexible(
                   child: Text(
                     label,

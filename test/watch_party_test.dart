@@ -11,6 +11,7 @@ import 'package:onfeed/src/account/account_api.dart';
 import 'package:onfeed/src/account/account_controller.dart';
 import 'package:onfeed/src/account/profile_controller.dart';
 import 'package:onfeed/src/account/session_store.dart';
+import 'package:onfeed/src/account/supporter_controller.dart';
 import 'package:onfeed/src/analytics/analytics_service.dart';
 import 'package:onfeed/src/models/media_item.dart';
 import 'package:onfeed/src/platform/device_capabilities.dart';
@@ -129,6 +130,50 @@ Map<String, Object?> _welcome(
 
 Future<void> _settle() =>
     Future<void>.delayed(const Duration(milliseconds: 10));
+
+/// A signed-in account whose supporter status the fake API answers with
+/// [status] ('none', 'pending', 'verified'), or fails to answer when null.
+/// [next] answers each request in turn instead.
+Future<SupporterController> supporterAccount(
+  WidgetTester tester,
+  String? status, {
+  String Function()? next,
+}) async {
+  late SupporterController controller;
+  await tester.runAsync(() async {
+    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final api = AccountApi(
+      baseUrl: Uri.parse('https://api.reelish.test'),
+      client: MockClient((_) async {
+        final answer = next != null ? next() : status;
+        if (answer == null) return http.Response('', 503);
+        return _json({
+          'code': 'RS-ABCD-2345',
+          'status': answer,
+          'since': answer == 'verified' ? 1719825600 : null,
+          'recognition': {'listed': false, 'name': ''},
+        });
+      }),
+    );
+    final account = AccountController(
+      api: api,
+      store: MemorySessionStore(
+        StoredSession(
+          sessionId: 'session',
+          accessToken: 'access',
+          accessExpiresAt: now + 3600,
+          refreshToken: 'refresh',
+          refreshExpiresAt: now + 86400,
+          userId: 'user-1',
+          username: 'viewer',
+        ),
+      ),
+    );
+    await account.restore();
+    controller = SupporterController(account: account, api: api);
+  });
+  return controller;
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -716,9 +761,11 @@ void main() {
                   return '11112222';
                 },
             open: (_, code) => opened = code,
+            supporters: await supporterAccount(tester, 'verified'),
           ),
         ),
       );
+      await tester.pump();
       expect(find.text('S1 · E2'), findsOneWidget);
       await tester.tap(find.byTooltip('Fewer people'));
       await tester.tap(find.text('Everyone can play and pause'));
@@ -753,9 +800,11 @@ void main() {
                     return '11112222';
                   },
               open: (_, code) => opened = code,
+              supporters: await supporterAccount(tester, 'verified'),
             ),
           ),
         );
+        await tester.pump();
         final button = find.widgetWithText(FilledButton, 'Create party');
         expect(tester.getSize(button).width, lessThan(400));
         expect(find.text('Watch in sync'), findsOneWidget);
@@ -827,15 +876,185 @@ void main() {
             content: const PartyContent(tmdbId: 1, type: 'movie', title: 'X'),
             create: ({required content, settings = const PartySettings()}) =>
                 throw const AccountApiException('party_unavailable', 'x'),
+            supporters: await supporterAccount(tester, 'verified'),
           ),
         ),
       );
+      await tester.pump();
       await tester.tap(find.text('Create party'));
       await tester.pumpAndSettle();
       expect(
         find.text('Watch Party is unavailable right now. Try again later.'),
         findsOneWidget,
       );
+    });
+
+    group('hosting is for supporters', () {
+      const film = PartyContent(tmdbId: 1, type: 'movie', title: 'Film');
+      Future<String> neverCreate({
+        required PartyContent content,
+        PartySettings settings = const PartySettings(),
+      }) => throw StateError('a non-supporter must not reach create');
+
+      testWidgets('someone else sees why, and both ways on', (tester) async {
+        await tester.pumpWidget(
+          app(
+            CreatePartyScreen(
+              content: film,
+              create: neverCreate,
+              supporters: await supporterAccount(tester, 'none'),
+            ),
+          ),
+        );
+        await tester.pump();
+        expect(find.text(PartyHostingForSupporters.title), findsOneWidget);
+        expect(find.text('Create party'), findsNothing);
+        expect(find.text('Become a Supporter'), findsOneWidget);
+        await tester.tap(find.text('Have a code? Join a party'));
+        await tester.pumpAndSettle();
+        expect(find.byType(JoinPartyScreen), findsOneWidget);
+      });
+
+      testWidgets('a donation waiting for review cannot host yet', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          app(
+            CreatePartyScreen(
+              content: film,
+              create: neverCreate,
+              supporters: await supporterAccount(tester, 'pending'),
+            ),
+          ),
+        );
+        await tester.pump();
+        expect(find.text(PartyHostingForSupporters.title), findsOneWidget);
+      });
+
+      testWidgets('the server has the last word', (tester) async {
+        await tester.pumpWidget(
+          app(
+            CreatePartyScreen(
+              content: film,
+              create: ({required content, settings = const PartySettings()}) =>
+                  throw const AccountApiException(
+                    'supporter_required',
+                    'x',
+                    status: 403,
+                  ),
+              supporters: await supporterAccount(tester, 'verified'),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.tap(find.text('Create party'));
+        await tester.pump();
+        await tester.pump();
+        expect(find.text(PartyHostingForSupporters.title), findsOneWidget);
+      });
+
+      testWidgets('when support cannot be checked, the server decides', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          app(
+            CreatePartyScreen(
+              content: film,
+              create: neverCreate,
+              supporters: await supporterAccount(tester, null),
+            ),
+          ),
+        );
+        await tester.pump();
+        expect(find.text('Create party'), findsOneWidget);
+      });
+
+      testWidgets('support that counts opens hosting without a restart', (
+        tester,
+      ) async {
+        final answers = ['none', 'verified'];
+        final supporters = await supporterAccount(
+          tester,
+          null,
+          next: () => answers.length > 1 ? answers.removeAt(0) : answers.first,
+        );
+        await tester.pumpWidget(
+          app(
+            CreatePartyScreen(
+              content: film,
+              create: neverCreate,
+              supporters: supporters,
+            ),
+          ),
+        );
+        await tester.pump();
+        expect(find.text(PartyHostingForSupporters.title), findsOneWidget);
+        await tester.runAsync(supporters.refresh);
+        await tester.pump();
+        expect(find.text('Create party'), findsOneWidget);
+      });
+
+      testWidgets(
+        'Windows: the same, beside the poster',
+        (tester) async {
+          for (final size in const [Size(1024, 700), Size(1920, 1080)]) {
+            tester.view.physicalSize = size;
+            tester.view.devicePixelRatio = 1;
+            await tester.pumpWidget(
+              app(
+                CreatePartyScreen(
+                  key: ValueKey(size),
+                  content: film,
+                  create: neverCreate,
+                  supporters: await supporterAccount(tester, 'none'),
+                ),
+              ),
+            );
+            await tester.pump();
+            expect(find.text(PartyHostingForSupporters.title), findsOneWidget);
+            expect(find.text('Become a Supporter'), findsOneWidget);
+            expect(tester.takeException(), isNull);
+          }
+          tester.view.reset();
+        },
+        variant: TargetPlatformVariant.only(TargetPlatform.windows),
+      );
+
+      testWidgets('TV: the remote starts on Become a Supporter', (
+        tester,
+      ) async {
+        DeviceCapabilities.debugOverride = const DeviceCapabilities(
+          isTelevision: true,
+          hasTouchscreen: false,
+        );
+        addTearDown(
+          () => DeviceCapabilities.debugOverride = const DeviceCapabilities(),
+        );
+        tester.view.physicalSize = const Size(1920, 1080);
+        tester.view.devicePixelRatio = 2;
+        addTearDown(tester.view.reset);
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: GlassTheme.tv,
+            home: CreatePartyScreen(
+              content: film,
+              create: neverCreate,
+              supporters: await supporterAccount(tester, 'none'),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+        final focused = FocusManager.instance.primaryFocus!.context!;
+        expect(
+          find.descendant(
+            of: find.byWidget(focused.widget),
+            matching: find.text('Become a Supporter'),
+          ),
+          findsOneWidget,
+        );
+        expect(tester.takeException(), isNull);
+      });
     });
 
     Future<(WatchPartyController, FakeSocket)> connected(

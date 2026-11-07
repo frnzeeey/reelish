@@ -207,7 +207,8 @@ void main() {
 
       await profile.loadFor('user-b');
       expect(profile.displayName, isNull);
-      expect(profile.avatar, const ProfileAvatar.initials());
+      // The default: the Trakt picture, or the initial without one.
+      expect(profile.avatar, const ProfileAvatar.trakt());
       expect(profile.nameOr('bob_trakt'), 'bob_trakt');
 
       final reloaded = controller();
@@ -231,7 +232,8 @@ void main() {
       final profile = controller();
       for (final user in ['u1', 'u2', 'u3', 'u4', 'u5']) {
         await profile.loadFor(user);
-        expect(profile.avatar, const ProfileAvatar.initials(), reason: user);
+        // Bad entries fall back to the default.
+        expect(profile.avatar, const ProfileAvatar.trakt(), reason: user);
         expect(profile.photo, isNull, reason: user);
         expect(profile.displayName, isNull, reason: user);
       }
@@ -240,7 +242,7 @@ void main() {
         ProfileController.storageKey: '{broken',
       });
       await profile.loadFor('u1');
-      expect(profile.avatar, const ProfileAvatar.initials());
+      expect(profile.avatar, const ProfileAvatar.trakt());
     });
 
     testWidgets('a photo is saved re-encoded, replaced, and deleted', (

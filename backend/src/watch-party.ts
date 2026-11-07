@@ -7,6 +7,7 @@ import type { Env } from './env';
 import { ApiError, json, readJsonBody } from './http';
 import { log } from './audit';
 import { requireLiveSession, type Principal } from './sessions';
+import { requirePerk } from './entitlements';
 import { cleanContent, cleanProfile, maxCapacity, type JoinCheck, type WatchPartyRoom } from './party-room';
 
 export const codePattern = /^\d{8}$/;
@@ -39,10 +40,16 @@ async function guarded<T>(work: () => Promise<T>): Promise<T> {
   }
 }
 
-/** POST /party: a new room hosted by the caller, ending their previous one. */
+/**
+ * POST /party: a new room hosted by the caller, ending their previous one.
+ * Hosting is for Reelish Supporters; joining (connectParty) is for everyone.
+ */
 export async function createParty(env: Env, principal: Principal, request: Request, requestId: string) {
   // As for joining: a signed-out or deleted account cannot host either.
   await requireLiveSession(env, principal);
+  // A supporter perk, so the Founder has it too; decided from the account,
+  // never the request. A room already open keeps going if support ends.
+  await requirePerk(env, principal.userId, 'host_watch_party');
   const body = await readJsonBody(request);
   const content = cleanContent(body.content);
   if (!content) throw new ApiError(400, 'invalid_content', 'Choose a movie or an episode.');

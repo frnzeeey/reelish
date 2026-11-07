@@ -39,7 +39,11 @@ search the generated references below: every file, class and function in
 | [Caching](features/caching.md) | TMDB response and artwork caches: policies, decision, measurements |
 | [Usage statistics](features/analytics.md) | Opt-in Firebase Analytics on Android: events, privacy, setup, DebugView, cost |
 | [Account badges](backend/badges.md) | Founder and Supporter: where each comes from, and why neither is a permission |
+| [Entitlements](backend/entitlements.md) | Free, Supporter and Founder: one rule for every supporter perk, and how to add one |
 | [Supporters](backend/supporters.md) | The Supporter Badge: Buy Me a Coffee webhooks, supporter codes, reviews, setup |
+| [App themes](features/supporter-themes.md) | Supporter app themes: the accent and profile they set, entitlement, saving, rendering |
+| [App icons](features/app-icons.md) | Launcher icon switching, the free and supporter icons, and their assets |
+| [Trakt profile](features/trakt-profile.md) | The Trakt username and avatar on every device: storage, refresh, failures, cost |
 | [Icon system](design/icon-system.md) | Reelish's own icons: design rules, solid forms, how to add one, the gallery |
 | [Content advisory](features/content-advisory.md) | The age rating card at playback start: TMDB coverage, sourcing rules, behaviour |
 | [Crash reporting](features/crash-reporting.md) | Opt-in Crashlytics on Android, the Windows error log, what is reported, testing, symbols |
