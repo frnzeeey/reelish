@@ -1,6 +1,7 @@
 // Account routes: Trakt device sign-in, session refresh and logout, the
 // signed-in user's sessions, and account deletion.
 
+import { badgesOf } from './badges';
 import { deleteReportsOf } from './support';
 import { decrypt, encrypt, randomToken, sha256 } from './crypto';
 import type { Env } from './env';
@@ -195,6 +196,7 @@ export async function me(env: Env, principal: Principal, requestId: string) {
     user: { id: user.id, username: user.trakt_username, createdAt: user.created_at },
     traktLinked: !!trakt,
     sessionId: principal.sessionId,
+    badges: await badgesOf(env, principal.userId),
   }, requestId);
 }
 

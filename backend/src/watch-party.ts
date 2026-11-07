@@ -2,6 +2,7 @@
 // participant's WebSocket. The Worker authenticates the Reelish session;
 // the room (a Durable Object per code) only ever sees the verified user id.
 
+import { isFounder } from './badges';
 import type { Env } from './env';
 import { ApiError, json, readJsonBody } from './http';
 import { log } from './audit';
@@ -110,5 +111,7 @@ export async function connectParty(env: Env, principal: Principal, request: Requ
     if (value) headers.set(name, value);
   }
   headers.set('X-Party-User', principal.userId);
+  // Built here, from the account: the room trusts nothing a client sends.
+  if (await isFounder(env, principal.userId)) headers.set('X-Party-Founder', '1');
   return guarded(() => stub.fetch('https://party.internal/socket', { headers }));
 }

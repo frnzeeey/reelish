@@ -14,7 +14,7 @@ import 'package:onfeed/src/platform/device_capabilities.dart';
 import 'package:onfeed/src/screens/supporters_screen.dart';
 import 'package:onfeed/src/support/support_service.dart';
 import 'package:onfeed/src/theme/glass_theme.dart';
-import 'package:onfeed/src/widgets/supporter_badge.dart';
+import 'package:onfeed/src/widgets/account_badges.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const _code = 'RS-ABCD-2345';

@@ -12,7 +12,7 @@ import '../theme/reelish_icons.dart';
 
 import '../account/account_controller.dart';
 import '../account/profile_controller.dart';
-import '../account/supporter_controller.dart';
+import '../account/account_badges.dart';
 import '../models/media_item.dart';
 import '../navigation/app_transitions.dart';
 import '../platform/device_capabilities.dart';
@@ -21,7 +21,7 @@ import '../theme/design_tokens.dart';
 import '../theme/glass_theme.dart';
 import '../widgets/profile_avatar.dart';
 import '../widgets/settings/settings_components.dart';
-import '../widgets/supporter_badge.dart';
+import '../widgets/account_badges.dart';
 import 'account_settings_screen.dart';
 import 'supporters_screen.dart';
 
@@ -67,6 +67,7 @@ class ProfileScreen extends StatefulWidget {
     this.refreshToken = 0,
     this.account,
     this.profile,
+    this.badges,
   });
 
   final StorageService storage;
@@ -81,6 +82,9 @@ class ProfileScreen extends StatefulWidget {
   /// Windows navigation).
   final int refreshToken;
   final AccountController? account;
+
+  /// [AccountBadges.instance] when null.
+  final AccountBadges? badges;
   final ProfileController? profile;
 
   @override
@@ -94,6 +98,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       widget.account ?? AccountController.instance;
   ProfileController get _profile =>
       widget.profile ?? ProfileController.instance;
+  late final AccountBadges _badges = widget.badges ?? AccountBadges.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_badges.refresh());
+  }
 
   /// Local reads only: no network request.
   Future<ProfileActivity> _load() async {
@@ -175,6 +186,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   username: _account.username,
                   account: _account,
                   profile: _profile,
+                  badges: _badges,
                   onEdit: _openAccount,
                   activity: FutureBuilder<ProfileActivity>(
                     future: _activity,
@@ -202,6 +214,7 @@ class _ProfileHero extends StatelessWidget {
     required this.username,
     required this.account,
     required this.profile,
+    required this.badges,
     required this.onEdit,
     required this.activity,
   });
@@ -210,6 +223,7 @@ class _ProfileHero extends StatelessWidget {
   final String? username;
   final AccountController account;
   final ProfileController profile;
+  final AccountBadges badges;
   final VoidCallback onEdit;
   final Widget activity;
 
@@ -278,26 +292,22 @@ class _ProfileHero extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              name,
-                              // A username has no spaces to wrap at: one
-                              // line, shortened, rather than split mid-word.
-                              maxLines: displayName == null ? 1 : 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: compact
-                                    ? AppTextSize.titleLarge
-                                    : AppTextSize.headline,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: -.3,
-                                height: 1.15,
+                            ListenableBuilder(
+                              listenable: badges,
+                              builder: (context, _) => _ProfileName(
+                                name: name,
+                                // A username has no spaces to wrap at: one
+                                // line, shortened, rather than split mid-word.
+                                maxLines: displayName == null ? 1 : 2,
+                                compact: compact,
+                                founder: badges.has(AccountBadge.founder),
                               ),
                             ),
                             const SizedBox(height: AppSpace.xs),
                             // Trakt usernames often repeat the person's name,
                             // so the badge names the service, not the user.
                             const _TraktBadge(),
-                            const _SupporterLine(),
+                            _BadgeLine(badges: badges),
                             const SizedBox(height: AppSpace.sm),
                             FilledButton.icon(
                               style: FilledButton.styleFrom(
@@ -356,46 +366,110 @@ class _ProfileHero extends StatelessWidget {
   }
 }
 
-/// The badge of a verified supporter, and nothing for anyone else: a profile
-/// is no place to ask for money. Tapping it opens the Supporters page.
-class _SupporterLine extends StatefulWidget {
-  const _SupporterLine();
+/// The name, with the Founder's crown beside it and title below. The title
+/// reads as part of who they are, so it sits with the name rather than among
+/// the badges.
+class _ProfileName extends StatelessWidget {
+  const _ProfileName({
+    required this.name,
+    required this.maxLines,
+    required this.compact,
+    required this.founder,
+  });
+
+  final String name;
+  final int maxLines;
+  final bool compact;
+  final bool founder;
 
   @override
-  State<_SupporterLine> createState() => _SupporterLineState();
-}
-
-class _SupporterLineState extends State<_SupporterLine> {
-  final _supporters = SupporterController.instance;
-
-  @override
-  void initState() {
-    super.initState();
-    unawaited(_supporters.refresh());
-  }
-
-  @override
-  Widget build(BuildContext context) => ListenableBuilder(
-    listenable: _supporters,
-    builder: (context, _) {
-      if (!_supporters.isSupporter) return const SizedBox.shrink();
-      return Padding(
-        padding: const EdgeInsets.only(top: AppSpace.xs),
-        child: SupporterBadge(
-          tv: DeviceCapabilities.isTv,
-          onTap: () => unawaited(
-            Navigator.push(
-              context,
-              AppPageRoute<void>(
-                context: context,
-                builder: (_) => const SupportersScreen(),
+  Widget build(BuildContext context) {
+    final size = compact ? AppTextSize.titleLarge : AppTextSize.headline;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Flexible(
+              child: Text(
+                name,
+                maxLines: maxLines,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: size,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -.3,
+                  height: 1.15,
+                ),
               ),
             ),
-          ),
+            if (founder) ...[
+              const SizedBox(width: AppSpace.xs),
+              Tooltip(
+                message: FounderBadge.description,
+                child: FounderEmblem(size: size),
+              ),
+            ],
+          ],
         ),
-      );
-    },
-  );
+        if (founder) ...[
+          const SizedBox(height: 2),
+          const Text(
+            FounderBadge.title,
+            style: TextStyle(
+              color: FounderBadge.ink,
+              fontSize: AppTextSize.bodySmall,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// The account's badges, and nothing for an account with none: a profile is no
+/// place to ask for money. A supporter's opens the Supporters page.
+class _BadgeLine extends StatelessWidget {
+  const _BadgeLine({required this.badges});
+
+  final AccountBadges badges;
+
+  @override
+  Widget build(BuildContext context) {
+    final tv = DeviceCapabilities.isTv;
+    return ListenableBuilder(
+      listenable: badges,
+      builder: (context, _) {
+        final founder = badges.has(AccountBadge.founder);
+        final supporter = badges.has(AccountBadge.supporter);
+        if (!founder && !supporter) return const SizedBox.shrink();
+        return Padding(
+          padding: const EdgeInsets.only(top: AppSpace.xs),
+          child: Wrap(
+            spacing: AppSpace.xs,
+            runSpacing: AppSpace.xs,
+            children: [
+              if (founder) FounderBadge(tv: tv),
+              if (supporter)
+                SupporterBadge(
+                  tv: tv,
+                  onTap: () => unawaited(
+                    Navigator.push(
+                      context,
+                      AppPageRoute<void>(
+                        context: context,
+                        builder: (_) => const SupportersScreen(),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 }
 
 /// The account behind the profile: signed in with Trakt. The username

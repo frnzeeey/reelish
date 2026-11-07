@@ -199,6 +199,7 @@ class PartyParticipant {
     required this.host,
     required this.status,
     this.avatar,
+    this.founder = false,
   });
 
   static PartyParticipant? fromJson(Object? json) {
@@ -207,6 +208,7 @@ class PartyParticipant {
       pid: json['pid'] as String,
       name: _string(json['name'], 'Viewer'),
       avatar: json['avatar'] is String ? json['avatar'] as String : null,
+      founder: json['founder'] == true,
       host: json['host'] == true,
       status: ParticipantStatus.values.firstWhere(
         (s) => s.name == json['status'],
@@ -214,6 +216,9 @@ class PartyParticipant {
       ),
     );
   }
+
+  /// Whether this is Reelish's founder, as the room reports it.
+  final bool founder;
 
   /// A per-room id; never the account.
   final String pid;

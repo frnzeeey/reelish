@@ -10,6 +10,7 @@ import '../../theme/design_tokens.dart';
 import '../../theme/glass_theme.dart';
 import '../../watch_party/party_models.dart';
 import '../../watch_party/watch_party_controller.dart';
+import '../../widgets/account_badges.dart';
 import '../../widgets/settings/settings_components.dart';
 import 'party_desktop.dart';
 import 'party_launcher.dart';
@@ -474,6 +475,13 @@ class _ParticipantTile extends StatelessWidget {
                           style: const TextStyle(fontWeight: FontWeight.w700),
                         ),
                       ),
+                      if (person.founder) ...[
+                        const SizedBox(width: AppSpace.xs),
+                        const Tooltip(
+                          message: FounderBadge.description,
+                          child: FounderEmblem(size: 16),
+                        ),
+                      ],
                       if (person.host) ...[
                         const SizedBox(width: AppSpace.sm),
                         _HostChip(),

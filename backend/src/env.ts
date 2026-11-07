@@ -49,6 +49,11 @@ export interface Env {
    * webhook refuses everything and the rest of the API runs as usual.
    */
   BMC_WEBHOOK_SECRET?: string;
+  /**
+   * The Trakt uuid of the Founder's account (badges.ts). A secret so that it
+   * stays out of the repository, and optional: without it nobody is Founder.
+   */
+  FOUNDER_TRAKT_UUID?: string;
 }
 
 /** Fails fast, with no secret values in the message, when one is missing. */

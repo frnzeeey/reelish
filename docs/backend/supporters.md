@@ -9,7 +9,7 @@ account. It is recognition only: nothing in the app is locked behind it.
 | Tables | `backend/migrations/0008_supporters.sql` |
 | Reviewed grants | `backend/scripts/grant-supporter.mjs` |
 | App status | `lib/src/account/supporter_controller.dart` |
-| Page and badge | `lib/src/screens/supporters_screen.dart`, `lib/src/widgets/supporter_badge.dart` |
+| Page and badge | `lib/src/screens/supporters_screen.dart`, `lib/src/widgets/account_badges.dart` |
 | Donation link | `SupportConfig.donationUrl` (`REELISH_DONATION_URL`) |
 
 ## What Buy Me a Coffee provides
