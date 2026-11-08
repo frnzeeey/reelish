@@ -56,11 +56,16 @@ class AppIconPreset {
   static const all = [
     AppIconPreset(defaultId, 'Default', AppIconGroup.free),
     AppIconPreset('slate', 'Slate', AppIconGroup.free),
-    AppIconPreset('royal_violet', 'Royal Violet', AppIconGroup.signature),
-    AppIconPreset('celestial', 'Celestial', AppIconGroup.signature),
+    // One per app theme, in the themes' order. The ids are launcher aliases,
+    // the saved choice, so the first five keep the ids of the themes they
+    // replaced.
+    AppIconPreset('royal_violet', 'Velvet Cinema', AppIconGroup.signature),
     AppIconPreset('aurora', 'Aurora', AppIconGroup.signature),
-    AppIconPreset('rose_luxe', 'Rose Luxe', AppIconGroup.signature),
-    AppIconPreset('golden_hour', 'Golden Hour', AppIconGroup.signature),
+    AppIconPreset('ember', 'Ember', AppIconGroup.signature),
+    AppIconPreset('celestial', 'Arctic', AppIconGroup.signature),
+    AppIconPreset('ivory_studio', 'Ivory Studio', AppIconGroup.signature),
+    AppIconPreset('golden_hour', 'Obsidian Gold', AppIconGroup.signature),
+    AppIconPreset('rose_luxe', 'Rosé Noir', AppIconGroup.signature),
     AppIconPreset('amber', 'Amber'),
     AppIconPreset('orange', 'Orange'),
     AppIconPreset('rose', 'Rose'),

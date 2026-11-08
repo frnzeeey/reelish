@@ -23,12 +23,18 @@ alias changes; the screen says so.
 | Group | Icons | Who |
 |---|---|---|
 | Free | Default, Slate | Everyone, always |
-| Signature | Royal Violet, Celestial, Aurora, Rose Luxe, Golden Hour | Reelish Supporters |
+| Signature | Velvet Cinema, Aurora, Ember, Arctic, Ivory Studio, Obsidian Gold, Rosé Noir | Reelish Supporters |
 | Colours | Amber, Orange, Rose, Violet, Indigo, Blue, Teal, Green, Lime | Reelish Supporters |
 
 The two free icons are full-quality icons, not lesser versions. Slate is the
 dark counterpart of the coral default. The Signature icons are the supporter
-collection's own artwork and match the [app themes](supporter-themes.md).
+collection's own artwork, one per [app theme](supporter-themes.md), painted from
+the theme's palette and ornament (`test/app_icon_test.dart` checks there is one
+per theme). Their alias ids are the saved choice, so the first five keep the
+ids of the themes they replaced: `royal_violet` is Velvet Cinema, `celestial`
+Arctic, `rose_luxe` Rosé Noir and `golden_hour` Obsidian Gold; `aurora`,
+`ember` and `ivory_studio` match their names. An icon chosen before stays on the
+home screen and shows its new artwork after the update.
 
 Everyone sees the whole collection. Someone who is not a supporter sees the
 supporter icons in full with a small lock, and a tap opens a short sheet with
@@ -37,7 +43,8 @@ a way to the Supporters page; nothing changes without that tap.
 `AppIconController.select` applies a supporter icon only after asking the
 server (`SupporterController.refresh`) and getting back an
 [entitlement](../backend/entitlements.md) with the `appIcons` perk (supporters,
-and the Founder).
+and the Founder). The perk covers the whole collection, so a new icon is the
+Founder's, and every supporter's, without any list to update.
 A saved status never unlocks one: if the server cannot be reached, or nobody
 is signed in, the answer is `unverified` and the icon stays as it is. A donation
 waiting for review does not count. The lock marks use the last known status,
@@ -63,8 +70,11 @@ Previews for the screen are 192 px PNGs in `assets/images/app_icons/`.
 - Colour presets: `tool/branding/generate_icon_presets.ps1`, from 846 px source
   tiles in `assets/icons/`. It samples each tile's flat gradient.
 - Signature icons: `tool/branding/generate_signature_icons.mjs`, painted with
-  CanvasKit (from `tool/icons/`). Their ornaments (stars, aurora ribbons, bokeh,
-  spotlight rays, a low sun) are deterministic. The fallback icons and previews
+  CanvasKit (from `tool/icons/`). Their ornaments (projector rays, aurora
+  ribbons, embers, stars, a gold sheen, bokeh) are deterministic. Ivory Studio,
+  the light one, uses an ink copy of the mark
+  (`drawable-nodpi/ic_launcher_foreground_ivory_studio.png`), since the shared
+  white mark would not show on it. The fallback icons and previews
   are the middle two thirds of the composed adaptive icon, as a launcher shows
   it.
 

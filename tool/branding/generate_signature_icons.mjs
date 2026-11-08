@@ -1,6 +1,6 @@
 // Generates the Signature launcher icons, the supporter collection's own
-// artwork (Settings > Appearance > App icon). Each matches a Supporter profile
-// theme (lib/src/theme/supporter_themes.dart). Unlike the colour presets
+// artwork (Settings > Appearance > App icon). Each matches an app theme
+// (lib/src/theme/supporter_themes.dart). Unlike the colour presets
 // (generate_icon_presets.ps1, which samples a flat gradient from a source
 // tile), these backgrounds carry ornaments, so they are painted here:
 //
@@ -156,37 +156,69 @@ function rays(canvas, color) {
   paint.delete();
 }
 
+// Keyed by the launcher alias id, which is the saved choice and never
+// changes; each now paints the app theme it is named for in the Dart presets
+// (royal_violet is Velvet Cinema, celestial Arctic, rose_luxe Rosé Noir,
+// golden_hour Obsidian Gold).
 const icons = {
+  // Velvet Cinema, the flagship: midnight violet lit in lavender, with the
+  // beams of a cinema projector.
   royal_violet: (c) => {
-    linear(c, [0, 0], [size, size], [hex('#9C7DF5'), hex('#5B45D6'), hex('#2A2178')], [0, .55, 1]);
-    glow(c, size * .26, size * .22, size * .5, hex('#D9CCFF', .34));
-    rays(c, hex('#EFE8FF', .42));
+    linear(c, [0, 0], [size, size], [hex('#8B6CF0'), hex('#5B2FC4'), hex('#1A1030')], [0, .5, 1]);
+    glow(c, size * .26, size * .22, size * .55, hex('#C4B5FD', .42));
+    rays(c, hex('#EDE7FF', .36));
+    glow(c, size * .8, size * .86, size * .4, hex('#0D0B14', .5));
   },
-  celestial: (c) => {
-    linear(c, [0, 0], [0, size], [hex('#25397F'), hex('#121A45'), hex('#080B1E')], [0, .55, 1]);
-    glow(c, size * .34, size * .3, size * .6, hex('#5E8BFF', .42));
-    stars(c, hex('#DCE6FF'), 90, 7);
-    glint(c, size * .72, size * .27, 13, hex('#F2F6FF', .95));
-    glint(c, size * .27, size * .74, 9, hex('#E4ECFF', .85));
-    glint(c, size * .78, size * .7, 6, hex('#E4ECFF', .8));
-  },
+  // Aurora: northern lights in teal and emerald over a green-black sky.
   aurora: (c) => {
-    linear(c, [0, 0], [size, size], [hex('#0F3038'), hex('#0E1D2C'), hex('#1A1238')], [0, .5, 1]);
-    ribbon(c, .2, hex('#2CE0C4', .75));
-    ribbon(c, .48, hex('#8A6CFF', .7));
-    stars(c, hex('#D8FFF6'), 26, 11);
+    linear(c, [0, 0], [0, size], [hex('#0F2E2A'), hex('#0A1C19'), hex('#071311')], [0, .55, 1]);
+    ribbon(c, .18, hex('#54D6C0', .8));
+    ribbon(c, .44, hex('#34D399', .6));
+    glow(c, size * .7, size * .2, size * .35, hex('#67E8F9', .22));
+    stars(c, hex('#ECFDF5'), 30, 11);
   },
-  rose_luxe: (c) => {
-    linear(c, [0, 0], [size, size], [hex('#EE97B8'), hex('#B4467A'), hex('#5E1C3E')], [0, .55, 1]);
-    glow(c, size * .3, size * .28, size * .5, hex('#FFE0EC', .3));
-    bokeh(c, hex('#FFE6F0'), 5);
+  // Ember: a dark theatre, warmed from below, with drifting embers.
+  ember: (c) => {
+    linear(c, [0, 0], [0, size], [hex('#1E0F0D'), hex('#3A1A16'), hex('#6B2620')], [0, .55, 1]);
+    glow(c, size * .5, size * .95, size * .6, hex('#FF795F', .55));
+    glow(c, size * .3, size * .25, size * .4, hex('#FFAD70', .18));
+    bokeh(c, hex('#FFAD70'), 23);
   },
+  // Arctic: a deep navy night with icy stars.
+  celestial: (c) => {
+    linear(c, [0, 0], [0, size], [hex('#1B3350'), hex('#0F1E30'), hex('#08111C')], [0, .55, 1]);
+    glow(c, size * .32, size * .28, size * .6, hex('#8CCBFF', .38));
+    stars(c, hex('#F0F9FF'), 90, 7);
+    glint(c, size * .72, size * .27, 13, hex('#F0F9FF', .95));
+    glint(c, size * .27, size * .74, 9, hex('#BAE6FD', .85));
+    glint(c, size * .78, size * .7, 6, hex('#BAE6FD', .8));
+  },
+  // Ivory Studio: warm ivory and stone under a soft bronze light; its mark
+  // is ink, not white (marks below).
+  ivory_studio: (c) => {
+    linear(c, [0, 0], [size, size], [hex('#FFFFFF'), hex('#F1EDE4'), hex('#DDD4C4')], [0, .55, 1]);
+    glow(c, size * .3, size * .25, size * .55, hex('#FFFFFF', .7));
+    glow(c, size * .78, size * .82, size * .45, hex('#B49B78', .3));
+    sheen(c, hex('#FFFFFF', .5));
+  },
+  // Obsidian Gold: black obsidian, a champagne light and a gold sheen.
   golden_hour: (c) => {
-    linear(c, [0, 0], [0, size], [hex('#7A3E2A'), hex('#C0743A'), hex('#E8B26A')], [0, .6, 1]);
-    // A low sun on the horizon, warming the lower half.
-    glow(c, size * .66, size * .7, size * .5, hex('#FFD49A', .6));
-    glow(c, size * .66, size * .7, size * .13, hex('#FFF3DC', .85));
+    linear(c, [0, 0], [size, size], [hex('#2A261E'), hex('#151411'), hex('#0D0D0C')], [0, .5, 1]);
+    glow(c, size * .28, size * .22, size * .5, hex('#D6B36A', .32));
+    sheen(c, hex('#E9D5A3', .36));
+    glow(c, size * .82, size * .86, size * .32, hex('#B58A45', .22));
   },
+  // Rosé Noir: dark plum with rose light and soft mauve bokeh.
+  rose_luxe: (c) => {
+    linear(c, [0, 0], [size, size], [hex('#4A2540'), hex('#2A1729'), hex('#140D14')], [0, .55, 1]);
+    glow(c, size * .3, size * .26, size * .52, hex('#F18EB5', .42));
+    bokeh(c, hex('#C4A0D2'), 5);
+  },
+};
+
+/** Icons whose mark is not the shared white one: tinted to read on them. */
+const marks = {
+  ivory_studio: hex('#2E2A23'),
 };
 
 const adaptive = (id) => `<?xml version="1.0" encoding="utf-8"?>
@@ -195,7 +227,7 @@ const adaptive = (id) => `<?xml version="1.0" encoding="utf-8"?>
   <background android:drawable="@drawable/ic_launcher_background_${id}"/>
   <foreground>
       <inset
-          android:drawable="@drawable/ic_launcher_foreground"
+          android:drawable="@drawable/ic_launcher_foreground${id in marks ? `_${id}` : ''}"
           android:inset="20%" />
   </foreground>
   <monochrome>
@@ -228,13 +260,27 @@ for (const [id, paint] of Object.entries(icons)) {
   savePng(background, join(res, 'drawable-nodpi', `ic_launcher_background_${id}.png`));
   writeFileSync(join(res, 'mipmap-anydpi-v26', `ic_launcher_${id}.xml`), adaptive(id));
 
+  // The mark: the shared white one, or a tinted copy for a light icon, saved
+  // as its own drawable for the adaptive icon to use.
+  let mark = foreground;
+  if (id in marks) {
+    mark = snapshot((c) => {
+      const paint = new CK.Paint();
+      paint.setColorFilter(CK.ColorFilter.MakeBlend(marks[id], CK.BlendMode.SrcIn));
+      c.drawImage(foreground, 0, 0, paint);
+      paint.delete();
+    }, foreground.width(), foreground.height());
+    savePng(mark, join(res, 'drawable-nodpi', `ic_launcher_foreground_${id}.png`));
+  }
+
   // The whole adaptive icon, as a launcher composes it.
   const composed = snapshot((c) => {
     c.drawImage(background, 0, 0, null);
     const inset = size * .2;
-    c.drawImageRectCubic(foreground, CK.XYWHRect(0, 0, foreground.width(), foreground.height()),
+    c.drawImageRectCubic(mark, CK.XYWHRect(0, 0, mark.width(), mark.height()),
       CK.XYWHRect(inset, inset, size - inset * 2, size - inset * 2), 1 / 3, 1 / 3, null);
   }, size);
+  if (mark !== foreground) mark.delete();
 
   // The visible middle two thirds, on a rounded tile like the other presets.
   const visible = CK.XYWHRect(size / 6, size / 6, size * 2 / 3, size * 2 / 3);

@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:onfeed/src/theme/supporter_themes.dart';
 import 'package:onfeed/src/account/account_api.dart';
 import 'package:onfeed/src/account/account_controller.dart';
 import 'package:onfeed/src/account/session_store.dart';
@@ -59,12 +60,15 @@ class _Account {
         requests++;
         final answer = status.length > 1 ? status.removeAt(0) : status.first;
         if (answer == null) return http.Response('', 503);
+        // 'founder': the Founder, who never donated, as the API answers.
+        final founder = answer == 'founder';
         return http.Response(
           jsonEncode({
             'code': 'RS-ABCD-2345',
-            'status': answer,
+            'status': founder ? 'none' : answer,
             'since': answer == 'verified' ? 1719825600 : null,
             'recognition': {'listed': false, 'name': ''},
+            if (founder) 'entitlement': 'founder',
           }),
           200,
         );
@@ -134,7 +138,7 @@ void main() {
       ]);
       expect(
         AppIconPreset.all.where((p) => p.group == AppIconGroup.signature),
-        hasLength(5),
+        hasLength(SupporterTheme.all.length),
       );
     });
 
@@ -213,6 +217,26 @@ void main() {
       expect(await controller.select('violet'), AppIconChange.applied);
       expect(await controller.select('default'), AppIconChange.applied);
       expect(launcher.enabled, 'default');
+    });
+
+    test('the Founder can apply every icon, new ones included', () async {
+      final controller = await _controller(['founder']);
+      for (final preset in AppIconPreset.all) {
+        expect(controller.unlocked(preset), isTrue, reason: preset.id);
+        expect(
+          await controller.select(preset.id),
+          AppIconChange.applied,
+          reason: preset.id,
+        );
+        expect(launcher.enabled, preset.id);
+      }
+    });
+
+    test('every app theme has its icon', () {
+      final signature = AppIconPreset.all
+          .where((p) => p.group == AppIconGroup.signature)
+          .map((p) => p.label);
+      expect(signature, SupporterTheme.all.map((theme) => theme.name));
     });
 
     test('a supporter icon asks the server, not the saved status', () async {
@@ -352,7 +376,7 @@ void main() {
       tester,
     ) async {
       await show(tester, ['none']);
-      await tester.tap(find.text('Celestial'));
+      await tester.tap(find.text('Arctic'));
       await tester.pumpAndSettle();
       expect(find.text('Become a Supporter'), findsOneWidget);
       expect(find.textContaining('stay free for everyone'), findsOneWidget);
