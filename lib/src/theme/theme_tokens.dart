@@ -75,6 +75,23 @@ class ThemeSurfaces {
       ? background
       : Color.lerp(textPrimary, Colors.black, .35)!;
 
+  /// The colours of the player's chrome and sheets, which sit over video
+  /// and stay dark in every theme: this theme's own colours when it is dark,
+  /// so the player still feels like the theme, or a dark counterpart built
+  /// from its ink when it is light.
+  ThemeSurfaces get forPlayer {
+    if (brightness == Brightness.dark) return this;
+    final ink = artworkScrim;
+    return ThemeSurfaces(
+      background: ink,
+      surface: Color.lerp(ink, Colors.white, .06)!,
+      raised: Color.lerp(ink, Colors.white, .1)!,
+      textPrimary: background,
+      textSecondary: Color.lerp(background, ink, .32)!,
+      ambient: ambient,
+    );
+  }
+
   /// The Windows sidebar: a step darker than the page, so artwork leads.
   Color get sidebar =>
       sidebarOverride ??

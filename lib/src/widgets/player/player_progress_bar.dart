@@ -251,7 +251,7 @@ class _PlayerProgressBarState extends State<PlayerProgressBar> {
                   controller: widget.controller,
                   dragFraction: drag,
                   emphasis: emphasis,
-                  accent: GlassTheme.primary,
+                  accent: GlassTheme.playerPrimary,
                 ),
               ),
             ),

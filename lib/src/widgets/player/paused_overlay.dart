@@ -557,7 +557,7 @@ class _PauseHeading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent = GlassTheme.primary;
+    final accent = GlassTheme.playerPrimary;
     final metaStyle = TextStyle(
       color: const Color(0xCCFFFFFF),
       fontSize: 13.5 * scale,
@@ -754,8 +754,8 @@ class _Scrim extends StatelessWidget {
             center: glow,
             radius: .5,
             colors: [
-              GlassTheme.primary.withValues(alpha: .14),
-              GlassTheme.primary.withValues(alpha: 0),
+              GlassTheme.playerPrimary.withValues(alpha: .14),
+              GlassTheme.playerPrimary.withValues(alpha: 0),
             ],
           ),
         ),
@@ -786,7 +786,7 @@ class _PausePlayButton extends StatelessWidget {
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: GlassTheme.primary.withValues(alpha: .32),
+            color: GlassTheme.playerPrimary.withValues(alpha: .32),
             blurRadius: size * .45,
             spreadRadius: 1,
           ),
@@ -810,7 +810,7 @@ class _PausePlayButton extends StatelessWidget {
           child: InkWell(
             onTap: onPressed,
             focusNode: focusNode,
-            focusColor: GlassTheme.primary.withValues(alpha: .55),
+            focusColor: GlassTheme.playerPrimary.withValues(alpha: .55),
             child: SizedBox.square(
               dimension: size,
               child: Icon(

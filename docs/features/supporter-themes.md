@@ -43,8 +43,11 @@ Every colour a theme changes is a token, so no screen names a theme:
 - Windows surfaces (`DesktopSurfaces.sidebar`, `.glass`, `.hairline`), glass
   panels (`LiquidGlass`'s default tint), the background scrims that fade
   artwork into the page, settings and party cards follow the tokens.
-- The video player keeps its own dark chrome in every theme: it sits over
-  video, not over the page.
+- The video player keeps dark chrome in every theme, as it sits over video:
+  `ThemeSurfaces.forPlayer` is the theme's own colours on a dark theme and a
+  dark counterpart on a light one, `GlassTheme.playerPrimary` the accent that
+  reads on it (a light theme's lighter partner), and `PlayerScreen` wraps the
+  player in `GlassTheme.player`, so its sheets and dialogs are dark too.
 - The native splash colour (`SplashSpec.background`) stays fixed, since the
   system launch screen cannot follow a theme.
 

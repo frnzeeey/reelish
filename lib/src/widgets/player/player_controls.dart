@@ -23,7 +23,7 @@ const _glassBorder = Color(0x2EFFFFFF);
 
 /// Remote focus on a player control: a strong accent fill that reads over
 /// any frame of video. Touch never shows it.
-Color get _focusFill => GlassTheme.primary.withValues(alpha: .55);
+Color get _focusFill => GlassTheme.playerPrimary.withValues(alpha: .55);
 
 /// The playback controls drawn over the video. It never contains the video
 /// itself, so showing, hiding or updating controls leaves the surface alone.
@@ -296,12 +296,16 @@ class _TopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Row(
     children: [
-      PlayerIconButton(
-        icon: ReelishIcons.back,
-        label: 'Back',
-        onPressed: onBack,
+      PlayerActionCluster(
+        children: [
+          PlayerIconButton(
+            icon: ReelishIcons.back,
+            label: 'Back',
+            onPressed: onBack,
+          ),
+        ],
       ),
-      const SizedBox(width: 6),
+      const SizedBox(width: 10),
       Expanded(
         child: _HiddenDuringPauseScreen(
           pauseScreen: pauseScreen,
@@ -337,27 +341,61 @@ class _TopBar extends StatelessWidget {
           ),
         ),
       ),
-      if (onLock != null)
-        PlayerIconButton(
-          icon: ReelishIcons.lock,
-          label: 'Lock controls',
-          onPressed: onLock!,
-        ),
-      PlayerIconButton(
-        icon: subtitleEnabled
-            ? ReelishIcons.subtitles
-            : ReelishIcons.subtitlesOff,
-        label: subtitleEnabled ? 'Subtitles on' : 'Subtitles',
-        selected: subtitleEnabled,
-        onPressed: onSubtitles,
-      ),
-      PlayerIconButton(
-        icon: ReelishIcons.settings,
-        label: 'Playback settings',
-        onPressed: onSettings,
+      const SizedBox(width: 6),
+      // The session's actions, as one glass group.
+      PlayerActionCluster(
+        children: [
+          if (onLock != null)
+            PlayerIconButton(
+              icon: ReelishIcons.lock,
+              label: 'Lock controls',
+              onPressed: onLock!,
+            ),
+          PlayerIconButton(
+            icon: subtitleEnabled
+                ? ReelishIcons.subtitles
+                : ReelishIcons.subtitlesOff,
+            label: subtitleEnabled ? 'Subtitles on' : 'Subtitles',
+            selected: subtitleEnabled,
+            onPressed: onSubtitles,
+          ),
+          PlayerIconButton(
+            icon: ReelishIcons.settings,
+            label: 'Playback settings',
+            onPressed: onSettings,
+          ),
+        ],
       ),
     ],
   );
+}
+
+/// Several player controls as one floating glass surface: the player's
+/// translucent fill (no blur, as it sits over playing video) with the
+/// painted glass finish. Grouping keeps the glass to a few surfaces instead
+/// of a ring around every icon.
+class PlayerActionCluster extends StatelessWidget {
+  const PlayerActionCluster({super.key, required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    if (children.isEmpty) return const SizedBox.shrink();
+    return DecoratedBox(
+      decoration: const ShapeDecoration(
+        color: _glassFill,
+        shape: StadiumBorder(side: BorderSide(color: _glassBorder)),
+      ),
+      child: GlassFinish(
+        light: .7,
+        child: Padding(
+          padding: const EdgeInsets.all(2),
+          child: Row(mainAxisSize: MainAxisSize.min, children: children),
+        ),
+      ),
+    );
+  }
 }
 
 class _CenterControls extends StatelessWidget {
@@ -468,7 +506,7 @@ class _PlayButton extends StatelessWidget {
                       dimension: size - 10,
                       child: CircularProgressIndicator(
                         strokeWidth: 2.4,
-                        color: GlassTheme.primary,
+                        color: GlassTheme.playerPrimary,
                       ),
                     ),
                   // The icon follows player state; playback never waits on it.
@@ -644,38 +682,48 @@ class _BottomBar extends StatelessWidget {
                 selected: true,
               ),
             ),
-          if (onPip case final pip?)
-            PlayerIconButton(
-              icon: ReelishIcons.pip,
-              label: 'Picture in picture',
-              onPressed: pip,
-            ),
-          if (onRotate case final rotate?)
-            PlayerIconButton(
-              icon: landscapeLocked
-                  ? ReelishIcons.rotate
-                  : ReelishIcons.landscape,
-              label: landscapeLocked ? 'Allow rotation' : 'Lock to landscape',
-              onPressed: rotate,
-            ),
-          if ((volume, onVolumeChanged, onToggleMute) case (
-            final volume?,
-            final onChanged?,
-            final onMute?,
-          ))
-            PlayerVolumeControl(
-              volume: volume,
-              onChanged: onChanged,
-              onToggleMute: onMute,
-            ),
-          if (onFullscreen case final toggle?)
-            PlayerIconButton(
-              icon: fullscreen
-                  ? ReelishIcons.fullscreenExit
-                  : ReelishIcons.fullscreen,
-              label: fullscreen ? 'Exit full screen (F)' : 'Full screen (F)',
-              onPressed: toggle,
-            ),
+          const SizedBox(width: 6),
+          // The window and screen actions, as one glass group.
+          PlayerActionCluster(
+            children: [
+              if (onPip case final pip?)
+                PlayerIconButton(
+                  icon: ReelishIcons.pip,
+                  label: 'Picture in picture',
+                  onPressed: pip,
+                ),
+              if (onRotate case final rotate?)
+                PlayerIconButton(
+                  icon: landscapeLocked
+                      ? ReelishIcons.rotate
+                      : ReelishIcons.landscape,
+                  label: landscapeLocked
+                      ? 'Allow rotation'
+                      : 'Lock to landscape',
+                  onPressed: rotate,
+                ),
+              if ((volume, onVolumeChanged, onToggleMute) case (
+                final volume?,
+                final onChanged?,
+                final onMute?,
+              ))
+                PlayerVolumeControl(
+                  volume: volume,
+                  onChanged: onChanged,
+                  onToggleMute: onMute,
+                ),
+              if (onFullscreen case final toggle?)
+                PlayerIconButton(
+                  icon: fullscreen
+                      ? ReelishIcons.fullscreenExit
+                      : ReelishIcons.fullscreen,
+                  label: fullscreen
+                      ? 'Exit full screen (F)'
+                      : 'Full screen (F)',
+                  onPressed: toggle,
+                ),
+            ],
+          ),
         ],
       ),
     ],
@@ -795,7 +843,7 @@ class PlayerIconButton extends StatelessWidget {
                       width: 5,
                       height: 5,
                       decoration: BoxDecoration(
-                        color: GlassTheme.primary,
+                        color: GlassTheme.playerPrimary,
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -833,7 +881,7 @@ class _PillButton extends StatelessWidget {
     excludeSemantics: true,
     child: Material(
       color: selected
-          ? GlassTheme.primary.withValues(alpha: .16)
+          ? GlassTheme.playerPrimary.withValues(alpha: .16)
           : const Color(0x1FFFFFFF),
       shape: const StadiumBorder(),
       clipBehavior: Clip.antiAlias,
@@ -852,7 +900,7 @@ class _PillButton extends StatelessWidget {
                   Icon(
                     icon,
                     size: 18,
-                    color: selected ? GlassTheme.primary : Colors.white,
+                    color: selected ? GlassTheme.playerPrimary : Colors.white,
                   ),
                   const SizedBox(width: 8),
                   Flexible(
@@ -863,7 +911,9 @@ class _PillButton extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w600,
-                        color: selected ? GlassTheme.primary : Colors.white,
+                        color: selected
+                            ? GlassTheme.playerPrimary
+                            : Colors.white,
                       ),
                     ),
                   ),
@@ -872,7 +922,9 @@ class _PillButton extends StatelessWidget {
                     Icon(
                       trailing,
                       size: 15,
-                      color: selected ? GlassTheme.primary : Colors.white70,
+                      color: selected
+                          ? GlassTheme.playerPrimary
+                          : Colors.white70,
                     ),
                   ],
                 ],
@@ -1099,7 +1151,7 @@ class _PlayerBufferingIndicatorState extends State<PlayerBufferingIndicator> {
             dimension: 44,
             child: CircularProgressIndicator(
               strokeWidth: 2.6,
-              color: GlassTheme.primary,
+              color: GlassTheme.playerPrimary,
               backgroundColor: const Color(0x26FFFFFF),
             ),
           ),
@@ -1142,7 +1194,7 @@ class PlayerStatusView extends StatelessWidget {
                     dimension: 44,
                     child: CircularProgressIndicator(
                       strokeWidth: 2.6,
-                      color: GlassTheme.primary,
+                      color: GlassTheme.playerPrimary,
                       backgroundColor: const Color(0x1FFFFFFF),
                     ),
                   ),
@@ -1215,12 +1267,12 @@ class PlayerErrorPanel extends StatelessWidget {
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-              color: GlassTheme.primary.withValues(alpha: .14),
+              color: GlassTheme.playerPrimary.withValues(alpha: .14),
               shape: BoxShape.circle,
             ),
             child: Icon(
               ReelishIcons.error,
-              color: GlassTheme.primary,
+              color: GlassTheme.playerPrimary,
               size: 28,
             ),
           ),
@@ -1334,7 +1386,7 @@ class NextEpisodeCard extends StatelessWidget {
           countdown == null ? 'UP NEXT' : 'NEXT EPISODE IN $countdown',
           maxLines: 1,
           style: TextStyle(
-            color: GlassTheme.primary,
+            color: GlassTheme.playerPrimary,
             fontSize: 11,
             fontWeight: FontWeight.w800,
             letterSpacing: .8,

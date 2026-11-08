@@ -198,7 +198,7 @@ class _SectionLabel extends StatelessWidget {
     child: Text(
       text,
       style: TextStyle(
-        color: GlassTheme.muted,
+        color: GlassTheme.playerSurfaces.textSecondary,
         fontSize: 11,
         fontWeight: FontWeight.w800,
         letterSpacing: .8,
@@ -236,7 +236,7 @@ class _AddonSearchStatus extends StatelessWidget {
               dimension: 16,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: GlassTheme.primary,
+                color: GlassTheme.playerPrimary,
               ),
             ),
             const SizedBox(width: 12),
@@ -244,7 +244,10 @@ class _AddonSearchStatus extends StatelessWidget {
           Expanded(
             child: Text(
               text,
-              style: TextStyle(color: GlassTheme.muted, fontSize: 13),
+              style: TextStyle(
+                color: GlassTheme.playerSurfaces.textSecondary,
+                fontSize: 13,
+              ),
             ),
           ),
           if (retry)
@@ -253,7 +256,7 @@ class _AddonSearchStatus extends StatelessWidget {
               child: Text(
                 'Retry',
                 style: TextStyle(
-                  color: GlassTheme.primary,
+                  color: GlassTheme.playerPrimary,
                   fontWeight: FontWeight.w700,
                 ),
               ),

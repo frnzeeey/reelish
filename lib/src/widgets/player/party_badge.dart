@@ -51,7 +51,7 @@ class PartyBadge extends StatelessWidget {
                       border: Border.all(
                         color: calm
                             ? Colors.white.withValues(alpha: .14)
-                            : GlassTheme.primary.withValues(alpha: .6),
+                            : GlassTheme.playerPrimary.withValues(alpha: .6),
                       ),
                     ),
                     child: Row(
@@ -62,7 +62,7 @@ class PartyBadge extends StatelessWidget {
                         Icon(
                           ReelishIcons.people,
                           size: 16,
-                          color: GlassTheme.primary,
+                          color: GlassTheme.playerPrimary,
                         ),
                         const SizedBox(width: 6),
                         Flexible(
@@ -110,7 +110,9 @@ class _Faces extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: shown[i].host ? GlassTheme.primary : Colors.black,
+                    color: shown[i].host
+                        ? GlassTheme.playerPrimary
+                        : Colors.black,
                     width: 1.5,
                   ),
                 ),

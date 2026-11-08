@@ -108,12 +108,11 @@ class _PlayerVolumeControlState extends State<PlayerVolumeControl> {
                             child: SliderTheme(
                               data: SliderTheme.of(context).copyWith(
                                 trackHeight: 3,
-                                activeTrackColor: GlassTheme.primary,
+                                activeTrackColor: GlassTheme.playerPrimary,
                                 inactiveTrackColor: Colors.white24,
                                 thumbColor: Colors.white,
-                                overlayColor: GlassTheme.primary.withValues(
-                                  alpha: .22,
-                                ),
+                                overlayColor: GlassTheme.playerPrimary
+                                    .withValues(alpha: .22),
                                 thumbShape: const RoundSliderThumbShape(
                                   enabledThumbRadius: 6,
                                 ),

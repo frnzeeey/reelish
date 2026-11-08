@@ -7,6 +7,8 @@ import '../models/stream_source.dart';
 import '../services/storage_service.dart';
 import '../services/stream_discovery.dart';
 import '../services/playback_settings_controller.dart';
+import '../platform/device_capabilities.dart';
+import '../theme/glass_theme.dart';
 import '../widgets/player/custom_video_player.dart';
 
 class PlayerScreen extends StatelessWidget {
@@ -48,8 +50,15 @@ class PlayerScreen extends StatelessWidget {
   final Future<MediaDetails?>? details;
   final Future<ContentAdvisory?>? advisory;
 
+  // The player's own theme: dark in every app theme, since it sits over
+  // video (GlassTheme.player). Its sheets and dialogs open under it.
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) => Theme(
+    data: GlassTheme.player(tv: DeviceCapabilities.usesTvLayout),
+    child: _scaffold(),
+  );
+
+  Widget _scaffold() => Scaffold(
     backgroundColor: Colors.black,
     body: CustomVideoPlayer(
       item: item,

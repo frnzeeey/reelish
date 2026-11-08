@@ -134,6 +134,33 @@ abstract final class GlassTheme {
   /// The theme's soft page light, or null for flat pages (Classic).
   static Color? get ambient => _surfaces.ambient;
 
+  /// The player's chrome and sheets: dark in every theme. See
+  /// [ThemeSurfaces.forPlayer].
+  static ThemeSurfaces get playerSurfaces => _surfaces.forPlayer;
+
+  /// The accent on the player's dark chrome: the theme's own, or on a light
+  /// theme its lighter partner, which reads on dark where the page accent
+  /// (deep enough for ivory) would not.
+  static AccentPalette get playerAccent =>
+      _surfaces.brightness == Brightness.dark
+      ? _accent
+      : AccentPalette(
+          id: _accent.id,
+          label: _accent.label,
+          primary: _accent.bright,
+          bright: Color.lerp(_accent.bright, Colors.white, .25)!,
+          dark: _accent.primary,
+        );
+
+  /// [primary] for the player's chrome.
+  static Color get playerPrimary => playerAccent.primary;
+
+  /// The Material theme inside the player, for the look in effect; [tv]
+  /// adds the remote's focus styling.
+  static ThemeData player({required bool tv}) => tv
+      ? buildTv(playerAccent, playerSurfaces)
+      : build(playerAccent, playerSurfaces);
+
   /// Status colours, fixed whatever the theme: cautions and pending
   /// approvals, failures, completed actions and neutral notes. Pair them
   /// with an icon or words, never colour alone.

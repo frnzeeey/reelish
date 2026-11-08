@@ -281,7 +281,7 @@ class _EpisodePanelState extends State<EpisodePanel> {
                     Text(
                       'EPISODES',
                       style: TextStyle(
-                        color: GlassTheme.primary,
+                        color: GlassTheme.playerPrimary,
                         fontSize: 11,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 1.8,
@@ -334,7 +334,7 @@ class _EpisodePanelState extends State<EpisodePanel> {
             child: Text(
               'Season $_season',
               style: TextStyle(
-                color: GlassTheme.muted,
+                color: GlassTheme.playerSurfaces.textSecondary,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -377,7 +377,9 @@ class _EpisodePanelState extends State<EpisodePanel> {
                       child: Text(
                         'No episodes are listed for this series.',
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: GlassTheme.muted),
+                        style: TextStyle(
+                          color: GlassTheme.playerSurfaces.textSecondary,
+                        ),
                       ),
                     ),
                   ),
@@ -516,7 +518,7 @@ class _EpisodeCardState extends State<_EpisodeCard> {
     final episode = widget.episode;
     final progress = widget.progress;
     final current = widget.currentLabel != null;
-    final accent = GlassTheme.primary;
+    final accent = GlassTheme.playerPrimary;
     final runtime = episode.runtimeMinutes == null
         ? ''
         : PauseCardContent.formatRuntime(
@@ -585,7 +587,9 @@ class _EpisodeCardState extends State<_EpisodeCard> {
                         Text(
                           'E${episode.episode.toString().padLeft(2, '0')}',
                           style: TextStyle(
-                            color: current ? accent : GlassTheme.muted,
+                            color: current
+                                ? accent
+                                : GlassTheme.playerSurfaces.textSecondary,
                             fontSize: 11.5,
                             fontWeight: FontWeight.w800,
                             letterSpacing: .6,
@@ -626,7 +630,7 @@ class _EpisodeCardState extends State<_EpisodeCard> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            color: GlassTheme.muted,
+                            color: GlassTheme.playerSurfaces.textSecondary,
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                           ),
@@ -714,7 +718,7 @@ class _CurrentBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) => DecoratedBox(
     decoration: BoxDecoration(
-      color: GlassTheme.primary,
+      color: GlassTheme.playerPrimary,
       borderRadius: BorderRadius.circular(6),
     ),
     child: Padding(
@@ -725,7 +729,7 @@ class _CurrentBadge extends StatelessWidget {
           Icon(
             label == 'Playing' ? ReelishIcons.equalizer : ReelishIcons.history,
             size: 12,
-            color: GlassTheme.background,
+            color: GlassTheme.playerSurfaces.background,
           ),
           const SizedBox(width: 3),
           Flexible(
@@ -734,7 +738,7 @@ class _CurrentBadge extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                color: GlassTheme.background,
+                color: GlassTheme.playerSurfaces.background,
                 fontSize: 10,
                 fontWeight: FontWeight.w800,
                 letterSpacing: .6,
@@ -766,7 +770,7 @@ class _Thumbnail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final placeholder = ColoredBox(
-      color: GlassTheme.elevatedSurface,
+      color: GlassTheme.playerSurfaces.raised,
       child: Center(
         child: Icon(
           ReelishIcons.movie,
@@ -822,7 +826,7 @@ class _Thumbnail extends StatelessWidget {
                     backgroundColor: const Color(0x66000000),
                     color: progress.isWatched
                         ? Colors.white70
-                        : GlassTheme.primary,
+                        : GlassTheme.playerPrimary,
                   ),
                 ),
               ),

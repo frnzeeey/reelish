@@ -222,7 +222,7 @@ class _AdvisoryCard extends StatelessWidget {
                   Text(
                     advisory.descriptorLine,
                     style: TextStyle(
-                      color: GlassTheme.textPrimary,
+                      color: GlassTheme.playerSurfaces.textPrimary,
                       fontSize: base,
                       fontWeight: FontWeight.w500,
                       height: 1.3,
