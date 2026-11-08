@@ -97,7 +97,7 @@ class _CopyManifestButtonState extends State<CopyManifestButton> {
               onPressed: available ? _copy : null,
               style: OutlinedButton.styleFrom(
                 foregroundColor: GlassTheme.textPrimary,
-                side: const BorderSide(color: GlassTheme.border),
+                side: BorderSide(color: GlassTheme.border),
                 minimumSize: const Size(0, 44),
                 padding: const EdgeInsets.symmetric(horizontal: 14),
               ),

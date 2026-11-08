@@ -46,9 +46,9 @@ class _PluginShimmerState extends State<PluginShimmer>
         final dx = (_controller.value * 3 - 1) * bounds.width;
         return LinearGradient(
           colors: [
-            Colors.white.withValues(alpha: .05),
-            Colors.white.withValues(alpha: .12),
-            Colors.white.withValues(alpha: .05),
+            GlassTheme.textPrimary.withValues(alpha: .05),
+            GlassTheme.textPrimary.withValues(alpha: .12),
+            GlassTheme.textPrimary.withValues(alpha: .05),
           ],
           stops: const [.35, .5, .65],
           transform: _Slide(dx),

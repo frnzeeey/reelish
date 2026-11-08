@@ -36,8 +36,8 @@ class PluginStats extends StatelessWidget {
               if (index > 0) const TextSpan(text: '  ·  '),
               TextSpan(
                 text: part.split(' ').first,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: GlassTheme.textPrimary,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -46,7 +46,7 @@ class PluginStats extends StatelessWidget {
             if (updated != null) TextSpan(text: '  ·  $updated'),
           ],
         ),
-        style: const TextStyle(
+        style: TextStyle(
           color: GlassTheme.muted,
           fontSize: AppTextSize.bodySmall,
           fontFeatures: [FontFeature.tabularFigures()],

@@ -71,7 +71,7 @@ class PluginScraperTile extends StatelessWidget {
                       description,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: GlassTheme.muted,
                         fontSize: AppTextSize.caption,
                         height: 1.35,
@@ -91,13 +91,17 @@ class PluginScraperTile extends StatelessWidget {
                               vertical: 3,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: .05),
+                              color: GlassTheme.textPrimary.withValues(
+                                alpha: .05,
+                              ),
                               borderRadius: BorderRadius.circular(AppRadius.sm),
                             ),
                             child: Text(
                               tag,
-                              style: const TextStyle(
-                                color: Colors.white70,
+                              style: TextStyle(
+                                color: GlassTheme.textPrimary.withValues(
+                                  alpha: .7,
+                                ),
                                 fontSize: AppTextSize.micro,
                                 fontWeight: FontWeight.w600,
                               ),

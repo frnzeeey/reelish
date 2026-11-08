@@ -272,7 +272,7 @@ class _CreatePartyScreenState extends State<CreatePartyScreen> {
                       const SizedBox(height: AppSpace.xs),
                       Text(
                         'Season ${content.season} · Episode ${content.episode}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: GlassTheme.muted,
                           fontSize: AppTextSize.bodyLarge,
                         ),
@@ -293,7 +293,7 @@ class _CreatePartyScreenState extends State<CreatePartyScreen> {
                       children: [
                         Expanded(
                           child: _error == null
-                              ? const Text(
+                              ? Text(
                                   'Each person needs a source for this title '
                                   'in their own plugins.',
                                   style: TextStyle(
@@ -577,7 +577,7 @@ class PartyHostingForSupporters extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpace.xs),
-        const Text(
+        Text(
           'Bring your friends and family together and watch in sync.',
           style: TextStyle(color: GlassTheme.muted, height: 1.4),
         ),
@@ -588,7 +588,7 @@ class PartyHostingForSupporters extends StatelessWidget {
           style: TextStyle(height: 1.4),
         ),
         const SizedBox(height: AppSpace.md),
-        const Row(
+        Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(

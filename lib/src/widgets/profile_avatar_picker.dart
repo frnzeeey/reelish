@@ -115,7 +115,7 @@ class _AvatarChoiceState extends State<_AvatarChoice> {
   @override
   Widget build(BuildContext context) {
     final ring = _focused
-        ? Colors.white
+        ? GlassTheme.textPrimary
         : widget.selected
         ? GlassTheme.primary
         : Colors.transparent;

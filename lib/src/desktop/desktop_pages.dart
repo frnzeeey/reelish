@@ -206,7 +206,7 @@ class _AddSourceBanner extends StatelessWidget {
           children: [
             Icon(ReelishIcons.link, color: GlassTheme.primary),
             const SizedBox(width: 16),
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -262,7 +262,7 @@ class _WatchTogetherRow extends StatelessWidget {
           children: [
             Icon(ReelishIcons.people, color: GlassTheme.primary),
             const SizedBox(width: 16),
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -664,12 +664,10 @@ class _DesktopSearchPageState extends State<DesktopSearchPage> {
                         horizontal: 20,
                         vertical: 20,
                       ),
-                      fillColor: Colors.white.withValues(alpha: .05),
+                      fillColor: GlassTheme.textPrimary.withValues(alpha: .05),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(
-                          color: DesktopSurfaces.hairline,
-                        ),
+                        borderSide: BorderSide(color: DesktopSurfaces.hairline),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
@@ -925,7 +923,7 @@ class _LibraryStat extends StatelessWidget {
     excludeSemantics: true,
     child: DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: .04),
+        color: GlassTheme.textPrimary.withValues(alpha: .04),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: DesktopSurfaces.hairline),
       ),
@@ -954,7 +952,7 @@ class _LibraryStat extends StatelessWidget {
                 ),
                 Text(
                   label,
-                  style: const TextStyle(fontSize: 12, color: GlassTheme.muted),
+                  style: TextStyle(fontSize: 12, color: GlassTheme.muted),
                 ),
               ],
             ),
@@ -991,7 +989,7 @@ class _LibraryHint extends StatelessWidget {
         ),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: .03),
+            color: GlassTheme.textPrimary.withValues(alpha: .03),
             borderRadius: BorderRadius.circular(DesktopSurfaces.radius),
             border: Border.all(color: DesktopSurfaces.hairline),
           ),
@@ -1013,10 +1011,7 @@ class _LibraryHint extends StatelessWidget {
                 Expanded(
                   child: Text(
                     message,
-                    style: const TextStyle(
-                      color: GlassTheme.muted,
-                      height: 1.4,
-                    ),
+                    style: TextStyle(color: GlassTheme.muted, height: 1.4),
                   ),
                 ),
               ],
@@ -1062,7 +1057,7 @@ class _RecentSearches extends StatelessWidget {
           children: [
             for (final query in queries)
               Material(
-                color: Colors.white.withValues(alpha: .05),
+                color: GlassTheme.textPrimary.withValues(alpha: .05),
                 shape: StadiumBorder(
                   side: BorderSide(color: DesktopSurfaces.hairline),
                 ),
@@ -1075,7 +1070,7 @@ class _RecentSearches extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(
+                        Icon(
                           ReelishIcons.history,
                           size: 18,
                           color: GlassTheme.muted,
@@ -1110,7 +1105,7 @@ class _KeyHint extends StatelessWidget {
       widthFactor: 1,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: .06),
+          color: GlassTheme.textPrimary.withValues(alpha: .06),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: DesktopSurfaces.hairline),
         ),
@@ -1118,7 +1113,7 @@ class _KeyHint extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
           child: Text(
             keys,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w700,
               color: GlassTheme.muted,

@@ -54,11 +54,15 @@ int posterDecodeWidth(double pixels) => ((pixels / 64).ceil() * 64).toInt();
 /// pages so they read as one system. Phone and TV keep their own.
 abstract final class DesktopSurfaces {
   /// The sidebar, a step darker than the page so the artwork leads.
-  static const sidebar = Color(0xFF0D0D12);
+  static Color get sidebar => GlassTheme.surfaces.sidebar;
 
   /// Frosted panels laid over artwork (episode panel, previews).
-  static const glass = Color(0xB3121218);
-  static const hairline = Color(0x1FFFFFFF);
+  static Color get glass => Color.lerp(
+    GlassTheme.surface,
+    GlassTheme.background,
+    .4,
+  )!.withValues(alpha: .7);
+  static Color get hairline => GlassTheme.textPrimary.withValues(alpha: .12);
   static const radius = AppRadius.card;
 
   /// Entrances and selection changes; hover uses [desktopMotion]'s default.
@@ -292,8 +296,8 @@ class _DesktopPosterCardState extends State<DesktopPosterCard> {
                         color: _focused
                             ? GlassTheme.coralBright
                             : _hovered
-                            ? Colors.white.withValues(alpha: .4)
-                            : Colors.white.withValues(alpha: .06),
+                            ? GlassTheme.textPrimary.withValues(alpha: .4)
+                            : GlassTheme.textPrimary.withValues(alpha: .06),
                         width: _focused ? 3 : 1.5,
                       ),
                     ),
@@ -439,7 +443,7 @@ class _DesktopPosterCardState extends State<DesktopPosterCard> {
                         const SizedBox(width: 3),
                         Text(
                           item.rating,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
                             color: GlassTheme.textPrimary,
@@ -948,7 +952,7 @@ class DesktopRowArrow extends StatelessWidget {
               message: label,
               child: Material(
                 color: DesktopSurfaces.glass,
-                shape: const CircleBorder(
+                shape: CircleBorder(
                   side: BorderSide(color: DesktopSurfaces.hairline),
                 ),
                 clipBehavior: Clip.antiAlias,
@@ -1061,7 +1065,7 @@ class DesktopRowNotice extends StatelessWidget {
                 children: [
                   Text(
                     message ?? '',
-                    style: const TextStyle(color: GlassTheme.muted),
+                    style: TextStyle(color: GlassTheme.muted),
                   ),
                   const SizedBox(width: 12),
                   if (onRetry != null)
@@ -1195,7 +1199,7 @@ class DesktopPageHeader extends StatelessWidget {
                   const SizedBox(height: 6),
                   Text(
                     subtitle,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: GlassTheme.muted,
                       fontSize: AppTextSize.body,
                       fontWeight: FontWeight.w500,
@@ -1258,7 +1262,7 @@ class DesktopMessage extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: GlassTheme.muted, height: 1.45),
+              style: TextStyle(color: GlassTheme.muted, height: 1.45),
             ),
             if (actionLabel != null && onAction != null) ...[
               const SizedBox(height: 20),

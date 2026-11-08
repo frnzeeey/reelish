@@ -71,10 +71,7 @@ class PlayerSheetFrame extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       subtitle!,
-                      style: const TextStyle(
-                        color: GlassTheme.muted,
-                        fontSize: 12,
-                      ),
+                      style: TextStyle(color: GlassTheme.muted, fontSize: 12),
                     ),
                   ],
                   const SizedBox(height: 10),
@@ -172,7 +169,7 @@ class PlayerSheetOption extends StatelessWidget {
                               detail!,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 color: GlassTheme.muted,
                                 fontSize: 12,
                               ),

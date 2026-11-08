@@ -70,6 +70,7 @@ import '../watch_party/party_models.dart';
 import '../widgets/brand_logo.dart';
 import '../widgets/profile_avatar.dart';
 import '../widgets/artwork_image.dart';
+import '../widgets/ambient_backdrop.dart';
 import '../widgets/glass_button.dart';
 
 /// One independently loaded single-request list (Trending, search). Its
@@ -1503,7 +1504,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       ..style = PaintingStyle.stroke
                       ..strokeWidth = 2.5
                       ..strokeJoin = StrokeJoin.round
-                      ..color = Colors.white.withValues(alpha: .85),
+                      ..color = GlassTheme.textPrimary.withValues(alpha: .85),
                   ),
                 ),
               ),
@@ -1825,7 +1826,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         ),
                       ),
                       const SizedBox(width: 13),
-                      const Expanded(
+                      Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -1871,7 +1872,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   ),
                   child: Row(
                     children: [
-                      const Icon(
+                      Icon(
                         ReelishIcons.offline,
                         color: GlassTheme.muted,
                         size: 18,
@@ -1880,7 +1881,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       Expanded(
                         child: Text(
                           feedError,
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: GlassTheme.muted,
                             fontSize: 12,
                           ),
@@ -2278,7 +2279,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           )
         else
           ColoredBox(color: GlassTheme.elevatedSurface),
-        const DecoratedBox(
+        DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topCenter,
@@ -2287,7 +2288,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 Color(0x77000000),
                 Color(0x26000000),
                 Color(0x00000000),
-                Color(0xD90B0B0F),
+                GlassTheme.artworkScrim.withValues(alpha: .851),
                 GlassTheme.background,
               ],
               stops: [0, .2, .46, .82, 1],
@@ -2866,6 +2867,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         body: Stack(
           fit: StackFit.expand,
           children: [
+            // The theme's soft light, behind everything.
+            const AmbientBackdrop(),
             SafeArea(
               bottom: false,
               child: IndexedStack(index: _tab, children: pages),

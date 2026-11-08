@@ -173,7 +173,7 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
           VerticalDivider(
             width: 1,
             thickness: 1,
-            color: Colors.white.withValues(alpha: .06),
+            color: GlassTheme.textPrimary.withValues(alpha: .06),
           ),
           Expanded(
             child: SettingsEmbedding(
@@ -214,7 +214,7 @@ class _RailTitle extends StatelessWidget {
   const _RailTitle();
 
   @override
-  Widget build(BuildContext context) => const Padding(
+  Widget build(BuildContext context) => Padding(
     padding: EdgeInsets.fromLTRB(DesktopMetrics.pagePadding - 20, 40, 8, 10),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -253,7 +253,7 @@ class _GroupLabel extends StatelessWidget {
     ),
     child: Text(
       label,
-      style: const TextStyle(
+      style: TextStyle(
         color: GlassTheme.muted,
         fontSize: AppTextSize.caption,
         letterSpacing: 1.5,
@@ -346,7 +346,7 @@ class _RailItemState extends State<_RailItem> {
                 color: selected
                     ? null
                     : _hovered
-                    ? Colors.white.withValues(alpha: .05)
+                    ? GlassTheme.textPrimary.withValues(alpha: .05)
                     : Colors.transparent,
                 borderRadius: BorderRadius.circular(DesktopSurfaces.radius),
                 border: Border.all(
@@ -372,7 +372,7 @@ class _RailItemState extends State<_RailItem> {
                                 ? FontWeight.w800
                                 : FontWeight.w700,
                             color: selected
-                                ? Colors.white
+                                ? GlassTheme.textPrimary
                                 : GlassTheme.textPrimary,
                           ),
                         ),
@@ -394,7 +394,7 @@ class _RailItemState extends State<_RailItem> {
                   if (section == null) ...[
                     // Apart from a title cut to fit, so the two never touch.
                     const SizedBox(width: 8),
-                    const Icon(
+                    Icon(
                       ReelishIcons.externalLink,
                       size: 16,
                       color: GlassTheme.muted,

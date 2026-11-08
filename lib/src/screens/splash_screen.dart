@@ -10,6 +10,7 @@ import '../widgets/brand_logo.dart';
 /// `android/app/src/main/res`; change them together so the hand-off from
 /// the system splash to Flutter has no jump.
 abstract final class SplashSpec {
+  // Fixed, not the theme: the native launch screen cannot follow it.
   static const background = Color(0xFF0B0B0F);
 
   /// Matches the 160dp logo in `launch_background.xml` and `splash_icon.xml`.
@@ -254,11 +255,7 @@ class _StartupError extends StatelessWidget {
       Text(
         message,
         textAlign: TextAlign.center,
-        style: const TextStyle(
-          color: GlassTheme.muted,
-          fontSize: 13,
-          height: 1.45,
-        ),
+        style: TextStyle(color: GlassTheme.muted, fontSize: 13, height: 1.45),
       ),
       if (onRetry != null) ...[
         const SizedBox(height: 12),

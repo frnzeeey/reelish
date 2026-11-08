@@ -1,14 +1,14 @@
-// App themes for Reelish Supporters (Settings > Appearance). A theme sets the
-// accent across the app and dresses the profile card: its backdrop, the ring
-// around the avatar and the card's own accents. Text stays white on a dark
-// surface, and each accent keeps the contrast every accent keeps, so a theme
-// never costs readability.
+// App themes for Reelish Supporters (Settings > Appearance). A theme is a
+// whole look: the page colours every screen reads through GlassTheme
+// (ThemeSurfaces), the accent across the app, and the profile card's lights,
+// ring and ornament. New themes are new entries here; no screen names one.
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
 import 'design_tokens.dart';
 import 'glass_theme.dart';
+import 'theme_tokens.dart';
 
 /// The ornament a theme adds to its backdrop, drawn once and cheaply.
 enum ThemeOrnament { none, stars, aurora, sheen }
@@ -18,18 +18,39 @@ class SupporterTheme {
   const SupporterTheme({
     required this.id,
     required this.name,
+    required this.description,
+    required this.surfaces,
+    required this.primary,
+    required this.light,
+    required this.deepAccent,
     required this.glow,
     required this.second,
     required this.deep,
     required this.ink,
     this.ornament = ThemeOrnament.none,
+    this.replaces = const [],
   });
 
-  /// Saved in the profile; never rename one.
+  /// Saved on the device; never rename one.
   final String id;
   final String name;
 
-  /// The main light, glowing from behind the avatar.
+  /// One line for the picker.
+  final String description;
+
+  /// The page colours every screen reads while this theme is on.
+  final ThemeSurfaces surfaces;
+
+  /// The accent: buttons, selection, progress and links.
+  final Color primary;
+
+  /// The accent's lighter partner: highlights and gradients.
+  final Color light;
+
+  /// The accent's deeper partner: pressed states and gradient ends.
+  final Color deepAccent;
+
+  /// The profile card's main light, glowing from behind the avatar.
   final Color glow;
 
   /// The answering light across the card.
@@ -42,77 +63,207 @@ class SupporterTheme {
   final Color ink;
   final ThemeOrnament ornament;
 
-  /// The accent the theme sets across the app: its main light, made to read
-  /// on the page background as every accent does.
-  AccentPalette get accent {
-    final base = AccentPalette.custom(glow);
-    return AccentPalette(
-      id: 'theme:$id',
-      label: name,
-      primary: base.primary,
-      bright: base.bright,
-      dark: base.dark,
-    );
-  }
+  /// Ids of retired themes that now open as this one, so a saved choice
+  /// keeps working.
+  final List<String> replaces;
 
-  static const royalViolet = SupporterTheme(
-    id: 'royal_violet',
-    name: 'Royal Violet',
-    glow: Color(0xFF8B6CF0),
-    second: Color(0xFF4C46D8),
-    deep: Color(0xFF15122A),
-    ink: Color(0xFFD6CBFF),
-    ornament: ThemeOrnament.sheen,
+  /// The accent the theme sets across the app.
+  AccentPalette get accent => AccentPalette(
+    id: 'theme:$id',
+    label: name,
+    primary: primary,
+    bright: light,
+    dark: deepAccent,
   );
 
-  static const celestial = SupporterTheme(
-    id: 'celestial',
-    name: 'Celestial',
-    glow: Color(0xFF5E8BFF),
-    second: Color(0xFF2A3A8C),
-    deep: Color(0xFF0C1124),
-    ink: Color(0xFFCAD8FF),
-    ornament: ThemeOrnament.stars,
+  /// Reelish's flagship look.
+  static const velvetCinema = SupporterTheme(
+    id: 'velvet_cinema',
+    name: 'Velvet Cinema',
+    description: 'Midnight and deep violet, lit in lavender',
+    surfaces: ThemeSurfaces(
+      background: Color(0xFF0D0B14),
+      surface: Color(0xFF191522),
+      raised: Color(0xFF211B30),
+      textPrimary: Color(0xFFF5F3FF),
+      textSecondary: Color(0xFFA9A2B8),
+      ambient: Color(0xFFA78BFA),
+    ),
+    primary: Color(0xFFA78BFA),
+    light: Color(0xFFC4B5FD),
+    deepAccent: Color(0xFF7C3AED),
+    glow: Color(0xFFA78BFA),
+    second: Color(0xFF7C3AED),
+    deep: Color(0xFF16112A),
+    ink: Color(0xFFC4B5FD),
+    ornament: ThemeOrnament.sheen,
+    replaces: ['royal_violet'],
   );
 
   static const aurora = SupporterTheme(
     id: 'aurora',
     name: 'Aurora',
-    glow: Color(0xFF2CCFB8),
-    second: Color(0xFF7A5CF5),
-    deep: Color(0xFF0B1820),
-    ink: Color(0xFFBDF4EA),
+    description: 'Northern lights in teal and emerald',
+    surfaces: ThemeSurfaces(
+      background: Color(0xFF071311),
+      surface: Color(0xFF10201E),
+      raised: Color(0xFF17302B),
+      textPrimary: Color(0xFFECFDF5),
+      textSecondary: Color(0xFF9CBAB1),
+      ambient: Color(0xFF54D6C0),
+    ),
+    primary: Color(0xFF54D6C0),
+    light: Color(0xFF67E8F9),
+    deepAccent: Color(0xFF2BA98F),
+    glow: Color(0xFF54D6C0),
+    second: Color(0xFF34D399),
+    deep: Color(0xFF0A1C19),
+    ink: Color(0xFFC6F7EC),
     ornament: ThemeOrnament.aurora,
   );
 
-  static const roseLuxe = SupporterTheme(
-    id: 'rose_luxe',
-    name: 'Rose Luxe',
-    glow: Color(0xFFEE8FB2),
-    second: Color(0xFF9A3B66),
-    deep: Color(0xFF1D1018),
+  static const obsidianGold = SupporterTheme(
+    id: 'obsidian_gold',
+    name: 'Obsidian Gold',
+    description: 'Obsidian black with champagne gold',
+    surfaces: ThemeSurfaces(
+      background: Color(0xFF0D0D0C),
+      surface: Color(0xFF191816),
+      raised: Color(0xFF24211B),
+      textPrimary: Color(0xFFF8F5ED),
+      textSecondary: Color(0xFFB9B0A0),
+      ambient: Color(0xFFD6B36A),
+    ),
+    primary: Color(0xFFD6B36A),
+    light: Color(0xFFE9D5A3),
+    deepAccent: Color(0xFFB58A45),
+    glow: Color(0xFFD6B36A),
+    second: Color(0xFFB58A45),
+    deep: Color(0xFF17140F),
+    ink: Color(0xFFE9D5A3),
+    ornament: ThemeOrnament.sheen,
+    replaces: ['golden_hour'],
+  );
+
+  static const ember = SupporterTheme(
+    id: 'ember',
+    name: 'Ember',
+    description: 'A dark theatre in warm, glowing light',
+    surfaces: ThemeSurfaces(
+      background: Color(0xFF140B0A),
+      surface: Color(0xFF211312),
+      raised: Color(0xFF301A18),
+      textPrimary: Color(0xFFFFF4F0),
+      textSecondary: Color(0xFFC2A39D),
+      ambient: Color(0xFFFF795F),
+    ),
+    primary: Color(0xFFFF795F),
+    light: Color(0xFFFFAD70),
+    deepAccent: Color(0xFFE5484D),
+    glow: Color(0xFFFF795F),
+    second: Color(0xFFE5484D),
+    deep: Color(0xFF1F0F0D),
+    ink: Color(0xFFFFD6C8),
+    ornament: ThemeOrnament.sheen,
+  );
+
+  static const arctic = SupporterTheme(
+    id: 'arctic',
+    name: 'Arctic',
+    description: 'Deep navy and clear, icy blue',
+    surfaces: ThemeSurfaces(
+      background: Color(0xFF08111C),
+      surface: Color(0xFF111E2D),
+      raised: Color(0xFF192A3C),
+      textPrimary: Color(0xFFF0F9FF),
+      textSecondary: Color(0xFFA5B9CA),
+      ambient: Color(0xFF8CCBFF),
+    ),
+    primary: Color(0xFF8CCBFF),
+    light: Color(0xFFBAE6FD),
+    deepAccent: Color(0xFF60A5FA),
+    glow: Color(0xFF8CCBFF),
+    second: Color(0xFF60A5FA),
+    deep: Color(0xFF0C1828),
+    ink: Color(0xFFBAE6FD),
+    ornament: ThemeOrnament.stars,
+    replaces: ['celestial'],
+  );
+
+  static const roseNoir = SupporterTheme(
+    id: 'rose_noir',
+    name: 'Rosé Noir',
+    description: 'Dark plum with muted rose and mauve',
+    surfaces: ThemeSurfaces(
+      background: Color(0xFF140D14),
+      surface: Color(0xFF211622),
+      raised: Color(0xFF302033),
+      textPrimary: Color(0xFFFFF1F7),
+      textSecondary: Color(0xFFC4A9BA),
+      ambient: Color(0xFFF18EB5),
+    ),
+    primary: Color(0xFFF18EB5),
+    light: Color(0xFFF7B6CF),
+    deepAccent: Color(0xFFD979A3),
+    glow: Color(0xFFF18EB5),
+    second: Color(0xFFC4A0D2),
+    deep: Color(0xFF1D121D),
     ink: Color(0xFFFFD3E2),
     ornament: ThemeOrnament.sheen,
+    replaces: ['rose_luxe'],
   );
 
-  static const goldenHour = SupporterTheme(
-    id: 'golden_hour',
-    name: 'Golden Hour',
-    glow: Color(0xFFE9BE86),
-    second: Color(0xFFB8733A),
-    deep: Color(0xFF1B140E),
-    ink: Color(0xFFFFE3BE),
+  /// The light theme: ivory pages and dark text. Artwork areas (heroes,
+  /// detail backdrops) stay dark with white titles ([ThemeSurfaces.artworkScrim]),
+  /// and the player keeps its dark chrome.
+  static const ivoryStudio = SupporterTheme(
+    id: 'ivory_studio',
+    name: 'Ivory Studio',
+    description: 'Warm ivory and bronze, in daylight',
+    surfaces: ThemeSurfaces(
+      brightness: Brightness.light,
+      background: Color(0xFFFAF8F3),
+      surface: Color(0xFFFFFFFF),
+      raised: Color(0xFFF4F0E8),
+      textPrimary: Color(0xFF28251F),
+      // #777064 in the palette, a step deeper so captions keep AA on the
+      // cream dialogs too.
+      textSecondary: Color(0xFF6F685C),
+      ambient: Color(0xFFB49B78),
+    ),
+    // The palette's bronze (#B49B78) is too faint for small accent text on
+    // ivory, so the accent is a deeper bronze and #B49B78 its light partner.
+    primary: Color(0xFF856D4C),
+    light: Color(0xFFB49B78),
+    deepAccent: Color(0xFF6E5A3E),
+    // The profile card stays a dark card, lit in bronze, in every theme.
+    glow: Color(0xFFB49B78),
+    second: Color(0xFF8F7756),
+    deep: Color(0xFF2A251E),
+    ink: Color(0xFFE5DFD4),
     ornament: ThemeOrnament.sheen,
   );
 
-  static const all = [royalViolet, celestial, aurora, roseLuxe, goldenHour];
+  /// The themes offered, flagship first.
+  static const all = [
+    velvetCinema,
+    aurora,
+    ember,
+    arctic,
+    ivoryStudio,
+    obsidianGold,
+    roseNoir,
+  ];
 
   /// The picker's choice for no theme: the accent the user picked.
   static const classicId = 'classic';
 
+  /// The offered theme saved as [id], including the ids of the themes it
+  /// replaced.
   static SupporterTheme? byId(String? id) {
+    if (id == null || id.isEmpty) return null;
     for (final theme in all) {
-      if (theme.id == id) return theme;
+      if (theme.id == id || theme.replaces.contains(id)) return theme;
     }
     return null;
   }

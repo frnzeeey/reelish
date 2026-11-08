@@ -339,7 +339,7 @@ class _FaqTile extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                 child: Text(
                   entry.answer,
-                  style: const TextStyle(color: GlassTheme.muted, height: 1.5),
+                  style: TextStyle(color: GlassTheme.muted, height: 1.5),
                 ),
               )
             : const SizedBox(width: double.infinity),
@@ -710,7 +710,7 @@ class _ReportScreenState extends State<ReportScreen> {
                         for (final MapEntry(:key, :value) in values.entries)
                           '${SupportDiagnostics.labels[key] ?? key}: $value',
                       ].join('\n'),
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: GlassTheme.muted,
                         fontSize: 12.5,
                         height: 1.5,

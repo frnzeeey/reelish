@@ -333,7 +333,7 @@ class _EpisodePanelState extends State<EpisodePanel> {
             padding: const EdgeInsets.fromLTRB(18, 2, 18, 4),
             child: Text(
               'Season $_season',
-              style: const TextStyle(
+              style: TextStyle(
                 color: GlassTheme.muted,
                 fontWeight: FontWeight.w700,
               ),
@@ -369,7 +369,7 @@ class _EpisodePanelState extends State<EpisodePanel> {
             controller: _scroll,
             slivers: [
               if (episodes.isEmpty)
-                const SliverFillRemaining(
+                SliverFillRemaining(
                   hasScrollBody: false,
                   child: Center(
                     child: Padding(
@@ -625,7 +625,7 @@ class _EpisodeCardState extends State<_EpisodeCard> {
                           meta,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: GlassTheme.muted,
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -733,7 +733,7 @@ class _CurrentBadge extends StatelessWidget {
               label.toUpperCase(),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 color: GlassTheme.background,
                 fontSize: 10,
                 fontWeight: FontWeight.w800,

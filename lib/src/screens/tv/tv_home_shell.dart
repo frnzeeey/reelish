@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../navigation/app_destination.dart';
 import '../../theme/glass_theme.dart';
 import '../../theme/reelish_icons.dart';
+import '../../widgets/ambient_backdrop.dart';
 import '../../widgets/tv/tv_focus.dart';
 import '../../widgets/brand_logo.dart';
 import '../../widgets/profile_avatar.dart';
@@ -178,6 +179,8 @@ class TvHomeShellState extends State<TvHomeShell> {
       body: Stack(
         fit: StackFit.expand,
         children: [
+          // The theme's soft light, behind everything.
+          const AmbientBackdrop(),
           Positioned.fill(
             left: collapsedRailWidth,
             child: Focus(
@@ -295,12 +298,15 @@ class _TvNavigationRail extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: expanded
-              ? const [
+              ? [
                   GlassTheme.background,
-                  Color(0xF00B0B0F),
-                  Color(0x000B0B0F),
+                  GlassTheme.background.withValues(alpha: .941),
+                  GlassTheme.background.withValues(alpha: 0),
                 ]
-              : const [Color(0xFF0E0E13), Color(0xFF0E0E13), Color(0xFF0E0E13)],
+              : List.filled(
+                  3,
+                  Color.lerp(GlassTheme.background, GlassTheme.surface, .3)!,
+                ),
           stops: const [0, .66, 1],
         ),
       ),
@@ -375,7 +381,7 @@ class _RailItemState extends State<_RailItem> {
         ? GlassTheme.background
         : widget.selected
         ? accent
-        : Colors.white70;
+        : GlassTheme.textPrimary.withValues(alpha: .7);
     return Semantics(
       button: true,
       selected: widget.selected,
@@ -413,7 +419,7 @@ class _RailItemState extends State<_RailItem> {
                   : widget.selected
                   ? accent.withValues(alpha: _hovered ? .22 : .14)
                   : _hovered
-                  ? Colors.white.withValues(alpha: .08)
+                  ? GlassTheme.textPrimary.withValues(alpha: .08)
                   : Colors.transparent,
               borderRadius: BorderRadius.circular(16),
             ),

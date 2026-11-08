@@ -482,7 +482,7 @@ class _PluginLibraryViewState extends State<PluginLibraryView> {
             Text(
               detail,
               maxLines: 1,
-              style: const TextStyle(
+              style: TextStyle(
                 color: GlassTheme.muted,
                 fontSize: AppTextSize.label,
               ),
@@ -700,7 +700,7 @@ class _Header extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpace.xs),
-        const Text(
+        Text(
           'Discover community providers and expand your streaming sources.',
           style: TextStyle(
             color: GlassTheme.muted,

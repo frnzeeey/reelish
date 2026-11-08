@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../widgets/glass_button.dart';
 import 'design_tokens.dart';
+import 'theme_tokens.dart';
 
 abstract final class GlassTheme {
   static const coral = AccentPalette(
@@ -105,116 +106,250 @@ abstract final class GlassTheme {
   static Color get coralBright => _accent.bright;
   static Color get coralDark => _accent.dark;
   static Color get coralGlow => _accent.primary.withValues(alpha: .2);
-  static const background = Color(0xFF0B0B0F);
-  static const textPrimary = Color(0xFFF7F7F9);
-  static const muted = Color(0xFFA5A5B2);
-  static const disabled = Color(0xFF62626D);
-  static const surface = Color(0xFF15151C);
-  static const elevatedSurface = Color(0xFF202029);
-  static const border = Color(0x1AFFFFFF);
-  static const glassBackground = Color(0x0FFFFFFF);
-  static const glassStrong = Color(0x17FFFFFF);
 
-  /// Status colours, fixed whatever the accent: cautions and pending
-  /// approvals, and failures. Pair them with an icon or words, never colour
-  /// alone.
+  /// The page colours in effect: [ThemeSurfaces.classic], or the app
+  /// theme's. Set by `AccentSettingsController`; the getters below follow it.
+  static ThemeSurfaces _surfaces = ThemeSurfaces.classic;
+  static ThemeSurfaces get surfaces => _surfaces;
+  static void setSurfaces(ThemeSurfaces value) => _surfaces = value;
+
+  static Color get background => _surfaces.background;
+  static Color get textPrimary => _surfaces.textPrimary;
+  static Color get muted => _surfaces.textSecondary;
+  static Color get disabled => _surfaces.disabled;
+  static Color get surface => _surfaces.surface;
+  static Color get elevatedSurface => _surfaces.raised;
+  static Color get border => _surfaces.border;
+  static Color get divider => _surfaces.divider;
+  static Color get glassBackground => _surfaces.glassBackground;
+  static Color get glassStrong => _surfaces.glassStrong;
+
+  /// The body of glass surfaces and smoked-glass controls.
+  static Color get glassTint => _surfaces.glassTint;
+
+  /// The shade over artwork behind white titles; the page colour in dark
+  /// themes.
+  static Color get artworkScrim => _surfaces.artworkScrim;
+
+  /// The theme's soft page light, or null for flat pages (Classic).
+  static Color? get ambient => _surfaces.ambient;
+
+  /// Status colours, fixed whatever the theme: cautions and pending
+  /// approvals, failures, completed actions and neutral notes. Pair them
+  /// with an icon or words, never colour alone.
   static const warning = Color(0xFFFFB547);
   static const danger = Color(0xFFFF5252);
+  static const success = Color(0xFF4ADE80);
+  static const info = Color(0xFF60A5FA);
   static LinearGradient get gradient =>
       LinearGradient(colors: [coralBright, primary]);
 
   /// The app's font. Set on the theme's text styles; a button `textStyle`
   /// given in a `styleFrom` replaces those, so it must name it too.
   static const fontFamily = 'Montserrat';
-  static ThemeData get dark => ThemeData(
-    brightness: Brightness.dark,
-    fontFamily: fontFamily,
-    scaffoldBackgroundColor: background,
-    colorScheme:
-        ColorScheme.fromSeed(
-          seedColor: primary,
-          brightness: Brightness.dark,
-        ).copyWith(
-          primary: primary,
-          onPrimary: background,
-          secondary: coralBright,
-          onSecondary: textPrimary,
-          surface: surface,
-          onSurface: textPrimary,
-        ),
-    useMaterial3: true,
-    // Buttons carry the Liquid Glass finish (painted, never blurred): the
-    // primary on the accent, the secondary as smoked glass. Text and icon
-    // buttons stay flat so the glass marks the actions that matter.
-    filledButtonTheme: FilledButtonThemeData(style: GlassButtonStyle.filled()),
-    outlinedButtonTheme: OutlinedButtonThemeData(
-      style: GlassButtonStyle.outlined(),
-    ),
-    // Menus are the same smoked glass, near-opaque so their text reads over
-    // anything, with a hairline edge instead of Material's tint.
-    popupMenuTheme: PopupMenuThemeData(
-      color: Color.alphaBlend(
-        Colors.white.withValues(alpha: .04),
-        GlassButtonStyle.smokedGlass,
-      ).withValues(alpha: .97),
-      surfaceTintColor: Colors.transparent,
-      elevation: 12,
-      shadowColor: Colors.black,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        side: const BorderSide(color: border),
-      ),
-    ),
-    navigationBarTheme: NavigationBarThemeData(
-      backgroundColor: glassBackground,
-      indicatorColor: coralGlow,
-      elevation: 0,
-      labelTextStyle: WidgetStateProperty.resolveWith(
-        (states) => TextStyle(
-          color: states.contains(WidgetState.selected) ? primary : muted,
-          fontSize: 11,
-          fontWeight: states.contains(WidgetState.selected)
-              ? FontWeight.w700
-              : FontWeight.w500,
-        ),
-      ),
-    ),
-    snackBarTheme: SnackBarThemeData(
-      behavior: SnackBarBehavior.floating,
-      backgroundColor: elevatedSurface,
-      contentTextStyle: TextStyle(color: Colors.white),
-      actionTextColor: primary,
-    ),
-    appBarTheme: const AppBarTheme(
-      backgroundColor: background,
-      surfaceTintColor: Colors.transparent,
-    ),
-    inputDecorationTheme: InputDecorationTheme(
-      filled: true,
-      fillColor: surface,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(15),
-        borderSide: const BorderSide(color: border),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(15),
-        borderSide: const BorderSide(color: border),
-      ),
-    ),
-  );
 
-  /// [dark] for Android TV. Same palette and components; focus, the only
-  /// cursor a remote has, is drawn as a coral tint on every [InkWell] and a
+  /// The phone and Windows theme for the look in effect.
+  static ThemeData get dark => build(_accent, _surfaces);
+
+  /// [dark] for Android TV, for the look in effect.
+  static ThemeData get tv => buildTv(_accent, _surfaces);
+
+  /// The Material theme for [accent] over [s]. Everything Material draws
+  /// (dialogs, sheets, menus, fields, chips, switches, sliders, progress)
+  /// takes its colours from here, so a theme reaches them without any
+  /// screen knowing it. Also used to preview a theme before it applies.
+  static ThemeData build(AccentPalette accent, ThemeSurfaces s) {
+    final primary = accent.primary;
+    final radius = BorderRadius.circular(AppRadius.lg);
+    return ThemeData(
+      brightness: s.brightness,
+      fontFamily: fontFamily,
+      scaffoldBackgroundColor: s.background,
+      canvasColor: s.background,
+      dividerColor: s.divider,
+      colorScheme:
+          ColorScheme.fromSeed(
+            seedColor: primary,
+            brightness: s.brightness,
+          ).copyWith(
+            primary: primary,
+            onPrimary: s.background,
+            primaryContainer: primary.withValues(alpha: .22),
+            onPrimaryContainer: s.textPrimary,
+            secondary: accent.bright,
+            onSecondary: s.textPrimary,
+            tertiary: accent.dark,
+            surface: s.surface,
+            onSurface: s.textPrimary,
+            onSurfaceVariant: s.textSecondary,
+            surfaceDim: s.background,
+            surfaceBright: s.raised,
+            surfaceContainerLowest: s.background,
+            surfaceContainerLow: s.surface,
+            surfaceContainer: s.surface,
+            surfaceContainerHigh: s.raised,
+            surfaceContainerHighest: Color.lerp(s.raised, s.textPrimary, .06),
+            surfaceTint: Colors.transparent,
+            outline: s.textPrimary.withValues(alpha: .22),
+            outlineVariant: s.border,
+            error: danger,
+            onError: Colors.white,
+            inverseSurface: s.textPrimary,
+            onInverseSurface: s.background,
+            shadow: Colors.black,
+            scrim: Colors.black,
+          ),
+      useMaterial3: true,
+      // Buttons carry the Liquid Glass finish (painted, never blurred): the
+      // primary on the accent, the secondary as smoked glass. Text and icon
+      // buttons stay flat so the glass marks the actions that matter.
+      filledButtonTheme: FilledButtonThemeData(
+        style: GlassButtonStyle.filled(ring: s.textPrimary),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: GlassButtonStyle.outlined(
+          tint: s.glassTint,
+          ring: accent.bright,
+        ),
+      ),
+      // Menus are the same smoked glass, near-opaque so their text reads over
+      // anything, with a hairline edge instead of Material's tint.
+      popupMenuTheme: PopupMenuThemeData(
+        color: Color.alphaBlend(
+          s.textPrimary.withValues(alpha: .04),
+          s.glassTint,
+        ).withValues(alpha: .97),
+        surfaceTintColor: Colors.transparent,
+        elevation: 12,
+        shadowColor: Colors.black,
+        shape: RoundedRectangleBorder(
+          borderRadius: radius,
+          side: BorderSide(color: s.border),
+        ),
+      ),
+      menuTheme: MenuThemeData(
+        style: MenuStyle(
+          backgroundColor: WidgetStatePropertyAll(s.raised),
+          surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+          shape: WidgetStatePropertyAll(
+            RoundedRectangleBorder(
+              borderRadius: radius,
+              side: BorderSide(color: s.border),
+            ),
+          ),
+        ),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: s.raised,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.xl),
+          side: BorderSide(color: s.border),
+        ),
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: s.raised,
+        modalBackgroundColor: s.raised,
+        surfaceTintColor: Colors.transparent,
+        dragHandleColor: s.textSecondary.withValues(alpha: .5),
+      ),
+      cardTheme: CardThemeData(
+        color: s.surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.card),
+          side: BorderSide(color: s.border),
+        ),
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: s.glassBackground,
+        selectedColor: primary.withValues(alpha: .22),
+        side: BorderSide(color: s.border),
+        labelStyle: TextStyle(color: s.textPrimary, fontFamily: fontFamily),
+        secondaryLabelStyle: TextStyle(color: primary, fontFamily: fontFamily),
+        checkmarkColor: primary,
+        shape: const StadiumBorder(),
+      ),
+      tooltipTheme: TooltipThemeData(
+        decoration: BoxDecoration(
+          color: s.raised,
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          border: Border.all(color: s.border),
+        ),
+        textStyle: TextStyle(color: s.textPrimary, fontSize: 12),
+      ),
+      progressIndicatorTheme: ProgressIndicatorThemeData(
+        color: primary,
+        linearTrackColor: s.glassStrong,
+        circularTrackColor: Colors.transparent,
+      ),
+      tabBarTheme: TabBarThemeData(
+        indicatorColor: primary,
+        labelColor: s.textPrimary,
+        unselectedLabelColor: s.textSecondary,
+        dividerColor: s.divider,
+      ),
+      dividerTheme: DividerThemeData(color: s.divider, space: 1),
+      textSelectionTheme: TextSelectionThemeData(
+        cursorColor: primary,
+        selectionColor: primary.withValues(alpha: .35),
+        selectionHandleColor: primary,
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: s.glassBackground,
+        indicatorColor: primary.withValues(alpha: .2),
+        elevation: 0,
+        labelTextStyle: WidgetStateProperty.resolveWith(
+          (states) => TextStyle(
+            color: states.contains(WidgetState.selected)
+                ? primary
+                : s.textSecondary,
+            fontSize: 11,
+            fontWeight: states.contains(WidgetState.selected)
+                ? FontWeight.w700
+                : FontWeight.w500,
+          ),
+        ),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: s.raised,
+        contentTextStyle: TextStyle(color: s.textPrimary),
+        actionTextColor: primary,
+      ),
+      appBarTheme: AppBarTheme(
+        backgroundColor: s.background,
+        surfaceTintColor: Colors.transparent,
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: s.surface,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15),
+          borderSide: BorderSide(color: s.border),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15),
+          borderSide: BorderSide(color: s.border),
+        ),
+      ),
+    );
+  }
+
+  /// [build] for Android TV. Same palette and components; focus, the only
+  /// cursor a remote has, is drawn as an accent tint on every [InkWell] and a
   /// tint plus ring on Material buttons, so it is visible from across the
   /// room. Call sites that set their own `side` keep it and show the tint.
-  static ThemeData get tv {
-    final base = dark;
+  static ThemeData buildTv(AccentPalette accent, ThemeSurfaces s) {
+    final base = build(accent, s);
+    final primary = accent.primary;
     WidgetStateProperty<Color?> overlay(Color focused) =>
         WidgetStateProperty.resolveWith(
           (states) => states.contains(WidgetState.focused)
               ? focused
               : states.contains(WidgetState.pressed)
-              ? Colors.white.withValues(alpha: .12)
+              ? s.textPrimary.withValues(alpha: .12)
               : null,
         );
     WidgetStateProperty<BorderSide?> ring(Color color, {BorderSide? rest}) =>
@@ -229,16 +364,16 @@ abstract final class GlassTheme {
       focusColor: tint,
       filledButtonTheme: FilledButtonThemeData(
         style: ButtonStyle(
-          overlayColor: overlay(Colors.white.withValues(alpha: .22)),
-          side: ring(Colors.white),
+          overlayColor: overlay(s.textPrimary.withValues(alpha: .22)),
+          side: ring(s.textPrimary),
         ).merge(base.filledButtonTheme.style),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: ButtonStyle(
           overlayColor: overlay(tint),
           side: ring(
-            coralBright,
-            rest: BorderSide(color: Colors.white.withValues(alpha: .3)),
+            accent.bright,
+            rest: BorderSide(color: s.textPrimary.withValues(alpha: .3)),
           ),
         ).merge(base.outlinedButtonTheme.style),
       ),

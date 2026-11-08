@@ -45,7 +45,7 @@ class ReelishIdentity extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 4),
-              const Text(
+              Text(
                 'A streaming catalog app with add-on support and an in-app '
                 'video player.',
                 style: TextStyle(

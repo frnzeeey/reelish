@@ -71,7 +71,7 @@ class _AccountGateState extends State<AccountGate> {
 
   @override
   Widget build(BuildContext context) => switch (widget.account.status) {
-    AccountStatus.restoring => const ColoredBox(color: GlassTheme.background),
+    AccountStatus.restoring => ColoredBox(color: GlassTheme.background),
     AccountStatus.signedOut => SignInScreen(account: widget.account),
     AccountStatus.signedIn => widget.child,
   };
@@ -405,7 +405,7 @@ class _BrowserPanel extends StatelessWidget {
               : 'Sign in to Trakt and approve Reelish, then come back here. '
                     'This page updates by itself.',
           textAlign: TextAlign.center,
-          style: const TextStyle(
+          style: TextStyle(
             color: GlassTheme.muted,
             fontWeight: FontWeight.w500,
             height: 1.4,
@@ -725,7 +725,7 @@ class _Status extends StatelessWidget {
         Flexible(
           child: Text(
             text,
-            style: const TextStyle(
+            style: TextStyle(
               color: GlassTheme.muted,
               fontWeight: FontWeight.w500,
             ),

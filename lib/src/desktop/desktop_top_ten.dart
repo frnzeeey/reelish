@@ -398,7 +398,7 @@ class _Numeral extends StatelessWidget {
           tween: ColorTween(
             end: highlighted
                 ? GlassTheme.coralBright
-                : Colors.white.withValues(alpha: .7),
+                : GlassTheme.textPrimary.withValues(alpha: .7),
           ),
           duration: desktopMotion(context),
           builder: (context, color, _) => Text(
@@ -413,7 +413,7 @@ class _Numeral extends StatelessWidget {
               foreground: Paint()
                 ..style = PaintingStyle.stroke
                 ..strokeWidth = (size / 50).clamp(2.5, 5)
-                ..color = color ?? Colors.white,
+                ..color = color ?? GlassTheme.textPrimary,
             ),
           ),
         ),

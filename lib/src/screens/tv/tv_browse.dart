@@ -142,30 +142,30 @@ class _Backdrop extends StatelessWidget {
                     ),
             ),
             // Painted fades into the background, left and bottom.
-            const DecoratedBox(
+            DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.centerLeft,
                   end: Alignment.centerRight,
                   colors: [
                     GlassTheme.background,
-                    Color(0xCC0B0B0F),
-                    Color(0x330B0B0F),
-                    Color(0x000B0B0F),
+                    GlassTheme.artworkScrim.withValues(alpha: .8),
+                    GlassTheme.artworkScrim.withValues(alpha: .2),
+                    GlassTheme.artworkScrim.withValues(alpha: 0),
                   ],
                   stops: [0, .25, .6, 1],
                 ),
               ),
             ),
-            const DecoratedBox(
+            DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.bottomCenter,
                   end: Alignment.topCenter,
                   colors: [
                     GlassTheme.background,
-                    Color(0x990B0B0F),
-                    Color(0x000B0B0F),
+                    GlassTheme.artworkScrim.withValues(alpha: .6),
+                    GlassTheme.artworkScrim.withValues(alpha: 0),
                   ],
                   stops: [0, .35, .7],
                 ),
@@ -581,7 +581,7 @@ class TvRowMessage extends StatelessWidget {
                         if (message != null)
                           Text(
                             message!,
-                            style: const TextStyle(color: GlassTheme.muted),
+                            style: TextStyle(color: GlassTheme.muted),
                           ),
                         if (onRetry != null) ...[
                           const SizedBox(width: 16),
@@ -801,7 +801,7 @@ class TvMessage extends StatelessWidget {
             Text(
               message!,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: GlassTheme.muted, height: 1.4),
+              style: TextStyle(color: GlassTheme.muted, height: 1.4),
             ),
           ],
           if (actionLabel != null && onAction != null) ...[

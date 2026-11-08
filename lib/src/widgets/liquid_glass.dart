@@ -27,7 +27,7 @@ class LiquidGlass extends StatelessWidget {
     this.opacity = .72,
     this.borderRadius = 20,
     this.padding = EdgeInsets.zero,
-    this.tintColor = const Color(0xFF111722),
+    this.tintColor,
     this.accentColor,
     this.showShadow = true,
     this.showBorder = true,
@@ -49,7 +49,9 @@ class LiquidGlass extends StatelessWidget {
   final double opacity;
   final double borderRadius;
   final EdgeInsetsGeometry padding;
-  final Color tintColor;
+
+  /// The glass body; the theme's glass tint by default.
+  final Color? tintColor;
 
   /// Color of the ambient reflection when [accentStrength] is above zero;
   /// defaults to the theme accent.
@@ -117,7 +119,7 @@ class LiquidGlass extends StatelessWidget {
       painter: LiquidGlassBodyPainter(
         radius: borderRadius,
         opacity: opacity,
-        tint: tintColor,
+        tint: tintColor ?? GlassTheme.glassTint,
         highlight: showTopHighlight ? light : 0,
         accent: accent,
         accentStrength: accentStrength,
@@ -490,7 +492,7 @@ class ReelishGlassCard extends StatefulWidget {
     this.highlightIntensity = 1,
     this.accentStrength = 0,
     this.selected = false,
-    this.tintColor = const Color(0xFF111722),
+    this.tintColor,
   });
 
   final Widget child;
@@ -506,7 +508,9 @@ class ReelishGlassCard extends StatefulWidget {
 
   /// Adds coral ambient light, for the selected item among glass choices.
   final bool selected;
-  final Color tintColor;
+
+  /// The glass body; the theme's glass tint by default.
+  final Color? tintColor;
 
   @override
   State<ReelishGlassCard> createState() => _ReelishGlassCardState();

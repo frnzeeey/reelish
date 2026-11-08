@@ -317,7 +317,7 @@ class _Backdrop extends StatelessWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              const ColoredBox(color: GlassTheme.surface),
+              ColoredBox(color: GlassTheme.surface),
               if (image.isNotEmpty)
                 ArtworkImage.network(
                   image,
@@ -332,26 +332,29 @@ class _Backdrop extends StatelessWidget {
         ),
         // The text side darkened for contrast, eased off by the middle so
         // the artwork leads.
-        const DecoratedBox(
+        DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                Color(0xF20B0B0F),
-                Color(0xC70B0B0F),
-                Color(0x590B0B0F),
-                Color(0x000B0B0F),
+                GlassTheme.artworkScrim.withValues(alpha: .949),
+                GlassTheme.artworkScrim.withValues(alpha: .78),
+                GlassTheme.artworkScrim.withValues(alpha: .349),
+                GlassTheme.artworkScrim.withValues(alpha: 0),
               ],
               stops: [0, .22, .44, .66],
             ),
           ),
         ),
         // The far edge darkened a little, so the eye stays on the picture.
-        const DecoratedBox(
+        DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.centerRight,
               end: Alignment.centerLeft,
-              colors: [Color(0x660B0B0F), Color(0x000B0B0F)],
+              colors: [
+                GlassTheme.artworkScrim.withValues(alpha: .4),
+                GlassTheme.artworkScrim.withValues(alpha: 0),
+              ],
               stops: [0, .2],
             ),
           ),
@@ -363,11 +366,11 @@ class _Backdrop extends StatelessWidget {
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: const [
-                Color(0x590B0B0F),
-                Color(0x000B0B0F),
-                Color(0x000B0B0F),
-                Color(0xB30B0B0F),
+              colors: [
+                GlassTheme.artworkScrim.withValues(alpha: .349),
+                GlassTheme.artworkScrim.withValues(alpha: 0),
+                GlassTheme.artworkScrim.withValues(alpha: 0),
+                GlassTheme.artworkScrim.withValues(alpha: .702),
                 GlassTheme.background,
                 GlassTheme.background,
               ],
@@ -616,9 +619,7 @@ class _HeroText extends StatelessWidget {
                 ),
                 // Dark on the accent, as on phone and TV: white on coral
                 // is 3.2:1, below the 4.5:1 text needs.
-                foregroundColor: const WidgetStatePropertyAll(
-                  GlassTheme.background,
-                ),
+                foregroundColor: WidgetStatePropertyAll(GlassTheme.background),
                 backgroundColor: WidgetStateProperty.resolveWith(
                   (states) => states.contains(WidgetState.pressed)
                       ? Color.alphaBlend(

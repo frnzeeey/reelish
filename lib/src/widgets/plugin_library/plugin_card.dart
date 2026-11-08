@@ -65,10 +65,10 @@ class _PluginCardState extends State<PluginCard> {
     final border = _focused
         ? BorderSide(color: GlassTheme.coralBright, width: 2.5)
         : _hovered
-        ? BorderSide(color: Colors.white.withValues(alpha: .22))
+        ? BorderSide(color: GlassTheme.textPrimary.withValues(alpha: .22))
         : widget.installed
         ? BorderSide(color: GlassTheme.primary.withValues(alpha: .35))
-        : const BorderSide(color: GlassTheme.border);
+        : BorderSide(color: GlassTheme.border);
     return Semantics(
       container: true,
       label:
@@ -144,7 +144,7 @@ class _PluginCardState extends State<PluginCard> {
                                   : 'by ${plugin.author}',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 color: GlassTheme.muted,
                                 fontSize: AppTextSize.label,
                               ),
@@ -183,7 +183,7 @@ class _PluginCardState extends State<PluginCard> {
                   Expanded(
                     child: ClipRect(
                       child: preview.isEmpty
-                          ? const Text(
+                          ? Text(
                               'The manifest could not be reached when the '
                               'catalog was updated.',
                               maxLines: 2,
@@ -217,7 +217,7 @@ class _PluginCardState extends State<PluginCard> {
                           freshness,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: GlassTheme.muted,
                             fontSize: AppTextSize.caption,
                             height: 1.3,
@@ -251,10 +251,12 @@ class _SourceChip extends StatelessWidget {
     constraints: const BoxConstraints(maxWidth: 132),
     padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
     decoration: BoxDecoration(
-      color: subtle ? Colors.transparent : Colors.white.withValues(alpha: .05),
+      color: subtle
+          ? Colors.transparent
+          : GlassTheme.textPrimary.withValues(alpha: .05),
       borderRadius: BorderRadius.circular(AppRadius.sm),
       border: Border.all(
-        color: Colors.white.withValues(alpha: subtle ? .1 : .06),
+        color: GlassTheme.textPrimary.withValues(alpha: subtle ? .1 : .06),
       ),
     ),
     child: Text(
@@ -262,7 +264,9 @@ class _SourceChip extends StatelessWidget {
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
       style: TextStyle(
-        color: subtle ? GlassTheme.muted : Colors.white70,
+        color: subtle
+            ? GlassTheme.muted
+            : GlassTheme.textPrimary.withValues(alpha: .7),
         fontSize: AppTextSize.caption,
         fontWeight: FontWeight.w600,
       ),

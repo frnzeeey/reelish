@@ -33,7 +33,7 @@ graph LR
   desktop["desktop"] -->|25| theme["theme"]
   desktop["desktop"] -->|4| viewmodels["viewmodels"]
   desktop["desktop"] -->|1| watch_party["watch_party"]
-  desktop["desktop"] -->|18| widgets["widgets"]
+  desktop["desktop"] -->|19| widgets["widgets"]
   desktop["desktop"] -->|3| widgets_settings["widgets/settings"]
   diagnostics["diagnostics"] -->|1| analytics["analytics"]
   diagnostics["diagnostics"] -->|1| services["services"]
@@ -61,7 +61,7 @@ graph LR
   screens["screens"] -->|51| theme["theme"]
   screens["screens"] -->|3| viewmodels["viewmodels"]
   screens["screens"] -->|2| watch_party["watch_party"]
-  screens["screens"] -->|35| widgets["widgets"]
+  screens["screens"] -->|36| widgets["widgets"]
   screens["screens"] -->|4| widgets_player["widgets/player"]
   screens["screens"] -->|14| widgets_plugin_library["widgets/plugin_library"]
   screens["screens"] -->|15| widgets_settings["widgets/settings"]
@@ -73,7 +73,7 @@ graph LR
   screens_tv["screens/tv"] -->|9| theme["theme"]
   screens_tv["screens/tv"] -->|4| viewmodels["viewmodels"]
   screens_tv["screens/tv"] -->|1| watch_party["watch_party"]
-  screens_tv["screens/tv"] -->|4| widgets["widgets"]
+  screens_tv["screens/tv"] -->|5| widgets["widgets"]
   screens_tv["screens/tv"] -->|1| widgets_settings["widgets/settings"]
   screens_tv["screens/tv"] -->|5| widgets_tv["widgets/tv"]
   screens_watch_party["screens/watch_party"] -->|4| account["account"]
@@ -91,7 +91,7 @@ graph LR
   services["services"] -->|6| analytics["analytics"]
   services["services"] -->|35| models["models"]
   services["services"] -->|2| platform["platform"]
-  services["services"] -->|2| theme["theme"]
+  services["services"] -->|3| theme["theme"]
   support["support"] -->|3| account["account"]
   support["support"] -->|1| platform["platform"]
   support["support"] -->|1| services["services"]
@@ -110,7 +110,7 @@ graph LR
   widgets["widgets"] -->|3| models["models"]
   widgets["widgets"] -->|5| platform["platform"]
   widgets["widgets"] -->|4| services["services"]
-  widgets["widgets"] -->|29| theme["theme"]
+  widgets["widgets"] -->|31| theme["theme"]
   widgets["widgets"] -->|1| widgets_settings["widgets/settings"]
   widgets["widgets"] -->|2| widgets_tv["widgets/tv"]
   widgets_player["widgets/player"] -->|1| account["account"]
@@ -143,21 +143,21 @@ graph LR
 | `account` | `models` (1), `platform` (1), `services` (2) |
 | `analytics` | `diagnostics` (1) |
 | `app` | `services` (5) |
-| `desktop` | `account` (1), `models` (12), `navigation` (2), `screens` (6), `screens/watch_party` (2), `services` (14), `theme` (25), `viewmodels` (4), `watch_party` (1), `widgets` (18), `widgets/settings` (3) |
+| `desktop` | `account` (1), `models` (12), `navigation` (2), `screens` (6), `screens/watch_party` (2), `services` (14), `theme` (25), `viewmodels` (4), `watch_party` (1), `widgets` (19), `widgets/settings` (3) |
 | `diagnostics` | `analytics` (1), `services` (1) |
 | `models` | nothing outside itself |
 | `navigation` | `theme` (1) |
 | `notifications` | `account` (4), `analytics` (2), `platform` (1), `services` (2) |
 | `platform` | `account` (1), `analytics` (2), `widgets` (1) |
-| `screens` | `account` (17), `analytics` (3), `app` (1), `desktop` (7), `diagnostics` (3), `models` (23), `navigation` (7), `notifications` (2), `platform` (12), `screens/tv` (3), `screens/watch_party` (4), `services` (33), `support` (3), `theme` (51), `viewmodels` (3), `watch_party` (2), `widgets` (35), `widgets/player` (4), `widgets/plugin_library` (14), `widgets/settings` (15), `widgets/tv` (5) |
-| `screens/tv` | `models` (5), `navigation` (1), `screens/watch_party` (1), `services` (5), `theme` (9), `viewmodels` (4), `watch_party` (1), `widgets` (4), `widgets/settings` (1), `widgets/tv` (5) |
+| `screens` | `account` (17), `analytics` (3), `app` (1), `desktop` (7), `diagnostics` (3), `models` (23), `navigation` (7), `notifications` (2), `platform` (12), `screens/tv` (3), `screens/watch_party` (4), `services` (33), `support` (3), `theme` (51), `viewmodels` (3), `watch_party` (2), `widgets` (36), `widgets/player` (4), `widgets/plugin_library` (14), `widgets/settings` (15), `widgets/tv` (5) |
+| `screens/tv` | `models` (5), `navigation` (1), `screens/watch_party` (1), `services` (5), `theme` (9), `viewmodels` (4), `watch_party` (1), `widgets` (5), `widgets/settings` (1), `widgets/tv` (5) |
 | `screens/watch_party` | `account` (4), `desktop` (2), `models` (1), `navigation` (2), `platform` (3), `screens` (1), `theme` (15), `watch_party` (9), `widgets` (8), `widgets/settings` (3), `widgets/tv` (1) |
-| `services` | `account` (3), `analytics` (6), `models` (35), `platform` (2), `theme` (2) |
+| `services` | `account` (3), `analytics` (6), `models` (35), `platform` (2), `theme` (3) |
 | `support` | `account` (3), `platform` (1), `services` (1) |
 | `theme` | `widgets` (1) |
 | `viewmodels` | `analytics` (2), `models` (11), `services` (13) |
 | `watch_party` | `account` (4), `analytics` (2), `diagnostics` (1), `models` (1) |
-| `widgets` | `account` (3), `analytics` (4), `desktop` (1), `diagnostics` (1), `models` (3), `platform` (5), `services` (4), `theme` (29), `widgets/settings` (1), `widgets/tv` (2) |
+| `widgets` | `account` (3), `analytics` (4), `desktop` (1), `diagnostics` (1), `models` (3), `platform` (5), `services` (4), `theme` (31), `widgets/settings` (1), `widgets/tv` (2) |
 | `widgets/player` | `account` (1), `diagnostics` (2), `models` (19), `platform` (7), `services` (15), `theme` (25), `watch_party` (3), `widgets` (6), `widgets/tv` (1) |
 | `widgets/plugin_library` | `models` (4), `platform` (1), `services` (5), `theme` (30), `widgets` (3) |
 | `widgets/settings` | `theme` (7), `widgets` (1), `widgets/tv` (1) |
@@ -169,7 +169,7 @@ The files imported by the most other `lib/` files. A change to one of these reac
 
 | File | Imported by (lib files) | Imported by (tests) |
 |---|---|---|
-| [`lib/src/theme/glass_theme.dart`](../../lib/src/theme/glass_theme.dart) | 80 | 39 |
+| [`lib/src/theme/glass_theme.dart`](../../lib/src/theme/glass_theme.dart) | 81 | 39 |
 | [`lib/src/theme/reelish_icons.dart`](../../lib/src/theme/reelish_icons.dart) | 75 | 8 |
 | [`lib/src/theme/design_tokens.dart`](../../lib/src/theme/design_tokens.dart) | 45 | 1 |
 | [`lib/src/models/media_item.dart`](../../lib/src/models/media_item.dart) | 32 | 38 |
@@ -202,7 +202,7 @@ Each third-party package imported by `lib/`, A–Z, with the files that import i
 | Package | Imported by |
 |---|---|
 | `crypto` | `src/account/profile_controller.dart`, `src/services/github_update_service.dart`, `src/services/provider_plugin_service.dart` |
-| `flutter` | 149 files, including `icon_gallery.dart`, `main.dart`, `src/account/account_badges.dart`, `src/account/account_controller.dart`, `src/account/avatar_image.dart`, `src/account/profile_controller.dart` |
+| `flutter` | 151 files, including `icon_gallery.dart`, `main.dart`, `src/account/account_badges.dart`, `src/account/account_controller.dart`, `src/account/avatar_image.dart`, `src/account/profile_controller.dart` |
 | `flutter_cache_manager` | `src/widgets/artwork_image.dart` |
 | `flutter_go_torrent_streamer` | `src/services/torrent_source_preparer.dart`, `src/widgets/player/custom_video_player.dart` |
 | `flutter_js` | `src/services/provider_fetch_bridge.dart`, `src/services/provider_runner.dart` |

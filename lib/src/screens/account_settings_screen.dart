@@ -454,7 +454,7 @@ class _ProfileCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Signed in with Trakt',
                       style: TextStyle(
                         color: GlassTheme.muted,
@@ -479,7 +479,7 @@ class _ProfileCard extends StatelessWidget {
                         _wrappable('@$username'),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: GlassTheme.muted,
                           fontSize: AppTextSize.label,
                           fontWeight: FontWeight.w500,
@@ -600,7 +600,7 @@ class _DangerTile extends StatelessWidget {
                     const SizedBox(height: 3),
                     Text(
                       description,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: GlassTheme.muted,
                         fontSize: AppTextSize.label,
                         height: 1.4,
@@ -611,7 +611,7 @@ class _DangerTile extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               trailing ??
-                  const Icon(
+                  Icon(
                     ReelishIcons.chevronRight,
                     color: GlassTheme.muted,
                     size: 22,

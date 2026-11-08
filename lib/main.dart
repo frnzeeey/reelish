@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'src/account/account_controller.dart';
 import 'src/account/supporter_controller.dart';
 import 'src/account/profile_controller.dart';
@@ -55,9 +56,40 @@ class _ReelishAppState extends State<ReelishApp> {
   /// Lets desktop keyboard shortcuts go back from any screen.
   final _navigatorKey = GlobalKey<NavigatorState>();
 
+  /// The look last drawn: accent and page colours.
+  Object? _look;
+
+  @override
+  void initState() {
+    super.initState();
+    _accentSettings.addListener(_lookChanged);
+  }
+
+  /// Screens read the theme's colours through GlassTheme as they build, not
+  /// only through Theme.of, so a new look rebuilds every element once,
+  /// after this frame. Navigation and state are kept; nothing is recreated.
+  void _lookChanged() {
+    final look = (GlassTheme.accent.id, GlassTheme.surfaces);
+    if (look == _look) return;
+    final first = _look == null;
+    _look = look;
+    if (first) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      void rebuild(Element element) {
+        element.markNeedsBuild();
+        element.visitChildren(rebuild);
+      }
+
+      (context as Element).visitChildren(rebuild);
+    });
+  }
+
   @override
   void dispose() {
-    _accentSettings.dispose();
+    _accentSettings
+      ..removeListener(_lookChanged)
+      ..dispose();
     super.dispose();
   }
 
@@ -75,17 +107,32 @@ class _ReelishAppState extends State<ReelishApp> {
         title: 'Reelish',
         debugShowCheckedModeBanner: false,
         theme: tv ? GlassTheme.tv : GlassTheme.dark,
+        // A new theme fades in, except under reduced motion.
+        themeAnimationDuration:
+            MediaQueryData.fromView(View.of(context)).disableAnimations
+            ? Duration.zero
+            : kThemeAnimationDuration,
         navigatorKey: _navigatorKey,
         navigatorObservers: [if (tv) _popupFocus],
-        builder: DeviceCapabilities.isDesktopPlatform
-            ? (context, child) => DesktopGamepad(
-                navigatorKey: _navigatorKey,
-                child: DesktopShortcuts(
+        builder: (context, child) {
+          // Status bar icons that read on the theme's pages: dark ones on a
+          // light theme. The player sets its own while it plays.
+          final content = AnnotatedRegion<SystemUiOverlayStyle>(
+            value: GlassTheme.surfaces.brightness == Brightness.light
+                ? SystemUiOverlayStyle.dark
+                : SystemUiOverlayStyle.light,
+            child: child!,
+          );
+          return DeviceCapabilities.isDesktopPlatform
+              ? DesktopGamepad(
                   navigatorKey: _navigatorKey,
-                  child: child!,
-                ),
-              )
-            : null,
+                  child: DesktopShortcuts(
+                    navigatorKey: _navigatorKey,
+                    child: content,
+                  ),
+                )
+              : content;
+        },
         home: _StartupScreen(accentSettings: _accentSettings),
       );
     },

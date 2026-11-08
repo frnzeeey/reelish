@@ -71,7 +71,7 @@ class UpdateDialogFrame extends StatelessWidget {
     insetPadding: const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(26),
-      side: const BorderSide(color: GlassTheme.border),
+      side: BorderSide(color: GlassTheme.border),
     ),
     child: ConstrainedBox(
       constraints: BoxConstraints(maxWidth: maxWidth),

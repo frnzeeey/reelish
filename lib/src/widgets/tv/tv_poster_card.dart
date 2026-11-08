@@ -125,7 +125,7 @@ class _TitleFallback extends StatelessWidget {
     child: Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Icon(ReelishIcons.movie, color: GlassTheme.muted, size: 30),
+        Icon(ReelishIcons.movie, color: GlassTheme.muted, size: 30),
         const SizedBox(height: 10),
         Text(
           item.name,
@@ -172,7 +172,7 @@ class TvRankedPoster extends StatelessWidget {
                 foreground: Paint()
                   ..style = PaintingStyle.stroke
                   ..strokeWidth = 3
-                  ..color = Colors.white.withValues(alpha: .72),
+                  ..color = GlassTheme.textPrimary.withValues(alpha: .72),
               ),
             ),
           ),

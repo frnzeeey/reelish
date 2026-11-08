@@ -130,7 +130,7 @@ class _AppIconSettingsScreenState extends State<AppIconSettingsScreen> {
     padding: const EdgeInsets.only(bottom: AppSpace.sm),
     child: Text(
       text,
-      style: const TextStyle(
+      style: TextStyle(
         color: GlassTheme.muted,
         fontSize: AppTextSize.label,
         fontWeight: FontWeight.w700,
@@ -227,7 +227,7 @@ class _FootNote extends StatelessWidget {
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
+        Padding(
           padding: EdgeInsets.only(top: 1),
           child: Icon(
             ReelishIcons.info,
@@ -239,7 +239,7 @@ class _FootNote extends StatelessWidget {
         Expanded(
           child: Text(
             text,
-            style: const TextStyle(
+            style: TextStyle(
               color: GlassTheme.muted,
               fontSize: AppTextSize.label,
               height: 1.4,
@@ -285,7 +285,7 @@ class _IconChoiceState extends State<_IconChoice> {
     final duration = AppMotion.resolve(context, AppMotion.hover);
     final icon = (widget.width - 28).clamp(48.0, 76.0);
     final border = _focused
-        ? Colors.white
+        ? GlassTheme.textPrimary
         : widget.selected
         ? GlassTheme.primary
         : GlassTheme.border;
@@ -452,7 +452,7 @@ class _SupporterIconSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Material(
     color: GlassTheme.surface,
-    shape: const RoundedRectangleBorder(
+    shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xxl)),
       side: BorderSide(color: GlassTheme.border),
     ),
@@ -472,7 +472,7 @@ class _SupporterIconSheet extends StatelessWidget {
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.white24,
+                color: GlassTheme.textPrimary.withValues(alpha: .24),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -505,7 +505,7 @@ class _SupporterIconSheet extends StatelessWidget {
               ],
             ),
             const SizedBox(height: AppSpace.xs),
-            const Text(
+            Text(
               'Part of the supporter collection: every app icon, as a '
               'thank-you to the people who fund Reelish. Default and Slate '
               'stay free for everyone.',

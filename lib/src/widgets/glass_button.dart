@@ -25,9 +25,9 @@ enum GlassButtonTone {
 /// layer follows the default stadium shape; a button with another shape
 /// passes its corner radius to [layer].
 abstract final class GlassButtonStyle {
-  /// The tint of secondary glass: [LiquidGlass]'s default tint, so buttons
-  /// and panels are the same material.
-  static const smokedGlass = Color(0xFF111722);
+  /// The tint of secondary glass: the theme's glass tint, so buttons and
+  /// panels are the same material.
+  static Color get smokedGlass => GlassTheme.glassTint;
 
   /// Paints the finish behind a button's content for its current states.
   static ButtonLayerBuilder layer({
@@ -61,18 +61,19 @@ abstract final class GlassButtonStyle {
             : BorderSide.none,
       );
 
-  /// The theme's primary button: the accent fill with the glass finish.
-  static ButtonStyle filled() => ButtonStyle(
+  /// The theme's primary button: the accent fill with the glass finish and
+  /// a focus [ring] (the theme's text colour by default).
+  static ButtonStyle filled({Color? ring}) => ButtonStyle(
     backgroundBuilder: layer(),
-    side: focusRing(GlassTheme.textPrimary),
+    side: focusRing(ring ?? GlassTheme.textPrimary),
   );
 
-  /// The theme's secondary button: smoked glass, readable over artwork,
-  /// lighter than the primary one.
-  static ButtonStyle outlined() => ButtonStyle(
+  /// The theme's secondary button: smoked glass in [tint] (the theme's glass
+  /// tint by default), readable over artwork, lighter than the primary one.
+  static ButtonStyle outlined({Color? tint, Color? ring}) => ButtonStyle(
     backgroundBuilder: layer(tone: GlassButtonTone.neutral),
     backgroundColor: WidgetStateProperty.resolveWith(
-      (states) => smokedGlass.withValues(
+      (states) => (tint ?? smokedGlass).withValues(
         alpha: states.contains(WidgetState.disabled)
             ? .22
             : states.contains(WidgetState.pressed)
@@ -82,7 +83,7 @@ abstract final class GlassButtonStyle {
             : .42,
       ),
     ),
-    side: focusRing(GlassTheme.coralBright),
+    side: focusRing(ring ?? GlassTheme.coralBright),
   );
 }
 

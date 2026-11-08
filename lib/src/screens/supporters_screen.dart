@@ -317,10 +317,10 @@ class _Hero extends StatelessWidget {
                   ? 'You help keep Reelish growing.'
                   : 'Supporter since ${supporterSinceLabel(status!.since!)}. '
                         'You help keep Reelish growing.',
-              style: const TextStyle(color: GlassTheme.muted, height: 1.4),
+              style: TextStyle(color: GlassTheme.muted, height: 1.4),
             ),
           ] else
-            const Text(
+            Text(
               message,
               style: TextStyle(color: GlassTheme.muted, height: 1.45),
             ),
@@ -346,7 +346,7 @@ class _Hero extends StatelessWidget {
             const SizedBox(height: AppSpace.xs),
             Text(
               'Opens ${SupportConfig.donationPageLabel} in your browser.',
-              style: const TextStyle(color: GlassTheme.muted, fontSize: 12),
+              style: TextStyle(color: GlassTheme.muted, fontSize: 12),
             ),
           ],
         ],
@@ -367,7 +367,7 @@ class _SupportFromPhone extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      const Text(
+      Text(
         'On your phone or computer, open',
         style: TextStyle(color: GlassTheme.muted, fontSize: AppTextSize.body),
       ),
@@ -381,7 +381,7 @@ class _SupportFromPhone extends StatelessWidget {
       ),
       if (code != null) ...[
         const SizedBox(height: AppSpace.sm),
-        const Text(
+        Text(
           'and add this code to your message',
           style: TextStyle(color: GlassTheme.muted, fontSize: AppTextSize.body),
         ),
@@ -599,10 +599,7 @@ class _EmailDetail extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: const TextStyle(color: GlassTheme.muted, fontSize: 12),
-        ),
+        Text(label, style: TextStyle(color: GlassTheme.muted, fontSize: 12)),
         SelectableText(
           value,
           style: const TextStyle(fontWeight: FontWeight.w600),

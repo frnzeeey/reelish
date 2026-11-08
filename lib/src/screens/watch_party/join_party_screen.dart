@@ -187,7 +187,7 @@ class _JoinPartyScreenState extends State<JoinPartyScreen> {
               ),
             ),
             const SizedBox(height: AppSpace.xxs),
-            const Text(
+            Text(
               'The host sees it in their waiting room. Pasting a whole '
               'invitation works too.',
               textAlign: TextAlign.center,
@@ -226,7 +226,7 @@ class _JoinPartyScreenState extends State<JoinPartyScreen> {
             // Where the lookup's answer appears: a spinner, the reason it
             // failed, or the party itself.
             const SizedBox(height: AppSpace.md),
-            const Text(
+            Text(
               _hostHint,
               textAlign: TextAlign.center,
               style: TextStyle(
@@ -261,7 +261,7 @@ class _JoinPartyScreenState extends State<JoinPartyScreen> {
                     ),
                   if (found != null) ...[
                     const SizedBox(height: AppSpace.lg),
-                    const Divider(height: 1, color: DesktopSurfaces.hairline),
+                    Divider(height: 1, color: DesktopSurfaces.hairline),
                     const SizedBox(height: AppSpace.xs),
                     PartyContentCard(
                       content: found.content,
@@ -371,7 +371,7 @@ class _JoinPartyScreenState extends State<JoinPartyScreen> {
                       icon: const Icon(ReelishIcons.paste),
                       label: const Text('Paste code'),
                     ),
-                    const Text(
+                    Text(
                       'The host sees it in their waiting room. Pasting a '
                       'whole invitation works too.',
                       textAlign: TextAlign.center,
@@ -416,7 +416,7 @@ class _JoinPartyScreenState extends State<JoinPartyScreen> {
           )
         else
           // Who has no code came to the wrong page; say where to go.
-          const Padding(
+          Padding(
             padding: EdgeInsets.fromLTRB(
               AppSpace.lg,
               AppSpace.md,

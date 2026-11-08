@@ -244,7 +244,7 @@ class _WatchTogetherRow extends StatelessWidget {
             children: [
               Icon(ReelishIcons.people, color: GlassTheme.primary),
               const SizedBox(width: 14),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

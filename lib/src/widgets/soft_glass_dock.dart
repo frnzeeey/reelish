@@ -234,7 +234,9 @@ class _DockItem extends StatelessWidget {
                     child: Icon(
                       selected ? selectedIcon : icon,
                       size: iconSize,
-                      color: selected ? GlassTheme.primary : Colors.white70,
+                      color: selected
+                          ? GlassTheme.primary
+                          : GlassTheme.textPrimary.withValues(alpha: .7),
                     ),
                   ),
                   const SizedBox(height: 3),
@@ -262,7 +264,7 @@ class _DockItem extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: selected
                           ? GlassTheme.primary
-                          : Colors.white.withValues(alpha: .16),
+                          : GlassTheme.textPrimary.withValues(alpha: .16),
                       borderRadius: BorderRadius.circular(3),
                       boxShadow: selected
                           ? [

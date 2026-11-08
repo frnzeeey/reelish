@@ -190,13 +190,13 @@ class _MenuPill extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                color: active ? GlassTheme.coralBright : Colors.white,
+                color: active ? GlassTheme.coralBright : GlassTheme.textPrimary,
                 fontSize: AppTextSize.label,
                 fontWeight: FontWeight.w700,
               ),
             ),
             const SizedBox(width: 2),
-            const Icon(
+            Icon(
               ReelishIcons.caretDown,
               size: AppIcon.sm,
               color: GlassTheme.muted,

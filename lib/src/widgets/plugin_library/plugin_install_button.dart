@@ -61,7 +61,7 @@ class _PluginInstallButtonState extends State<PluginInstallButton> {
           '${widget.plugin.author ?? 'a third party'}, not Reelish. Its '
           'provider scripts run on this device and can make network requests. '
           'Install only if you trust this source.\n\n$url',
-          style: const TextStyle(color: GlassTheme.muted, height: 1.4),
+          style: TextStyle(color: GlassTheme.muted, height: 1.4),
         ),
         actions: [
           TextButton(
@@ -215,7 +215,7 @@ class _PluginRemoveButtonState extends State<PluginRemoveButton> {
       builder: (dialogContext) => AlertDialog(
         backgroundColor: GlassTheme.elevatedSurface,
         title: Text('Remove ${widget.plugin.name}?'),
-        content: const Text(
+        content: Text(
           'Its providers will no longer be searched when you press play. '
           'You can install it again from the library.',
           style: TextStyle(color: GlassTheme.muted, height: 1.4),
@@ -268,8 +268,8 @@ class _PluginRemoveButtonState extends State<PluginRemoveButton> {
         onPressed: _removing ? null : _remove,
         style: OutlinedButton.styleFrom(
           minimumSize: const Size(0, 48),
-          foregroundColor: Colors.white,
-          side: const BorderSide(color: GlassTheme.border),
+          foregroundColor: GlassTheme.textPrimary,
+          side: BorderSide(color: GlassTheme.border),
         ),
         icon: _removing
             ? const GlassButtonProgress()

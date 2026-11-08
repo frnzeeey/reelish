@@ -110,7 +110,7 @@ class _ProviderInstallerModalState extends State<ProviderInstallerModal> {
                   ),
                 ],
               ),
-              const Text(
+              Text(
                 'Provider scripts run on this device and can make network requests. Add only collections you trust. Use an HTTPS manifest link.',
                 style: TextStyle(color: GlassTheme.muted),
               ),

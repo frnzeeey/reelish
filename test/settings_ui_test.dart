@@ -200,6 +200,8 @@ void main() {
       ),
       size: const Size(360, 740),
     );
+    // Below the theme collection.
+    await _scrollTo(tester, find.text('Custom'));
     for (final preset in GlassTheme.accents) {
       expect(find.text(preset.label), findsOneWidget, reason: preset.id);
     }

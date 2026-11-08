@@ -287,7 +287,7 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
         clipBehavior: Clip.none,
         fit: StackFit.expand,
         children: [
-          const ColoredBox(color: GlassTheme.surface),
+          ColoredBox(color: GlassTheme.surface),
           if (backdrop.isNotEmpty)
             ArtworkImage.network(
               backdrop,
@@ -298,13 +298,13 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
               frameBuilder: posterFadeIn(context),
               errorBuilder: (_, _, _) => const SizedBox.shrink(),
             ),
-          const DecoratedBox(
+          DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  Color(0xF50B0B0F),
-                  Color(0xB00B0B0F),
-                  Color(0x330B0B0F),
+                  GlassTheme.artworkScrim.withValues(alpha: .961),
+                  GlassTheme.artworkScrim.withValues(alpha: .69),
+                  GlassTheme.artworkScrim.withValues(alpha: .2),
                 ],
                 stops: [0, .45, 1],
               ),
@@ -312,17 +312,20 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
           ),
           if (panel)
             // Shade under the panel, so it reads against bright artwork.
-            const DecoratedBox(
+            DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.centerRight,
                   end: Alignment.centerLeft,
-                  colors: [Color(0x990B0B0F), Color(0x000B0B0F)],
+                  colors: [
+                    GlassTheme.artworkScrim.withValues(alpha: .6),
+                    GlassTheme.artworkScrim.withValues(alpha: 0),
+                  ],
                   stops: [0, .45],
                 ),
               ),
             ),
-          const DecoratedBox(
+          DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
@@ -330,9 +333,9 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
                 // Solid before the edge, so the image's last pixel row
                 // never shows as a line.
                 colors: [
-                  Color(0x800B0B0F),
-                  Color(0x000B0B0F),
-                  Color(0x000B0B0F),
+                  GlassTheme.artworkScrim.withValues(alpha: .502),
+                  GlassTheme.artworkScrim.withValues(alpha: 0),
+                  GlassTheme.artworkScrim.withValues(alpha: 0),
                   GlassTheme.background,
                   GlassTheme.background,
                 ],
@@ -631,7 +634,7 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
                     // Initials while the photo loads, or when there is none.
                     child: Text(
                       _initials(member.name),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w800,
                         color: GlassTheme.muted,
@@ -654,10 +657,7 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: GlassTheme.muted,
-                    ),
+                    style: TextStyle(fontSize: 12, color: GlassTheme.muted),
                   ),
                 ],
               ),
@@ -692,7 +692,7 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
           crossAxisAlignment: WrapCrossAlignment.center,
           spacing: 12,
           children: [
-            Text(error, style: const TextStyle(color: GlassTheme.muted)),
+            Text(error, style: TextStyle(color: GlassTheme.muted)),
             TextButton.icon(
               onPressed: () {
                 final season = _selectedSeason;
@@ -708,7 +708,7 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
       );
     }
     if (_episodes.isEmpty) {
-      return const Padding(
+      return Padding(
         padding: EdgeInsets.symmetric(vertical: 16),
         child: Text(
           'No episodes are listed for this season yet.',
@@ -756,7 +756,7 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
               if (_episodes.isNotEmpty && !_loadingEpisodes)
                 Text(
                   '${_episodes.length} episode${_episodes.length == 1 ? '' : 's'}',
-                  style: const TextStyle(fontSize: 12, color: GlassTheme.muted),
+                  style: TextStyle(fontSize: 12, color: GlassTheme.muted),
                 ),
             ],
           ),
@@ -766,7 +766,10 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
             padding: const EdgeInsets.only(top: 8, bottom: 4),
             child: picker,
           ),
-        Divider(height: 17, color: Colors.white.withValues(alpha: .08)),
+        Divider(
+          height: 17,
+          color: GlassTheme.textPrimary.withValues(alpha: .08),
+        ),
         Expanded(
           child: notice != null
               ? Padding(
@@ -1039,9 +1042,9 @@ class _Chip extends StatelessWidget {
   @override
   Widget build(BuildContext context) => DecoratedBox(
     decoration: BoxDecoration(
-      color: Colors.white.withValues(alpha: .08),
+      color: GlassTheme.textPrimary.withValues(alpha: .08),
       borderRadius: BorderRadius.circular(20),
-      border: Border.all(color: Colors.white.withValues(alpha: .14)),
+      border: Border.all(color: GlassTheme.textPrimary.withValues(alpha: .14)),
     ),
     child: Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -1071,15 +1074,17 @@ class _SeasonChip extends StatelessWidget {
     onSelected: (_) => onTap(),
     showCheckmark: false,
     selectedColor: GlassTheme.primary.withValues(alpha: .22),
-    backgroundColor: Colors.white.withValues(alpha: .04),
+    backgroundColor: GlassTheme.textPrimary.withValues(alpha: .04),
     labelStyle: TextStyle(
       fontWeight: FontWeight.w700,
-      color: selected ? GlassTheme.coralBright : Colors.white70,
+      color: selected
+          ? GlassTheme.coralBright
+          : GlassTheme.textPrimary.withValues(alpha: .7),
     ),
     side: BorderSide(
       color: selected
           ? GlassTheme.primary.withValues(alpha: .5)
-          : Colors.white.withValues(alpha: .14),
+          : GlassTheme.textPrimary.withValues(alpha: .14),
     ),
   );
 }
@@ -1167,7 +1172,7 @@ class _EpisodeTileState extends State<_EpisodeTile> {
             duration: desktopMotion(context, 160),
             decoration: BoxDecoration(
               color: lifted
-                  ? Colors.white.withValues(alpha: .08)
+                  ? GlassTheme.textPrimary.withValues(alpha: .08)
                   : widget.lastWatched
                   ? GlassTheme.primary.withValues(alpha: .08)
                   : compact
@@ -1180,8 +1185,10 @@ class _EpisodeTileState extends State<_EpisodeTile> {
                     : widget.lastWatched
                     ? GlassTheme.primary.withValues(alpha: .45)
                     : lifted
-                    ? Colors.white.withValues(alpha: .25)
-                    : Colors.white.withValues(alpha: compact ? 0 : .06),
+                    ? GlassTheme.textPrimary.withValues(alpha: .25)
+                    : GlassTheme.textPrimary.withValues(
+                        alpha: compact ? 0 : .06,
+                      ),
                 width: _focused ? 2.5 : 1,
               ),
             ),
@@ -1269,8 +1276,8 @@ class _EpisodeTileState extends State<_EpisodeTile> {
                             fontWeight: FontWeight.w800,
                             fontSize: compact ? 13.5 : 14,
                             color: watched && !lifted
-                                ? Colors.white70
-                                : Colors.white,
+                                ? GlassTheme.textPrimary.withValues(alpha: .7)
+                                : GlassTheme.textPrimary,
                           ),
                         ),
                         const SizedBox(height: 3),
@@ -1291,10 +1298,12 @@ class _EpisodeTileState extends State<_EpisodeTile> {
                             overview,
                             maxLines: compact ? 1 : 2,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12.5,
                               height: 1.35,
-                              color: Colors.white70,
+                              color: GlassTheme.textPrimary.withValues(
+                                alpha: .7,
+                              ),
                             ),
                           ),
                         ],

@@ -395,7 +395,7 @@ class _Sheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Material(
     color: GlassTheme.surface,
-    shape: const RoundedRectangleBorder(
+    shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xxl)),
       side: BorderSide(color: GlassTheme.border),
     ),
@@ -412,7 +412,7 @@ class _Sheet extends StatelessWidget {
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.white24,
+                  color: GlassTheme.textPrimary.withValues(alpha: .24),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -966,7 +966,7 @@ class _Stat extends StatelessWidget {
                       const TextSpan(text: ' '),
                       TextSpan(
                         text: label,
-                        style: const TextStyle(color: GlassTheme.muted),
+                        style: TextStyle(color: GlassTheme.muted),
                       ),
                     ],
                   ),
@@ -1033,7 +1033,7 @@ class _SignedOut extends StatelessWidget {
   const _SignedOut();
 
   @override
-  Widget build(BuildContext context) => const Padding(
+  Widget build(BuildContext context) => Padding(
     padding: EdgeInsets.all(AppSpace.xl),
     child: Column(
       children: [

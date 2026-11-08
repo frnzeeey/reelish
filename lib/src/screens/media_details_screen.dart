@@ -163,7 +163,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Material(
-        color: Colors.white.withValues(alpha: .045),
+        color: GlassTheme.textPrimary.withValues(alpha: .045),
         borderRadius: BorderRadius.circular(16),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
@@ -181,7 +181,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                     width: 112,
                     height: 76,
                     child: image.isEmpty
-                        ? const ColoredBox(
+                        ? ColoredBox(
                             color: GlassTheme.surface,
                             child: Icon(
                               ReelishIcons.movie,
@@ -192,7 +192,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                             image,
                             fit: BoxFit.cover,
                             cacheWidth: 224,
-                            errorBuilder: (_, __, ___) => const ColoredBox(
+                            errorBuilder: (_, __, ___) => ColoredBox(
                               color: GlassTheme.surface,
                               child: Icon(
                                 ReelishIcons.movie,
@@ -241,7 +241,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                             : overview,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: GlassTheme.muted,
                           fontSize: 11,
                           height: 1.3,
@@ -299,16 +299,16 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
           ),
           // Ends in the page colour, fully opaque, so the header blends into
           // the content below without a seam.
-          const Positioned.fill(
+          Positioned.fill(
             child: DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Color(0x990B0B0F),
-                    Color(0x220B0B0F),
-                    Color(0xE60B0B0F),
+                    GlassTheme.artworkScrim.withValues(alpha: .6),
+                    GlassTheme.artworkScrim.withValues(alpha: .133),
+                    GlassTheme.artworkScrim.withValues(alpha: .902),
                     GlassTheme.background,
                   ],
                   stops: [0, .42, .9, 1],
@@ -530,7 +530,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
             width: 72,
             height: 72,
             child: member.profile.isEmpty
-                ? const ColoredBox(
+                ? ColoredBox(
                     color: GlassTheme.surface,
                     child: Icon(ReelishIcons.person, size: 32),
                   )
@@ -538,7 +538,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                     member.profile,
                     fit: BoxFit.cover,
                     cacheWidth: 144,
-                    errorBuilder: (_, __, ___) => const ColoredBox(
+                    errorBuilder: (_, __, ___) => ColoredBox(
                       color: GlassTheme.surface,
                       child: Icon(ReelishIcons.person, size: 32),
                     ),
@@ -560,7 +560,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: GlassTheme.muted, fontSize: 10),
+            style: TextStyle(color: GlassTheme.muted, fontSize: 10),
           ),
         ],
       ],
@@ -636,8 +636,8 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                   synopsis.isNotEmpty
                       ? synopsis
                       : 'No synopsis is available for this title.',
-                  style: const TextStyle(
-                    color: Colors.white70,
+                  style: TextStyle(
+                    color: GlassTheme.textPrimary.withValues(alpha: .7),
                     height: 1.55,
                     fontSize: 14,
                   ),
@@ -658,7 +658,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                 const SizedBox(height: 18),
                 Text(
                   'Status: ${_details!.status}',
-                  style: const TextStyle(color: GlassTheme.muted, fontSize: 12),
+                  style: TextStyle(color: GlassTheme.muted, fontSize: 12),
                 ),
               ],
               if (_loading) ...[
@@ -674,7 +674,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                     Expanded(
                       child: Text(
                         _error!,
-                        style: const TextStyle(color: GlassTheme.muted),
+                        style: TextStyle(color: GlassTheme.muted),
                       ),
                     ),
                     TextButton.icon(
@@ -739,7 +739,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                       Expanded(
                         child: Text(
                           _episodeError!,
-                          style: const TextStyle(color: GlassTheme.muted),
+                          style: TextStyle(color: GlassTheme.muted),
                         ),
                       ),
                       TextButton.icon(
@@ -752,7 +752,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                     ],
                   )
                 else if (_episodes.isEmpty)
-                  const Text(
+                  Text(
                     'No episodes are available for this season.',
                     style: TextStyle(color: GlassTheme.muted),
                   ),
@@ -823,13 +823,16 @@ class _StatusBarScrim extends StatelessWidget {
       left: 0,
       right: 0,
       height: inset + 80,
-      child: const IgnorePointer(
+      child: IgnorePointer(
         child: DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [Color(0xE60B0B0F), Color(0x000B0B0F)],
+              colors: [
+                GlassTheme.background.withValues(alpha: .902),
+                GlassTheme.background.withValues(alpha: 0),
+              ],
             ),
           ),
         ),

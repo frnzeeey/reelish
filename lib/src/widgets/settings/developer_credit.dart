@@ -41,7 +41,7 @@ class _Credit extends StatelessWidget {
   const _Credit();
 
   @override
-  Widget build(BuildContext context) => const Text.rich(
+  Widget build(BuildContext context) => Text.rich(
     TextSpan(
       text: 'Designed & Developed by\n',
       children: [

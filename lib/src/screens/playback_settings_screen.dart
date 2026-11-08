@@ -193,10 +193,12 @@ class AppearanceSettingsScreen extends StatelessWidget {
           return SettingsSection(
             label: 'THEMES',
             description: unlocked
-                ? 'A theme sets the accent across Reelish and dresses your '
-                      'profile. Classic uses the accent you pick below.'
-                : 'For Reelish Supporters: a theme sets the accent across '
-                      'Reelish and dresses your profile.',
+                ? 'A theme changes the colours of every screen and dresses '
+                      'your profile. Choose one to preview it first. Classic '
+                      'uses the accent you pick below.'
+                : 'For Reelish Supporters: a theme changes the colours of '
+                      'every screen and dresses your profile. Choose one to '
+                      'preview it.',
             children: [
               Padding(
                 padding: const EdgeInsets.all(14),
@@ -222,7 +224,8 @@ class AppearanceSettingsScreen extends StatelessWidget {
           label: 'ACCENT COLOR',
           description: controller.theme == null
               ? 'Used for highlights, selections and controls.'
-              : 'Your theme sets the accent now. Pick one to use it instead.',
+              : 'Your theme brings its own accent. Pick another to use it '
+                    'with the theme.',
           children: [
             Padding(
               padding: const EdgeInsets.all(14),
@@ -230,17 +233,28 @@ class AppearanceSettingsScreen extends StatelessWidget {
                 builder: (context, constraints) {
                   const spacing = 8.0;
                   final itemWidth = (constraints.maxWidth - spacing * 3) / 4;
+                  final theme = controller.theme;
+                  // The picked accent shows, rather than the theme's.
+                  final ownAccent =
+                      theme == null || !controller.usesThemeAccent;
                   return Wrap(
                     spacing: spacing,
                     runSpacing: spacing,
                     children: [
+                      // First under a theme: back to the theme's own accent.
+                      if (theme != null)
+                        _AccentChoice(
+                          accent: theme.accent,
+                          labelOverride: 'Theme',
+                          selected: controller.usesThemeAccent,
+                          width: itemWidth,
+                          onTap: () => controller.useThemeAccent(),
+                        ),
                       for (final accent in GlassTheme.accents)
                         _AccentChoice(
                           accent: accent,
-                          // Not while a theme sets the accent.
                           selected:
-                              controller.theme == null &&
-                              accent.id == controller.accent.id,
+                              ownAccent && accent.id == controller.accent.id,
                           width: itemWidth,
                           onTap: () => controller.update(accent),
                         ),
@@ -250,9 +264,7 @@ class AppearanceSettingsScreen extends StatelessWidget {
                         accent: controller.accent.isCustom
                             ? controller.accent
                             : AccentPalette.custom(GlassTheme.coral.primary),
-                        selected:
-                            controller.theme == null &&
-                            controller.accent.isCustom,
+                        selected: ownAccent && controller.accent.isCustom,
                         width: itemWidth,
                         swatch: controller.accent.isCustom
                             ? null
@@ -313,9 +325,9 @@ class AppearanceSettingsScreen extends StatelessWidget {
         icon: const SupporterEmblem(size: 32),
         title: const Text('App themes'),
         content: const Text(
-          'Themes set the accent across Reelish and dress your profile. They '
-          'are a thank-you to Reelish Supporters. Every accent color below '
-          'stays free for everyone.',
+          'Themes change the colours of every screen in Reelish and dress your '
+          'profile. They are a thank-you to Reelish Supporters. Every accent '
+          'color below stays free for everyone.',
         ),
         actions: [
           TextButton(
@@ -348,6 +360,7 @@ class _AccentChoice extends StatelessWidget {
     required this.width,
     required this.onTap,
     this.swatch,
+    this.labelOverride,
   });
 
   final AccentPalette accent;
@@ -358,11 +371,14 @@ class _AccentChoice extends StatelessWidget {
   /// Drawn instead of the accent's dot (the Custom tile's colour wheel).
   final Widget? swatch;
 
+  /// Shown instead of the accent's name (the theme's own accent).
+  final String? labelOverride;
+
   @override
   Widget build(BuildContext context) => Semantics(
     button: true,
     selected: selected,
-    label: '${accent.label} accent color',
+    label: '${labelOverride ?? accent.label} accent color',
     child: InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -425,7 +441,7 @@ class _AccentChoice extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              accent.label,
+              labelOverride ?? accent.label,
               style: TextStyle(
                 color: selected ? accent.bright : GlassTheme.textPrimary,
                 fontSize: AppTextSize.micro,
@@ -530,7 +546,7 @@ class _CustomAccentDialogState extends State<_CustomAccentDialog> {
               Text(
                 '#${hex.toUpperCase()} · brightness is set for you so text '
                 'stays readable.',
-                style: const TextStyle(
+                style: TextStyle(
                   color: GlassTheme.muted,
                   fontSize: AppTextSize.caption,
                   fontWeight: FontWeight.w500,
@@ -584,7 +600,7 @@ class _AccentPreview extends StatelessWidget {
                 color: palette.primary,
                 borderRadius: BorderRadius.circular(AppRadius.pill),
               ),
-              child: const Row(
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
@@ -638,7 +654,7 @@ class _AccentPreview extends StatelessWidget {
             value: .62,
             minHeight: 4,
             color: palette.primary,
-            backgroundColor: Colors.white12,
+            backgroundColor: GlassTheme.textPrimary.withValues(alpha: .12),
           ),
         ),
       ],
@@ -1207,7 +1223,9 @@ class PlaybackSettingsScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: color,
         shape: BoxShape.circle,
-        border: Border.all(color: Colors.white38),
+        border: Border.all(
+          color: GlassTheme.textPrimary.withValues(alpha: .38),
+        ),
       ),
     ),
     onTap: () async {
@@ -1238,7 +1256,9 @@ class PlaybackSettingsScreen extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: preview,
                         borderRadius: BorderRadius.circular(AppRadius.md),
-                        border: Border.all(color: Colors.white38),
+                        border: Border.all(
+                          color: GlassTheme.textPrimary.withValues(alpha: .38),
+                        ),
                       ),
                     ),
                     _colorSlider(
@@ -1371,7 +1391,7 @@ class PlaybackSettingsScreen extends StatelessWidget {
     useSafeArea: true,
     builder: (context) => Material(
       color: GlassTheme.surface,
-      shape: const RoundedRectangleBorder(
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
           top: Radius.circular(AppRadius.xxl),
         ),
@@ -1388,7 +1408,7 @@ class PlaybackSettingsScreen extends StatelessWidget {
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.white24,
+                  color: GlassTheme.textPrimary.withValues(alpha: .24),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),

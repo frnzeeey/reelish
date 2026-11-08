@@ -61,7 +61,7 @@ class PartyContentCard extends StatelessWidget {
                 const SizedBox(height: AppSpace.xs),
                 Text(
                   content.isSeries ? content.episodeLabel : 'Movie',
-                  style: const TextStyle(color: GlassTheme.muted),
+                  style: TextStyle(color: GlassTheme.muted),
                 ),
                 if (detail != null) ...[
                   const SizedBox(height: AppSpace.xs),
@@ -69,7 +69,7 @@ class PartyContentCard extends StatelessWidget {
                     detail!,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: GlassTheme.muted),
+                    style: TextStyle(color: GlassTheme.muted),
                   ),
                 ],
               ],
@@ -85,7 +85,7 @@ class _PosterFallback extends StatelessWidget {
   const _PosterFallback();
 
   @override
-  Widget build(BuildContext context) => const ColoredBox(
+  Widget build(BuildContext context) => ColoredBox(
     color: GlassTheme.surface,
     child: Icon(ReelishIcons.movie, color: GlassTheme.muted),
   );
@@ -249,7 +249,7 @@ class PartyCodeBlock extends StatelessWidget {
     ),
     child: Column(
       children: [
-        const Text(
+        Text(
           'PARTY CODE',
           style: TextStyle(
             color: GlassTheme.muted,
@@ -370,7 +370,7 @@ class PartyHowItWorks extends StatelessWidget {
             const SizedBox(height: 2),
             Text(
               detail,
-              style: const TextStyle(
+              style: TextStyle(
                 color: GlassTheme.muted,
                 fontSize: AppTextSize.label,
               ),
@@ -475,7 +475,7 @@ class _PartyCodeBoxesState extends State<PartyCodeBoxes> {
                     decoration: BoxDecoration(
                       color: filled
                           ? GlassTheme.primary.withValues(alpha: .08)
-                          : Colors.white.withValues(alpha: .04),
+                          : GlassTheme.textPrimary.withValues(alpha: .04),
                       borderRadius: BorderRadius.circular(AppRadius.md),
                       border: Border.all(
                         width: current ? 2 : 1,
@@ -483,7 +483,7 @@ class _PartyCodeBoxesState extends State<PartyCodeBoxes> {
                             ? GlassTheme.primary
                             : filled
                             ? GlassTheme.primary.withValues(alpha: .4)
-                            : Colors.white.withValues(alpha: .12),
+                            : GlassTheme.textPrimary.withValues(alpha: .12),
                       ),
                     ),
                     child: Text(
@@ -506,7 +506,7 @@ class _PartyCodeBoxesState extends State<PartyCodeBoxes> {
                       for (var i = 0; i < 8; i++) ...[
                         if (i == 4)
                           // The two halves, as the code is written.
-                          const SizedBox(
+                          SizedBox(
                             width: 28,
                             child: Center(
                               child: Text(

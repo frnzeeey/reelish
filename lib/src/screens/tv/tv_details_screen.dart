@@ -197,14 +197,14 @@ class _TvMediaDetailsScreenState extends State<TvMediaDetailsScreen> {
                             .round(),
                     errorBuilder: (_, _, _) => const SizedBox.shrink(),
                   ),
-                  const DecoratedBox(
+                  DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
                           GlassTheme.background,
-                          Color(0xCC0B0B0F),
-                          Color(0x330B0B0F),
-                          Color(0x000B0B0F),
+                          GlassTheme.artworkScrim.withValues(alpha: .8),
+                          GlassTheme.artworkScrim.withValues(alpha: .2),
+                          GlassTheme.artworkScrim.withValues(alpha: 0),
                         ],
                         stops: [0, .25, .6, 1],
                       ),
@@ -213,12 +213,15 @@ class _TvMediaDetailsScreenState extends State<TvMediaDetailsScreen> {
                 ],
               ),
             ),
-          const DecoratedBox(
+          DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.bottomCenter,
                 end: Alignment.topCenter,
-                colors: [GlassTheme.background, Color(0x000B0B0F)],
+                colors: [
+                  GlassTheme.background,
+                  GlassTheme.artworkScrim.withValues(alpha: 0),
+                ],
                 stops: [.1, .55],
               ),
             ),
@@ -305,7 +308,7 @@ class _TvMediaDetailsScreenState extends State<TvMediaDetailsScreen> {
           const SizedBox(height: 8),
           Text(
             details!.genres.join(', '),
-            style: const TextStyle(color: GlassTheme.muted, fontSize: 14),
+            style: TextStyle(color: GlassTheme.muted, fontSize: 14),
           ),
         ],
         if (details?.tagline.isNotEmpty == true) ...[
@@ -340,7 +343,7 @@ class _TvMediaDetailsScreenState extends State<TvMediaDetailsScreen> {
             'Starring ${cast.join(', ')}',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: GlassTheme.muted, fontSize: 14),
+            style: TextStyle(color: GlassTheme.muted, fontSize: 14),
           ),
         ],
         const SizedBox(height: 24),
@@ -501,7 +504,7 @@ class _TvMediaDetailsScreenState extends State<TvMediaDetailsScreen> {
     else if (_episodeError != null)
       Row(
         children: [
-          Text(_episodeError!, style: const TextStyle(color: GlassTheme.muted)),
+          Text(_episodeError!, style: TextStyle(color: GlassTheme.muted)),
           const SizedBox(width: 14),
           OutlinedButton.icon(
             onPressed: _seasons.isEmpty
@@ -513,7 +516,7 @@ class _TvMediaDetailsScreenState extends State<TvMediaDetailsScreen> {
         ],
       )
     else if (_episodes.isEmpty)
-      const Text(
+      Text(
         'No episodes are available for this season.',
         style: TextStyle(color: GlassTheme.muted),
       )
@@ -582,17 +585,14 @@ class _EpisodeCard extends StatelessWidget {
                   ColoredBox(
                     color: GlassTheme.elevatedSurface,
                     child: still.isEmpty
-                        ? const Icon(
-                            ReelishIcons.movie,
-                            color: GlassTheme.muted,
-                          )
+                        ? Icon(ReelishIcons.movie, color: GlassTheme.muted)
                         : ArtworkImage.network(
                             'https://image.tmdb.org/t/p/w300$still',
                             fit: BoxFit.cover,
                             cacheWidth:
                                 (width * MediaQuery.devicePixelRatioOf(context))
                                     .round(),
-                            errorBuilder: (_, _, _) => const Icon(
+                            errorBuilder: (_, _, _) => Icon(
                               ReelishIcons.movie,
                               color: GlassTheme.muted,
                             ),
@@ -626,7 +626,7 @@ class _EpisodeCard extends StatelessWidget {
             ].join(' · '),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
+            style: TextStyle(
               color: GlassTheme.muted,
               fontSize: 14,
               height: 1.35,

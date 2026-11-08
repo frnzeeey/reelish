@@ -542,7 +542,7 @@ class _EndPartyTile extends StatelessWidget {
             ),
           ),
           const SizedBox(width: AppSpace.md),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -642,11 +642,7 @@ class _EndedView extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
-                ReelishIcons.people,
-                size: 48,
-                color: GlassTheme.muted,
-              ),
+              Icon(ReelishIcons.people, size: 48, color: GlassTheme.muted),
               const SizedBox(height: AppSpace.md),
               Text(
                 message,

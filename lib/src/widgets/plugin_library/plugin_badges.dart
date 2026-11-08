@@ -100,7 +100,9 @@ class PluginMetaPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = accent ? GlassTheme.coralBright : Colors.white70;
+    final color = accent
+        ? GlassTheme.coralBright
+        : GlassTheme.textPrimary.withValues(alpha: .7);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
       decoration: BoxDecoration(
@@ -110,7 +112,7 @@ class PluginMetaPill extends StatelessWidget {
                 GlassTheme.primary.withValues(alpha: .12),
                 GlassTheme.surface,
               )
-            : Colors.white.withValues(alpha: .05),
+            : GlassTheme.textPrimary.withValues(alpha: .05),
         borderRadius: BorderRadius.circular(AppRadius.sm),
       ),
       child: Row(

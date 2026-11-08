@@ -31,11 +31,11 @@ class PluginSearchBar extends StatelessWidget {
     ),
     decoration: InputDecoration(
       hintText: 'Search plugins, authors or sources…',
-      hintStyle: const TextStyle(
+      hintStyle: TextStyle(
         color: GlassTheme.muted,
         fontWeight: FontWeight.w500,
       ),
-      prefixIcon: const Icon(ReelishIcons.search, color: GlassTheme.muted),
+      prefixIcon: Icon(ReelishIcons.search, color: GlassTheme.muted),
       suffixIcon: ValueListenableBuilder<TextEditingValue>(
         valueListenable: controller,
         builder: (context, value, _) => AnimatedSwitcher(

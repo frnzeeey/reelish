@@ -12,6 +12,7 @@ import '../models/media_item.dart';
 import '../models/resume_summary.dart';
 import '../navigation/app_destination.dart';
 import '../theme/glass_theme.dart';
+import '../widgets/ambient_backdrop.dart';
 import '../widgets/poster_image.dart';
 import 'desktop_widgets.dart';
 import '../widgets/brand_logo.dart';
@@ -114,6 +115,8 @@ class _DesktopShellState extends State<DesktopShell> {
         body: Stack(
           fit: StackFit.expand,
           children: [
+            // The theme's soft light, behind everything.
+            const AmbientBackdrop(),
             // The page's width follows only the pin, never the hover, so
             // opening the rail costs the page nothing.
             AnimatedPositioned(
@@ -305,7 +308,14 @@ class _SidebarState extends State<_Sidebar> {
                 borderRadius: radius,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: overlay ? .5 : 0),
+                    // A light page needs only a soft shadow to lift the rail.
+                    color: Colors.black.withValues(
+                      alpha: overlay
+                          ? (GlassTheme.surfaces.brightness == Brightness.dark
+                                ? .5
+                                : .14)
+                          : 0,
+                    ),
                     blurRadius: 36,
                     offset: const Offset(10, 0),
                   ),
@@ -329,11 +339,15 @@ class _SidebarState extends State<_Sidebar> {
                           Color.alphaBlend(
                             GlassTheme.primary.withValues(alpha: .07),
                             overlay
-                                ? const Color(0x8C111117)
+                                ? Color.lerp(
+                                    GlassTheme.background,
+                                    GlassTheme.surface,
+                                    .4,
+                                  )!.withValues(alpha: .55)
                                 : DesktopSurfaces.sidebar,
                           ),
                           overlay
-                              ? const Color(0xB30D0D12)
+                              ? DesktopSurfaces.sidebar.withValues(alpha: .7)
                               : DesktopSurfaces.sidebar,
                         ],
                         stops: const [0, .5],
@@ -341,7 +355,7 @@ class _SidebarState extends State<_Sidebar> {
                       // Over the page the lit glass edge replaces it.
                       border: Border(
                         right: BorderSide(
-                          color: Colors.white.withValues(
+                          color: GlassTheme.textPrimary.withValues(
                             alpha: overlay ? 0 : .06,
                           ),
                         ),
@@ -468,7 +482,7 @@ class _RailContents extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 10),
               child: Divider(
                 height: 1,
-                color: Colors.white.withValues(alpha: .07),
+                color: GlassTheme.textPrimary.withValues(alpha: .07),
               ),
             ),
           ],
@@ -536,8 +550,8 @@ class _SidebarItemState extends State<_SidebarItem> {
     final color = selected
         ? accent
         : _hovered || _focused
-        ? Colors.white
-        : Colors.white70;
+        ? GlassTheme.textPrimary
+        : GlassTheme.textPrimary.withValues(alpha: .7);
     // The tooltip shows only while the labels are hidden. A hidden tooltip
     // drops its wrapper, so the item is keyed to keep its state and focus
     // as the rail opens and closes around it.
@@ -590,7 +604,7 @@ class _SidebarItemState extends State<_SidebarItem> {
                     color: selected
                         ? null
                         : _hovered
-                        ? Colors.white.withValues(alpha: .07)
+                        ? GlassTheme.textPrimary.withValues(alpha: .07)
                         : Colors.transparent,
                     borderRadius: BorderRadius.circular(13),
                     border: Border.all(
@@ -707,7 +721,7 @@ class _PinToggle extends StatelessWidget {
                           maxLines: 1,
                           softWrap: false,
                           overflow: TextOverflow.clip,
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: GlassTheme.muted,
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
@@ -800,7 +814,10 @@ class _ResumeSection extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(24, 10, 24, 0),
-          child: Divider(height: 1, color: Colors.white.withValues(alpha: .07)),
+          child: Divider(
+            height: 1,
+            color: GlassTheme.textPrimary.withValues(alpha: .07),
+          ),
         ),
         SizedBox(
           height: _headerHeight,
@@ -815,7 +832,7 @@ class _ResumeSection extends StatelessWidget {
                     ),
                     child: Row(
                       children: [
-                        const Expanded(
+                        Expanded(
                           child: _FadeIn(
                             child: Text(
                               'CONTINUE WATCHING',
@@ -823,7 +840,9 @@ class _ResumeSection extends StatelessWidget {
                               softWrap: false,
                               overflow: TextOverflow.clip,
                               style: TextStyle(
-                                color: Color(0x8CFFFFFF),
+                                color: GlassTheme.textPrimary.withValues(
+                                  alpha: .55,
+                                ),
                                 fontSize: 10,
                                 letterSpacing: 1.2,
                                 fontWeight: FontWeight.w800,
@@ -867,7 +886,7 @@ class _ResumeSection extends StatelessWidget {
                   ),
                 )
               // Compact: a quiet mark, so the thumbnails read as a group.
-              : const Tooltip(
+              : Tooltip(
                   message: 'Continue watching',
                   child: Center(
                     child: Icon(
@@ -881,7 +900,7 @@ class _ResumeSection extends StatelessWidget {
         Expanded(
           child: items.isEmpty
               ? open && shelf.loaded
-                    ? const _AtOpenWidth(
+                    ? _AtOpenWidth(
                         child: Padding(
                           padding: EdgeInsets.fromLTRB(
                             _ResumeTile.thumbLeft,
@@ -1063,12 +1082,16 @@ class _ResumeTileState extends State<_ResumeTile> {
                   // target; the focus ring is the accent, as on the
                   // destinations.
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: _hovered ? .06 : 0),
+                    color: GlassTheme.textPrimary.withValues(
+                      alpha: _hovered ? .06 : 0,
+                    ),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: _focused
                           ? GlassTheme.coralBright
-                          : Colors.white.withValues(alpha: _hovered ? .06 : 0),
+                          : GlassTheme.textPrimary.withValues(
+                              alpha: _hovered ? .06 : 0,
+                            ),
                       width: _focused ? 2 : 1,
                     ),
                   ),
@@ -1095,8 +1118,10 @@ class _ResumeTileState extends State<_ResumeTile> {
                                     style: TextStyle(
                                       fontFamily: GlassTheme.fontFamily,
                                       color: active
-                                          ? Colors.white
-                                          : const Color(0xE0FFFFFF),
+                                          ? GlassTheme.textPrimary
+                                          : GlassTheme.textPrimary.withValues(
+                                              alpha: .88,
+                                            ),
                                       fontSize: 13,
                                       height: 1.25,
                                       fontWeight: FontWeight.w700,
@@ -1115,8 +1140,9 @@ class _ResumeTileState extends State<_ResumeTile> {
                                         if (episode != null)
                                           TextSpan(
                                             text: episode,
-                                            style: const TextStyle(
-                                              color: Color(0xCCFFFFFF),
+                                            style: TextStyle(
+                                              color: GlassTheme.textPrimary
+                                                  .withValues(alpha: .8),
                                               fontWeight: FontWeight.w700,
                                             ),
                                           ),
@@ -1129,7 +1155,7 @@ class _ResumeTileState extends State<_ResumeTile> {
                                     maxLines: 1,
                                     softWrap: false,
                                     overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       color: GlassTheme.muted,
                                       fontSize: 11.5,
                                       height: 1.25,
@@ -1180,7 +1206,7 @@ class _ResumeTileState extends State<_ResumeTile> {
       foregroundDecoration: BoxDecoration(
         borderRadius: radius,
         border: Border.all(
-          color: Colors.white.withValues(alpha: active ? .18 : .08),
+          color: GlassTheme.textPrimary.withValues(alpha: active ? .18 : .08),
         ),
       ),
       child: ClipRRect(
@@ -1264,7 +1290,7 @@ class _ProgressLine extends StatelessWidget {
     borderRadius: BorderRadius.circular(2),
     child: Container(
       height: 3,
-      color: Colors.white.withValues(alpha: .28),
+      color: GlassTheme.textPrimary.withValues(alpha: .28),
       alignment: Alignment.centerLeft,
       child: FractionallySizedBox(
         // Never a sliver too thin to see.

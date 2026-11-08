@@ -36,9 +36,9 @@ class DesktopPluginsPage extends StatefulWidget {
   );
 
   static final _outlined = OutlinedButton.styleFrom(
-    foregroundColor: Colors.white,
-    backgroundColor: Colors.white.withValues(alpha: .05),
-    side: const BorderSide(color: DesktopSurfaces.hairline),
+    foregroundColor: GlassTheme.textPrimary,
+    backgroundColor: GlassTheme.textPrimary.withValues(alpha: .05),
+    side: BorderSide(color: DesktopSurfaces.hairline),
     padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
   );
 
@@ -325,7 +325,7 @@ class _ViewSwitch extends StatelessWidget {
       foregroundColor: GlassTheme.muted,
       selectedBackgroundColor: GlassTheme.primary.withValues(alpha: .16),
       selectedForegroundColor: GlassTheme.coralBright,
-      side: const BorderSide(color: GlassTheme.border),
+      side: BorderSide(color: GlassTheme.border),
       textStyle: const TextStyle(
         fontFamily: GlassTheme.fontFamily,
         fontSize: AppTextSize.bodySmall,
@@ -381,7 +381,7 @@ class _Stat extends StatelessWidget {
             style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
           ),
           const SizedBox(width: 8),
-          Text(label, style: const TextStyle(color: GlassTheme.muted)),
+          Text(label, style: TextStyle(color: GlassTheme.muted)),
         ],
       ),
     );
@@ -421,7 +421,7 @@ class _Heading extends StatelessWidget {
             detail,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
+            style: TextStyle(
               color: GlassTheme.muted,
               fontSize: AppTextSize.bodySmall,
             ),
@@ -463,7 +463,7 @@ class _Empty extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 22),
-        const Expanded(
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -585,7 +585,7 @@ class _Warning extends StatelessWidget {
                   message,
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: GlassTheme.muted,
                     fontSize: AppTextSize.bodySmall,
                     height: 1.4,
@@ -663,7 +663,7 @@ class _RepositoryCardState extends State<_RepositoryCard> {
           color: _expanded
               ? GlassTheme.primary.withValues(alpha: .28)
               : _hovered
-              ? Colors.white.withValues(alpha: .16)
+              ? GlassTheme.textPrimary.withValues(alpha: .16)
               : DesktopSurfaces.hairline,
         ),
       ),
@@ -713,7 +713,7 @@ class _RepositoryCardState extends State<_RepositoryCard> {
                               repository.url,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 color: GlassTheme.muted,
                                 fontSize: AppTextSize.label,
                               ),
@@ -764,12 +764,9 @@ class _RepositoryCardState extends State<_RepositoryCard> {
                   : Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const Divider(
-                          height: 1,
-                          color: DesktopSurfaces.hairline,
-                        ),
+                        Divider(height: 1, color: DesktopSurfaces.hairline),
                         if (repository.plugins.isEmpty)
-                          const Padding(
+                          Padding(
                             padding: EdgeInsets.all(20),
                             child: Text(
                               'This collection has no valid providers.',
@@ -841,7 +838,7 @@ class _ProviderTile extends StatelessWidget {
   Widget build(BuildContext context) => Material(
     color: plugin.enabled
         ? GlassTheme.primary.withValues(alpha: .06)
-        : Colors.white.withValues(alpha: .02),
+        : GlassTheme.textPrimary.withValues(alpha: .02),
     borderRadius: BorderRadius.circular(DesktopSurfaces.radius - 2),
     clipBehavior: Clip.antiAlias,
     child: InkWell(
@@ -898,7 +895,7 @@ class _ProviderTile extends StatelessWidget {
                       ].join('  ·  '),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: GlassTheme.muted,
                         fontSize: AppTextSize.label,
                         height: 1.35,

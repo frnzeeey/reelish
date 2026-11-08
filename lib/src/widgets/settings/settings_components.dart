@@ -270,7 +270,7 @@ class SettingsHeader extends StatelessWidget {
                     subtitle!,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: GlassTheme.muted,
                       fontSize: AppTextSize.label,
                       height: 1.35,
@@ -326,10 +326,13 @@ class SettingsSection extends StatelessWidget {
   final String? description;
   final List<Widget> children;
 
-  static const _surface = LinearGradient(
+  static LinearGradient get _surface => LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    colors: [Color(0xFF1A1A22), Color(0xFF14141B)],
+    colors: [
+      Color.lerp(GlassTheme.surface, GlassTheme.elevatedSurface, .45)!,
+      GlassTheme.surface,
+    ],
   );
 
   @override
@@ -344,7 +347,7 @@ class SettingsSection extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(6, 0, 6, 10),
             child: Text(
               description!,
-              style: const TextStyle(
+              style: TextStyle(
                 color: GlassTheme.muted,
                 fontSize: AppTextSize.label,
                 height: 1.4,
@@ -356,10 +359,10 @@ class SettingsSection extends StatelessWidget {
           clipBehavior: Clip.antiAlias,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(SettingsMetrics.sectionRadius),
-            side: const BorderSide(color: GlassTheme.border),
+            side: BorderSide(color: GlassTheme.border),
           ),
           child: Ink(
-            decoration: const BoxDecoration(gradient: _surface),
+            decoration: BoxDecoration(gradient: _surface),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -388,7 +391,7 @@ class SettingsSectionHeader extends StatelessWidget {
       header: true,
       child: Text(
         label,
-        style: const TextStyle(
+        style: TextStyle(
           color: GlassTheme.muted,
           fontSize: AppTextSize.caption,
           fontWeight: FontWeight.w800,
@@ -403,7 +406,7 @@ class SettingsDivider extends StatelessWidget {
   const SettingsDivider({super.key});
 
   @override
-  Widget build(BuildContext context) => const Divider(
+  Widget build(BuildContext context) => Divider(
     height: 1,
     thickness: 1,
     indent: 16,
@@ -478,7 +481,7 @@ class SettingsTile extends StatelessWidget {
                         const SizedBox(height: 3),
                         Text(
                           description!,
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: GlassTheme.muted,
                             fontSize: AppTextSize.label,
                             height: 1.4,
@@ -492,7 +495,7 @@ class SettingsTile extends StatelessWidget {
                           style: TextStyle(
                             color: onTap != null
                                 ? GlassTheme.coralBright
-                                : Colors.white70,
+                                : GlassTheme.textPrimary.withValues(alpha: .7),
                             fontSize: AppTextSize.label,
                             fontWeight: FontWeight.w600,
                           ),
@@ -506,7 +509,7 @@ class SettingsTile extends StatelessWidget {
                   trailing!,
                 ] else if (chevron) ...[
                   const SizedBox(width: 8),
-                  const Icon(
+                  Icon(
                     ReelishIcons.chevronRight,
                     color: GlassTheme.muted,
                     size: 22,
@@ -549,7 +552,7 @@ class SettingsParagraph extends StatelessWidget {
         Text(
           text,
           style: TextStyle(
-            color: Colors.white.withValues(alpha: .78),
+            color: GlassTheme.textPrimary.withValues(alpha: .78),
             fontSize: AppTextSize.bodySmall,
             height: 1.6,
           ),
@@ -653,7 +656,7 @@ class SettingsSliderTile extends StatelessWidget {
         const SizedBox(height: 3),
         Text(
           description,
-          style: const TextStyle(
+          style: TextStyle(
             color: GlassTheme.muted,
             fontSize: AppTextSize.label,
             height: 1.4,

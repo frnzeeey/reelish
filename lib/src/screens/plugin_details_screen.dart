@@ -65,7 +65,7 @@ class PluginDetailsScreen extends StatelessWidget {
                         onPressed: () => Navigator.maybePop(context),
                         icon: const Icon(ReelishIcons.back),
                       ),
-                      const Text(
+                      Text(
                         'Community Library',
                         style: TextStyle(
                           color: GlassTheme.muted,
@@ -139,8 +139,8 @@ class PluginDetailsScreen extends StatelessWidget {
                       const _Heading('Description'),
                       Text(
                         description,
-                        style: const TextStyle(
-                          color: Colors.white70,
+                        style: TextStyle(
+                          color: GlassTheme.textPrimary.withValues(alpha: .7),
                           height: 1.5,
                           fontSize: AppTextSize.bodySmall,
                         ),
@@ -215,7 +215,7 @@ class PluginDetailsScreen extends StatelessWidget {
           if (plugin.scrapers.isEmpty)
             SliverToBoxAdapter(
               child: _constrained(
-                const Padding(
+                Padding(
                   padding: EdgeInsets.symmetric(horizontal: 20),
                   child: Text(
                     'The source list is unavailable for this provider.',
@@ -325,8 +325,8 @@ class _Hero extends StatelessWidget {
                         : 'by ${plugin.author}',
                     // White70, not muted: muted on the accent-tinted hero
                     // falls under 4.5:1.
-                    style: const TextStyle(
-                      color: Colors.white70,
+                    style: TextStyle(
+                      color: GlassTheme.textPrimary.withValues(alpha: .7),
                       fontSize: AppTextSize.bodySmall,
                     ),
                   ),
@@ -428,7 +428,7 @@ class _InfoTable extends StatelessWidget {
     child: Column(
       children: [
         for (final (index, (label, value)) in rows.indexed) ...[
-          if (index > 0) const Divider(height: 1, color: GlassTheme.border),
+          if (index > 0) Divider(height: 1, color: GlassTheme.border),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
@@ -438,7 +438,7 @@ class _InfoTable extends StatelessWidget {
                   width: 110,
                   child: Text(
                     label,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: GlassTheme.muted,
                       fontSize: AppTextSize.label,
                       fontWeight: FontWeight.w600,
@@ -481,11 +481,11 @@ class _ManifestBox extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(ReelishIcons.link, size: 18, color: GlassTheme.muted),
+          Icon(ReelishIcons.link, size: 18, color: GlassTheme.muted),
           const SizedBox(width: 10),
           Expanded(
             child: url == null
-                ? const Text(
+                ? Text(
                     'No manifest URL is available.',
                     style: TextStyle(
                       color: GlassTheme.muted,
@@ -494,10 +494,10 @@ class _ManifestBox extends StatelessWidget {
                   )
                 : SelectableText(
                     url.toString(),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: AppTextSize.label,
                       height: 1.4,
-                      color: Colors.white70,
+                      color: GlassTheme.textPrimary.withValues(alpha: .7),
                     ),
                   ),
           ),

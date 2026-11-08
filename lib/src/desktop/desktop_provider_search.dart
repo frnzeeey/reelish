@@ -100,13 +100,17 @@ class _DesktopProviderSearchState extends State<DesktopProviderSearch> {
                             colors: [
                               Color.alphaBlend(
                                 GlassTheme.primary.withValues(alpha: .1),
-                                const Color(0xCC15151B),
+                                GlassTheme.surface.withValues(alpha: .8),
                               ),
-                              const Color(0xE60F0F14),
+                              Color.lerp(
+                                GlassTheme.background,
+                                GlassTheme.surface,
+                                .4,
+                              )!.withValues(alpha: .9),
                             ],
                           ),
                           border: Border.all(
-                            color: Colors.white.withValues(alpha: .1),
+                            color: GlassTheme.textPrimary.withValues(alpha: .1),
                           ),
                         ),
                         child: Padding(
@@ -133,8 +137,8 @@ class _DesktopProviderSearchState extends State<DesktopProviderSearch> {
                                     ),
                                     TextSpan(
                                       text: widget.title,
-                                      style: const TextStyle(
-                                        color: Colors.white,
+                                      style: TextStyle(
+                                        color: GlassTheme.textPrimary,
                                         fontWeight: FontWeight.w700,
                                       ),
                                     ),
@@ -145,14 +149,16 @@ class _DesktopProviderSearchState extends State<DesktopProviderSearch> {
                                 textAlign: TextAlign.center,
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: Color(0xCCFFFFFF),
+                                style: TextStyle(
+                                  color: GlassTheme.textPrimary.withValues(
+                                    alpha: .8,
+                                  ),
                                   fontSize: 14,
                                   height: 1.45,
                                 ),
                               ),
                               const SizedBox(height: 6),
-                              const Text(
+                              Text(
                                 'Sources are checked as they arrive; this '
                                 'can take a moment.',
                                 textAlign: TextAlign.center,
@@ -168,12 +174,13 @@ class _DesktopProviderSearchState extends State<DesktopProviderSearch> {
                                 icon: const Icon(ReelishIcons.close, size: 18),
                                 label: const Text('Cancel'),
                                 style: OutlinedButton.styleFrom(
-                                  foregroundColor: Colors.white,
-                                  backgroundColor: Colors.white.withValues(
-                                    alpha: .06,
-                                  ),
+                                  foregroundColor: GlassTheme.textPrimary,
+                                  backgroundColor: GlassTheme.textPrimary
+                                      .withValues(alpha: .06),
                                   side: BorderSide(
-                                    color: Colors.white.withValues(alpha: .2),
+                                    color: GlassTheme.textPrimary.withValues(
+                                      alpha: .2,
+                                    ),
                                   ),
                                   shape: const StadiumBorder(),
                                   minimumSize: const Size(140, 44),
@@ -185,7 +192,7 @@ class _DesktopProviderSearchState extends State<DesktopProviderSearch> {
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              const Text(
+                              Text(
                                 'or press Esc',
                                 style: TextStyle(
                                   color: GlassTheme.muted,
@@ -224,7 +231,7 @@ class _Spinner extends StatelessWidget {
             strokeWidth: 3,
             strokeCap: StrokeCap.round,
             color: GlassTheme.primary,
-            backgroundColor: Colors.white.withValues(alpha: .08),
+            backgroundColor: GlassTheme.textPrimary.withValues(alpha: .08),
           ),
         ),
         Container(

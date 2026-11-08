@@ -443,7 +443,7 @@ class MediaCardSkeleton extends StatelessWidget {
             Expanded(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(AppRadius.md),
-                child: const ColoredBox(color: GlassTheme.surface),
+                child: ColoredBox(color: GlassTheme.surface),
               ),
             ),
             const SizedBox(height: 10),

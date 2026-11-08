@@ -101,13 +101,28 @@ class ReelishWordmark extends StatelessWidget {
   /// off bright artwork instead of lying flat on it.
   final bool lifted;
 
+  /// Takes 84% of the green channel from every channel: white becomes a
+  /// near-black ink, and the brand coral a deep crimson.
+  static const _onLight = ColorFilter.matrix(<double>[
+    1, -.84, 0, 0, 0, //
+    0, .16, 0, 0, 0, //
+    0, -.84, 1, 0, 0, //
+    0, 0, 0, 1, 0, //
+  ]);
+
   @override
   Widget build(BuildContext context) {
-    final artwork = _BrandArtwork(
+    Widget artwork = _BrandArtwork(
       asset: BrandAssets.wordLogo,
       bounds: BrandAssets.wordLogoBounds,
       height: height,
     );
+    // On a light theme's pages the white letters turn to dark ink and the
+    // coral deepens to crimson, so the wordmark keeps its two tones. A
+    // shadow is for lifting it off artwork, never needed on a light page.
+    if (GlassTheme.surfaces.brightness == Brightness.light) {
+      return ColorFiltered(colorFilter: _onLight, child: artwork);
+    }
     if (!lifted) return artwork;
     return Stack(
       clipBehavior: Clip.none,

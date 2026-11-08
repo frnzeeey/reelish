@@ -90,7 +90,7 @@ class PartyDesktopFrame extends StatelessWidget {
                                 const SizedBox(height: 2),
                                 Text(
                                   subtitle,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     color: GlassTheme.muted,
                                     fontSize: AppTextSize.body,
                                   ),
@@ -146,16 +146,13 @@ class PartyDesktopPoster extends StatelessWidget {
         ],
       ),
       child: url.isEmpty
-          ? const Icon(ReelishIcons.movie, size: 48, color: GlassTheme.muted)
+          ? Icon(ReelishIcons.movie, size: 48, color: GlassTheme.muted)
           : ArtworkImage.network(
               url,
               fit: BoxFit.cover,
               cacheWidth: posterDecodeWidth(width * dpr),
-              errorBuilder: (_, _, _) => const Icon(
-                ReelishIcons.movie,
-                size: 48,
-                color: GlassTheme.muted,
-              ),
+              errorBuilder: (_, _, _) =>
+                  Icon(ReelishIcons.movie, size: 48, color: GlassTheme.muted),
             ),
     );
   }
@@ -176,10 +173,13 @@ class PartyDesktopCard extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: padding,
     decoration: BoxDecoration(
-      gradient: const LinearGradient(
+      gradient: LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: [Color(0xFF1A1A22), Color(0xFF14141B)],
+        colors: [
+          Color.lerp(GlassTheme.surface, GlassTheme.elevatedSurface, .45)!,
+          GlassTheme.surface,
+        ],
       ),
       borderRadius: BorderRadius.circular(DesktopSurfaces.radius + 6),
       border: Border.all(color: DesktopSurfaces.hairline),

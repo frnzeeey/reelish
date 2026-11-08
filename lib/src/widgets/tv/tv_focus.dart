@@ -163,7 +163,7 @@ class _TvFocusableState extends State<TvFocusable> {
                   color: _focused
                       ? GlassTheme.coralBright
                       : _hovered
-                      ? Colors.white.withValues(alpha: .45)
+                      ? GlassTheme.textPrimary.withValues(alpha: .45)
                       : Colors.transparent,
                   width: _focused ? 3 : 2,
                 ),
@@ -424,7 +424,7 @@ class TvTextField extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 10),
-          const Icon(ReelishIcons.keyboard, color: GlassTheme.muted),
+          Icon(ReelishIcons.keyboard, color: GlassTheme.muted),
         ],
       ),
     ),

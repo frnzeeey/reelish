@@ -302,7 +302,7 @@ class _LibraryHeader extends StatelessWidget {
         ],
       ),
       const SizedBox(height: 8),
-      const Text(
+      Text(
         'Everything you are watching and saving, all in one place.',
         style: TextStyle(color: GlassTheme.muted, fontSize: 12, height: 1.4),
       ),
@@ -359,7 +359,7 @@ class _FilterChip extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: selected
                       ? GlassTheme.background.withValues(alpha: .12)
-                      : Colors.white.withValues(alpha: .07),
+                      : GlassTheme.textPrimary.withValues(alpha: .07),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
@@ -436,7 +436,7 @@ class _MediaSection extends StatelessWidget {
                     const SizedBox(height: 3),
                     Text(
                       subtitle,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: GlassTheme.muted,
                         fontSize: AppTextSize.label,
                       ),
@@ -447,7 +447,7 @@ class _MediaSection extends StatelessWidget {
               if (items.isNotEmpty)
                 Text(
                   '${items.length} ${items.length == 1 ? 'title' : 'titles'}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: GlassTheme.muted,
                     fontSize: AppTextSize.caption,
                     fontWeight: FontWeight.w600,
@@ -592,7 +592,7 @@ class _LibraryEmptyState extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 message,
-                style: const TextStyle(
+                style: TextStyle(
                   color: GlassTheme.muted,
                   fontSize: AppTextSize.label,
                   height: 1.35,

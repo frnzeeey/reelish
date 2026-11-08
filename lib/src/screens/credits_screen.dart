@@ -260,7 +260,7 @@ class _TraktAttributionBlock extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        const Text(
+        Text(
           'Powered by Trakt',
           style: TextStyle(
             color: GlassTheme.textPrimary,
@@ -270,7 +270,7 @@ class _TraktAttributionBlock extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        const Text(
+        Text(
           'Sign-in, My list sync and new episode checks use Trakt. Reelish '
           'is independent and is not sponsored by, endorsed by or affiliated '
           'with Trakt.',
@@ -289,7 +289,7 @@ class _TmdbAttributionBlock extends StatelessWidget {
   const _TmdbAttributionBlock();
 
   @override
-  Widget build(BuildContext context) => const Padding(
+  Widget build(BuildContext context) => Padding(
     padding: EdgeInsets.fromLTRB(16, 20, 16, 18),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,

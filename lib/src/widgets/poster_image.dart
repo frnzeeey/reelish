@@ -12,7 +12,7 @@ class PosterPlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => DecoratedBox(
-    decoration: const BoxDecoration(
+    decoration: BoxDecoration(
       gradient: LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
@@ -20,7 +20,11 @@ class PosterPlaceholder extends StatelessWidget {
       ),
     ),
     child: Center(
-      child: Icon(ReelishIcons.movie, size: iconSize, color: Colors.white24),
+      child: Icon(
+        ReelishIcons.movie,
+        size: iconSize,
+        color: GlassTheme.textPrimary.withValues(alpha: .24),
+      ),
     ),
   );
 }

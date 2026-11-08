@@ -19,14 +19,14 @@ class PluginSafetyNotice extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
     decoration: BoxDecoration(
-      color: Colors.white.withValues(alpha: .03),
+      color: GlassTheme.textPrimary.withValues(alpha: .03),
       borderRadius: BorderRadius.circular(AppRadius.lg),
       border: Border.all(color: GlassTheme.border),
     ),
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
+        Padding(
           padding: EdgeInsets.only(top: 1),
           child: Icon(ReelishIcons.shield, size: 18, color: GlassTheme.muted),
         ),
@@ -37,7 +37,7 @@ class PluginSafetyNotice extends StatelessWidget {
             'make or maintain. They may change, become unavailable or stop '
             'working. Only install plugins from sources you trust.'
             '${attribution == null ? '' : '\n$attribution'}',
-            style: const TextStyle(
+            style: TextStyle(
               color: GlassTheme.muted,
               fontSize: AppTextSize.caption,
               height: 1.45,
@@ -155,7 +155,7 @@ class PluginMessageState extends StatelessWidget {
         Text(
           message,
           textAlign: TextAlign.center,
-          style: const TextStyle(
+          style: TextStyle(
             color: GlassTheme.muted,
             fontSize: AppTextSize.bodySmall,
             height: 1.45,
@@ -204,13 +204,13 @@ class PluginManualInstallPrompt extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.fromLTRB(14, 8, 8, 8),
     decoration: BoxDecoration(
-      color: Colors.white.withValues(alpha: .03),
+      color: GlassTheme.textPrimary.withValues(alpha: .03),
       borderRadius: BorderRadius.circular(AppRadius.lg),
       border: Border.all(color: GlassTheme.border),
     ),
     child: Row(
       children: [
-        const Icon(ReelishIcons.linkAdd, size: 18, color: GlassTheme.muted),
+        Icon(ReelishIcons.linkAdd, size: 18, color: GlassTheme.muted),
         const SizedBox(width: 10),
         const Expanded(
           child: Text(

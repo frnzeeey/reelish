@@ -180,8 +180,8 @@ class _PluginsHeader extends StatelessWidget {
         tooltip: 'Add by link',
         onPressed: onPaste,
         style: IconButton.styleFrom(
-          foregroundColor: Colors.white,
-          backgroundColor: Colors.white.withValues(alpha: .07),
+          foregroundColor: GlassTheme.textPrimary,
+          backgroundColor: GlassTheme.textPrimary.withValues(alpha: .07),
         ),
         icon: const Icon(ReelishIcons.linkAdd),
       ),
@@ -259,7 +259,7 @@ class _PluginsHero extends StatelessWidget {
                     child: Icon(ReelishIcons.hub, color: GlassTheme.primary),
                   ),
                   const SizedBox(width: 12),
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -287,10 +287,10 @@ class _PluginsHero extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 14),
-              const Text(
+              Text(
                 'Choose which trusted providers Reelish can search when you press play.',
                 style: TextStyle(
-                  color: Colors.white70,
+                  color: GlassTheme.textPrimary.withValues(alpha: .7),
                   height: 1.4,
                   fontSize: AppTextSize.label,
                 ),
@@ -326,9 +326,9 @@ class _MetricPill extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
     decoration: BoxDecoration(
-      color: Colors.white.withValues(alpha: .06),
+      color: GlassTheme.textPrimary.withValues(alpha: .06),
       borderRadius: BorderRadius.circular(AppRadius.md),
-      border: Border.all(color: Colors.white.withValues(alpha: .07)),
+      border: Border.all(color: GlassTheme.textPrimary.withValues(alpha: .07)),
     ),
     child: Row(
       mainAxisSize: MainAxisSize.min,
@@ -344,8 +344,8 @@ class _MetricPill extends StatelessWidget {
         const SizedBox(width: 5),
         Text(
           label,
-          style: const TextStyle(
-            color: Colors.white70,
+          style: TextStyle(
+            color: GlassTheme.textPrimary.withValues(alpha: .7),
             fontSize: AppTextSize.micro,
           ),
         ),
@@ -376,7 +376,7 @@ class _SectionHeading extends StatelessWidget {
       const SizedBox(height: 3),
       Text(
         detail,
-        style: const TextStyle(
+        style: TextStyle(
           color: GlassTheme.muted,
           fontSize: AppTextSize.caption,
         ),
@@ -396,7 +396,7 @@ class _LibraryEntry extends StatelessWidget {
     color: GlassTheme.surface,
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(AppRadius.xl),
-      side: const BorderSide(color: GlassTheme.border),
+      side: BorderSide(color: GlassTheme.border),
     ),
     clipBehavior: Clip.antiAlias,
     child: InkWell(
@@ -419,7 +419,7 @@ class _LibraryEntry extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 12),
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -442,7 +442,7 @@ class _LibraryEntry extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(ReelishIcons.chevronRight, color: GlassTheme.muted),
+            Icon(ReelishIcons.chevronRight, color: GlassTheme.muted),
           ],
         ),
       ),
@@ -484,7 +484,7 @@ class _EmptyPlugins extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 7),
-        const Text(
+        Text(
           'Collections give Reelish places to look for streams. Browse the library or add one by its link. You can turn each provider on or off at any time.',
           textAlign: TextAlign.center,
           style: TextStyle(
@@ -608,7 +608,7 @@ class _RepositoryCardState extends State<_RepositoryCard> {
                 padding: const EdgeInsets.only(top: 4),
                 child: Text(
                   '$enabledCount of ${repository.plugins.length} providers active',
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: GlassTheme.muted,
                     fontSize: AppTextSize.micro,
                   ),
@@ -655,7 +655,7 @@ class _RepositoryCardState extends State<_RepositoryCard> {
                       showDivider: index < repository.plugins.length - 1,
                     ),
                   if (repository.plugins.isEmpty)
-                    const Padding(
+                    Padding(
                       padding: EdgeInsets.all(18),
                       child: Text(
                         'This collection has no valid providers.',
@@ -726,7 +726,7 @@ class _ProviderTile extends StatelessWidget {
                       plugin.description,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: GlassTheme.muted,
                         fontSize: AppTextSize.micro,
                         height: 1.3,
@@ -788,7 +788,7 @@ class _NoticeCard extends StatelessWidget {
               const SizedBox(height: 3),
               Text(
                 message,
-                style: const TextStyle(
+                style: TextStyle(
                   color: GlassTheme.muted,
                   fontSize: AppTextSize.micro,
                   height: 1.35,
@@ -882,7 +882,7 @@ class _RepositoryError extends StatelessWidget {
                 message,
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   color: GlassTheme.muted,
                   fontSize: AppTextSize.micro,
                   height: 1.3,

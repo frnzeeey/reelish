@@ -197,7 +197,7 @@ class _SectionLabel extends StatelessWidget {
     padding: const EdgeInsets.fromLTRB(4, 12, 4, 8),
     child: Text(
       text,
-      style: const TextStyle(
+      style: TextStyle(
         color: GlassTheme.muted,
         fontSize: 11,
         fontWeight: FontWeight.w800,
@@ -244,7 +244,7 @@ class _AddonSearchStatus extends StatelessWidget {
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(color: GlassTheme.muted, fontSize: 13),
+              style: TextStyle(color: GlassTheme.muted, fontSize: 13),
             ),
           ),
           if (retry)

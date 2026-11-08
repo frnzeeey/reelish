@@ -72,7 +72,7 @@ class ProviderSearchDialog extends StatelessWidget {
                           '${season == null || episode == null ? '' : ' · S$season E$episode'}',
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: GlassTheme.muted,
                             fontSize: 12,
                           ),

@@ -63,7 +63,7 @@ class TmdbAttributionFooter extends StatelessWidget {
           const TmdbLogo(height: 11),
           const SizedBox(height: 10),
         ],
-        const Text(
+        Text(
           TmdbAttribution.disclaimer,
           textAlign: TextAlign.center,
           style: TextStyle(
