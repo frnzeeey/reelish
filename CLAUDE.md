@@ -161,6 +161,8 @@ flutter pub get
 flutter run -d windows --dart-define=REELISH_API_URL=https://...   # Windows interface
 cd backend && npm ci && npm test                   # Reelish API (Cloudflare Worker)
 cd backend && npm run typecheck                     # tsc --noEmit
+cd backend && npm run dev                           # local Worker (wrangler dev)
+cd backend && npm run migrate:local                 # migrations into the local D1 ("reelish")
 cd backend && npx vitest run test/<name>.test.ts -t "<test name>"   # one backend test
 cd backend && npx wrangler d1 migrations apply reelish-staging --remote --env staging
 cd backend && npx wrangler deploy --env staging     # production only when asked
@@ -193,7 +195,8 @@ version tag (`.github/workflows/`, `docs/releasing.md`).
   `backend/test/helpers.ts` fakes Trakt through one global fetch mock, so
   sign accounts in one after another, not in parallel.
 - Build what you touched: `flutter build windows --release` for Windows,
-  `flutter build apk --profile` for Android.
+  `flutter build apk --profile` for Android. `REELISH_API_URL` is only
+  needed for a build you will run against the API, not to check it compiles.
 - Widget tests pick the interface with
   `variant: TargetPlatformVariant.only(TargetPlatform.windows)` (Windows) or
   `DeviceCapabilities.debugOverride` (TV). They draw text in the Ahem test
