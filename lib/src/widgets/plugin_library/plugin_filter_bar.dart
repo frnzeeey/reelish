@@ -249,10 +249,6 @@ class _LanguageMenu extends StatelessWidget {
         : 'Language: $language. Change the language filter',
     initialValue: language ?? _all,
     onSelected: (value) => onSelected(value == _all ? null : value),
-    color: GlassTheme.elevatedSurface,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(AppRadius.lg),
-    ),
     constraints: const BoxConstraints(maxHeight: 420, minWidth: 200),
     itemBuilder: (context) => [
       _menuItem(_all, 'All languages', checked: language == null),
@@ -278,10 +274,6 @@ class _SortMenu extends StatelessWidget {
     tooltip: 'Sort plugins, currently ${sort.label}',
     initialValue: sort,
     onSelected: onSelected,
-    color: GlassTheme.elevatedSurface,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(AppRadius.lg),
-    ),
     itemBuilder: (context) => [
       for (final option in PluginSort.values)
         _menuItem(option, option.label, checked: option == sort),

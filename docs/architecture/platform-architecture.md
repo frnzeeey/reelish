@@ -54,6 +54,7 @@ graph TD
 | Torrents | 64-bit processes only (`TorrentSupport`) | Same; many TV devices are 32-bit | Not supported |
 | Updates | `GitHubUpdateService` APK → package installer (`onfeed/app_update`) | Same | `WindowsUpdateController`: installer or ZIP, verified, via `reelish/app_update` |
 | Glass quality | `LiquidGlass` balanced/high | Capped to low | Desktop surfaces, one blur per panel |
+| Glass buttons | Painted finish (`GlassButtonStyle`) on Filled/Outlined buttons, no blur; `GlassButtonProgress` for busy buttons; search header and menus in the same smoked glass | Same, under the TV focus ring | Same, with hover light and a keyboard focus ring; search field, and a lit edge on the sidebar while it lies over the page |
 | Picture-in-picture, brightness, rotation | Yes (`onfeed/player`) | Not offered | No |
 
 ## Shared code that branches

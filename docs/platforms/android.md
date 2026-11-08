@@ -12,7 +12,7 @@ which switch to the [TV interface](android-tv.md) at runtime.
 | Library | [`library_screen.dart`](../../lib/src/screens/library_screen.dart) |
 | Plugins, Plugin Library | [`plugins_screen.dart`](../../lib/src/screens/plugins_screen.dart), [`plugin_library_screen.dart`](../../lib/src/screens/plugin_library_screen.dart), [`plugin_details_screen.dart`](../../lib/src/screens/plugin_details_screen.dart) |
 | Settings | [`playback_settings_screen.dart`](../../lib/src/screens/playback_settings_screen.dart), [`lib/src/widgets/settings/`](../../lib/src/widgets/settings) |
-| Cards and glass | [`media_card.dart`](../../lib/src/widgets/media_card.dart), [`liquid_glass.dart`](../../lib/src/widgets/liquid_glass.dart), [`glass_box.dart`](../../lib/src/widgets/glass_box.dart) |
+| Cards and glass | [`media_card.dart`](../../lib/src/widgets/media_card.dart), [`liquid_glass.dart`](../../lib/src/widgets/liquid_glass.dart), [`glass_box.dart`](../../lib/src/widgets/glass_box.dart), buttons in [`glass_button.dart`](../../lib/src/widgets/glass_button.dart) |
 | Player (shared) | [`lib/src/widgets/player/`](../../lib/src/widgets/player); touch in [`gesture_touch_layer.dart`](../../lib/src/widgets/player/gesture_touch_layer.dart) |
 | Updates | [`github_update_service.dart`](../../lib/src/services/github_update_service.dart), [`app_update_flow.dart`](../../lib/src/widgets/app_update_flow.dart), [`update_dialog.dart`](../../lib/src/widgets/update_dialog.dart) |
 | Native | [`ReelishActivity.kt`](../../android/app/src/main/kotlin/com/example/onfeed/ReelishActivity.kt): `onfeed/device`, `onfeed/player`, `onfeed/app_update` |

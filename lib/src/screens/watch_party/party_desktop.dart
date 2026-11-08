@@ -11,6 +11,7 @@ import '../../theme/design_tokens.dart';
 import '../../theme/glass_theme.dart';
 import '../../watch_party/party_models.dart';
 import '../../widgets/artwork_image.dart';
+import '../../widgets/glass_button.dart';
 
 /// A Windows party page: Back and the title over a centred column no wider
 /// than [maxWidth], on the page background with a soft accent glow.
@@ -214,10 +215,7 @@ class PartyDesktopButton extends StatelessWidget {
       ),
       onPressed: onPressed,
       icon: busy
-          ? const SizedBox.square(
-              dimension: 18,
-              child: CircularProgressIndicator(strokeWidth: 2.4),
-            )
+          ? const GlassButtonProgress()
           : Icon(ReelishIcons.filled(icon)),
       label: Text(label, style: const TextStyle(fontWeight: FontWeight.w800)),
     ),

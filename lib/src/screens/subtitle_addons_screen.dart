@@ -5,6 +5,7 @@ import '../models/subtitle_addon.dart';
 import '../services/subtitle_addon_service.dart';
 import '../theme/design_tokens.dart';
 import '../theme/glass_theme.dart';
+import '../widgets/glass_button.dart';
 import '../widgets/settings/settings_components.dart';
 
 /// Stremio subtitle addons the player searches while you watch.
@@ -162,15 +163,15 @@ class _SubtitleAddonsScreenState extends State<SubtitleAddonsScreen> {
                     child: FilledButton.icon(
                       onPressed: _installing ? null : _install,
                       icon: _installing
-                          ? const SizedBox.square(
-                              dimension: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
+                          ? const GlassButtonProgress()
                           : const Icon(ReelishIcons.add),
                       label: const Text('Add addon'),
                       style: FilledButton.styleFrom(
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(AppRadius.lg),
+                        ),
+                        backgroundBuilder: GlassButtonStyle.layer(
+                          radius: AppRadius.lg,
                         ),
                         textStyle: const TextStyle(
                           fontFamily: GlassTheme.fontFamily,

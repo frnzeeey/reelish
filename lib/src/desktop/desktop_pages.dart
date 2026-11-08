@@ -14,6 +14,7 @@ import '../theme/glass_theme.dart';
 import '../viewmodels/library_view_model.dart';
 import '../viewmodels/search_view_model.dart';
 import '../widgets/settings/tmdb_attribution.dart';
+import '../widgets/glass_button.dart';
 import 'desktop_hero.dart';
 import 'desktop_top_ten.dart';
 import 'desktop_widgets.dart';
@@ -628,48 +629,54 @@ class _DesktopSearchPageState extends State<DesktopSearchPage> {
               alignment: Alignment.centerLeft,
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 960),
-                child: TextField(
-                  controller: _controller,
-                  focusNode: _focus,
-                  autofocus: true,
-                  onChanged: _onChanged,
-                  onSubmitted: (value) => _search(value.trim()),
-                  textInputAction: TextInputAction.search,
-                  style: const TextStyle(fontSize: 17),
-                  decoration: InputDecoration(
-                    hintText: 'Search titles',
-                    prefixIcon: const Icon(ReelishIcons.search),
-                    suffixIcon: ListenableBuilder(
-                      listenable: _controller,
-                      builder: (context, _) => _controller.text.isEmpty
-                          // The shortcut, where it is used.
-                          ? const _KeyHint('Ctrl+F')
-                          : IconButton(
-                              tooltip: 'Clear',
-                              icon: const Icon(ReelishIcons.close),
-                              onPressed: () {
-                                _controller.clear();
-                                unawaited(_search(''));
-                                _focus.requestFocus();
-                              },
-                            ),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 20,
-                    ),
-                    fillColor: Colors.white.withValues(alpha: .05),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: const BorderSide(
-                        color: DesktopSurfaces.hairline,
+                // Glass under the translucent fill; quieter than a button
+                // because text is typed on it.
+                child: GlassFinish(
+                  radius: 16,
+                  light: .7,
+                  child: TextField(
+                    controller: _controller,
+                    focusNode: _focus,
+                    autofocus: true,
+                    onChanged: _onChanged,
+                    onSubmitted: (value) => _search(value.trim()),
+                    textInputAction: TextInputAction.search,
+                    style: const TextStyle(fontSize: 17),
+                    decoration: InputDecoration(
+                      hintText: 'Search titles',
+                      prefixIcon: const Icon(ReelishIcons.search),
+                      suffixIcon: ListenableBuilder(
+                        listenable: _controller,
+                        builder: (context, _) => _controller.text.isEmpty
+                            // The shortcut, where it is used.
+                            ? const _KeyHint('Ctrl+F')
+                            : IconButton(
+                                tooltip: 'Clear',
+                                icon: const Icon(ReelishIcons.close),
+                                onPressed: () {
+                                  _controller.clear();
+                                  unawaited(_search(''));
+                                  _focus.requestFocus();
+                                },
+                              ),
                       ),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide(
-                        color: GlassTheme.primary,
-                        width: 1.6,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 20,
+                      ),
+                      fillColor: Colors.white.withValues(alpha: .05),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: const BorderSide(
+                          color: DesktopSurfaces.hairline,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide(
+                          color: GlassTheme.primary,
+                          width: 1.6,
+                        ),
                       ),
                     ),
                   ),

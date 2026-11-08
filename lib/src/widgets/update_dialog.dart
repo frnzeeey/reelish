@@ -8,6 +8,7 @@ import '../theme/reelish_icons.dart';
 import '../models/app_update.dart';
 import '../services/github_update_service.dart';
 import '../theme/glass_theme.dart';
+import 'glass_button.dart';
 
 /// Turns GitHub release Markdown (including `--generate-notes` output) into
 /// plain text. Returns an empty string when nothing meaningful remains.
@@ -134,7 +135,11 @@ class UpdateDialogButton extends StatelessWidget {
     final shape = RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(15),
     );
-    const textStyle = TextStyle(fontWeight: FontWeight.w700);
+    // A styleFrom textStyle replaces the theme's, so it names the font.
+    const textStyle = TextStyle(
+      fontFamily: GlassTheme.fontFamily,
+      fontWeight: FontWeight.w700,
+    );
     const size = Size.fromHeight(48);
     return primary
         ? FilledButton(
@@ -144,6 +149,7 @@ class UpdateDialogButton extends StatelessWidget {
               minimumSize: size,
               shape: shape,
               textStyle: textStyle,
+              backgroundBuilder: GlassButtonStyle.layer(radius: 15),
             ),
             child: Text(label),
           )
@@ -156,6 +162,10 @@ class UpdateDialogButton extends StatelessWidget {
               textStyle: textStyle,
               foregroundColor: GlassTheme.textPrimary,
               backgroundColor: GlassTheme.glassStrong,
+              backgroundBuilder: GlassButtonStyle.layer(
+                tone: GlassButtonTone.neutral,
+                radius: 15,
+              ),
             ),
             child: Text(label),
           );

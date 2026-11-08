@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../widgets/glass_button.dart';
+import 'design_tokens.dart';
+
 abstract final class GlassTheme {
   static const coral = AccentPalette(
     id: 'coral',
@@ -140,6 +143,28 @@ abstract final class GlassTheme {
           onSurface: textPrimary,
         ),
     useMaterial3: true,
+    // Buttons carry the Liquid Glass finish (painted, never blurred): the
+    // primary on the accent, the secondary as smoked glass. Text and icon
+    // buttons stay flat so the glass marks the actions that matter.
+    filledButtonTheme: FilledButtonThemeData(style: GlassButtonStyle.filled()),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: GlassButtonStyle.outlined(),
+    ),
+    // Menus are the same smoked glass, near-opaque so their text reads over
+    // anything, with a hairline edge instead of Material's tint.
+    popupMenuTheme: PopupMenuThemeData(
+      color: Color.alphaBlend(
+        Colors.white.withValues(alpha: .04),
+        GlassButtonStyle.smokedGlass,
+      ).withValues(alpha: .97),
+      surfaceTintColor: Colors.transparent,
+      elevation: 12,
+      shadowColor: Colors.black,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        side: const BorderSide(color: border),
+      ),
+    ),
     navigationBarTheme: NavigationBarThemeData(
       backgroundColor: glassBackground,
       indicatorColor: coralGlow,
@@ -199,13 +224,14 @@ abstract final class GlassTheme {
               : rest,
         );
     final tint = primary.withValues(alpha: .26);
+    // TV focus wins over the glass styles; their finish fills in the rest.
     return base.copyWith(
       focusColor: tint,
       filledButtonTheme: FilledButtonThemeData(
         style: ButtonStyle(
           overlayColor: overlay(Colors.white.withValues(alpha: .22)),
           side: ring(Colors.white),
-        ),
+        ).merge(base.filledButtonTheme.style),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: ButtonStyle(
@@ -214,7 +240,7 @@ abstract final class GlassTheme {
             coralBright,
             rest: BorderSide(color: Colors.white.withValues(alpha: .3)),
           ),
-        ),
+        ).merge(base.outlinedButtonTheme.style),
       ),
       textButtonTheme: TextButtonThemeData(
         style: ButtonStyle(overlayColor: overlay(tint), side: ring(primary)),

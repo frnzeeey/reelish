@@ -6,6 +6,7 @@ import '../services/update_config.dart';
 import '../services/windows_update_controller.dart';
 import '../theme/glass_theme.dart';
 import '../widgets/app_update_flow.dart';
+import '../widgets/glass_button.dart';
 import '../widgets/settings/settings_components.dart';
 import '../widgets/update_dialog.dart';
 import 'desktop_update_dialogs.dart';
@@ -71,6 +72,7 @@ class _WindowsUpdateSectionState extends State<WindowsUpdateSection> {
           fontWeight: FontWeight.w700,
         ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        backgroundBuilder: GlassButtonStyle.layer(radius: 12),
       ),
       child: Text(label),
     );

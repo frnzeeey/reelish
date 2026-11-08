@@ -338,13 +338,20 @@ class _SidebarState extends State<_Sidebar> {
                         ],
                         stops: const [0, .5],
                       ),
+                      // Over the page the lit glass edge replaces it.
                       border: Border(
                         right: BorderSide(
                           color: Colors.white.withValues(
-                            alpha: overlay ? .1 : .06,
+                            alpha: overlay ? 0 : .06,
                           ),
                         ),
                       ),
+                    ),
+                    // Always present, so the rail's contents keep their place in the
+                    // tree (and their focus) when it opens; lit only over the page.
+                    foregroundDecoration: _GlassEdgeDecoration(
+                      radius: 22,
+                      lit: overlay,
                     ),
                     child: FocusTraversalGroup(
                       child: _FillOrScroll(
@@ -1267,4 +1274,86 @@ class _ProgressLine extends StatelessWidget {
       ),
     ),
   );
+}
+
+/// The open rail's glass edge: the same light as every glass surface, lit
+/// from above and shaded below, drawn on the right side only (the left sits
+/// on the window edge) and round its [radius] corners, with a faint inner
+/// rim for thickness.
+class _GlassEdgeDecoration extends Decoration {
+  const _GlassEdgeDecoration({required this.radius, required this.lit});
+
+  final double radius;
+
+  /// Drawn only while the rail lies over the page.
+  final bool lit;
+
+  @override
+  BoxPainter createBoxPainter([VoidCallback? onChanged]) =>
+      _GlassEdgePainter(radius, lit: lit);
+}
+
+class _GlassEdgePainter extends BoxPainter {
+  _GlassEdgePainter(this.radius, {required this.lit});
+
+  final double radius;
+  final bool lit;
+
+  @override
+  void paint(Canvas canvas, Offset offset, ImageConfiguration configuration) {
+    final size = configuration.size;
+    if (!lit || size == null || size.isEmpty) return;
+    final rect = offset & size;
+    // Only the right side and its corners: the strip from where the corners
+    // start bending to the edge.
+    final strip = Rect.fromLTRB(
+      rect.right - radius - 2,
+      rect.top,
+      rect.right,
+      rect.bottom,
+    );
+    RRect shape(double inset) => RRect.fromRectAndCorners(
+      rect.deflate(inset),
+      topRight: Radius.circular(math.max(0, radius - inset)),
+      bottomRight: Radius.circular(math.max(0, radius - inset)),
+    );
+    canvas
+      ..save()
+      ..clipRect(strip);
+    // Inner rim, then the lit outer edge.
+    canvas.drawRRect(
+      shape(1.75),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.5
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.white.withValues(alpha: .08),
+            Colors.white.withValues(alpha: .02),
+            Colors.black.withValues(alpha: .12),
+          ],
+          stops: const [0, .4, 1],
+        ).createShader(rect),
+    );
+    canvas.drawRRect(
+      shape(.5),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.white.withValues(alpha: .30),
+            Colors.white.withValues(alpha: .12),
+            Colors.white.withValues(alpha: .07),
+            Colors.black.withValues(alpha: .22),
+          ],
+          stops: const [0, .25, .7, 1],
+        ).createShader(rect),
+    );
+    canvas.restore();
+  }
 }

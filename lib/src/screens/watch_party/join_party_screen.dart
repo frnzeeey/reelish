@@ -17,6 +17,7 @@ import '../../desktop/desktop_widgets.dart';
 import 'party_desktop.dart';
 import 'party_widgets.dart';
 import 'waiting_room_screen.dart';
+import '../../widgets/glass_button.dart';
 
 class JoinPartyScreen extends StatefulWidget {
   const JoinPartyScreen({
@@ -306,10 +307,7 @@ class _JoinPartyScreenState extends State<JoinPartyScreen> {
               ),
               onPressed: found == null || found.full || _joining ? null : _join,
               icon: _joining
-                  ? const SizedBox.square(
-                      dimension: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2.4),
-                    )
+                  ? const GlassButtonProgress()
                   : const Icon(ReelishIcons.login),
               label: Text(
                 _joining

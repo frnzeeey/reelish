@@ -6,6 +6,7 @@ import '../services/provider_plugin_service.dart';
 import '../theme/glass_theme.dart';
 import 'glass_box.dart';
 import 'tv/tv_focus.dart';
+import 'glass_button.dart';
 
 class ProviderInstallerModal extends StatefulWidget {
   const ProviderInstallerModal({super.key, required this.pluginService});
@@ -168,10 +169,7 @@ class _ProviderInstallerModalState extends State<ProviderInstallerModal> {
                 child: FilledButton.icon(
                   onPressed: _busy ? null : _install,
                   icon: _busy
-                      ? const SizedBox.square(
-                          dimension: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
+                      ? const GlassButtonProgress()
                       : const Icon(ReelishIcons.download),
                   label: Text(_busy ? 'Checking manifest…' : 'Add collection'),
                 ),

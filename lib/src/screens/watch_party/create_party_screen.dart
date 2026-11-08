@@ -23,6 +23,7 @@ import 'join_party_screen.dart';
 import 'party_desktop.dart';
 import 'party_widgets.dart';
 import 'waiting_room_screen.dart';
+import '../../widgets/glass_button.dart';
 
 class CreatePartyScreen extends StatefulWidget {
   const CreatePartyScreen({
@@ -525,10 +526,7 @@ class _CreatePartyScreenState extends State<CreatePartyScreen> {
                 ),
                 onPressed: _creating ? null : _submit,
                 icon: _creating
-                    ? const SizedBox.square(
-                        dimension: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2.4),
-                      )
+                    ? const GlassButtonProgress()
                     : const Icon(ReelishIcons.celebration),
                 label: Text(
                   _creating ? 'Creating party…' : 'Create party',

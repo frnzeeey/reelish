@@ -6,6 +6,7 @@ import '../../services/provider_plugin_service.dart';
 import '../../theme/design_tokens.dart';
 import '../../theme/glass_theme.dart';
 import 'plugin_formatting.dart';
+import '../glass_button.dart';
 
 /// Hands a catalog manifest to the existing provider installer.
 ///
@@ -148,11 +149,7 @@ class _PluginInstallButtonState extends State<PluginInstallButton> {
         icon: AnimatedSwitcher(
           duration: AppMotion.resolve(context, AppMotion.hover),
           child: _installing
-              ? const SizedBox.square(
-                  key: ValueKey('installing'),
-                  dimension: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
+              ? const GlassButtonProgress(key: ValueKey('installing'))
               : Icon(
                   installed
                       ? ReelishIcons.filled(
@@ -275,10 +272,7 @@ class _PluginRemoveButtonState extends State<PluginRemoveButton> {
           side: const BorderSide(color: GlassTheme.border),
         ),
         icon: _removing
-            ? const SizedBox.square(
-                dimension: 16,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
+            ? const GlassButtonProgress()
             : const Icon(ReelishIcons.trash, size: 18),
         label: Text(_removing ? 'Removing…' : 'Remove'),
       );

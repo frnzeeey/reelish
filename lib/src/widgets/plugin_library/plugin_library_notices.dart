@@ -3,6 +3,7 @@ import '../../theme/reelish_icons.dart';
 
 import '../../theme/design_tokens.dart';
 import '../../theme/glass_theme.dart';
+import '../glass_button.dart';
 
 const _warning = GlassTheme.warning;
 
@@ -172,10 +173,7 @@ class PluginMessageState extends StatelessWidget {
                   onPressed: busy ? null : onAction,
                   style: FilledButton.styleFrom(minimumSize: const Size(0, 46)),
                   icon: busy
-                      ? const SizedBox.square(
-                          dimension: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
+                      ? const GlassButtonProgress()
                       : Icon(actionIcon ?? ReelishIcons.refresh),
                   label: Text(actionLabel!),
                 ),

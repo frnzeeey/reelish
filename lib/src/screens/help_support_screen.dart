@@ -18,6 +18,7 @@ import '../widgets/settings/settings_components.dart';
 import 'app_information_screens.dart';
 import 'legal_information_screen.dart';
 import 'supporters_screen.dart';
+import '../widgets/glass_button.dart';
 
 void _push(BuildContext context, WidgetBuilder builder) => unawaited(
   Navigator.of(
@@ -753,10 +754,7 @@ class _ReportScreenState extends State<ReportScreen> {
           child: FilledButton.icon(
             onPressed: _sending ? null : () => unawaited(_review()),
             icon: _sending
-                ? const SizedBox.square(
-                    dimension: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
+                ? const GlassButtonProgress()
                 : const Icon(ReelishIcons.send),
             label: Text(
               _sending

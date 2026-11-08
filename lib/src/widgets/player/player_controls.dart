@@ -7,6 +7,7 @@ import 'package:video_player/video_player.dart';
 
 import '../../platform/device_capabilities.dart';
 import '../../theme/glass_theme.dart';
+import '../glass_button.dart';
 import 'player_marquee_text.dart';
 import 'player_progress_bar.dart';
 import 'player_volume_control.dart';
@@ -456,35 +457,37 @@ class _PlayButton extends StatelessWidget {
           onTap: onPressed,
           focusNode: focusNode,
           focusColor: _focusFill,
-          child: SizedBox.square(
-            dimension: size,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                if (buffering)
-                  SizedBox.square(
-                    dimension: size - 10,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.4,
-                      color: GlassTheme.primary,
+          child: GlassFinish(
+            child: SizedBox.square(
+              dimension: size,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  if (buffering)
+                    SizedBox.square(
+                      dimension: size - 10,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.4,
+                        color: GlassTheme.primary,
+                      ),
+                    ),
+                  // The icon follows player state; playback never waits on it.
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 180),
+                    switchInCurve: Curves.easeOutBack,
+                    transitionBuilder: (child, animation) => ScaleTransition(
+                      scale: Tween(begin: .6, end: 1.0).animate(animation),
+                      child: FadeTransition(opacity: animation, child: child),
+                    ),
+                    child: Icon(
+                      ReelishIcons.filled(icon),
+                      key: ValueKey(icon),
+                      size: size * .5,
+                      color: Colors.white,
                     ),
                   ),
-                // The icon follows player state; playback never waits on it.
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 180),
-                  switchInCurve: Curves.easeOutBack,
-                  transitionBuilder: (child, animation) => ScaleTransition(
-                    scale: Tween(begin: .6, end: 1.0).animate(animation),
-                    child: FadeTransition(opacity: animation, child: child),
-                  ),
-                  child: Icon(
-                    ReelishIcons.filled(icon),
-                    key: ValueKey(icon),
-                    size: size * .5,
-                    color: Colors.white,
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -837,40 +840,43 @@ class _PillButton extends StatelessWidget {
       child: InkWell(
         onTap: onPressed,
         focusColor: _focusFill,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 40),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  icon,
-                  size: 18,
-                  color: selected ? GlassTheme.primary : Colors.white,
-                ),
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w600,
-                      color: selected ? GlassTheme.primary : Colors.white,
+        child: GlassFinish(
+          light: selected ? 1.2 : 1,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 40),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    icon,
+                    size: 18,
+                    color: selected ? GlassTheme.primary : Colors.white,
+                  ),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: selected ? GlassTheme.primary : Colors.white,
+                      ),
                     ),
                   ),
-                ),
-                if (trailingIcon case final trailing?) ...[
-                  const SizedBox(width: 6),
-                  Icon(
-                    trailing,
-                    size: 15,
-                    color: selected ? GlassTheme.primary : Colors.white70,
-                  ),
+                  if (trailingIcon case final trailing?) ...[
+                    const SizedBox(width: 6),
+                    Icon(
+                      trailing,
+                      size: 15,
+                      color: selected ? GlassTheme.primary : Colors.white70,
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),

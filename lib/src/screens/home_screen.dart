@@ -70,6 +70,7 @@ import '../watch_party/party_models.dart';
 import '../widgets/brand_logo.dart';
 import '../widgets/profile_avatar.dart';
 import '../widgets/artwork_image.dart';
+import '../widgets/glass_button.dart';
 
 /// One independently loaded single-request list (Trending, search). Its
 /// fields change only inside the home screen's setState. The catalog rows
@@ -1568,23 +1569,32 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   Expanded(
                     child: ValueListenableBuilder<TextEditingValue>(
                       valueListenable: _search,
-                      builder: (context, value, _) => TextField(
-                        controller: _search,
-                        focusNode: _searchFocus,
-                        onChanged: _searchChanged,
-                        decoration: InputDecoration(
-                          prefixIcon: const Icon(ReelishIcons.search),
-                          hintText: 'Find your next favorite',
-                          suffixIcon: value.text.isEmpty
-                              ? null
-                              : IconButton(
-                                  tooltip: 'Clear search',
-                                  onPressed: () {
-                                    _search.clear();
-                                    _searchChanged('');
-                                  },
-                                  icon: const Icon(ReelishIcons.close),
-                                ),
+                      // Smoked glass, as the buttons: the fill is
+                      // translucent so the finish under it shows.
+                      builder: (context, value, _) => GlassFinish(
+                        radius: 15,
+                        light: .7,
+                        child: TextField(
+                          controller: _search,
+                          focusNode: _searchFocus,
+                          onChanged: _searchChanged,
+                          decoration: InputDecoration(
+                            fillColor: GlassButtonStyle.smokedGlass.withValues(
+                              alpha: .55,
+                            ),
+                            prefixIcon: const Icon(ReelishIcons.search),
+                            hintText: 'Find your next favorite',
+                            suffixIcon: value.text.isEmpty
+                                ? null
+                                : IconButton(
+                                    tooltip: 'Clear search',
+                                    onPressed: () {
+                                      _search.clear();
+                                      _searchChanged('');
+                                    },
+                                    icon: const Icon(ReelishIcons.close),
+                                  ),
+                          ),
                         ),
                       ),
                     ),
