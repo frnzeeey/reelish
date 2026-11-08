@@ -334,9 +334,10 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                   ),
                   // Dark glass with the brighter accent, so the label keeps
                   // its contrast on any artwork (a coral tint on coral text
-                  // fell under 4.5:1).
+                  // fell under 4.5:1); at .8 every accent keeps 4.5:1 even
+                  // over white.
                   decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: .38),
+                    color: Colors.black.withValues(alpha: .8),
                     borderRadius: BorderRadius.circular(30),
                     border: Border.all(
                       color: GlassTheme.primary.withValues(alpha: .45),
@@ -358,7 +359,9 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                   // The details page is where a long title is read in full.
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  // Not the page text, which is dark on a light theme.
+                  style: TextStyle(
+                    color: GlassTheme.onArtwork,
                     fontSize: 34,
                     height: 1.05,
                     fontWeight: FontWeight.w900,
@@ -469,21 +472,32 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
     ),
   );
 
-  Widget _metadata(String text, {bool highlight = false, IconData? icon}) {
+  Widget _metadata(
+    String text, {
+    bool highlight = false,
+    IconData? icon,
+    bool onPage = false,
+  }) {
     // Highlighted: the brighter accent on dark glass, which keeps its
-    // contrast on artwork (a coral tint behind coral text did not).
-    final color = highlight ? GlassTheme.coralBright : Colors.white70;
+    // contrast on artwork (a coral tint behind coral text did not). On the
+    // page (genres) the chip is drawn in the page's text colour, which is
+    // dark on a light theme; on artwork it stays white.
+    final ink = onPage ? GlassTheme.textPrimary : Colors.white;
+    final color = highlight
+        ? GlassTheme.coralBright
+        : ink.withValues(alpha: .7);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
+        // .8: the accent keeps 4.5:1 on it over the brightest artwork.
         color: highlight
-            ? Colors.black.withValues(alpha: .38)
-            : Colors.white.withValues(alpha: .10),
+            ? Colors.black.withValues(alpha: .8)
+            : ink.withValues(alpha: .10),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: highlight
               ? GlassTheme.primary.withValues(alpha: .3)
-              : Colors.white.withValues(alpha: .16),
+              : ink.withValues(alpha: .16),
         ),
       ),
       child: Row(
@@ -650,7 +664,8 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    for (final genre in _details!.genres) _metadata(genre),
+                    for (final genre in _details!.genres)
+                      _metadata(genre, onPage: true),
                   ],
                 ),
               ],

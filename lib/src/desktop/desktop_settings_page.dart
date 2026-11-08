@@ -13,6 +13,7 @@ import '../services/accent_settings_controller.dart';
 import '../services/playback_settings_controller.dart';
 import '../theme/design_tokens.dart';
 import '../theme/glass_theme.dart';
+import '../widgets/settings/developer_credit.dart';
 import '../widgets/settings/settings_components.dart';
 import 'desktop_widgets.dart';
 
@@ -165,6 +166,11 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
                           ),
                         ),
                     ],
+                    // Who made Reelish, as under the phone and TV Settings.
+                    const Padding(
+                      padding: EdgeInsets.only(top: AppSpace.md),
+                      child: DeveloperCreditFooter(),
+                    ),
                   ],
                 ),
               ),

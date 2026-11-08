@@ -94,9 +94,12 @@ abstract final class _RankMetrics {
   /// The numeral's font size: about three quarters of the poster height.
   static double numeralSize(double posterWidth) => posterWidth * 1.5 * .74;
 
-  /// Room left of the poster for the numeral; "10" needs more.
+  /// Room left of the poster for the numeral; "10" needs more. Measured for
+  /// Bebas Neue at [numeralSize]: one digit is about .44 of the poster
+  /// width and the tightened "10" about .82, so it draws within a few
+  /// percent of the others' height.
   static double numeralWidth(double posterWidth, int rank) =>
-      posterWidth * (rank == 10 ? .78 : .46);
+      posterWidth * (rank == 10 ? .79 : .46);
 
   /// Space between the numeral and its poster: none, so the two read as
   /// one card while the numeral is never hidden behind the poster.
@@ -405,11 +408,15 @@ class _Numeral extends StatelessWidget {
             '$rank',
             maxLines: 1,
             softWrap: false,
+            // Bebas Neue, as the phone's Top 10: tall, condensed numerals,
+            // drawn as an outline. One weight only, so none is asked for.
             style: TextStyle(
+              fontFamily: 'BebasNeue',
               fontSize: size,
               height: .82,
-              letterSpacing: rank == 10 ? -size * .14 : -size * .04,
-              fontWeight: FontWeight.w900,
+              // Bebas digits are tabular, so the narrow 1 leaves room to
+              // draw "10" a little tighter.
+              letterSpacing: rank == 10 ? -size * .03 : 0,
               foreground: Paint()
                 ..style = PaintingStyle.stroke
                 ..strokeWidth = (size / 50).clamp(2.5, 5)

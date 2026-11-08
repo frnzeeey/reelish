@@ -144,6 +144,28 @@ void main() {
       }
     });
 
+    test('text on artwork reads over the scrim in every theme', () {
+      addTearDown(() => GlassTheme.setSurfaces(ThemeSurfaces.classic));
+      for (final surfaces in [
+        ThemeSurfaces.classic,
+        for (final theme in SupporterTheme.all) theme.surfaces,
+      ]) {
+        GlassTheme.setSurfaces(surfaces);
+        // Light themes: white, not their dark page text. Dark themes: their
+        // own text colour, unchanged.
+        expect(
+          GlassTheme.onArtwork,
+          surfaces.brightness == Brightness.light
+              ? Colors.white
+              : surfaces.textPrimary,
+        );
+        expect(
+          _contrast(GlassTheme.onArtwork, surfaces.artworkScrim),
+          greaterThan(7),
+        );
+      }
+    });
+
     test('every theme casts its own light; Classic stays flat', () {
       expect(ThemeSurfaces.classic.ambient, isNull);
       for (final theme in SupporterTheme.all) {

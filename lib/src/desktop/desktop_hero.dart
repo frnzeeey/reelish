@@ -452,12 +452,14 @@ class _HeroText extends StatelessWidget {
       item.name,
       maxLines: 2,
       overflow: TextOverflow.ellipsis,
-      style: const TextStyle(
+      // Not the page text, which is dark on a light theme.
+      style: TextStyle(
+        color: GlassTheme.onArtwork,
         fontSize: 50,
         height: 1.02,
         fontWeight: FontWeight.w800,
         letterSpacing: -1.4,
-        shadows: [Shadow(color: Color(0x66000000), blurRadius: 24)],
+        shadows: const [Shadow(color: Color(0x66000000), blurRadius: 24)],
       ),
     );
     final meta = [
@@ -541,7 +543,8 @@ class _HeroText extends StatelessWidget {
                     const SizedBox(width: 4),
                     Text(
                       item.rating,
-                      style: const TextStyle(
+                      style: TextStyle(
+                        color: GlassTheme.onArtwork,
                         fontSize: 14,
                         fontWeight: FontWeight.w800,
                       ),
@@ -841,9 +844,14 @@ class _SpotlightRail extends StatelessWidget {
                   // The compact Reelish mark heads Reelish's own picks.
                   const ReelishMark(height: 15),
                   const SizedBox(width: 9),
-                  const Text(
+                  // Over the hero's shaded foot, not the page.
+                  Text(
                     'In the Spotlight',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+                    style: TextStyle(
+                      color: GlassTheme.onArtwork,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                   const Spacer(),
                   // Where the rotation is, at a glance; the counter says it.
@@ -1145,6 +1153,7 @@ class _ShownDetails extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
+                    color: GlassTheme.onArtwork,
                     fontSize: compact ? 13.5 : 17,
                     height: 1.2,
                     fontWeight: FontWeight.w800,

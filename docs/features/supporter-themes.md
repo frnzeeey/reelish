@@ -141,7 +141,14 @@ player. Masks (`ShaderMask` gradients) keep white, as it is not a colour there.
 
 Artwork areas use `GlassTheme.artworkScrim`: the page colour in dark themes, so
 artwork fades into the page, and a deep ink in light themes, so those areas
-stay dark and their white titles read. The Windows sidebar is a step deeper
+stay dark and their white titles read. Titles and labels there take
+`GlassTheme.onArtwork` (white on a light theme, the theme's text colour on a
+dark one), never the inherited page text, which is dark on a light theme. A
+hero whose actions sit at its foot (the phone Spotlight, Windows details)
+ends in the scrim, not the page colour. The TV backdrops are the exception:
+the hero text and the rows sit on their fade into the page, so they fade in
+`GlassTheme.background` (a light wash on a light theme) and their text uses
+the page colours there (`GlassTheme.isLight`). The Windows sidebar is a step deeper
 than the page (darker on dark themes, a deeper cream on light ones), with a
 lighter shadow on light pages. The Reelish wordmark turns to ink and crimson on
 light pages, and the status bar icons turn dark (`main.dart`).

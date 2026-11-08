@@ -2289,7 +2289,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 Color(0x26000000),
                 Color(0x00000000),
                 GlassTheme.artworkScrim.withValues(alpha: .851),
-                GlassTheme.background,
+                // The page colour in dark themes; a light theme keeps the
+                // foot dark so the white title and buttons still read.
+                GlassTheme.artworkScrim,
               ],
               stops: [0, .2, .46, .82, 1],
             ),
@@ -2308,9 +2310,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   vertical: 6,
                 ),
                 // Dark glass with the brighter accent, as on the details page,
-                // so the label keeps its contrast on any artwork.
+                // so the label keeps its contrast on any artwork: it sits
+                // where the shade is clear, and at .8 every accent keeps
+                // 4.5:1 even over white (at .38 it fell to about 1:1).
                 decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: .38),
+                  color: Colors.black.withValues(alpha: .8),
                   borderRadius: BorderRadius.circular(30),
                   border: Border.all(
                     color: GlassTheme.primary.withValues(alpha: .45),
@@ -2331,7 +2335,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 item.name,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                // Not the page text, which is dark on a light theme.
+                style: TextStyle(
+                  color: GlassTheme.onArtwork,
                   fontSize: 35,
                   height: 1.02,
                   fontWeight: FontWeight.w900,

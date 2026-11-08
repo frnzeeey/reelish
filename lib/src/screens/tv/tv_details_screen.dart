@@ -197,14 +197,17 @@ class _TvMediaDetailsScreenState extends State<TvMediaDetailsScreen> {
                             .round(),
                     errorBuilder: (_, _, _) => const SizedBox.shrink(),
                   ),
+                  // Fades into the page, as on the TV Home: the page colour,
+                  // so on a light theme the text below sits on a light wash
+                  // (on a dark theme it equals the artwork scrim).
                   DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
                           GlassTheme.background,
-                          GlassTheme.artworkScrim.withValues(alpha: .8),
-                          GlassTheme.artworkScrim.withValues(alpha: .2),
-                          GlassTheme.artworkScrim.withValues(alpha: 0),
+                          GlassTheme.background.withValues(alpha: .8),
+                          GlassTheme.background.withValues(alpha: .2),
+                          GlassTheme.background.withValues(alpha: 0),
                         ],
                         stops: [0, .25, .6, 1],
                       ),
@@ -220,7 +223,7 @@ class _TvMediaDetailsScreenState extends State<TvMediaDetailsScreen> {
                 end: Alignment.topCenter,
                 colors: [
                   GlassTheme.background,
-                  GlassTheme.artworkScrim.withValues(alpha: 0),
+                  GlassTheme.background.withValues(alpha: 0),
                 ],
                 stops: [.1, .55],
               ),
@@ -270,6 +273,9 @@ class _TvMediaDetailsScreenState extends State<TvMediaDetailsScreen> {
       if (details?.status.isNotEmpty == true) details!.status,
     ];
     final cast = details?.cast.take(5).map((member) => member.name).toList();
+    // On the backdrop's fade into the page: white on a dark theme, the page
+    // text on a light one.
+    final ink = _ink;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -277,7 +283,11 @@ class _TvMediaDetailsScreenState extends State<TvMediaDetailsScreen> {
         Text(
           _isSeries ? 'SERIES' : 'MOVIE',
           style: TextStyle(
-            color: GlassTheme.coralBright,
+            // The light accent reads on dark; on a light page the deeper
+            // one keeps AA.
+            color: GlassTheme.isLight
+                ? GlassTheme.primary
+                : GlassTheme.coralBright,
             fontSize: 14,
             letterSpacing: 1.4,
             fontWeight: FontWeight.w800,
@@ -298,8 +308,8 @@ class _TvMediaDetailsScreenState extends State<TvMediaDetailsScreen> {
         const SizedBox(height: 12),
         TvMetaLine(
           parts: meta,
-          style: const TextStyle(
-            color: Color(0xDDFFFFFF),
+          style: TextStyle(
+            color: ink.withValues(alpha: .867),
             fontSize: 16,
             fontWeight: FontWeight.w700,
           ),
@@ -317,8 +327,8 @@ class _TvMediaDetailsScreenState extends State<TvMediaDetailsScreen> {
             details!.tagline,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: Colors.white70,
+            style: TextStyle(
+              color: ink.withValues(alpha: .7),
               fontStyle: FontStyle.italic,
               fontSize: 15,
             ),
@@ -331,8 +341,8 @@ class _TvMediaDetailsScreenState extends State<TvMediaDetailsScreen> {
               : 'No synopsis is available for this title.',
           maxLines: 4,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            color: Color(0xD9FFFFFF),
+          style: TextStyle(
+            color: ink.withValues(alpha: .851),
             fontSize: 15,
             height: 1.5,
           ),
@@ -429,12 +439,17 @@ class _TvMediaDetailsScreenState extends State<TvMediaDetailsScreen> {
     if (content != null) start(context, content);
   }
 
+  /// Text on the backdrop's fade into the page: white on a dark theme, the
+  /// page text on a light one.
+  static Color get _ink =>
+      GlassTheme.isLight ? GlassTheme.textPrimary : Colors.white;
+
   static ButtonStyle _actionStyle({required bool filled}) =>
       (filled ? FilledButton.styleFrom : OutlinedButton.styleFrom)(
         minimumSize: const Size(0, 52),
         padding: const EdgeInsets.symmetric(horizontal: 26),
         shape: const StadiumBorder(),
-        foregroundColor: filled ? GlassTheme.background : Colors.white,
+        foregroundColor: filled ? GlassTheme.background : _ink,
         backgroundColor: filled ? GlassTheme.primary : null,
         // A button's textStyle replaces the theme's label style rather than
         // merging with it, so the family is named here.

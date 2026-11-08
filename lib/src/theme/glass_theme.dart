@@ -138,6 +138,13 @@ abstract final class GlassTheme {
   /// [ThemeSurfaces.forPlayer].
   static ThemeSurfaces get playerSurfaces => _surfaces.forPlayer;
 
+  /// Whether the theme is light (Ivory Studio): dark text on light pages.
+  static bool get isLight => _surfaces.brightness == Brightness.light;
+
+  /// Titles and labels over [artworkScrim]: white on a light theme, whose
+  /// page text is dark; the theme's own text colour on a dark one.
+  static Color get onArtwork => isLight ? Colors.white : _surfaces.textPrimary;
+
   /// The accent on the player's dark chrome: the theme's own, or on a light
   /// theme its lighter partner, which reads on dark where the page accent
   /// (deep enough for ivory) would not.

@@ -141,7 +141,10 @@ class _Backdrop extends StatelessWidget {
                       errorBuilder: (_, _, _) => const SizedBox.expand(),
                     ),
             ),
-            // Painted fades into the background, left and bottom.
+            // Painted fades into the background, left and bottom. The page
+            // colour, not the artwork scrim: the hero text and the rows sit
+            // on this fade, so on a light theme it is a light wash under
+            // dark text (on a dark theme the two colours are the same).
             DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -149,9 +152,9 @@ class _Backdrop extends StatelessWidget {
                   end: Alignment.centerRight,
                   colors: [
                     GlassTheme.background,
-                    GlassTheme.artworkScrim.withValues(alpha: .8),
-                    GlassTheme.artworkScrim.withValues(alpha: .2),
-                    GlassTheme.artworkScrim.withValues(alpha: 0),
+                    GlassTheme.background.withValues(alpha: .8),
+                    GlassTheme.background.withValues(alpha: .2),
+                    GlassTheme.background.withValues(alpha: 0),
                   ],
                   stops: [0, .25, .6, 1],
                 ),
@@ -164,8 +167,8 @@ class _Backdrop extends StatelessWidget {
                   end: Alignment.topCenter,
                   colors: [
                     GlassTheme.background,
-                    GlassTheme.artworkScrim.withValues(alpha: .6),
-                    GlassTheme.artworkScrim.withValues(alpha: 0),
+                    GlassTheme.background.withValues(alpha: .6),
+                    GlassTheme.background.withValues(alpha: 0),
                   ],
                   stops: [0, .35, .7],
                 ),
@@ -195,6 +198,10 @@ class _HeroDetails extends StatelessWidget {
           item.type == 'series' ? 'Series' : 'Movie',
           if (item.rating.isNotEmpty) TvRating(item.rating),
         ];
+        // On the backdrop's fade into the page: white on a dark theme, the
+        // page text on a light one, whose fade is a light wash.
+        final light = GlassTheme.isLight;
+        final ink = light ? GlassTheme.textPrimary : Colors.white;
         return AnimatedSwitcher(
           duration: MediaQuery.disableAnimationsOf(context)
               ? Duration.zero
@@ -219,19 +226,24 @@ class _HeroDetails extends StatelessWidget {
                     item.name,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 36,
                       height: 1.05,
                       fontWeight: FontWeight.w900,
                       letterSpacing: -1,
-                      shadows: [Shadow(color: Colors.black54, blurRadius: 12)],
+                      // A dark halo only behind light text.
+                      shadows: light
+                          ? null
+                          : const [
+                              Shadow(color: Colors.black54, blurRadius: 12),
+                            ],
                     ),
                   ),
                   const SizedBox(height: 10),
                   TvMetaLine(
                     parts: meta,
-                    style: const TextStyle(
-                      color: Color(0xDDFFFFFF),
+                    style: TextStyle(
+                      color: ink.withValues(alpha: .867),
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
                     ),
@@ -242,8 +254,8 @@ class _HeroDetails extends StatelessWidget {
                       item.description,
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Color(0xC7FFFFFF),
+                      style: TextStyle(
+                        color: ink.withValues(alpha: .78),
                         fontSize: 14,
                         height: 1.45,
                       ),

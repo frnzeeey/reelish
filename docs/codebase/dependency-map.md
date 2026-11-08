@@ -34,7 +34,7 @@ graph LR
   desktop["desktop"] -->|4| viewmodels["viewmodels"]
   desktop["desktop"] -->|1| watch_party["watch_party"]
   desktop["desktop"] -->|19| widgets["widgets"]
-  desktop["desktop"] -->|3| widgets_settings["widgets/settings"]
+  desktop["desktop"] -->|4| widgets_settings["widgets/settings"]
   diagnostics["diagnostics"] -->|1| analytics["analytics"]
   diagnostics["diagnostics"] -->|1| services["services"]
   navigation["navigation"] -->|1| theme["theme"]
@@ -143,7 +143,7 @@ graph LR
 | `account` | `models` (1), `platform` (1), `services` (2) |
 | `analytics` | `diagnostics` (1) |
 | `app` | `services` (5) |
-| `desktop` | `account` (1), `models` (12), `navigation` (2), `screens` (6), `screens/watch_party` (2), `services` (14), `theme` (25), `viewmodels` (4), `watch_party` (1), `widgets` (19), `widgets/settings` (3) |
+| `desktop` | `account` (1), `models` (12), `navigation` (2), `screens` (6), `screens/watch_party` (2), `services` (14), `theme` (25), `viewmodels` (4), `watch_party` (1), `widgets` (19), `widgets/settings` (4) |
 | `diagnostics` | `analytics` (1), `services` (1) |
 | `models` | nothing outside itself |
 | `navigation` | `theme` (1) |

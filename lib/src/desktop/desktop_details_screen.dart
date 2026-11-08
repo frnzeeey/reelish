@@ -331,13 +331,15 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 // Solid before the edge, so the image's last pixel row
-                // never shows as a line.
+                // never shows as a line. The scrim, not the page colour: the
+                // white actions sit on this foot, so on a light theme it
+                // stays dark (on a dark theme the two are the same).
                 colors: [
                   GlassTheme.artworkScrim.withValues(alpha: .502),
                   GlassTheme.artworkScrim.withValues(alpha: 0),
                   GlassTheme.artworkScrim.withValues(alpha: 0),
-                  GlassTheme.background,
-                  GlassTheme.background,
+                  GlassTheme.artworkScrim,
+                  GlassTheme.artworkScrim,
                 ],
                 stops: [0, .22, .55, .95, 1],
               ),
@@ -411,12 +413,14 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
                             _item.name,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+                            // Not the page text, dark on a light theme.
+                            style: TextStyle(
+                              color: GlassTheme.onArtwork,
                               fontSize: 52,
                               height: 1.02,
                               fontWeight: FontWeight.w800,
                               letterSpacing: -1.4,
-                              shadows: [
+                              shadows: const [
                                 Shadow(
                                   color: Color(0x66000000),
                                   blurRadius: 24,
@@ -436,7 +440,8 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
                                 const SizedBox(width: 4),
                                 Text(
                                   rating,
-                                  style: const TextStyle(
+                                  style: TextStyle(
+                                    color: GlassTheme.onArtwork,
                                     fontSize: 15,
                                     fontWeight: FontWeight.w800,
                                   ),
@@ -1039,18 +1044,23 @@ class _Chip extends StatelessWidget {
 
   final String label;
 
+  // On the hero's artwork: drawn in the colour that reads there.
   @override
   Widget build(BuildContext context) => DecoratedBox(
     decoration: BoxDecoration(
-      color: GlassTheme.textPrimary.withValues(alpha: .08),
+      color: GlassTheme.onArtwork.withValues(alpha: .08),
       borderRadius: BorderRadius.circular(20),
-      border: Border.all(color: GlassTheme.textPrimary.withValues(alpha: .14)),
+      border: Border.all(color: GlassTheme.onArtwork.withValues(alpha: .14)),
     ),
     child: Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: Text(
         label,
-        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+        style: TextStyle(
+          color: GlassTheme.onArtwork,
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     ),
   );

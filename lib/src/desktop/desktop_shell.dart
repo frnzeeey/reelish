@@ -426,14 +426,13 @@ class _RailContents extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(20, 24, 12, 28),
           child: Row(
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(11),
-                child: Image.asset(
-                  BrandAssets.appIcon,
-                  width: 40,
-                  height: 40,
-                  cacheWidth: (40 * MediaQuery.devicePixelRatioOf(context))
-                      .round(),
+              // In the accent colour, as phone Home's (the coral icon for
+              // the default accent). Not read out: the wordmark says it.
+              ExcludeSemantics(
+                child: AccentAppIcon(
+                  key: ValueKey(GlassTheme.accent.id),
+                  size: 40,
+                  radius: 11,
                 ),
               ),
               Flexible(
