@@ -56,7 +56,7 @@ in, so a Sovereign splash would flash from the default.
 
 A theme dresses the profile card; the avatar's frame is separate. Under any
 theme, an [avatar frame](avatar-frames.md) the account wears replaces the
-theme's ring around the avatar. The Founder wears the Founder frame (champagne
+theme's ring around the avatar. The Founder wears the Sovereign frame (champagne
 laurel and crown) by default.
 
 ## Design tokens

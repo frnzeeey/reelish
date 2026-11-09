@@ -2,8 +2,8 @@
 
 Reelish Supporters can wear a frame around their avatar: Profile > Avatar frame,
 on phone, TV and Windows. A frame follows the account to every device and shows
-to others in Watch Party. The Founder has every frame, and a Founder frame of
-their own. The server decides who may wear which ([avatar frames API](../backend/frames.md)).
+to others in Watch Party. The Founder has every frame, and a frame of
+their own, Sovereign. The server decides who may wear which ([avatar frames API](../backend/frames.md)).
 
 ## The collection
 
@@ -21,9 +21,9 @@ their own. The server decides who may wear which ([avatar frames API](../backend
 | Cinematic | Obsidian | Black glass with a highlight | No |
 | Special Edition | Supporter | Supporter gold and star | A glint |
 | Special Edition | Premiere 2026 | Silver film; limited edition | A glint |
-| Special Edition | Founder | Champagne laurel and crown; Founder only | Halo and glint |
+| Special Edition | Sovereign (id `founder`) | Champagne laurel and crown; Founder only | Sovereign sheen |
 
-Every frame is a band with a fine bezel, except the Founder's, a fine ring
+Every frame is a band with a fine bezel, except Sovereign, a fine ring
 carried by its laurel and crown. A frame is a separate choice from the avatar:
 changing the avatar keeps the frame.
 
@@ -36,7 +36,7 @@ assets:
 - Behind the avatar, painted once: a soft undertone, the band and bezel, and the
   ornaments around it (stars, particles, corona, glass, film sprockets).
 - What moves, alone in its own `RepaintBoundary`: a glint, a turning band, or the
-  Founder's halo. Most frames are still. One controller per frame, stopped
+  Sovereign sheen (below). Most frames are still. One controller per frame, stopped
   under reduced motion, in the background, on a covered page and when scrolled
   out of view, with the still frame shown instead.
 - In front, painted once: the Founder's laurel and crown, the Supporter star,
@@ -45,8 +45,15 @@ assets:
   Home, the Windows sidebar, the TV rail) take `AvatarFrameRim`, a fine rim in
   the frame's colour. Party avatars wear the frame still.
 
-The Founder frame's edit button sits in the gap at the foot of its laurel; with
+The Sovereign frame's edit button sits in the gap at the foot of its laurel; with
 other frames it keeps the lower right.
+
+The Sovereign sheen (`FrameMotion.sheen`, a 7 s cycle) lights the laurel and
+crown themselves, so it is painted over them (`_SheenPainter`): for the first
+fifth of the cycle a band of pale light crosses the metal from the upper left,
+where the Sovereign Crest is lit from, and a four-pointed sparkle flares on the
+crown's tallest pearl as it passes. The rest of the cycle is still but for the
+violet undertone breathing behind the laurel. The still frame has no sheen.
 
 ## The account's frames
 
@@ -64,7 +71,7 @@ collections in even columns. Each tile shows the frame on a quiet disc, with a
 check when equipped, a lock (or the Founder's crown) when it cannot be worn, and
 Limited or Collected under limited editions. The preview's button equips
 ("Collect and equip" for an open limited edition), removes the worn frame, or,
-for someone who cannot wear it, leads to the Supporters page. The Founder frame
+for someone who cannot wear it, leads to the Supporters page. The Sovereign frame
 shows to the Founder only, and a closed limited edition only to those who
 collected it.
 

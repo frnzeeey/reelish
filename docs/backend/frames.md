@@ -32,7 +32,7 @@ the perk. To add one, give it an id, a window and a design in the app.
 Migration `0010_avatar_frames.sql`:
 
 - `users.avatar_frame`: the chosen frame's id. `NULL` is the default (the
-  Founder frame for the Founder, none for everyone else); `'none'` is a choice of
+  Sovereign frame, id `founder`, for the Founder, none for everyone else); `'none'` is a choice of
   no frame.
 - `collected_frames (user_id, frame_id, collected_at)`: limited editions
   collected; deleted with the account.

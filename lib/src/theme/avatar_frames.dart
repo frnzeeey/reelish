@@ -54,8 +54,10 @@ enum FrameMotion {
   /// The ring's colours turn slowly round it.
   turn,
 
-  /// A halo breathes and a glint travels: the Founder's.
-  halo,
+  /// Light sweeps across the laurel and crown from the upper left, a sparkle
+  /// flares on the crown, then a long rest while a violet undertone
+  /// breathes: the Sovereign frame's.
+  sheen,
 }
 
 @immutable
@@ -263,10 +265,11 @@ class AvatarFrameStyle {
     limitedUntil: DateTime.utc(2027, 1, 31),
   );
 
-  /// The Founder's frame: champagne gold, laurel and crown.
+  /// The Founder's frame, Sovereign: champagne gold, laurel and crown. Its id
+  /// stays 'founder', as the Reelish API stores it.
   static const founder = AvatarFrameStyle(
     id: 'founder',
-    name: 'Founder',
+    name: 'Sovereign',
     description: 'Champagne laurel and crown, for the creator of Reelish',
     collection: FrameCollection.special,
     colors: [
@@ -277,7 +280,7 @@ class AvatarFrameStyle {
       Color(0xFFD6B779),
     ],
     ornament: FrameOrnament.laurel,
-    motion: FrameMotion.halo,
+    motion: FrameMotion.sheen,
     founderOnly: true,
   );
 

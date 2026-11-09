@@ -18,7 +18,7 @@ enum FrameChange {
   /// The server confirms it: the frame is worn on every device.
   applied,
 
-  /// Not a Supporter, or a Founder frame for anyone else.
+  /// Not a Supporter, or the Founder's Sovereign frame for anyone else.
   notAllowed,
 
   /// A limited edition that can no longer be collected.

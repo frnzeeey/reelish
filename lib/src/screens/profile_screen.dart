@@ -732,7 +732,7 @@ class _EditableAvatar extends StatelessWidget {
       profile: profile,
     );
     final frame = this.frame;
-    // The Founder frame's laurel meets at the foot, where the button sits.
+    // The Sovereign frame's laurel meets at the foot, where the button sits.
     final atFoot = frame?.ornament == FrameOrnament.laurel;
     final framed = frame != null
         ? AvatarFrame(style: frame, size: size, child: avatar)

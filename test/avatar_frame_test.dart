@@ -218,6 +218,64 @@ void main() {
       expect(tester.binding.hasScheduledFrame, isFalse);
     });
 
+    group('The Sovereign sheen', () {
+      final sheen = find.byWidgetPredicate(
+        (widget) =>
+            widget is CustomPaint &&
+            widget.painter.runtimeType.toString() == '_SheenPainter',
+      );
+
+      test('is the Founder frame, named Sovereign, with its id kept', () {
+        final style = AvatarFrameStyle.founder;
+        expect(style.id, 'founder');
+        expect(style.name, 'Sovereign');
+        expect(style.motion, FrameMotion.sheen);
+        expect(AvatarFrame.periodOf(style), const Duration(seconds: 7));
+      });
+
+      testWidgets('sweeps over the laurel while it moves', (tester) async {
+        await tester.pumpWidget(
+          _app(
+            AvatarFrame(
+              style: AvatarFrameStyle.founder,
+              size: 132,
+              child: _disc(132),
+            ),
+          ),
+        );
+        expect(sheen, findsOneWidget);
+        // Through a sweep, its sparkle and the rest after it.
+        for (var ms = 0; ms < 7000; ms += 250) {
+          await tester.pump(const Duration(milliseconds: 250));
+          expect(tester.takeException(), isNull, reason: '$ms ms');
+        }
+        expect(tester.binding.hasScheduledFrame, isTrue);
+      });
+
+      testWidgets('is not drawn on a still frame', (tester) async {
+        for (final (size, reduceMotion, animate) in [
+          (132.0, true, true),
+          (132.0, false, false),
+          (40.0, false, true),
+        ]) {
+          await tester.pumpWidget(
+            _app(
+              AvatarFrame(
+                style: AvatarFrameStyle.founder,
+                size: size,
+                animate: animate,
+                child: _disc(size),
+              ),
+              reduceMotion: reduceMotion,
+            ),
+          );
+          await tester.pump();
+          expect(sheen, findsNothing, reason: '$size $reduceMotion $animate');
+          expect(tester.binding.hasScheduledFrame, isFalse);
+        }
+      });
+    });
+
     testWidgets('reduced motion shows the still frame', (tester) async {
       await tester.pumpWidget(
         _app(
@@ -454,7 +512,7 @@ void main() {
       expect(find.text('None'), findsOneWidget);
     });
 
-    testWidgets('the Founder wears the Founder frame', (tester) async {
+    testWidgets('the Founder wears the Sovereign frame', (tester) async {
       await show(
         tester,
         _Server(
@@ -524,7 +582,7 @@ void main() {
         findsOneWidget,
       );
       // The Founder's frame is not shown to anyone else.
-      expect(find.text('Founder'), findsNothing);
+      expect(find.text('Sovereign'), findsNothing);
       await tester.tap(find.text('Aurora'));
       await tester.pump(const Duration(milliseconds: 400));
       expect(find.text('Equip'), findsNothing);
@@ -554,9 +612,7 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('the Founder sees every frame, the Founder frame too', (
-      tester,
-    ) async {
+    testWidgets('the Founder sees every frame, Sovereign too', (tester) async {
       await show(
         tester,
         _Server(
@@ -566,7 +622,7 @@ void main() {
         ),
       );
       expect(
-        find.bySemanticsLabel(RegExp('Founder frame.*equipped')),
+        find.bySemanticsLabel(RegExp('Sovereign frame.*equipped')),
         findsOneWidget,
       );
       expect(

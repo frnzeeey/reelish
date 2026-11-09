@@ -17,7 +17,7 @@ import 'package:flutter/material.dart';
 import '../account/avatar_frames.dart';
 import '../theme/avatar_frames.dart';
 
-/// The Founder frame's colours: the Sovereign Crest's metal over a
+/// The Sovereign frame's colours: the Sovereign Crest's metal over a
 /// midnight-violet undertone.
 abstract final class FounderRingColors {
   static const platinum = Color(0xFFF3DCA7);
@@ -65,6 +65,7 @@ class AvatarFrame extends StatefulWidget {
   /// One cycle of a frame's motion.
   static Duration periodOf(AvatarFrameStyle style) => switch (style.motion) {
     FrameMotion.turn => const Duration(seconds: 16),
+    FrameMotion.sheen => const Duration(seconds: 7),
     _ => const Duration(seconds: 6),
   };
 
@@ -215,6 +216,23 @@ class _AvatarFrameState extends State<AvatarFrame>
             child: IgnorePointer(
               child: CustomPaint(
                 painter: _FrontPainter(style, size: size, weight: weight),
+              ),
+            ),
+          ),
+        // The Sovereign sheen lights the laurel and crown, so it sits over
+        // them. Only while moving: the still frame has no sheen.
+        if (style.motion == FrameMotion.sheen && ornate && _moving)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: RepaintBoundary(
+                child: CustomPaint(
+                  painter: _SheenPainter(
+                    _controller,
+                    size: size,
+                    weight: weight,
+                  ),
+                  willChange: true,
+                ),
               ),
             ),
           ),
@@ -451,7 +469,8 @@ class _BackPainter extends CustomPainter {
       old.ornate != ornate;
 }
 
-/// Repainted while it moves: a glint, a turning ring or a breathing halo.
+/// Repainted while it moves: a glint, a turning ring, or the Sovereign
+/// frame's breathing undertone (its sheen is _SheenPainter, over the laurel).
 class _LightPainter extends CustomPainter {
   _LightPainter(
     this.style,
@@ -479,25 +498,25 @@ class _LightPainter extends CustomPainter {
           radius,
           _stroke(weight)..shader = _ringShader(style, rect, t),
         );
-      case FrameMotion.halo:
-        // A soft light just outside the ring, breathing between faint and a
-        // little less faint.
+      case FrameMotion.sheen:
+        // The violet undertone behind the laurel, breathing once a cycle,
+        // the same violet that is painted still beneath the ring.
         final breath = .5 - .5 * math.cos(2 * math.pi * t);
-        final outer = radius + (size * .12).clamp(4.0, 16.0);
+        final outer = radius + (size * .14).clamp(5.0, 18.0);
+        const violet = FounderRingColors.violet;
         canvas.drawCircle(
           center,
           outer,
           Paint()
             ..shader = RadialGradient(
               colors: [
-                style.rim.withValues(alpha: 0),
-                style.rim.withValues(alpha: .09 + .07 * breath),
-                style.rim.withValues(alpha: 0),
+                violet.withValues(alpha: 0),
+                violet.withValues(alpha: .06 + .12 * breath),
+                violet.withValues(alpha: 0),
               ],
               stops: [(radius - weight) / outer, radius / outer, 1],
             ).createShader(Rect.fromCircle(center: center, radius: outer)),
         );
-        _glint(canvas, center, radius, rect, t);
       case FrameMotion.glint:
         _glint(canvas, center, radius, rect, t);
       case FrameMotion.none:
@@ -666,11 +685,23 @@ class AvatarFrameRim extends StatelessWidget {
   }
 }
 
-/// The Founder's frame around the ring: two champagne laurel branches rising
-/// from the bottom, either side, toward the crown set on top of the ring, the
-/// Founder Collection's crown (tool/branding/sovereign_shared.mjs). The gap
-/// where the branches meet at the foot holds the edit button. Painted once,
-/// beyond the widget's bounds, so it takes no room.
+/// The Sovereign frame's laurel and crown as shapes, so the frame and its
+/// sheen draw exactly the same metal.
+typedef _LaurelShape = ({
+  Path stems,
+  double stemWidth,
+  Path leaves,
+  Path crown,
+  Rect crownRect,
+  Rect bounds,
+});
+
+/// The Founder's frame, Sovereign, around the ring: two champagne laurel
+/// branches rising from the bottom, either side, toward the crown set on top
+/// of the ring, the Founder Collection's crown
+/// (tool/branding/sovereign_shared.mjs). The gap where the branches meet at
+/// the foot holds the edit button. Painted once, beyond the widget's bounds,
+/// so it takes no room.
 class _LaurelPainter extends CustomPainter {
   const _LaurelPainter({required this.size, required this.weight});
 
@@ -692,24 +723,13 @@ class _LaurelPainter extends CustomPainter {
   static const _pearls = [Offset(15, 37), Offset(146, 15), Offset(277, 37)];
   static const _jewels = [68.0, 146.0, 224.0];
 
-  @override
-  void paint(Canvas canvas, Size box) {
-    final (:center, :radius) = _circle(box, size, weight);
-    final bounds = Rect.fromCircle(center: center, radius: radius * 1.5);
-    final metal = Paint()
-      ..isAntiAlias = true
-      ..shader = const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [
-          FounderRingColors.platinum,
-          FounderRingColors.champagne,
-          FounderRingColors.bronze,
-          FounderRingColors.champagne,
-        ],
-        stops: [0, .4, .7, 1],
-      ).createShader(bounds);
-
+  /// The laurel and crown for a ring of [radius] round [center].
+  static _LaurelShape shape(
+    Offset center,
+    double radius,
+    double size,
+    double weight,
+  ) {
     // The branches: a stem on a circle just outside the ring, with pairs of
     // leaves leaning toward the tip, the inner ones shorter so they stay
     // clear of the ring.
@@ -721,20 +741,15 @@ class _LaurelPainter extends CustomPainter {
               math.sin(degrees * math.pi / 180),
             ) *
             stem;
-    final line = Paint()
-      ..isAntiAlias = true
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round
-      ..strokeWidth = math.max(1.2, size * .014)
-      ..shader = metal.shader;
+    final stems = Path();
+    final leaves = Path();
     for (final (from, to) in [(112.0, 228.0), (68.0, -48.0)]) {
       final sign = (to - from).sign;
-      final path = Path()..moveTo(on(from).dx, on(from).dy);
+      stems.moveTo(on(from).dx, on(from).dy);
       for (var i = 1; i <= 24; i++) {
         final point = on(from + (to - from) * i / 24);
-        path.lineTo(point.dx, point.dy);
+        stems.lineTo(point.dx, point.dy);
       }
-      canvas.drawPath(path, line);
       const pairs = 6;
       for (var i = 0; i < pairs; i++) {
         final t = (i + .5) / pairs;
@@ -742,33 +757,33 @@ class _LaurelPainter extends CustomPainter {
         final forward = at * math.pi / 180 + sign * math.pi / 2;
         final grow = 1 - t * .35;
         // Outward (away from the avatar), then inward and shorter.
-        canvas.drawPath(
+        leaves.addPath(
           _leaf(
             on(at),
             forward - sign * .62,
             size * .17 * grow,
             size * .05 * grow,
           ),
-          metal,
+          Offset.zero,
         );
-        canvas.drawPath(
+        leaves.addPath(
           _leaf(
             on(at),
             forward + sign * .5,
             size * .11 * grow,
             size * .035 * grow,
           ),
-          metal,
+          Offset.zero,
         );
       }
-      canvas.drawPath(
+      leaves.addPath(
         _leaf(
           on(to),
           to * math.pi / 180 + sign * math.pi / 2,
           size * .12,
           size * .036,
         ),
-        metal,
+        Offset.zero,
       );
     }
 
@@ -788,14 +803,57 @@ class _LaurelPainter extends CustomPainter {
     for (final pearl in _pearls) {
       crown.addOval(Rect.fromCircle(center: c(pearl), radius: 15 * k));
     }
+    return (
+      stems: stems,
+      stemWidth: math.max(1.2, size * .014),
+      leaves: leaves,
+      crown: crown,
+      crownRect: Rect.fromLTWH(left, top, width, _crownH * k),
+      bounds: Rect.fromCircle(center: center, radius: radius * 1.5),
+    );
+  }
+
+  /// The centre of the crown's tallest pearl, where the sheen sparkles.
+  static Offset crownPearl(Rect crownRect) {
+    final k = crownRect.width / _crownW;
+    return crownRect.topLeft + _pearls[1] * k;
+  }
+
+  @override
+  void paint(Canvas canvas, Size box) {
+    final (:center, :radius) = _circle(box, size, weight);
+    final laurel = shape(center, radius, size, weight);
+    final metal = Paint()
+      ..isAntiAlias = true
+      ..shader = const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          FounderRingColors.platinum,
+          FounderRingColors.champagne,
+          FounderRingColors.bronze,
+          FounderRingColors.champagne,
+        ],
+        stops: [0, .4, .7, 1],
+      ).createShader(laurel.bounds);
     canvas.drawPath(
-      crown.shift(Offset(0, 6 * k)),
+      laurel.stems,
+      _stroke(laurel.stemWidth)
+        ..strokeCap = StrokeCap.round
+        ..shader = metal.shader,
+    );
+    canvas.drawPath(laurel.leaves, metal);
+
+    final crownRect = laurel.crownRect;
+    final k = crownRect.width / _crownW;
+    canvas.drawPath(
+      laurel.crown.shift(Offset(0, 6 * k)),
       Paint()
         ..color = const Color(0x66000000)
         ..maskFilter = MaskFilter.blur(BlurStyle.normal, 6 * k),
     );
     canvas.drawPath(
-      crown,
+      laurel.crown,
       Paint()
         ..isAntiAlias = true
         ..shader = const LinearGradient(
@@ -806,13 +864,17 @@ class _LaurelPainter extends CustomPainter {
             FounderRingColors.champagne,
             FounderRingColors.bronze,
           ],
-        ).createShader(Rect.fromLTWH(left, top, width, _crownH * k)),
+        ).createShader(crownRect),
     );
     final jewel = Paint()
       ..isAntiAlias = true
       ..color = FounderRingColors.obsidian;
     for (final x in _jewels) {
-      canvas.drawCircle(c(Offset(x, 134)), 7 * k, jewel);
+      canvas.drawCircle(
+        crownRect.topLeft + Offset(x * k, 134 * k),
+        7 * k,
+        jewel,
+      );
     }
   }
 
@@ -847,4 +909,101 @@ class _LaurelPainter extends CustomPainter {
   @override
   bool shouldRepaint(_LaurelPainter old) =>
       old.size != size || old.weight != weight;
+}
+
+/// The Sovereign sheen, over the laurel and crown: once a cycle a band of
+/// pale light crosses the metal from the upper left, where the Sovereign
+/// Crest is lit from, and a sparkle flares on the crown's tallest pearl as
+/// it passes. The rest of the cycle paints nothing.
+class _SheenPainter extends CustomPainter {
+  _SheenPainter(this.light, {required this.size, required this.weight})
+    : super(repaint: light);
+
+  /// 0 to 1 over one cycle.
+  final Animation<double> light;
+  final double size;
+  final double weight;
+
+  /// The part of the cycle the sweep takes (about 1.6 s of 7).
+  static const sweep = .23;
+
+  static const _light = Color(0xFFFFF6DE);
+
+  @override
+  void paint(Canvas canvas, Size box) {
+    final t = light.value;
+    if (t >= sweep) return;
+    final (:center, :radius) = _circle(box, size, weight);
+    final laurel = _LaurelPainter.shape(center, radius, size, weight);
+    final bounds = laurel.bounds.expandToInclude(laurel.crownRect);
+    // The band's place along the diagonal, eased, from just before the
+    // metal to just past it.
+    final along = -.2 + 1.4 * Curves.easeInOutSine.transform(t / sweep);
+    const half = .11;
+    final band = LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [
+        _light.withValues(alpha: 0),
+        _light.withValues(alpha: 0),
+        _light.withValues(alpha: .95),
+        _light.withValues(alpha: 0),
+        _light.withValues(alpha: 0),
+      ],
+      stops: [
+        0,
+        (along - half).clamp(0.0, 1.0),
+        along.clamp(0.0, 1.0),
+        (along + half).clamp(0.0, 1.0),
+        1,
+      ],
+    ).createShader(bounds);
+    final sheen = Paint()
+      ..isAntiAlias = true
+      ..shader = band;
+    canvas.drawPath(laurel.leaves, sheen);
+    canvas.drawPath(laurel.crown, sheen);
+    canvas.drawPath(
+      laurel.stems,
+      _stroke(laurel.stemWidth)
+        ..strokeCap = StrokeCap.round
+        ..shader = band,
+    );
+    canvas.drawCircle(center, radius, _stroke(weight)..shader = band);
+
+    // The sparkle, as the band crosses the pearl: the pearl's place along
+    // the same diagonal the band travels.
+    final pearl = _LaurelPainter.crownPearl(laurel.crownRect);
+    final diagonal = bounds.bottomRight - bounds.topLeft;
+    final offset = pearl - bounds.topLeft;
+    final pearlAlong =
+        (offset.dx * diagonal.dx + offset.dy * diagonal.dy) /
+        diagonal.distanceSquared;
+    final flare = (1 - (along - pearlAlong).abs() / .14).clamp(0.0, 1.0);
+    if (flare <= 0) return;
+    final eased = Curves.easeOut.transform(flare);
+    final r = size * .11 * eased;
+    canvas.drawCircle(
+      pearl,
+      r * .9,
+      Paint()
+        ..color = _light.withValues(alpha: .45 * eased)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, r * .5),
+    );
+    // A four-pointed star, turned a little as it flares.
+    canvas.save();
+    canvas.translate(pearl.dx, pearl.dy);
+    canvas.rotate(math.pi / 8 * (1 - flare));
+    _BackPainter._glint(
+      canvas,
+      Offset.zero,
+      r,
+      _light.withValues(alpha: eased),
+    );
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(_SheenPainter old) =>
+      old.light != light || old.size != size || old.weight != weight;
 }
