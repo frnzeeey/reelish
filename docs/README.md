@@ -58,6 +58,7 @@ search the generated references below: every file, class and function in
 | [Playback lifecycle](playback/playback-lifecycle.md) | The player session: opening, playing, subtitles, episodes, closing |
 | [Provider integration](playback/provider-integration.md) | Repositories, script approval, the QuickJS sandbox, discovery |
 | [Player engines](playback/platform-player-engines.md) | Media3 and libmpv, selection, the engine gate, torrents |
+| [Audio tracks](playback/audio-tracks.md) | Dual audio: discovery, naming, switching, engine support and limits |
 | [Troubleshooting](playback/troubleshooting.md) | Symptoms mapped to code and logs |
 
 ## Backend

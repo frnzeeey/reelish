@@ -95,7 +95,56 @@ void main() {
     );
     // No video tracks: no quality. One audio track: nothing to choose.
     expect(find.text('Quality'), findsNothing);
-    expect(find.text('Audio'), findsNothing);
+    expect(find.text('Audio & language'), findsNothing);
+  });
+
+  testWidgets('names audio tracks by language and returns the choice', (
+    tester,
+  ) async {
+    final closed = await openSheet(
+      tester,
+      audioTracks: const [
+        VideoAudioTrack(
+          id: '1',
+          language: 'jpn',
+          isSelected: true,
+          channelCount: 2,
+          codec: 'aac',
+        ),
+        VideoAudioTrack(
+          id: '2',
+          language: 'eng',
+          isSelected: false,
+          channelCount: 6,
+        ),
+        VideoAudioTrack(id: '3', isSelected: false),
+      ],
+    );
+    // The category shows the language playing now.
+    expect(find.text('Audio & language'), findsOneWidget);
+    expect(find.text('Japanese'), findsOneWidget);
+    await tester.tap(find.text('Audio & language'));
+    await tester.pumpAndSettle();
+    expect(find.text('Stereo · AAC'), findsOneWidget);
+    expect(find.text('English'), findsOneWidget);
+    expect(find.text('5.1'), findsOneWidget);
+    // No metadata: a numbered track, never an invented language.
+    expect(find.text('Audio track 3'), findsOneWidget);
+    expect(
+      tester.getSemantics(find.text('Japanese').last),
+      matchesSemantics(
+        isSelected: true,
+        isButton: true,
+        hasSelectedState: true,
+        isFocusable: true,
+        hasTapAction: true,
+        hasFocusAction: true,
+        label: 'Japanese\nStereo · AAC\nPlaying',
+      ),
+    );
+    await tester.tap(find.text('English'));
+    await tester.pumpAndSettle();
+    expect((await closed)?.audioTrackId, '2');
   });
 
   testWidgets('a speed applies with one tap', (tester) async {

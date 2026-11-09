@@ -35,6 +35,7 @@ import '../../services/subtitle_loader.dart';
 import '../../services/torrent_source_preparer.dart';
 import '../../theme/design_tokens.dart';
 import '../../watch_party/party_player_sync.dart';
+import 'audio_switch_check.dart';
 import 'audio_track_sheet.dart';
 import 'content_advisory_overlay.dart';
 import 'episode_panel.dart';
@@ -257,6 +258,27 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
   final _externalCue = ExternalCueClock();
   List<VideoTrack> _videoTracks = [];
   List<VideoAudioTrack> _audioTracks = [];
+
+  /// The audio language the viewer picked in this session. A reopened player
+  /// (another source, a reconnect, the other engine) plays it ahead of the
+  /// language preferences.
+  String? _chosenAudioLanguage;
+
+  /// Sources (by URL) whose audio libmpv could not switch this session (see
+  /// [_confirmMpvAudio]); they offer no audio choice.
+  final Set<String> _audioLockedSources = {};
+
+  /// A libmpv audio switch not yet seen to play on: its source and the
+  /// language chosen before it. A reopen of that source while it is pending
+  /// means the switch failed it (see [_audioSwitchFailedSource]).
+  ({String url, String? previousLanguage})? _unconfirmedAudioSwitch;
+
+  /// The audio tracks the viewer can choose between.
+  List<VideoAudioTrack> get _audioChoices =>
+      _audioLockedSources.contains(_source?.url) ? const [] : _audioTracks;
+
+  /// Counts audio switches, so a late answer about an older one is dropped.
+  int _audioRequest = 0;
   VideoTrack? _selectedVideoTrack;
   double _subtitleDelay = 0;
   late PlaybackSettings _playback;
@@ -533,6 +555,11 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
     _controlsVisible.value = true;
     _pauseOverlayTimer?.cancel();
     _pauseOverlayTimer = null;
+    final unconfirmed = _unconfirmedAudioSwitch;
+    _unconfirmedAudioSwitch = null;
+    if (unconfirmed != null && unconfirmed.url == source.url) {
+      _audioSwitchFailedSource(unconfirmed.url, unconfirmed.previousLanguage);
+    }
     _source = source;
     _videoTracks = [];
     _audioTracks = [];
@@ -628,7 +655,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
         loadVideoTracks(),
         loadAudioTracks(),
       ]).timeout(const Duration(seconds: 2), onTimeout: () => <void>[]);
-      await _applyPreferredAudio(c);
+      await _applyPreferredAudio(c, beforePlay: true);
       // A newer source, episode or close during the track queries above has
       // already disposed [c]; it must not be listened to or played.
       if (!mounted || generation != _initializationGeneration) return;
@@ -794,6 +821,8 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
       if (!value.isPlaying) return;
       if (!noted && value.position > start) {
         noted = true;
+        // Some streams list their audio tracks only once they play.
+        unawaited(_refreshAudioTracks(controller));
         _metrics.firstFrame(engine.id.name);
         _advisory.playbackStarted();
         CrashReporter.instance.setContext(
@@ -1842,42 +1871,158 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
 
   Future<void> _pickAudio() async {
     final controller = _controller;
-    if (controller == null || _audioTracks.length < 2) return;
+    if (controller == null) return;
+    await _refreshAudioTracks(controller);
+    if (!mounted || _audioChoices.length < 2) return;
     final id = await _withSheet(
-      () => AudioTrackSheet.show(context, _audioTracks),
+      () => AudioTrackSheet.show(context, _audioChoices),
     );
     if (id == null || !mounted || !identical(controller, _controller)) return;
     await _selectAudioTrack(controller, id);
   }
 
+  /// Reads the engine's audio tracks again: tracks a stream lists late, and
+  /// which one the engine really plays (a switch can land after its call
+  /// returns, or not at all).
+  Future<void> _refreshAudioTracks(
+    VideoPlayerController controller, {
+    int? request,
+  }) async {
+    if (!controller.isAudioTrackSupportAvailable()) return;
+    try {
+      final tracks = await controller.getAudioTracks().timeout(
+        const Duration(seconds: 2),
+      );
+      if (!mounted || !identical(controller, _controller)) return;
+      if (request != null && request != _audioRequest) return;
+      setState(() => _audioTracks = tracks);
+    } catch (_) {
+      // Keep the last list; a closed or slow engine changes nothing here.
+    }
+  }
+
+  /// Switches to audio track [id] in place: playback carries on from where
+  /// it is, playing or paused, and subtitles are untouched (forced
+  /// subtitles follow the audio language). [byViewer] remembers the
+  /// language for the rest of the session.
   Future<void> _selectAudioTrack(
     VideoPlayerController controller,
-    String id,
-  ) async {
+    String id, {
+    bool byViewer = true,
+    Duration timeout = const Duration(seconds: 6),
+  }) async {
+    final track = _audioTracks.where((entry) => entry.id == id).firstOrNull;
+    if (track == null || track.isSelected) return;
+    final previous = _audioTracks
+        .where((entry) => entry.isSelected)
+        .firstOrNull;
+    final previousLanguage = _chosenAudioLanguage;
+    if (byViewer) _chosenAudioLanguage = AudioTrackLabel.language(track);
+    final request = ++_audioRequest;
+    // Media3 answers once ExoPlayer reports the new track (it waits up to
+    // 5 s itself), libmpv at once; either way the engine is asked after.
+    var settled = true;
     try {
-      await controller.selectAudioTrack(id).timeout(const Duration(seconds: 4));
+      await controller.selectAudioTrack(id).timeout(timeout);
+    } on TimeoutException {
+      settled = false;
     } catch (_) {
-      return; // Keep the engine's current track if the backend refuses.
+      // The engine refused; the refresh below shows the track it kept.
     }
-    if (!mounted) return;
-    setState(() {
-      _audioTracks = [
-        for (final track in _audioTracks)
-          VideoAudioTrack(
-            id: track.id,
-            label: track.label,
-            language: track.language,
-            isSelected: track.id == id,
-            bitrate: track.bitrate,
-            sampleRate: track.sampleRate,
-            channelCount: track.channelCount,
-            codec: track.codec,
-          ),
-      ];
-    });
-    if (_playback.useForcedSubtitles) {
+    await _refreshAudioTracks(controller, request: request);
+    if (!settled) {
+      Timer(const Duration(seconds: 2), () {
+        unawaited(
+          _refreshAudioTracks(controller, request: request).then((_) {
+            if (mounted && _playback.useForcedSubtitles) {
+              unawaited(_applyPreferredSubtitle(automatic: false));
+            }
+          }),
+        );
+      });
+    }
+    if (mounted && _playback.useForcedSubtitles) {
       unawaited(_applyPreferredSubtitle(automatic: false));
     }
+    if (previous != null && settled && _engine.id == PlayerEngineId.mediaKit) {
+      final source = _source;
+      if (source != null) {
+        _unconfirmedAudioSwitch = (
+          url: source.url,
+          previousLanguage: previousLanguage,
+        );
+      }
+      unawaited(
+        _confirmMpvAudio(controller, request, previous.id, previousLanguage),
+      );
+    }
+  }
+
+  /// On libmpv, makes sure playback goes on after a switch (see
+  /// [AudioSwitchCheck]). An fMP4 HLS rendition libmpv cannot start either
+  /// freezes playback, and then the previous track is put back here, or
+  /// ends the source as a lost connection within a second, and then the
+  /// reopen that follows does it ([_audioSwitchFailedSource]). Media3 is
+  /// not checked.
+  Future<void> _confirmMpvAudio(
+    VideoPlayerController controller,
+    int request,
+    String previousId,
+    String? previousLanguage,
+  ) async {
+    bool current() =>
+        mounted &&
+        identical(controller, _controller) &&
+        request == _audioRequest;
+    final plays = await AudioSwitchCheck(
+      sample: () {
+        if (!current()) return null;
+        final value = controller.value;
+        return AudioSwitchSample(
+          playing: value.isPlaying && !_scrubbing.value,
+          position: value.position,
+        );
+      },
+    ).run();
+    if (!current()) return;
+    _unconfirmedAudioSwitch = null;
+    if (plays) return;
+    final source = _source;
+    if (source != null) _audioSwitchFailedSource(source.url, previousLanguage);
+    try {
+      await controller
+          .selectAudioTrack(previousId)
+          .timeout(const Duration(seconds: 6));
+    } catch (_) {
+      // The refresh below shows whatever libmpv kept.
+    }
+    await _refreshAudioTracks(controller);
+    if (mounted && _playback.useForcedSubtitles) {
+      unawaited(_applyPreferredSubtitle(automatic: false));
+    }
+  }
+
+  /// An audio switch stopped libmpv playing [url]: the language from before
+  /// it comes back, the source offers no audio choice for the rest of the
+  /// session, and the viewer is told.
+  void _audioSwitchFailedSource(String url, String? previousLanguage) {
+    PlaybackLog.log(
+      'Player',
+      'libmpv could not play the selected audio track; restoring the '
+          'previous one',
+    );
+    _chosenAudioLanguage = previousLanguage;
+    _audioLockedSources.add(url);
+    if (!mounted) return;
+    setState(() {}); // Hides the audio choices.
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+      const SnackBar(
+        content: Text(
+          'This stream can’t change its audio on this player, so the '
+          'previous track is back.',
+        ),
+      ),
+    );
   }
 
   Future<void> _resolveEpisodes() async {
@@ -2106,6 +2251,8 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
 
   Future<void> _settings() async {
     final controller = _controller;
+    if (controller != null) await _refreshAudioTracks(controller);
+    if (!mounted) return;
     final alternate = _alternateEngine;
     final result = await _withSheet(
       () => PlayerSettingsSheet.show(
@@ -2120,7 +2267,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
         ),
         _availableSubtitles,
         _videoTracks,
-        _audioTracks,
+        _audioChoices,
         alternate == null ? null : _engineName(alternate.id),
       ),
     );
@@ -2313,6 +2460,8 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
     _refreshSubtitleMenu();
     if (previous.preferredAudioLanguage != _playback.preferredAudioLanguage ||
         previous.secondaryAudioLanguage != _playback.secondaryAudioLanguage) {
+      // New preferences replace the language picked in the player.
+      _chosenAudioLanguage = null;
       final controller = _controller;
       if (controller != null) unawaited(_applyPreferredAudio(controller));
     }
@@ -2332,45 +2481,38 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
     allowTorrents: _playback.p2pStreaming && TorrentSupport.available,
   );
 
-  Future<void> _applyPreferredAudio(VideoPlayerController controller) async {
-    if (_audioTracks.isNotEmpty && controller.isAudioTrackSupportAvailable()) {
-      final preferences = [
+  /// Plays the audio the session wants: the language the viewer picked,
+  /// else the preferred languages. [beforePlay] is the opening of a player,
+  /// before anything plays.
+  Future<void> _applyPreferredAudio(
+    VideoPlayerController controller, {
+    bool beforePlay = false,
+  }) async {
+    if (_audioChoices.isNotEmpty && controller.isAudioTrackSupportAvailable()) {
+      final languages = [
+        ?_chosenAudioLanguage,
         _playback.preferredAudioLanguage == 'device'
             ? WidgetsBinding.instance.platformDispatcher.locale.languageCode
             : _playback.preferredAudioLanguage,
         _playback.secondaryAudioLanguage,
-      ].where((language) => language.isNotEmpty).toList();
-      for (final language in preferences) {
-        final track = _audioTracks
-            .where((entry) => entry.language?.isNotEmpty == true)
-            .where((entry) => _languageMatches(entry.language!, language))
-            .firstOrNull;
-        if (track == null) continue;
-        try {
-          await controller
-              .selectAudioTrack(track.id)
-              .timeout(const Duration(seconds: 2));
-          if (mounted) {
-            setState(() {
-              _audioTracks = [
-                for (final entry in _audioTracks)
-                  VideoAudioTrack(
-                    id: entry.id,
-                    label: entry.label,
-                    language: entry.language,
-                    isSelected: entry.id == track.id,
-                    bitrate: entry.bitrate,
-                    sampleRate: entry.sampleRate,
-                    channelCount: entry.channelCount,
-                    codec: entry.codec,
-                  ),
-              ];
-            });
-          }
-        } catch (_) {
-          // Keep the engine's selected track if a backend rejects the request.
-        }
-        break;
+      ].where((language) => language.isNotEmpty);
+      final track = languages
+          .map(
+            (language) => _audioTracks
+                .where((entry) => entry.language?.isNotEmpty == true)
+                .where((entry) => _languageMatches(entry.language!, language))
+                .firstOrNull,
+          )
+          .nonNulls
+          .firstOrNull;
+      if (track != null) {
+        await _selectAudioTrack(
+          controller,
+          track.id,
+          byViewer: false,
+          // Opening a player must not wait long on a slow engine.
+          timeout: Duration(seconds: beforePlay ? 2 : 6),
+        );
       }
     }
     if (_playback.useForcedSubtitles) {
@@ -3376,7 +3518,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
                           : (current?.providerName ?? '')),
                   sourceLabel: sourceLabel,
                   subtitleEnabled: _subtitle != null,
-                  showAudio: _audioTracks.length > 1,
+                  showAudio: _audioChoices.length > 1,
                   showSources: alternatives > 1,
                   landscapeLocked: _landscapeLocked,
                   onBack: () {

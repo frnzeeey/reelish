@@ -115,7 +115,7 @@ graph LR
   widgets["widgets"] -->|2| widgets_tv["widgets/tv"]
   widgets_player["widgets/player"] -->|1| account["account"]
   widgets_player["widgets/player"] -->|2| diagnostics["diagnostics"]
-  widgets_player["widgets/player"] -->|19| models["models"]
+  widgets_player["widgets/player"] -->|20| models["models"]
   widgets_player["widgets/player"] -->|8| platform["platform"]
   widgets_player["widgets/player"] -->|15| services["services"]
   widgets_player["widgets/player"] -->|27| theme["theme"]
@@ -158,7 +158,7 @@ graph LR
 | `viewmodels` | `analytics` (2), `models` (11), `services` (13) |
 | `watch_party` | `account` (4), `analytics` (2), `diagnostics` (1), `models` (1) |
 | `widgets` | `account` (4), `analytics` (4), `desktop` (1), `diagnostics` (1), `models` (3), `platform` (5), `services` (4), `theme` (32), `widgets/settings` (1), `widgets/tv` (2) |
-| `widgets/player` | `account` (1), `diagnostics` (2), `models` (19), `platform` (8), `services` (15), `theme` (27), `watch_party` (3), `widgets` (6), `widgets/tv` (1) |
+| `widgets/player` | `account` (1), `diagnostics` (2), `models` (20), `platform` (8), `services` (15), `theme` (27), `watch_party` (3), `widgets` (6), `widgets/tv` (1) |
 | `widgets/plugin_library` | `models` (4), `platform` (1), `services` (5), `theme` (30), `widgets` (3) |
 | `widgets/settings` | `theme` (7), `widgets` (1), `widgets/tv` (1) |
 | `widgets/tv` | `models` (1), `platform` (1), `theme` (4), `widgets` (2) |
@@ -172,11 +172,11 @@ The files imported by the most other `lib/` files. A change to one of these reac
 | [`lib/src/theme/glass_theme.dart`](../../lib/src/theme/glass_theme.dart) | 84 | 41 |
 | [`lib/src/theme/reelish_icons.dart`](../../lib/src/theme/reelish_icons.dart) | 76 | 8 |
 | [`lib/src/theme/design_tokens.dart`](../../lib/src/theme/design_tokens.dart) | 47 | 1 |
-| [`lib/src/platform/device_capabilities.dart`](../../lib/src/platform/device_capabilities.dart) | 34 | 15 |
+| [`lib/src/platform/device_capabilities.dart`](../../lib/src/platform/device_capabilities.dart) | 34 | 16 |
 | [`lib/src/models/media_item.dart`](../../lib/src/models/media_item.dart) | 32 | 38 |
 | [`lib/src/services/storage_service.dart`](../../lib/src/services/storage_service.dart) | 20 | 26 |
 | [`lib/src/widgets/settings/settings_components.dart`](../../lib/src/widgets/settings/settings_components.dart) | 19 | 2 |
-| [`lib/src/models/stream_source.dart`](../../lib/src/models/stream_source.dart) | 18 | 15 |
+| [`lib/src/models/stream_source.dart`](../../lib/src/models/stream_source.dart) | 18 | 17 |
 | [`lib/src/account/account_controller.dart`](../../lib/src/account/account_controller.dart) | 17 | 16 |
 | [`lib/src/widgets/tv/tv_focus.dart`](../../lib/src/widgets/tv/tv_focus.dart) | 17 | 7 |
 | [`lib/src/widgets/glass_button.dart`](../../lib/src/widgets/glass_button.dart) | 15 | 1 |

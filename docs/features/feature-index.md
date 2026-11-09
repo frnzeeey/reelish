@@ -39,16 +39,22 @@ source opens, and lets them switch in the player.
 **Entry:** `CustomVideoPlayer._initialize` (tracks queried for up to 2 s).
 **UI:** [`audio_track_sheet.dart`](../../lib/src/widgets/player/audio_track_sheet.dart),
 [`player_settings_sheet.dart`](../../lib/src/widgets/player/player_settings_sheet.dart):
-a panel of categories (Speed, Quality, Audio, Subtitles, Picture, and the
-engine switch when another engine can open the stream), each showing its
-current value, with a page of choices per category. Quality lists only the
-stream's own tracks (and Auto), Audio appears only with more than one track,
-and a choice applies at once; subtitle timing steps on its page and applies
-once. It closes with one `PlayerSettings`, which `CustomVideoPlayer._settings`
-applies as before.
-**Logic:** [`video_quality_selector.dart`](../../lib/src/services/video_quality_selector.dart).
-**State:** player session; preferences in `PlaybackSettings`.
-**Tests:** `player_settings_sheet_test`, `playback_settings_test`.
+a panel of categories (Speed, Quality, Audio & language, Subtitles, Picture,
+and the engine switch when another engine can open the stream), each showing
+its current value, with a page of choices per category. Quality lists only
+the stream's own tracks (and Auto), Audio & language appears only with more
+than one track, and a choice applies at once; subtitle timing steps on its
+page and applies once. It closes with one `PlayerSettings`, which
+`CustomVideoPlayer._settings` applies as before. Audio tracks are named by
+`AudioTrackLabel` and switched in place; the details, engine support and the
+libmpv fMP4 HLS limit are in [Audio tracks](../playback/audio-tracks.md).
+**Logic:** [`video_quality_selector.dart`](../../lib/src/services/video_quality_selector.dart),
+[`audio_switch_check.dart`](../../lib/src/widgets/player/audio_switch_check.dart).
+**State:** player session (the language picked in the player lasts the
+session); preferences in `PlaybackSettings`.
+**Tests:** `player_settings_sheet_test`, `playback_settings_test`,
+`audio_tracks_test`, `integration_test/audio_track_switch_test.dart`,
+`integration_test/media3_audio_track_test.dart`.
 
 ## Branding
 

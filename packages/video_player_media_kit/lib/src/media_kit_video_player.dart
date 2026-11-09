@@ -25,6 +25,9 @@ import 'package:video_player_platform_interface/video_player_platform_interface.
 class MediaKitVideoPlayer extends VideoPlayerPlatform {
   // The implementation uses [Player.hashCode] as texture ID.
   final _players = HashMap<int, Player>();
+
+  /// libmpv's `aid` per player, as last observed.
+  final _selectedAudio = HashMap<int, String>();
   final _completers = HashMap<int, Completer<void>>();
   final _videoControllers = HashMap<int, VideoController>();
   final _streamControllers = HashMap<int, StreamController<VideoEvent>>();
@@ -84,6 +87,7 @@ class MediaKitVideoPlayer extends VideoPlayerPlatform {
     );
 
     _players.remove(textureId);
+    _selectedAudio.remove(textureId);
     _completers.remove(textureId);
     _videoControllers.remove(textureId);
     _streamControllers.remove(textureId);
@@ -175,6 +179,18 @@ class MediaKitVideoPlayer extends VideoPlayerPlatform {
     // --------------------------------------------------
     final markMediaOpened = _initialize(textureId);
     // --------------------------------------------------
+
+    // The audio track libmpv plays, observed rather than read on request:
+    // a property read blocks this thread on libmpv's core, which can wait on
+    // the video output, which waits on this thread.
+    final platform = player.platform;
+    if (platform is NativePlayer) {
+      unawaited(
+        platform.observeProperty('aid', (value) async {
+          _selectedAudio[textureId] = value;
+        }).catchError((Object _) {}),
+      );
+    }
 
     final String resource;
     final Map<String, String> httpHeaders = dataSource.httpHeaders;
@@ -304,13 +320,16 @@ class MediaKitVideoPlayer extends VideoPlayerPlatform {
   Future<List<VideoAudioTrack>> getAudioTracks(int playerId) async {
     final player = _players[playerId];
     if (player == null) return [];
-    final selectedId = player.state.track.audio.id;
+    // media_kit's selected track stays `auto` until the app picks one; the
+    // track libmpv chose by itself is its observed `aid`.
+    final selectedId = _selectedAudio[playerId] ?? player.state.track.audio.id;
     return player.state.tracks.audio
         .where((track) => track.id != 'auto' && track.id != 'no')
         .map((track) => VideoAudioTrack(
               id: track.id,
-              label:
-                  track.title ?? track.language ?? track.codec ?? 'Audio track',
+              // Only the stream's own title: the app names tracks from their
+              // language and must know when there is no title.
+              label: track.title,
               language: track.language,
               isSelected: track.id == selectedId,
               bitrate: track.bitrate,
@@ -328,6 +347,8 @@ class MediaKitVideoPlayer extends VideoPlayerPlatform {
     for (final track in player.state.tracks.audio) {
       if (track.id == trackId) {
         await player.setAudioTrack(track);
+        // libmpv took `aid`; the observer reports the same a moment later.
+        if (_players.containsKey(playerId)) _selectedAudio[playerId] = trackId;
         return;
       }
     }
@@ -425,6 +446,31 @@ class MediaKitVideoPlayer extends VideoPlayerPlatform {
     final platform = _players[playerId]?.platform;
     if (platform is NativePlayer) {
       await platform.setProperty('sub-delay', seconds.toStringAsFixed(3));
+    }
+  }
+
+  /// The sample format each time libmpv's audio output (re)starts, as
+  /// media_kit observes `audio-params`: for tests that check a new audio
+  /// track really decodes.
+  @visibleForTesting
+  Stream<String?> debugAudioFormats(int playerId) =>
+      _players[playerId]?.stream.audioParams.map((params) => params.format) ??
+      const Stream.empty();
+
+  /// Reports libmpv's own value of property [name] (such as `aid`) whenever
+  /// it changes, for tests that check what libmpv plays: media_kit's track
+  /// state records a request, not its result. Observed, never read on
+  /// request (see [create]); a property that becomes unavailable is not
+  /// reported.
+  @visibleForTesting
+  Future<void> debugObserveMpv(
+    int playerId,
+    String name,
+    void Function(String value) onValue,
+  ) async {
+    final platform = _players[playerId]?.platform;
+    if (platform is NativePlayer) {
+      await platform.observeProperty(name, (value) async => onValue(value));
     }
   }
 
@@ -667,8 +713,12 @@ class MediaKitVideoPlayer extends VideoPlayerPlatform {
             //
             // The exception is MediaCodec output (`vo=mediacodec_embed`, used
             // on emulators): it can only show hardware-decoded frames, so a
-            // codec that fails to open there leaves the picture black.
-            if (!_isDecoderMessage(event) || useMediaCodecOutput) {
+            // codec that fails to open there leaves the picture black. Audio
+            // is decoded in software either way, so its messages still get
+            // the grace check: "Error decoding audio." on the first packet
+            // after an audio track switch passes while playback goes on.
+            if (!_isDecoderMessage(event) ||
+                (useMediaCodecOutput && !_isAudioDecoderMessage(event))) {
               forward();
               return;
             }
@@ -716,6 +766,10 @@ class MediaKitVideoPlayer extends VideoPlayerPlatform {
     final text = message.toLowerCase();
     return text.contains('codec') || text.contains('decod');
   }
+
+  /// Whether [message] names the audio decoder ("Error decoding audio.").
+  static bool _isAudioDecoderMessage(String message) =>
+      _isDecoderMessage(message) && message.toLowerCase().contains('audio');
 }
 
 /// A subtitle track inside the media itself.

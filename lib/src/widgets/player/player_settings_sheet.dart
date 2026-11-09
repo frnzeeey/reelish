@@ -9,6 +9,7 @@ import '../../platform/device_capabilities.dart';
 import '../../theme/design_tokens.dart';
 import '../../theme/glass_theme.dart';
 import '../../theme/reelish_icons.dart';
+import 'audio_track_sheet.dart';
 import 'player_sheet.dart';
 
 class PlayerSettings {
@@ -131,13 +132,6 @@ class PlayerSettingsSheet extends StatefulWidget {
       '${(bits / 1e6).toStringAsFixed(1)} Mbps',
   ].join(' · ');
 
-  /// An audio track's language, codec and channels, as the stream gives them.
-  static String audioDetail(VideoAudioTrack track) => [
-    if (track.language?.isNotEmpty == true) track.language!,
-    if (track.codec?.isNotEmpty == true) track.codec!,
-    if (track.channelCount != null) '${track.channelCount} ch',
-  ].join(' · ');
-
   /// `+0.50 s`, `-0.25 s`, or `No delay`.
   static String delayLabel(double delay) => delay == 0
       ? 'No delay'
@@ -226,13 +220,13 @@ class _PlayerSettingsSheetState extends State<PlayerSettingsSheet> {
       ],
     ),
     _Page.audio => _choices(
-      title: 'Audio',
+      title: AudioTrackSheet.title,
       icon: ReelishIcons.audioWave,
       children: [
-        for (final track in widget.audioTracks)
+        for (final (index, track) in widget.audioTracks.indexed)
           PlayerSheetOption(
-            title: track.label ?? track.language ?? 'Audio track',
-            detail: PlayerSettingsSheet.audioDetail(track),
+            title: AudioTrackLabel.title(track, index),
+            detail: AudioTrackLabel.detail(widget.audioTracks, index),
             selected: identical(track, _currentAudio),
             trailing: 'Playing',
             onTap: () => _apply(_value.copyWith(audioTrackId: track.id)),
@@ -353,10 +347,13 @@ class _PlayerSettingsSheetState extends State<PlayerSettingsSheet> {
         if (widget.audioTracks.length > 1)
           _CategoryRow(
             icon: ReelishIcons.audioWave,
-            title: 'Audio',
+            title: AudioTrackSheet.title,
             value: audio == null
                 ? 'Default'
-                : audio.label ?? audio.language ?? 'Audio track',
+                : AudioTrackLabel.title(
+                    audio,
+                    widget.audioTracks.indexOf(audio),
+                  ),
             onTap: () => _open(_Page.audio),
           ),
         _CategoryRow(
