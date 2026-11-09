@@ -735,6 +735,35 @@ void main() {
       expect(find.byType(SupporterThemePicker), findsNothing);
     });
 
+    testWidgets('Sovereign Edition dresses the Founder\'s card', (
+      tester,
+    ) async {
+      late AccountController account;
+      late AccentSettingsController appearance;
+      await tester.runAsync(() async {
+        final (a, supporters) = await _account(['founder']);
+        account = a;
+        await supporters.refresh();
+        appearance = AccentSettingsController(supporters: supporters);
+        await appearance.load();
+        await appearance.setTheme('sovereign');
+      });
+      await showProfile(tester, appearance, account);
+      expect(
+        tester
+            .widget<SupporterThemeBackdrop>(find.byType(SupporterThemeBackdrop))
+            .theme,
+        SupporterTheme.sovereign,
+      );
+      expect(
+        tester
+            .widget<SupporterAvatarRing>(find.byType(SupporterAvatarRing))
+            .theme,
+        SupporterTheme.sovereign,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('without a theme, the usual card', (tester) async {
       late AccountController account;
       late AccentSettingsController appearance;

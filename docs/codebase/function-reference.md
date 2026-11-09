@@ -28,7 +28,7 @@ Top-level functions and methods in `lib/`, A–Z by name, then by declaring type
 | `add` | `SeekCost` | [`playback_sync.dart:109`](../../lib/src/watch_party/playback_sync.dart#L109) |  | `void add(int measuredMs)` |  |
 | `add` | `StreamDiscovery` | [`stream_discovery.dart:76`](../../lib/src/services/stream_discovery.dart#L76) |  | `void add(StreamSource source)` |  |
 | `addCandidate` | `PlaybackCoordinator` | [`playback_coordinator.dart:345`](../../lib/src/services/playback_coordinator.dart#L345) |  | `bool addCandidate(StreamSource source)` |  |
-| `_addName` | `_IdentityCard` | [`profile_screen.dart:548`](../../lib/src/screens/profile_screen.dart#L548) |  | `Widget _addName(bool tv, {required bool start})` | Without a name of their own, the prompt is also the way to set one. |
+| `_addName` | `_IdentityCard` | [`profile_screen.dart:549`](../../lib/src/screens/profile_screen.dart#L549) |  | `Widget _addName(bool tv, {required bool start})` | Without a name of their own, the prompt is also the way to set one. |
 | `addons` | `SubtitleAddonService` | [`subtitle_addon_service.dart:102`](../../lib/src/services/subtitle_addon_service.dart#L102) | yes | `Future<List<SubtitleAddon>> addons() async` |  |
 | `airedBy` | `EpisodeRef` | [`episode_context.dart:45`](../../lib/src/models/episode_context.dart#L45) |  | `bool airedBy(DateTime now)` | Whether providers can have streams for it yet. |
 | `airedBy` | `TvEpisode` | [`tv_season.dart:60`](../../lib/src/models/tv_season.dart#L60) |  | `bool airedBy(DateTime now)` | Whether it has been broadcast by `now`. |

@@ -555,26 +555,41 @@ class SupporterAvatarRing extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => DecoratedBox(
-    decoration: BoxDecoration(
-      shape: BoxShape.circle,
-      gradient: SweepGradient(
-        colors: [theme.ink, theme.glow, theme.second, theme.glow, theme.ink],
-        stops: const [0, .3, .55, .8, 1],
+  Widget build(BuildContext context) {
+    // Sovereign's ring is all champagne, catching the light like metal,
+    // over a faint violet halo; the other themes ring in both their lights.
+    final crest = theme.ornament == ThemeOrnament.crest;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: SweepGradient(
+          colors: crest
+              ? [theme.ink, theme.glow, theme.deepAccent, theme.glow, theme.ink]
+              : [theme.ink, theme.glow, theme.second, theme.glow, theme.ink],
+          stops: const [0, .3, .55, .8, 1],
+        ),
+        boxShadow: [
+          if (crest)
+            BoxShadow(
+              color: theme.second.withValues(alpha: .30),
+              blurRadius: 30,
+            ),
+          BoxShadow(
+            color: theme.glow.withValues(alpha: crest ? .26 : .38),
+            blurRadius: crest ? 18 : 26,
+          ),
+        ],
       ),
-      boxShadow: [
-        BoxShadow(color: theme.glow.withValues(alpha: .38), blurRadius: 26),
-      ],
-    ),
-    child: Padding(
-      padding: const EdgeInsets.all(2.5),
-      child: DecoratedBox(
-        decoration: BoxDecoration(shape: BoxShape.circle, color: theme.deep),
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpace.xxs),
-          child: child,
+      child: Padding(
+        padding: const EdgeInsets.all(2.5),
+        child: DecoratedBox(
+          decoration: BoxDecoration(shape: BoxShape.circle, color: theme.deep),
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpace.xxs),
+            child: child,
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }

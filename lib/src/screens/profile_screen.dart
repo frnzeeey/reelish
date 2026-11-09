@@ -540,6 +540,7 @@ class _IdentityCard extends StatelessWidget {
           alignStart: start,
           founder: badges.has(AccountBadge.founder),
           supporter: badges.has(AccountBadge.supporter),
+          sovereign: theme?.collection == ThemeCollection.founder,
           onOpenSupporters: onOpenSupporters,
         ),
       );
@@ -745,6 +746,7 @@ class _ProfileName extends StatelessWidget {
     required this.supporter,
     required this.onOpenSupporters,
     this.alignStart = false,
+    this.sovereign = false,
   });
 
   final String name;
@@ -755,6 +757,9 @@ class _ProfileName extends StatelessWidget {
   final bool supporter;
   final VoidCallback onOpenSupporters;
 
+  /// Sovereign Edition is on: the Founder badge takes its champagne finish.
+  final bool sovereign;
+
   @override
   Widget build(BuildContext context) {
     final tv = DeviceCapabilities.isTv;
@@ -764,7 +769,8 @@ class _ProfileName extends StatelessWidget {
         ? AppTextSize.titleLarge
         : AppTextSize.headline;
     final capsules = [
-      if (founder) FounderBadge(tv: tv, onTap: onOpenSupporters),
+      if (founder)
+        FounderBadge(tv: tv, sovereign: sovereign, onTap: onOpenSupporters),
       if (supporter)
         SupporterBadge(tv: tv, short: true, onTap: onOpenSupporters),
     ];

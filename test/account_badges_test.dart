@@ -192,6 +192,41 @@ void main() {
       expect(find.byType(ui.FounderEmblem), findsOneWidget);
       expect(find.text(ui.FounderBadge.label), findsNothing);
       expect(find.byType(ui.SupporterBadge), findsNothing);
+      // Without Sovereign Edition, the badge keeps its usual finish.
+      expect(
+        tester.widget<ui.FounderBadge>(find.byType(ui.FounderBadge)).sovereign,
+        isFalse,
+      );
+    });
+
+    testWidgets('the Sovereign finish recolours the crown, not the badge', (
+      tester,
+    ) async {
+      Future<void> pump(bool sovereign) => tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(child: ui.FounderBadge(sovereign: sovereign)),
+          ),
+        ),
+      );
+      await pump(false);
+      final plain = tester.getSize(find.byType(ui.FounderBadge));
+      expect(
+        tester
+            .widget<ui.FounderEmblem>(find.byType(ui.FounderEmblem))
+            .sovereign,
+        isFalse,
+      );
+      await pump(true);
+      // Same capsule, same words: one identity, a different finish.
+      expect(tester.getSize(find.byType(ui.FounderBadge)), plain);
+      expect(find.text(ui.FounderBadge.title), findsOneWidget);
+      expect(
+        tester
+            .widget<ui.FounderEmblem>(find.byType(ui.FounderEmblem))
+            .sovereign,
+        isTrue,
+      );
     });
 
     testWidgets('shows both badges when an account has both', (tester) async {

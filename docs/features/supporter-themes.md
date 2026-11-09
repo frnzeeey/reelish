@@ -45,6 +45,15 @@ never has. Choosing it waits for a fresh answer from the server; at launch the
 saved status applies it, as for every theme, and the server's answer replaces
 that. The Founder can switch to Classic or any other theme at any time.
 
+Under Sovereign Edition the profile card is the Founder's own: the avatar ring
+is all champagne (`SupporterAvatarRing` with the crest ornament) over a faint
+violet halo, and the Founder & Developer capsule takes its Sovereign finish
+(`FounderBadge(sovereign: true)`): the same violet capsule and words, with the
+crown, name and rim in champagne. Everywhere else (Watch Party, the Supporters
+page) and under any other theme, the badge is unchanged. None of it animates.
+The launch screen is unchanged: the native splash shows before Reelish knows
+who is signed in, so a Sovereign splash would flash from the default.
+
 ## Design tokens
 
 Every colour a theme changes is a token, so no screen names a theme:

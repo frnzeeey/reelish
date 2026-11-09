@@ -123,11 +123,12 @@ class _Capsule extends StatelessWidget {
   }
 }
 
-/// The Reelish crown, in violet.
+/// The Reelish crown, in violet, or in champagne for the Sovereign finish.
 class FounderEmblem extends StatelessWidget {
-  const FounderEmblem({super.key, this.size = 20});
+  const FounderEmblem({super.key, this.size = 20, this.sovereign = false});
 
   final double size;
+  final bool sovereign;
 
   static const gradient = LinearGradient(
     begin: Alignment.topLeft,
@@ -135,18 +136,38 @@ class FounderEmblem extends StatelessWidget {
     colors: [Color(0xFFE6DBFF), Color(0xFFB79CF7), Color(0xFF8460E8)],
   );
 
+  /// Champagne gold, lit from the upper left.
+  static const sovereignGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFFF7E9C4), Color(0xFFD6B779), Color(0xFFAF8D52)],
+  );
+
   @override
-  Widget build(BuildContext context) =>
-      _Emblem(icon: ReelishIcons.founder, gradient: gradient, size: size);
+  Widget build(BuildContext context) => _Emblem(
+    icon: ReelishIcons.founder,
+    gradient: sovereign ? sovereignGradient : gradient,
+    size: size,
+  );
 }
 
 /// The identity of the person who created Reelish. It belongs to one account,
 /// and grants no permission of any kind.
 class FounderBadge extends StatelessWidget {
-  const FounderBadge({super.key, this.tv = false, this.onTap});
+  const FounderBadge({
+    super.key,
+    this.tv = false,
+    this.onTap,
+    this.sovereign = false,
+  });
 
   final bool tv;
   final VoidCallback? onTap;
+
+  /// The Sovereign finish, for the Founder's own profile under Sovereign
+  /// Edition: the same violet capsule, with its crown, name and rim in
+  /// champagne. Everywhere else, and to everyone else, the badge is as it is.
+  final bool sovereign;
 
   static const label = 'REELISH FOUNDER';
   static const title = 'Founder & Developer';
@@ -159,9 +180,12 @@ class FounderBadge extends StatelessWidget {
   Widget build(BuildContext context) => Tooltip(
     message: description,
     child: _Capsule(
-      emblem: FounderEmblem(size: CapsuleMetrics.emblem(tv) + 2),
+      emblem: FounderEmblem(
+        size: CapsuleMetrics.emblem(tv) + 2,
+        sovereign: sovereign,
+      ),
       label: title,
-      ink: const Color(0xFFE6DCFF),
+      ink: sovereign ? const Color(0xFFF1E3BE) : const Color(0xFFE6DCFF),
       // Deep violet into a lighter one: the Founder's finish, which no other
       // badge has.
       fill: const LinearGradient(
@@ -169,7 +193,7 @@ class FounderBadge extends StatelessWidget {
         end: Alignment.centerRight,
         colors: [Color(0x528460E8), Color(0x249B7BEF)],
       ),
-      outline: const Color(0x80B79CF7),
+      outline: sovereign ? const Color(0x99D6B779) : const Color(0x80B79CF7),
       tv: tv,
       semantics: '$title. $description',
       onTap: onTap,
