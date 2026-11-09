@@ -434,20 +434,23 @@ class _IconChoiceState extends State<_IconChoice> {
                     ],
                   ),
                   const SizedBox(height: AppSpace.xs),
-                  // Already the button's label; read out once.
+                  // Already the button's label; read out once. A long name
+                  // (Sovereign Crest) shrinks a little rather than being cut.
                   ExcludeSemantics(
-                    child: Text(
-                      widget.preset.label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: AppTextSize.label,
-                        fontWeight: widget.selected
-                            ? FontWeight.w700
-                            : FontWeight.w500,
-                        color: widget.selected
-                            ? GlassTheme.textPrimary
-                            : GlassTheme.muted,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        widget.preset.label,
+                        maxLines: 1,
+                        style: TextStyle(
+                          fontSize: AppTextSize.label,
+                          fontWeight: widget.selected
+                              ? FontWeight.w700
+                              : FontWeight.w500,
+                          color: widget.selected
+                              ? GlassTheme.textPrimary
+                              : GlassTheme.muted,
+                        ),
                       ),
                     ),
                   ),
