@@ -26,7 +26,7 @@ enum Entitlement { free, supporter, founder }
 /// backend/src/entitlements.ts, check [SupporterController.has] in the app,
 /// and call `requirePerk` wherever the server enforces it. Nothing names the
 /// Founder: inheritance happens in the entitlement.
-enum SupporterPerk { hostWatchParty, appThemes, appIcons }
+enum SupporterPerk { hostWatchParty, appThemes, appIcons, avatarFrames }
 
 /// The Founder's own perks: the Founder Collection's cosmetics, which no
 /// donation unlocks. Each is the Founder entitlement as a whole, so a
@@ -37,7 +37,7 @@ enum SupporterPerk { hostWatchParty, appThemes, appIcons }
 /// backend/src/entitlements.ts, and check [SupporterController.hasFounderPerk].
 /// Nothing names the Founder's account: the server decides the entitlement
 /// from its own secret.
-enum FounderPerk { founderThemes, founderIcons, profileAccent }
+enum FounderPerk { founderThemes, founderIcons, founderFrames }
 
 /// The account's status, as the server reported it.
 @immutable

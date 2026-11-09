@@ -5,6 +5,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import '../theme/reelish_icons.dart';
 import '../account/account_badges.dart';
+import '../account/avatar_frames.dart';
 import '../account/supporter_controller.dart';
 import '../models/app_update.dart';
 import '../models/episode_context.dart';
@@ -68,7 +69,7 @@ import 'watch_party/join_party_screen.dart';
 import 'watch_party/party_launcher.dart';
 import '../watch_party/party_models.dart';
 import '../widgets/brand_logo.dart';
-import '../widgets/founder_avatar_ring.dart';
+import '../widgets/avatar_frame.dart';
 import '../widgets/profile_avatar.dart';
 import '../widgets/artwork_image.dart';
 import '../widgets/ambient_backdrop.dart';
@@ -180,6 +181,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       // One GET /me per launch: badges, and the Trakt username and avatar as
       // they are now, wherever they changed. Nothing waits for it.
       unawaited(AccountBadges.instance.refresh());
+      unawaited(AvatarFrames.instance.refresh());
       // The entitlement as the server sees it now: perks and app themes.
       unawaited(SupporterController.instance.refresh());
     });
@@ -1688,7 +1690,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         ),
                       ),
                       padding: const EdgeInsets.all(2),
-                      child: const FounderAvatarRim(
+                      child: const AvatarFrameRim(
                         child: MyProfileAvatar(size: 36),
                       ),
                     ),

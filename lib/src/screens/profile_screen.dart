@@ -24,12 +24,15 @@ import '../theme/design_tokens.dart';
 import '../theme/glass_theme.dart';
 import '../theme/supporter_themes.dart';
 import '../widgets/profile_avatar.dart';
-import '../widgets/founder_avatar_ring.dart';
+import '../account/avatar_frames.dart';
+import '../theme/avatar_frames.dart';
+import '../widgets/avatar_frame.dart';
 import '../widgets/profile_avatar_picker.dart';
 import '../widgets/settings/settings_components.dart';
 import '../widgets/account_badges.dart';
 import 'account_settings_screen.dart';
 import 'app_icon_settings_screen.dart';
+import 'avatar_frames_screen.dart';
 import 'playback_settings_screen.dart';
 import 'supporters_screen.dart';
 
@@ -77,6 +80,7 @@ class ProfileScreen extends StatefulWidget {
     this.profile,
     this.badges,
     this.appearance,
+    this.frames,
   });
 
   final StorageService storage;
@@ -94,6 +98,9 @@ class ProfileScreen extends StatefulWidget {
 
   /// [AccountBadges.instance] when null.
   final AccountBadges? badges;
+
+  /// The account's avatar frames; [AvatarFrames.instance] when null.
+  final AvatarFrames? frames;
   final ProfileController? profile;
 
   /// The app's look: its theme, when one applies, dresses the identity card,
@@ -112,6 +119,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   ProfileController get _profile =>
       widget.profile ?? ProfileController.instance;
   late final AccountBadges _badges = widget.badges ?? AccountBadges.instance;
+  late final AvatarFrames _frames = widget.frames ?? AvatarFrames.instance;
 
   /// The entitlement, for the membership tile: the appearance's when given
   /// (the same instance the app uses), else the app's.
@@ -121,7 +129,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
+    // Both read GET /me, so they share one request.
     unawaited(_badges.refresh());
+    unawaited(_frames.refresh());
   }
 
   /// Local reads only: no network request.
@@ -162,6 +172,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
   );
 
   void _openAppIcon() => _open((back) => AppIconSettingsScreen(onBack: back));
+
+  void _openFrames() => _open(
+    (back) => AvatarFramesScreen(
+      onBack: back,
+      frames: _frames,
+      supporters: _supporters,
+      account: _account,
+      profile: _profile,
+    ),
+  );
 
   void _openSupporters() => unawaited(
     Navigator.of(context).push(
@@ -277,6 +297,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _account,
       _profile,
       _supporters,
+      _frames,
       ?widget.appearance,
     ]),
     builder: (context, _) {
@@ -298,7 +319,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         profile: _profile,
         badges: _badges,
         theme: appearance?.theme,
-        founderAccent: _supporters.hasFounderPerk(FounderPerk.profileAccent),
+        frame: AvatarFrameStyle.byId(_frames.equipped),
         onChangeAvatar: () => unawaited(_chooseAvatar()),
         onAddName: _openAccount,
         onOpenSupporters: _openSupporters,
@@ -315,6 +336,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       );
       final personalize = <Widget>[
+        SettingsTile(
+          icon: ReelishIcons.face,
+          title: 'Avatar frame',
+          value: AvatarFrameStyle.byId(_frames.equipped)?.name ?? 'None',
+          onTap: _openFrames,
+        ),
         if (appearance != null)
           SettingsTile(
             icon: ReelishIcons.palette,
@@ -440,7 +467,7 @@ class _IdentityCard extends StatelessWidget {
     required this.profile,
     required this.badges,
     required this.theme,
-    this.founderAccent = false,
+    this.frame,
     required this.onChangeAvatar,
     required this.onAddName,
     required this.onOpenSupporters,
@@ -457,8 +484,8 @@ class _IdentityCard extends StatelessWidget {
   /// The app theme, when one applies.
   final SupporterTheme? theme;
 
-  /// The Founder's animated gold ring on the avatar (FounderPerk.profileAccent).
-  final bool founderAccent;
+  /// The avatar frame the account wears, if any (AvatarFrames).
+  final AvatarFrameStyle? frame;
   final VoidCallback onChangeAvatar;
 
   /// Opens the account page, where the display name is set.
@@ -591,14 +618,16 @@ class _IdentityCard extends StatelessWidget {
                       ? 84.0
                       : 100.0,
                   theme: theme,
-                  founderAccent: founderAccent,
+                  frame: frame,
                   account: account,
                   profile: profile,
                   onChange: onChangeAvatar,
                 ),
                 // The edit button sits below the Founder's frame.
                 SizedBox(
-                  height: founderAccent ? AppSpace.md + 14 : AppSpace.md,
+                  height: frame?.ornament == FrameOrnament.laurel
+                      ? AppSpace.md + 14
+                      : AppSpace.md,
                 ),
                 _name(compact: compact, start: false),
                 const SizedBox(height: AppSpace.sm),
@@ -626,7 +655,7 @@ class _IdentityCard extends StatelessWidget {
         _EditableAvatar(
           size: tv ? 120 : 112,
           theme: theme,
-          founderAccent: founderAccent,
+          frame: frame,
           account: account,
           profile: profile,
           onChange: onChangeAvatar,
@@ -663,7 +692,7 @@ class _EditableAvatar extends StatelessWidget {
     required this.account,
     required this.profile,
     required this.onChange,
-    this.founderAccent = false,
+    this.frame,
   });
 
   final double size;
@@ -672,8 +701,8 @@ class _EditableAvatar extends StatelessWidget {
   final ProfileController profile;
   final VoidCallback onChange;
 
-  /// The Founder's animated gold ring, whatever the theme.
-  final bool founderAccent;
+  /// The avatar frame the account wears, in place of the theme's ring.
+  final AvatarFrameStyle? frame;
 
   @override
   Widget build(BuildContext context) {
@@ -684,8 +713,11 @@ class _EditableAvatar extends StatelessWidget {
       account: account,
       profile: profile,
     );
-    final framed = founderAccent
-        ? FounderAnimatedAvatarRing(size: size, child: avatar)
+    final frame = this.frame;
+    // The Founder frame's laurel meets at the foot, where the button sits.
+    final atFoot = frame?.ornament == FrameOrnament.laurel;
+    final framed = frame != null
+        ? AvatarFrame(style: frame, size: size, child: avatar)
         : theme != null
         ? SupporterAvatarRing(theme: theme, child: avatar)
         : Container(
@@ -700,7 +732,7 @@ class _EditableAvatar extends StatelessWidget {
             child: avatar,
           );
     final visual = DeviceCapabilities.isTv ? 38.0 : 30.0;
-    final fill = founderAccent
+    final fill = atFoot
         ? FounderRingColors.platinum
         : theme?.ink ?? GlassTheme.coralBright;
     // The tap target is 48 or more around the smaller disc, and the disc is
@@ -714,9 +746,9 @@ class _EditableAvatar extends StatelessWidget {
         Positioned(
           // In the Founder's frame the button sits in the gap at the foot of
           // the laurel, where the branches meet; elsewhere at the lower right.
-          left: founderAccent ? 0 : null,
-          right: founderAccent ? 0 : -offset,
-          bottom: founderAccent ? -target / 2 : -offset,
+          left: atFoot ? 0 : null,
+          right: atFoot ? 0 : -offset,
+          bottom: atFoot ? -target / 2 : -offset,
           child: Center(
             widthFactor: 1,
             heightFactor: 1,

@@ -11,6 +11,8 @@ import '../../models/tv_season.dart';
 import '../../theme/design_tokens.dart';
 import '../../theme/glass_theme.dart';
 import '../../watch_party/party_models.dart';
+import '../../theme/avatar_frames.dart';
+import '../../widgets/avatar_frame.dart';
 import '../../widgets/profile_avatar.dart';
 import '../../widgets/artwork_image.dart';
 
@@ -124,20 +126,31 @@ class PartyAvatar extends StatelessWidget {
     required this.name,
     this.avatar,
     this.size = 40,
+    this.frame,
   });
 
   final String name;
   final String? avatar;
   final double size;
 
+  /// The avatar frame the room says this person wears.
+  final String? frame;
+
   @override
-  Widget build(BuildContext context) => ProfileAvatarView(
-    avatar: AvatarPreset.byId(avatar) == null
-        ? const ProfileAvatar.initials()
-        : ProfileAvatar.preset(avatar!),
-    name: name,
-    size: size,
-  );
+  Widget build(BuildContext context) {
+    final view = ProfileAvatarView(
+      avatar: AvatarPreset.byId(avatar) == null
+          ? const ProfileAvatar.initials()
+          : ProfileAvatar.preset(avatar!),
+      name: name,
+      size: size,
+    );
+    final style = AvatarFrameStyle.byId(frame);
+    // Still in a list: the frame shows who supports Reelish, quietly.
+    return style == null
+        ? view
+        : AvatarFrame(style: style, size: size, animate: false, child: view);
+  }
 }
 
 /// The colour of a participant's status: the accent when their player is

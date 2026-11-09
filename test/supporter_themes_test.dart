@@ -20,7 +20,6 @@ import 'package:onfeed/src/services/storage_service.dart';
 import 'package:onfeed/src/theme/glass_theme.dart';
 import 'package:onfeed/src/theme/supporter_themes.dart';
 import 'package:onfeed/src/theme/theme_tokens.dart';
-import 'package:onfeed/src/widgets/founder_avatar_ring.dart';
 import 'package:onfeed/src/widgets/supporter_theme_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -756,9 +755,8 @@ void main() {
             .theme,
         SupporterTheme.sovereign,
       );
-      // The Founder's own animated ring, in place of the theme's.
-      expect(find.byType(FounderAnimatedAvatarRing), findsOneWidget);
-      expect(find.byType(SupporterAvatarRing), findsNothing);
+      // Without a frame, the theme's ring (frames: avatar_frame_test.dart).
+      expect(find.byType(SupporterAvatarRing), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 

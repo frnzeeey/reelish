@@ -52,36 +52,12 @@ Supporters page) and under any other theme, the badge is unchanged. The launch
 screen is unchanged: the native splash shows before Reelish knows who is signed
 in, so a Sovereign splash would flash from the default.
 
-## The Founder's profile accent
+## The profile's frame
 
-The Founder's avatar on the profile card (phone, TV and Windows) wears
-`FounderAnimatedAvatarRing` (`lib/src/widgets/founder_avatar_ring.dart`) under
-every theme, in place of the theme's ring: a champagne-gold ring over a violet
-undertone, framed by two champagne laurel branches rising either side to the
-Founder Collection's crown, which rests on top of the ring. It is the same
-crown Sovereign Crest wears (`tool/branding/sovereign_shared.mjs`). The edit
-button sits in the gap at the foot of the laurel, where the branches meet. The
-frame frames the Founder's own avatar, whatever they choose (Trakt picture,
-photo, preset or initial). A soft halo breathes and
-one glint of reflected light travels the ring, both from one 6-second
-controller, slow and faint enough that the ring reads as gold before it reads
-as moving. It is `FounderPerk.profileAccent`
-([Founder perks](../backend/entitlements.md#founder-perks)); a supporter's
-profile keeps its theme's ring.
-
-- Only the light (halo and glint) repaints, in its own `RepaintBoundary`. The
-  ring, undertone and crown are painted once, and the avatar is never repainted
-  by it. No blur, no shader beyond gradients.
-- It stops under reduced motion (`MediaQuery.disableAnimations`), in the
-  background (app lifecycle), on a covered page (`TickerMode`), and when the
-  card is scrolled out of view, and a still ring shows instead.
-- The laurel and the crown are painted once, beyond the widget's bounds, so
-  they take no room.
-- Below 48 px it has no laurel or crown. The small avatars (phone Home, the Windows
-  sidebar, the TV rail) take `FounderAvatarRim`, a still champagne rim drawn
-  over the avatar's edge that takes no room, so those layouts do not move.
-
-Tests: `test/founder_avatar_ring_test.dart`.
+A theme dresses the profile card; the avatar's frame is separate. Under any
+theme, an [avatar frame](avatar-frames.md) the account wears replaces the
+theme's ring around the avatar. The Founder wears the Founder frame (champagne
+laurel and crown) by default.
 
 ## Design tokens
 

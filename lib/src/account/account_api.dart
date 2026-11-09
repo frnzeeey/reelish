@@ -294,6 +294,13 @@ class AccountApi {
   Future<Map<String, dynamic>> me(String accessToken) =>
       _send('GET', '/me', token: accessToken);
 
+  /// Wears the avatar frame [frame], or none for null. The server decides
+  /// whether the account may (backend/src/frames.ts).
+  Future<Map<String, dynamic>> setAvatarFrame(
+    String accessToken,
+    String? frame,
+  ) => _send('PUT', '/me/frame', token: accessToken, body: {'frame': frame});
+
   Future<Map<String, dynamic>> supporterStatus(String accessToken) =>
       _send('GET', '/supporters/me', token: accessToken);
 
@@ -338,7 +345,7 @@ class AccountApi {
   Future<Map<String, dynamic>> _send(
     String method,
     String path, {
-    Map<String, Object>? body,
+    Map<String, Object?>? body,
     String? token,
   }) async {
     final base = baseUrl;
