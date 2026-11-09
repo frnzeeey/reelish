@@ -468,6 +468,50 @@ describe('The Founder badge in a party', () => {
     expect(seen.participants).toHaveLength(2);
     expect(founderIn(seen)).toBe(1);
   });
+
+  it('the Founder\'s laurel avatar shows for the Founder alone', async () => {
+    await testEnv.DB.prepare('DELETE FROM users WHERE trakt_uuid = ?').bind('founder-uuid').run();
+    const founder = await supporter({ uuid: 'founder-uuid' });
+    // Kept when the Founder hosts with it.
+    const created = await create(founder.session.accessToken, {
+      content: movie,
+      profile: { name: 'Franze', avatar: 'founder_laurel' },
+    });
+    const { code } = (await created.json()) as { code: string };
+    const owner = await connect(founder.session.accessToken, code);
+    owner.send({ t: 'hello', name: 'Franze', avatar: 'founder_laurel' });
+
+    // A guest asks for it, with the Founder's header too.
+    const guest = await signIn();
+    const response = await call(`/api/v1/party/${code}/socket`, {
+      token: guest.session.accessToken,
+      headers: { Upgrade: 'websocket', 'X-Party-Founder': '1' },
+    });
+    const client = new Client(response.webSocket!);
+    await client.next('welcome');
+    client.send({ t: 'hello', name: 'Guest', avatar: 'founder_laurel' });
+    const seen = (await owner.next(
+      'participants',
+      (m) => (m.participants as { name: string }[]).some((person) => person.name === 'Guest'),
+    )) as unknown as { participants: { name: string; avatar: string | null }[] };
+    const avatarOf = (name: string) => seen.participants.find((p) => p.name === name)?.avatar;
+    expect(avatarOf('Franze')).toBe('founder_laurel');
+    expect(avatarOf('Guest')).toBeNull();
+  });
+
+  it('an ordinary host cannot create a room wearing it', async () => {
+    const { session } = await supporter();
+    const created = await create(session.accessToken, {
+      content: movie,
+      profile: { name: 'Sam', avatar: 'founder_laurel' },
+    });
+    const { code } = (await created.json()) as { code: string };
+    const owner = await connect(session.accessToken, code);
+    const welcome = (await owner.next('participants')) as unknown as {
+      participants: { avatar: string | null }[];
+    };
+    expect(welcome.participants[0].avatar).toBeNull();
+  });
 });
 
 describe('Hosting is for supporters; joining is for everyone', () => {

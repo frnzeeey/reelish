@@ -12,6 +12,7 @@ import '../account/account_api.dart';
 import '../account/account_controller.dart';
 import '../account/avatar_image.dart';
 import '../account/profile_controller.dart';
+import '../account/supporter_controller.dart';
 import '../account/watchlist_sync.dart';
 import '../platform/device_capabilities.dart';
 import '../theme/design_tokens.dart';
@@ -253,11 +254,17 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
               enabled: _busy == null,
               onTap: _editName,
             ),
-            ProfileAvatarPicker(
-              profile: _profile,
-              name: _profile.nameOr(widget.account.username),
-              enabled: _busy == null,
-              traktUrl: widget.account.traktAvatarUrl,
+            ListenableBuilder(
+              listenable: SupporterController.instance,
+              builder: (context, _) => ProfileAvatarPicker(
+                profile: _profile,
+                name: _profile.nameOr(widget.account.username),
+                enabled: _busy == null,
+                traktUrl: widget.account.traktAvatarUrl,
+                founder: SupporterController.instance.hasFounderPerk(
+                  FounderPerk.founderAvatar,
+                ),
+              ),
             ),
             if (_canPickPhoto)
               SettingsTile(

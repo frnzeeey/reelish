@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../account/account_controller.dart';
 import '../account/profile_controller.dart';
+import '../account/supporter_controller.dart';
 import '../theme/glass_theme.dart';
 
 /// The signed-in person's avatar, as their profile sets it on this device;
@@ -16,6 +17,7 @@ class MyProfileAvatar extends StatelessWidget {
     this.shadow = false,
     this.profile,
     this.account,
+    this.supporters,
   });
 
   final double size;
@@ -23,16 +25,32 @@ class MyProfileAvatar extends StatelessWidget {
   final ProfileController? profile;
   final AccountController? account;
 
+  /// Whose entitlement decides whether a Founder avatar shows;
+  /// [SupporterController.instance] when null.
+  final SupporterController? supporters;
+
   @override
   Widget build(BuildContext context) {
     final profile = this.profile ?? ProfileController.instance;
     final account = this.account ?? AccountController.instance;
+    final supporters = this.supporters ?? SupporterController.instance;
     return ListenableBuilder(
-      listenable: Listenable.merge([profile, account]),
+      listenable: Listenable.merge([profile, account, supporters]),
       builder: (context, _) {
         final photo = profile.photo;
+        var avatar = profile.avatar;
+        // A Founder avatar saved on this device shows only while the
+        // signed-in account is the Founder; anyone else sees their picture.
+        if (avatar.kind == AvatarKind.preset &&
+            AvatarPreset.shownFor(
+                  avatar.presetId,
+                  founder: supporters.hasFounderPerk(FounderPerk.founderAvatar),
+                ) ==
+                null) {
+          avatar = const ProfileAvatar.trakt();
+        }
         return ProfileAvatarView(
-          avatar: profile.avatar,
+          avatar: avatar,
           name: profile.nameOr(account.username),
           photo: photo == null ? null : FileImage(photo),
           traktUrl: account.traktAvatarUrl,

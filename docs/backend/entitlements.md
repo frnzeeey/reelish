@@ -67,6 +67,7 @@ The Founder Collection is the Founder's own: cosmetics no donation unlocks.
 | `founder_themes` / `founderThemes` | Nothing to enforce: a theme is only ever seen by its owner | The Founder Collection on the Appearance page (Sovereign Edition) |
 | `founder_icons` / `founderIcons` | Nothing to enforce: the icon is a device setting | The Founder Collection on the App icon page (Sovereign Crest); applying it asks the server afresh first |
 | `founder_profile_accent` / `profileAccent` | Nothing to enforce: only its owner sees their profile card | The animated gold ring on the profile avatar (`FounderAnimatedAvatarRing`) and the gold rim on the small avatars |
+| `founder_avatar` / `founderAvatar` | The Watch Party room keeps the `founder_laurel` avatar only from a participant the Worker verified as Founder (`cleanProfile` in `party-room.ts`); from anyone else it becomes the initial | The laurel avatar in the avatar picker (`AvatarPreset.founderLaurel`); drawn for the signed-in Founder, and in a party only for a participant the room marks as Founder |
 
 `SupporterController.hasFounderPerk(FounderPerk)` is true for the `founder`
 entitlement only, which the server decides from the `FOUNDER_TRAKT_UUID` secret

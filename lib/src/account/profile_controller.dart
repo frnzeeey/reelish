@@ -18,13 +18,35 @@ import 'avatar_image.dart';
 /// A built-in avatar: an illustration from assets/avatars/ (prepared by
 /// tool/branding/generate_avatars.ps1).
 class AvatarPreset {
-  const AvatarPreset(this.id, this.label, this.asset);
+  const AvatarPreset(
+    this.id,
+    this.label,
+    this.asset, {
+    this.founderOnly = false,
+  });
 
   /// Stored in preferences; never rename one. A stored id that is no
   /// longer listed (the earlier symbol presets) shows the initial instead.
   final String id;
   final String label;
   final String asset;
+
+  /// The Founder's own (FounderPerk.founderAvatar): drawn only for the
+  /// signed-in Founder, or a party participant the room marks as Founder.
+  final bool founderOnly;
+
+  /// The Founder Collection's avatar: a champagne laurel wreath under a
+  /// crown (tool/branding/generate_founder_avatar.mjs). Its id is the one
+  /// the Watch Party room accepts from a verified Founder only.
+  static const founderLaurel = AvatarPreset(
+    'founder_laurel',
+    'Founder',
+    'assets/avatars/founder_laurel.png',
+    founderOnly: true,
+  );
+
+  /// The Founder's own presets, shown in the picker to the Founder only.
+  static const founderCollection = [founderLaurel];
 
   static const all = [
     AvatarPreset('avatar1', 'Avatar 1', 'assets/avatars/avatar_1.png'),
@@ -37,11 +59,20 @@ class AvatarPreset {
     AvatarPreset('avatar8', 'Avatar 8', 'assets/avatars/avatar_8.png'),
   ];
 
+  /// The preset saved as [id], in either collection.
   static AvatarPreset? byId(String? id) {
-    for (final preset in all) {
+    for (final preset in [...all, ...founderCollection]) {
       if (preset.id == id) return preset;
     }
     return null;
+  }
+
+  /// The preset to draw for [id] on someone's behalf: a Founder preset only
+  /// when [founder] is true (as the server decided), otherwise none.
+  static AvatarPreset? shownFor(String? id, {required bool founder}) {
+    final preset = byId(id);
+    if (preset == null || (preset.founderOnly && !founder)) return null;
+    return preset;
   }
 }
 

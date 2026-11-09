@@ -124,15 +124,20 @@ class PartyAvatar extends StatelessWidget {
     required this.name,
     this.avatar,
     this.size = 40,
+    this.founder = false,
   });
 
   final String name;
   final String? avatar;
   final double size;
 
+  /// The room says this participant is the Founder, so the Founder's own
+  /// avatar may show; from anyone else it shows the initial.
+  final bool founder;
+
   @override
   Widget build(BuildContext context) => ProfileAvatarView(
-    avatar: AvatarPreset.byId(avatar) == null
+    avatar: AvatarPreset.shownFor(avatar, founder: founder) == null
         ? const ProfileAvatar.initials()
         : ProfileAvatar.preset(avatar!),
     name: name,

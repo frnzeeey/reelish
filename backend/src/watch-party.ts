@@ -63,7 +63,7 @@ export async function createParty(env: Env, principal: Principal, request: Reque
     guestControl: raw.guestControl === true,
     waitForAll: raw.waitForAll !== false,
   };
-  const host = cleanProfile(body.profile);
+  const host = cleanProfile(body.profile, await isFounder(env, principal.userId));
 
   const previous = await env.DB.prepare(`SELECT code FROM party_hosts WHERE user_id = ?`)
     .bind(principal.userId).first<{ code: string }>();

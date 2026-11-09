@@ -25,11 +25,18 @@ export type SupporterPerk = 'host_watch_party' | 'app_themes' | 'app_icons';
 
 /**
  * The Founder's own perks: the Founder Collection's cosmetics (a theme, a
- * launcher icon and the animated profile ring), which no donation unlocks.
- * Only their owner ever sees them, so the server has nothing to enforce; the app reads the entitlement from
- * /supporters/me. Named here so both sides list the same perks.
+ * launcher icon, the animated profile ring and the laurel avatar), which no
+ * donation unlocks. The app reads the entitlement from /supporters/me. Only
+ * the avatar is seen by others (in a Watch Party), so only it is enforced
+ * here: the party room keeps `founder_laurel` for a verified Founder alone
+ * (cleanProfile in party-room.ts). Named here so both sides list the same
+ * perks.
  */
-export type FounderPerk = 'founder_themes' | 'founder_icons' | 'founder_profile_accent';
+export type FounderPerk =
+  | 'founder_themes'
+  | 'founder_icons'
+  | 'founder_profile_accent'
+  | 'founder_avatar';
 
 const refusals: Record<SupporterPerk, string> = {
   host_watch_party: 'Hosting a Watch Party is for Reelish Supporters.',

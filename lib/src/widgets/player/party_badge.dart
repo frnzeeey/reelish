@@ -117,7 +117,12 @@ class _Faces extends StatelessWidget {
                   ),
                 ),
                 child: ProfileAvatarView(
-                  avatar: AvatarPreset.byId(shown[i].avatar) == null
+                  avatar:
+                      AvatarPreset.shownFor(
+                            shown[i].avatar,
+                            founder: shown[i].founder,
+                          ) ==
+                          null
                       ? const ProfileAvatar.initials()
                       : ProfileAvatar.preset(shown[i].avatar!),
                   name: shown[i].name,

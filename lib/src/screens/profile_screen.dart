@@ -177,13 +177,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _chooseAvatar() async {
     Widget picker(BuildContext context, {bool heading = true}) =>
         ListenableBuilder(
-          listenable: Listenable.merge([_profile, _account]),
+          listenable: Listenable.merge([_profile, _account, _supporters]),
           builder: (context, _) => ProfileAvatarPicker(
             profile: _profile,
             name: _profile.nameOr(_account.username),
             enabled: true,
             traktUrl: _account.traktAvatarUrl,
             showHeading: heading,
+            founder: _supporters.hasFounderPerk(FounderPerk.founderAvatar),
           ),
         );
     final more = DeviceCapabilities.isTv
@@ -299,6 +300,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         badges: _badges,
         theme: appearance?.theme,
         founderAccent: _supporters.hasFounderPerk(FounderPerk.profileAccent),
+        supporters: _supporters,
         onChangeAvatar: () => unawaited(_chooseAvatar()),
         onAddName: _openAccount,
         onOpenSupporters: _openSupporters,
@@ -441,6 +443,7 @@ class _IdentityCard extends StatelessWidget {
     required this.badges,
     required this.theme,
     this.founderAccent = false,
+    this.supporters,
     required this.onChangeAvatar,
     required this.onAddName,
     required this.onOpenSupporters,
@@ -459,6 +462,9 @@ class _IdentityCard extends StatelessWidget {
 
   /// The Founder's animated gold ring on the avatar (FounderPerk.profileAccent).
   final bool founderAccent;
+
+  /// Whose entitlement decides whether a Founder avatar shows.
+  final SupporterController? supporters;
   final VoidCallback onChangeAvatar;
 
   /// Opens the account page, where the display name is set.
@@ -592,6 +598,7 @@ class _IdentityCard extends StatelessWidget {
                       : 100.0,
                   theme: theme,
                   founderAccent: founderAccent,
+                  supporters: supporters,
                   account: account,
                   profile: profile,
                   onChange: onChangeAvatar,
@@ -624,6 +631,7 @@ class _IdentityCard extends StatelessWidget {
           size: tv ? 120 : 112,
           theme: theme,
           founderAccent: founderAccent,
+          supporters: supporters,
           account: account,
           profile: profile,
           onChange: onChangeAvatar,
@@ -661,6 +669,7 @@ class _EditableAvatar extends StatelessWidget {
     required this.profile,
     required this.onChange,
     this.founderAccent = false,
+    this.supporters,
   });
 
   final double size;
@@ -671,6 +680,7 @@ class _EditableAvatar extends StatelessWidget {
 
   /// The Founder's animated gold ring, whatever the theme.
   final bool founderAccent;
+  final SupporterController? supporters;
 
   @override
   Widget build(BuildContext context) {
@@ -680,6 +690,7 @@ class _EditableAvatar extends StatelessWidget {
       size: size,
       account: account,
       profile: profile,
+      supporters: supporters,
     );
     final framed = founderAccent
         ? FounderAnimatedAvatarRing(size: size, child: avatar)
