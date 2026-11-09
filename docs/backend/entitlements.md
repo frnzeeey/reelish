@@ -68,6 +68,7 @@ The Founder Collection is the Founder's own: cosmetics no donation unlocks.
 | `founder_themes` / `founderThemes` | Nothing to enforce: a theme is only ever seen by its owner | The Founder Collection on the Appearance page (Sovereign Edition) |
 | `founder_icons` / `founderIcons` | Nothing to enforce: the icon is a device setting | The Founder Collection on the App icon page (Sovereign Crest); applying it asks the server afresh first |
 | `founder_frames` / `founderFrames` | `frames.ts` lets only the Founder wear a Founder frame ([avatar frames](frames.md)) | The Sovereign frame (laurel and crown) in Profile > Avatar frame, worn by default |
+| `founder_splash` / `founderSplash` | Nothing to enforce: the launch screen is a device setting | The Sovereign Crest as the launch screen, automatic from the last status saved on the device (`SplashArtStore`) |
 
 `SupporterController.hasFounderPerk(FounderPerk)` is true for the `founder`
 entitlement only, which the server decides from the `FOUNDER_TRAKT_UUID` secret

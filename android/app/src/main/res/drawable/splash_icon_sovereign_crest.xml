@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The Founder's Android 13+ splash icon (SovereignSplashTheme): the
+     Sovereign Crest, inset exactly as splash_icon.xml insets the Reelish logo,
+     so it shows at 160dp like Flutter's first frame (SplashSpec). Generated
+     artwork: tool/branding/generate_sovereign_crest.mjs. -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/sovereign_crest_splash"
+    android:inset="22.2%" />

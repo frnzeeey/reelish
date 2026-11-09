@@ -11,6 +11,7 @@ import 'src/notifications/episode_alerts.dart';
 import 'src/platform/desktop_gamepad.dart';
 import 'src/platform/desktop_window.dart';
 import 'src/platform/device_capabilities.dart';
+import 'src/platform/splash_art.dart';
 import 'src/screens/home_screen.dart';
 import 'src/screens/sign_in_screen.dart';
 import 'src/screens/splash_screen.dart';
@@ -26,11 +27,15 @@ import 'src/widgets/tv/tv_focus.dart';
 @pragma('vm:entry-point')
 void episodeAlertsDispatcher() => runEpisodeAlertsTask();
 
-void main() {
+Future<void> main() async {
   PerfTimeline.appStarted();
   WidgetsFlutterBinding.ensureInitialized();
   CrashReporter.instance.install();
   PlayerEngineBootstrap.initialize();
+  // One local preference read, so the splash draws the right artwork (the
+  // Founder's crest or the logo) from its first frame; the system splash, or
+  // on Windows the still hidden window, covers it.
+  await SplashArtStore.instance.load();
   runApp(const ReelishApp());
   // After the first frame, so it costs startup nothing; errors before then
   // are held.
@@ -151,6 +156,10 @@ class _StartupScreen extends StatefulWidget {
 class _StartupScreenState extends State<_StartupScreen> {
   bool _acceptedThisSession = false;
 
+  // This launch's, read before the store updates them for the next one.
+  final _splashArt = SplashArtStore.instance.art;
+  final _nativeSplashArt = SplashArtStore.instance.nativeArt;
+
   /// Critical startup only: two local preference reads that decide the
   /// first screen and its colors, and the device type that decides between
   /// the mobile and TV interfaces. Network work (catalog, plugins, update
@@ -172,6 +181,11 @@ class _StartupScreenState extends State<_StartupScreen> {
     } catch (_) {
       // The accent the user picked shows until the server answers.
     }
+    // The next launch screen follows the account: the crest for the Founder.
+    SplashArtStore.instance.attach(
+      AccountController.instance,
+      SupporterController.instance,
+    );
     // The device-local profile follows whichever Trakt account is signed in.
     ProfileController.instance.attach(AccountController.instance);
     // My list and the Trakt watchlist, when the user turned that on.
@@ -191,6 +205,8 @@ class _StartupScreenState extends State<_StartupScreen> {
   @override
   Widget build(BuildContext context) => SplashGate<bool>(
     initialize: _initialize,
+    art: _splashArt,
+    nativeArt: _nativeSplashArt,
     builder: (context, hasAcceptedDocuments) {
       if (hasAcceptedDocuments || _acceptedThisSession) {
         // The catalog needs a Trakt sign-in; Home appears once signed in.

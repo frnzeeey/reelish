@@ -49,8 +49,8 @@ Under Sovereign Edition the Founder's Sovereign capsule takes its Sovereign
 finish (`FounderBadge(sovereign: true)`): the same violet capsule and words,
 with the crown, name and rim in champagne. Everywhere else (Watch Party, the
 Supporters page) and under any other theme, the badge is unchanged. The launch
-screen is unchanged: the native splash shows before Reelish knows who is signed
-in, so a Sovereign splash would flash from the default.
+screen does not follow the theme; it follows the Founder's account instead
+(the Sovereign Crest, under any theme): see [Launch screen](launch-screen.md).
 
 ## The profile's frame
 

@@ -67,13 +67,16 @@ wordmark); paths in `BrandAssets`
 **In the app:** `ReelishWordmark` and `ReelishMark` draw the logos without
 their transparent margins (phone Home header, Windows sidebar, the
 "REELISH SPOTLIGHT" labels, the "In the Spotlight" rail); the splash draws
-the primary logo ([`splash_screen.dart`](../../lib/src/screens/splash_screen.dart)).
+the primary logo, or for the Founder the Sovereign Crest
+([`splash_screen.dart`](../../lib/src/screens/splash_screen.dart),
+[`splash_art.dart`](../../lib/src/platform/splash_art.dart);
+[Launch screen](launch-screen.md)).
 **Platform icons:** [`tool/branding/generate_brand_assets.ps1`](../../tool/branding/generate_brand_assets.ps1)
 writes the adaptive-icon background and monochrome layer, the Android splash
 drawable, the TV banner and the Windows `app_icon.ico`; then
 `dart run flutter_launcher_icons` (config in `pubspec.yaml`) writes the
 Android launcher icons.
-**Tests:** `brand_assets_test`, `splash_screen_test`.
+**Tests:** `brand_assets_test`, `splash_screen_test`, `splash_art_test`.
 
 ## Continue watching and resume
 

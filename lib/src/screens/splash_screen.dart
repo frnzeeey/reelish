@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../platform/splash_art.dart';
 import '../theme/glass_theme.dart';
 import '../widgets/brand_logo.dart';
 
@@ -18,6 +19,32 @@ abstract final class SplashSpec {
   /// about 100dp of this.
   static const logoSize = 160.0;
   static const logoAsset = BrandAssets.primaryLogo;
+
+  /// The Founder's launch screen: the Sovereign Crest on the same 846 px
+  /// canvas as [logoAsset], shown at [logoSize] like it
+  /// (`splash_icon_sovereign_crest.xml`;
+  /// tool/branding/generate_sovereign_crest.mjs).
+  static const crestAsset = 'assets/icons/sovereign_crest_splash.png';
+
+  static String assetFor(SplashArt art) => switch (art) {
+    SplashArt.reelish => logoAsset,
+    SplashArt.sovereignCrest => crestAsset,
+  };
+
+  /// The light that blooms behind [art]: coral for the logo, champagne
+  /// over midnight violet for the crest (the Sovereign Edition's colours).
+  static List<Color> glowFor(SplashArt art) => switch (art) {
+    SplashArt.reelish => const [
+      Color(0x47FF4D6D),
+      Color(0x14FF4D6D),
+      Color(0x00FF4D6D),
+    ],
+    SplashArt.sovereignCrest => const [
+      Color(0x38D6B779),
+      Color(0x1AA78BFA),
+      Color(0x00A78BFA),
+    ],
+  };
 }
 
 /// The startup screen shown while [SplashGate] restores what the first
@@ -28,6 +55,11 @@ abstract final class SplashSpec {
 /// only a soft coral glow blooms in behind it: fading the logo out and back
 /// in would read as a flicker. Platforms without a native splash get a
 /// fade and gentle 0.94 → 1 scale reveal instead.
+///
+/// [art] is the Reelish logo or, for the Founder, the Sovereign Crest
+/// ([SplashArtStore]). Where the native splash showed other artwork
+/// ([nativeArt]: Android before 13 cannot show the crest), the first frame
+/// draws what it showed and cross-fades to [art].
 class SplashView extends StatefulWidget {
   const SplashView({
     super.key,
@@ -35,7 +67,12 @@ class SplashView extends StatefulWidget {
     this.error,
     this.onRetry,
     this.revealLogo,
+    this.art = SplashArt.reelish,
+    this.nativeArt = SplashArt.reelish,
   });
+
+  final SplashArt art;
+  final SplashArt nativeArt;
 
   /// Shows a slim loading bar, only once startup is taking a noticeable time.
   final bool showProgress;
@@ -60,18 +97,26 @@ class _SplashViewState extends State<SplashView>
   late final Animation<double> _glow;
   late final bool _reveal;
 
+  /// The native splash showed other artwork, which the first frame keeps
+  /// and then cross-fades from.
+  late final bool _handOff;
+
+  /// What the first frame draws.
+  SplashArt get _firstArt => _handOff ? widget.nativeArt : widget.art;
+
   @override
   void initState() {
     super.initState();
     _reveal =
         widget.revealLogo ?? defaultTargetPlatform != TargetPlatform.android;
+    _handOff = !_reveal && widget.nativeArt != widget.art;
     // One controller drives the whole entrance, then stops: nothing runs
     // continuously while the splash waits.
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 650),
     );
-    _logoOpacity = _reveal
+    _logoOpacity = _reveal || _handOff
         ? CurvedAnimation(
             parent: _controller,
             curve: const Interval(0, .7, curve: Curves.easeOut),
@@ -103,7 +148,7 @@ class _SplashViewState extends State<SplashView>
     binding.deferFirstFrame();
     unawaited(
       Future.any<void>([
-        precacheImage(_logoImage(context), context),
+        precacheImage(_logoImage(context, _firstArt), context),
         Future<void>.delayed(_logoWait),
       ]).whenComplete(binding.allowFirstFrame),
     );
@@ -112,9 +157,9 @@ class _SplashViewState extends State<SplashView>
   /// Longest the first frame waits for the logo.
   static const _logoWait = Duration(milliseconds: 400);
 
-  /// The logo as drawn: decoded once, at display size.
-  ImageProvider _logoImage(BuildContext context) => ResizeImage(
-    const AssetImage(SplashSpec.logoAsset),
+  /// [art] as drawn: decoded once, at display size.
+  ImageProvider _logoImage(BuildContext context, SplashArt art) => ResizeImage(
+    AssetImage(SplashSpec.assetFor(art)),
     width: (SplashSpec.logoSize * MediaQuery.devicePixelRatioOf(context))
         .round(),
   );
@@ -123,6 +168,10 @@ class _SplashViewState extends State<SplashView>
   void didChangeDependencies() {
     super.didChangeDependencies();
     _holdFirstFrameForLogo();
+    // The artwork the cross-fade ends on starts decoding at once.
+    if (_handOff) {
+      unawaited(precacheImage(_logoImage(context, widget.art), context));
+    }
     if (_controller.isAnimating || _controller.isCompleted) return;
     if (MediaQuery.disableAnimationsOf(context)) {
       _controller.value = 1;
@@ -162,37 +211,27 @@ class _SplashViewState extends State<SplashView>
                     bottom: -SplashSpec.logoSize,
                     child: FadeTransition(
                       opacity: _glow,
-                      child: const DecoratedBox(
+                      child: DecoratedBox(
                         decoration: BoxDecoration(
                           gradient: RadialGradient(
-                            colors: [
-                              Color(0x47FF4D6D),
-                              Color(0x14FF4D6D),
-                              Color(0x00FF4D6D),
-                            ],
-                            stops: [0, .45, 1],
+                            colors: SplashSpec.glowFor(widget.art),
+                            stops: const [0, .45, 1],
                           ),
                         ),
                       ),
                     ),
                   ),
+                  // What the native splash showed, fading out under [art].
+                  if (_handOff)
+                    FadeTransition(
+                      opacity: ReverseAnimation(_logoOpacity),
+                      child: _artwork(context, widget.nativeArt),
+                    ),
                   FadeTransition(
                     opacity: _logoOpacity,
                     child: ScaleTransition(
                       scale: _logoScale,
-                      child: Image.asset(
-                        SplashSpec.logoAsset,
-                        width: SplashSpec.logoSize,
-                        height: SplashSpec.logoSize,
-                        // Decoded once, at display size.
-                        cacheWidth:
-                            (SplashSpec.logoSize *
-                                    MediaQuery.devicePixelRatioOf(context))
-                                .round(),
-                        filterQuality: FilterQuality.medium,
-                        semanticLabel: 'Reelish',
-                        gaplessPlayback: true,
-                      ),
+                      child: _artwork(context, widget.art),
                     ),
                   ),
                 ],
@@ -221,6 +260,19 @@ class _SplashViewState extends State<SplashView>
     );
   }
 }
+
+Widget _artwork(BuildContext context, SplashArt art) => Image.asset(
+  SplashSpec.assetFor(art),
+  width: SplashSpec.logoSize,
+  height: SplashSpec.logoSize,
+  // Decoded once, at display size.
+  cacheWidth: (SplashSpec.logoSize * MediaQuery.devicePixelRatioOf(context))
+      .round(),
+  filterQuality: FilterQuality.medium,
+  // The crest is the Reelish logo too, crowned.
+  semanticLabel: 'Reelish',
+  gaplessPlayback: true,
+);
 
 class _StartupProgress extends StatelessWidget {
   const _StartupProgress({super.key});
@@ -280,6 +332,8 @@ class SplashGate<T> extends StatefulWidget {
     this.progressDelay = const Duration(milliseconds: 1200),
     this.timeout = const Duration(seconds: 10),
     this.revealLogo,
+    this.art = SplashArt.reelish,
+    this.nativeArt = SplashArt.reelish,
   });
 
   final Future<T> Function() initialize;
@@ -287,6 +341,10 @@ class SplashGate<T> extends StatefulWidget {
   final Duration progressDelay;
   final Duration timeout;
   final bool? revealLogo;
+
+  /// Passed to [SplashView].
+  final SplashArt art;
+  final SplashArt nativeArt;
 
   @override
   State<SplashGate<T>> createState() => _SplashGateState<T>();
@@ -370,6 +428,8 @@ class _SplashGateState<T> extends State<SplashGate<T>> {
               error: _error,
               onRetry: _retry,
               revealLogo: widget.revealLogo,
+              art: widget.art,
+              nativeArt: widget.nativeArt,
             )
           : KeyedSubtree(
               key: const ValueKey('app'),

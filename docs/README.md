@@ -43,6 +43,7 @@ search the generated references below: every file, class and function in
 | [Supporters](backend/supporters.md) | The Supporter Badge: Buy Me a Coffee webhooks, supporter codes, reviews, setup |
 | [App themes](features/supporter-themes.md) | Supporter app themes: the accent and profile they set, entitlement, saving, rendering |
 | [App icons](features/app-icons.md) | Launcher icon switching, the free and supporter icons, and their assets |
+| [Launch screen](features/launch-screen.md) | The system and Flutter splash on each platform, and the Founder's Sovereign Crest splash |
 | [Avatar frames](features/avatar-frames.md) | The Supporter avatar frame collection, the Founder's Sovereign frame, limited editions, and how they are drawn |
 | [Avatar frames API](backend/frames.md) | Who may wear which frame, cross-device sync, limited-edition collecting, Watch Party |
 | [Trakt profile](features/trakt-profile.md) | The Trakt username and avatar on every device: storage, refresh, failures, cost |

@@ -22,6 +22,10 @@
 //       the visible icon, for launchers without adaptive icons
 //   assets/images/app_icons/sovereign_crest.png
 //       a 192 px preview for the settings screen
+//   android/app/src/main/res/drawable-nodpi/sovereign_crest_splash.png
+//   assets/icons/sovereign_crest_splash.png
+//       the Founder's launch screen (Android's system splash and Flutter's
+//       SplashView): the crest alone, at 846 px like the Reelish splash logo
 //   tool/branding/sovereign_crest.ico
 //       16 to 256 px, for Windows (not wired in: Windows embeds one icon in
 //       Reelish.exe for everyone, so a Founder-only icon cannot replace it)
@@ -109,13 +113,21 @@ function snapshot(draw, width, height = width) {
   return image;
 }
 
-/** The crown and mark at [scale] (logo px to icon px), centred on the canvas. */
-const artworkAt = (scale, options) => snapshot((c) => {
-  c.clear(CK.Color(0, 0, 0, 0));
+/** Draws the crown and mark at [scale] (logo px to icon px), centred on the
+ *  432 px canvas. */
+function paintArtworkAt(c, scale, options) {
+  c.save();
   c.translate(size / 2, size / 2);
   c.scale(scale, scale);
   c.translate(-content.x, -content.y);
   paintArtwork(c, options);
+  c.restore();
+}
+
+/** The crown and mark at [scale] (logo px to icon px), centred on the canvas. */
+const artworkAt = (scale, options) => snapshot((c) => {
+  c.clear(CK.Color(0, 0, 0, 0));
+  paintArtworkAt(c, scale, options);
 }, size);
 
 /** A laurel leaf: a pointed oval from [base] along [direction] (radians), the
@@ -136,8 +148,13 @@ function addLeaf(path, [x, y], direction, length, width) {
  * with pairs of leaves leaning toward the tips, which stop short of the top
  * and leave the crown its opening.
  */
-const wreathAt = (s, { mono = false } = {}) => snapshot((c) => {
+const wreathAt = (s, options) => snapshot((c) => {
   c.clear(CK.Color(0, 0, 0, 0));
+  paintWreath(c, s, options);
+}, size);
+
+/** Draws the wreath at [s] on the 432 px canvas (see [wreathAt]). */
+function paintWreath(c, s, { mono = false } = {}) {
   const cx = size / 2;
   const cy = size / 2;
   const radius = 100 * s;
@@ -196,7 +213,7 @@ const wreathAt = (s, { mono = false } = {}) => snapshot((c) => {
   c.drawPath(leaves, fill);
   [line, fill].forEach((p) => p.delete());
   [stems, leaves].forEach((p) => p.delete());
-}, size);
+}
 
 /** Each visible pixel's distance from the centre: [nearest, farthest]. */
 function extent(image) {
@@ -240,6 +257,7 @@ const layered = (...images) => snapshot((c) => {
   for (const image of images) c.drawImage(image, 0, 0, null);
 }, size);
 const foreground = layered(wreath, artwork);
+const wreathRadius = extent(wreath)[1];
 const monoWreath = wreathAt(wreathScale, { mono: true });
 const monoArtwork = artworkAt(scale, { mono: true });
 const monochrome = layered(monoWreath, monoArtwork);
@@ -305,6 +323,26 @@ for (const [density, pixels] of Object.entries(densities)) {
 const preview = tile(192);
 save(join(previews, `${id}.png`), preview.encodeToBytes());
 preview.delete();
+
+// The Founder's launch screen: the same wreath, crown and mark, drawn again
+// from their shapes at the splash's resolution (not the 432 px icon scaled
+// up), on the 846 px canvas the Reelish splash logo uses, so both show at
+// SplashSpec.logoSize (160 dp). The wreath spans 64% of it: the Reelish
+// artwork spans about 58%, and a round shape reads smaller than a square one.
+const splashPixels = 846;
+const splashZoom = (splashPixels * 0.64) / 2 / wreathRadius;
+const splash = snapshot((c) => {
+  c.clear(CK.Color(0, 0, 0, 0));
+  c.translate(splashPixels / 2, splashPixels / 2);
+  c.scale(splashZoom, splashZoom);
+  c.translate(-size / 2, -size / 2);
+  paintWreath(c, wreathScale);
+  paintArtworkAt(c, scale);
+}, splashPixels);
+const splashBytes = splash.encodeToBytes();
+save(join(nodpi, `${id}_splash.png`), splashBytes);
+save(join(root, 'assets', 'icons', `${id}_splash.png`), splashBytes);
+splash.delete();
 
 // Windows: one .ico holding a PNG per size (supported since Windows Vista).
 const pngs = icoSizes.map((pixels) => {

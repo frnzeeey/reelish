@@ -31,7 +31,7 @@ export type SupporterPerk = 'host_watch_party' | 'app_themes' | 'app_icons' | 'a
  * by others, so frames.ts enforces it. Named here so both sides list the same
  * perks.
  */
-export type FounderPerk = 'founder_themes' | 'founder_icons' | 'founder_frames';
+export type FounderPerk = 'founder_themes' | 'founder_icons' | 'founder_frames' | 'founder_splash';
 
 const refusals: Record<SupporterPerk, string> = {
   host_watch_party: 'Hosting a Watch Party is for Reelish Supporters.',

@@ -37,7 +37,7 @@ enum SupporterPerk { hostWatchParty, appThemes, appIcons, avatarFrames }
 /// backend/src/entitlements.ts, and check [SupporterController.hasFounderPerk].
 /// Nothing names the Founder's account: the server decides the entitlement
 /// from its own secret.
-enum FounderPerk { founderThemes, founderIcons, founderFrames }
+enum FounderPerk { founderThemes, founderIcons, founderFrames, founderSplash }
 
 /// The account's status, as the server reported it.
 @immutable

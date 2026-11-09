@@ -99,6 +99,7 @@ flutter:
     - assets/fonts/BebasNeue-OFL.txt
     - assets/icons/reelish_icon.png
     - assets/icons/Primary_logo.png
+    - assets/icons/sovereign_crest_splash.png
     - assets/icons/logo_icon.png
     - assets/icons/word_logo.png
     - assets/data/plugins.json

@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/services.dart';
+import 'package:onfeed/src/platform/splash_art.dart';
 import 'package:onfeed/src/screens/splash_screen.dart';
 
 Finder get _logo => find.byWidgetPredicate(
@@ -27,6 +29,91 @@ Widget _app(Widget child, {bool reduceMotion = false}) => MaterialApp(
 );
 
 void main() {
+  Finder art(String asset) => find.byWidgetPredicate(
+    (widget) =>
+        widget is Image &&
+        widget.image is ResizeImage &&
+        ((widget.image as ResizeImage).imageProvider as AssetImage).assetName ==
+            asset,
+  );
+
+  double artOpacity(WidgetTester tester, String asset) => tester
+      .widget<FadeTransition>(
+        find
+            .ancestor(of: art(asset), matching: find.byType(FadeTransition))
+            .first,
+      )
+      .opacity
+      .value;
+
+  Widget founderSplash(
+    Completer<int> init, {
+    required bool reveal,
+    SplashArt nativeArt = SplashArt.sovereignCrest,
+  }) => _app(
+    SplashGate<int>(
+      initialize: () => init.future,
+      revealLogo: reveal,
+      art: SplashArt.sovereignCrest,
+      nativeArt: nativeArt,
+      builder: (_, _) => const Text('home'),
+    ),
+  );
+
+  testWidgets('the Founder\'s crest continues the native splash as it is', (
+    tester,
+  ) async {
+    final init = Completer<int>();
+    await tester.pumpWidget(founderSplash(init, reveal: false));
+    expect(art(SplashSpec.crestAsset), findsOneWidget);
+    expect(_logo, findsNothing);
+    expect(artOpacity(tester, SplashSpec.crestAsset), 1);
+    init.complete(1);
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets(
+    'where the native splash showed the logo (Android 12 and older), the '
+    'crest fades in over it',
+    (tester) async {
+      final init = Completer<int>();
+      await tester.pumpWidget(
+        founderSplash(init, reveal: false, nativeArt: SplashArt.reelish),
+      );
+      // The first frame is what the system splash showed.
+      expect(_logoOpacity(tester), 1);
+      expect(artOpacity(tester, SplashSpec.crestAsset), 0);
+      await tester.pump(const Duration(milliseconds: 700));
+      expect(_logoOpacity(tester), 0);
+      expect(artOpacity(tester, SplashSpec.crestAsset), 1);
+      init.complete(1);
+      await tester.pumpAndSettle();
+    },
+  );
+
+  testWidgets('reveals the crest where there is no native splash', (
+    tester,
+  ) async {
+    final init = Completer<int>();
+    await tester.pumpWidget(
+      founderSplash(init, reveal: true, nativeArt: SplashArt.reelish),
+    );
+    expect(_logo, findsNothing);
+    expect(artOpacity(tester, SplashSpec.crestAsset), 0);
+    await tester.pump(const Duration(milliseconds: 700));
+    expect(artOpacity(tester, SplashSpec.crestAsset), 1);
+    init.complete(1);
+    await tester.pumpAndSettle();
+  });
+
+  test('the crest is a bundled asset at the logo\'s size', () async {
+    final logo = await rootBundle.load(SplashSpec.logoAsset);
+    final crest = await rootBundle.load(SplashSpec.crestAsset);
+    Future<int> width(ByteData data) async =>
+        (await decodeImageFromList(data.buffer.asUint8List())).width;
+    expect(await width(crest), await width(logo));
+  });
+
   testWidgets('continues the native splash: logo visible on the first frame', (
     tester,
   ) async {

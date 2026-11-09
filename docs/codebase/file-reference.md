@@ -9,7 +9,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | File | Platform | Lines | Purpose |
 |---|---|---|---|
 | [`lib/icon_gallery.dart`](#libicon_gallerydart) | Shared | 172 | A development screen showing every Reelish icon side by side, for checking the set after changing it. |
-| [`lib/main.dart`](#libmaindart) | Shared | 207 | App entry point: initialises the player engines, builds `ReelishApp` (theme, navigator, Windows shortcuts and gamepad) and the startup gate that shows first-run consent or `HomeScreen`. |
+| [`lib/main.dart`](#libmaindart) | Shared | 223 | App entry point: initialises the player engines, builds `ReelishApp` (theme, navigator, Windows shortcuts and gamepad) and the startup gate that shows first-run consent or `HomeScreen`. |
 | [`lib/src/account/account_api.dart`](#libsrcaccountaccount_apidart) | Shared | 391 | HTTP calls to the Reelish API's account routes, with timeouts and a typed error for every failure the UI distinguishes. |
 | [`lib/src/account/account_badges.dart`](#libsrcaccountaccount_badgesdart) | Shared | 98 | The badges on the signed-in account. |
 | [`lib/src/account/account_controller.dart`](#libsrcaccountaccount_controllerdart) | Shared | 404 | The signed-in Trakt account: restores the stored session at launch, hands out fresh access tokens (one shared refresh at a time), runs the device sign-in, and signs out. |
@@ -63,6 +63,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/platform/desktop_gamepad.dart`](#libsrcplatformdesktop_gamepaddart) | Windows | 200 | Controller navigation for the Windows interface. |
 | [`lib/src/platform/desktop_window.dart`](#libsrcplatformdesktop_windowdart) | Windows | 123 | The desktop window: fullscreen through the Windows runner's `reelish/window` channel. |
 | [`lib/src/platform/device_capabilities.dart`](#libsrcplatformdevice_capabilitiesdart) | Shared | 153 | What kind of device Reelish is running on, read once during startup. |
+| [`lib/src/platform/splash_art.dart`](#libsrcplatformsplash_artdart) | Shared | 148 | The launch screen's artwork: the Reelish logo, or for the Founder the Sovereign Crest (FounderPerk.founderSplash). |
 | [`lib/src/platform/windows_installation.dart`](#libsrcplatformwindows_installationdart) | Windows | 102 | How the running Windows copy of Reelish was installed. |
 | [`lib/src/screens/account_settings_screen.dart`](#libsrcscreensaccount_settings_screendart) | Shared | 676 | The signed-in Trakt account in Settings: the profile (display name and avatar, kept on this device), sign out here or everywhere, and delete the Reelish account. |
 | [`lib/src/screens/app_icon_settings_screen.dart`](#libsrcscreensapp_icon_settings_screendart) | Shared | 578 | Settings → Appearance → App icon: the launcher icon presets in a grid. |
@@ -83,7 +84,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/screens/plugins_screen.dart`](#libsrcscreensplugins_screendart) | Shared | 919 | The phone and TV Plugins page: installed repositories, enabling providers, script updates and the plugin library. |
 | [`lib/src/screens/profile_screen.dart`](#libsrcscreensprofile_screendart) | Shared | 1139 | The signed-in person's page, in three parts: who they are (avatar, name, badges, their viewing at a glance), how Reelish looks for them (avatar, app theme, app icon) and their account. |
 | [`lib/src/screens/sign_in_screen.dart`](#libsrcscreenssign_in_screendart) | Shared | 805 | Trakt sign-in, shown before Home whenever no session is stored. |
-| [`lib/src/screens/splash_screen.dart`](#libsrcscreenssplash_screendart) | Shared | 380 | The launch splash and `SplashGate`, which runs startup work before the first screen. |
+| [`lib/src/screens/splash_screen.dart`](#libsrcscreenssplash_screendart) | Shared | 440 | The launch splash and `SplashGate`, which runs startup work before the first screen. |
 | [`lib/src/screens/subtitle_addons_screen.dart`](#libsrcscreenssubtitle_addons_screendart) | Shared | 237 | Stremio subtitle addons the player searches while you watch. |
 | [`lib/src/screens/supporters_screen.dart`](#libsrcscreenssupporters_screendart) | Shared | 738 | Reelish Supporters: a place to thank the people who fund Reelish, and to support it. |
 | [`lib/src/screens/tv/tv_browse.dart`](#libsrcscreenstvtv_browsedart) | Android TV | 876 | TV browsing building blocks: the featured-title frame, focusable poster rows and grids, and their messages. |
@@ -229,7 +230,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/main.dart
 
-**Source:** [`lib/main.dart`](../../lib/main.dart) · **Platform:** Shared · **Lines:** 207 · **Branches on:** isDesktop, usesTvLayout, isDesktopPlatform
+**Source:** [`lib/main.dart`](../../lib/main.dart) · **Platform:** Shared · **Lines:** 223 · **Branches on:** isDesktop, usesTvLayout, isDesktopPlatform
 
 **Purpose:** App entry point: initialises the player engines, builds `ReelishApp` (theme, navigator, Windows shortcuts and gamepad) and the startup gate that shows first-run consent or `HomeScreen`.
 
@@ -237,7 +238,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Top-level functions:** `episodeAlertsDispatcher`, `main`
 
-**Imports (project):** `src/account/account_controller.dart`, `src/account/profile_controller.dart`, `src/account/supporter_controller.dart`, `src/account/watchlist_sync.dart`, `src/diagnostics/crash_reporter.dart`, `src/notifications/episode_alerts.dart`, `src/platform/desktop_gamepad.dart`, `src/platform/desktop_window.dart`, `src/platform/device_capabilities.dart`, `src/screens/first_run_consent_screen.dart`, `src/screens/home_screen.dart`, `src/screens/sign_in_screen.dart`, `src/screens/splash_screen.dart`, `src/services/accent_settings_controller.dart`, `src/services/perf_timeline.dart`, `src/services/player_engine.dart`, `src/theme/glass_theme.dart`, `src/widgets/tv/tv_focus.dart`
+**Imports (project):** `src/account/account_controller.dart`, `src/account/profile_controller.dart`, `src/account/supporter_controller.dart`, `src/account/watchlist_sync.dart`, `src/diagnostics/crash_reporter.dart`, `src/notifications/episode_alerts.dart`, `src/platform/desktop_gamepad.dart`, `src/platform/desktop_window.dart`, `src/platform/device_capabilities.dart`, `src/platform/splash_art.dart`, `src/screens/first_run_consent_screen.dart`, `src/screens/home_screen.dart`, `src/screens/sign_in_screen.dart`, `src/screens/splash_screen.dart`, `src/services/accent_settings_controller.dart`, `src/services/perf_timeline.dart`, `src/services/player_engine.dart`, `src/theme/glass_theme.dart`, `src/widgets/tv/tv_focus.dart`
 
 **Packages:** `flutter`
 
@@ -261,7 +262,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Imported by:** `src/account/account_controller.dart`, `src/account/avatar_frames.dart`, `src/account/supporter_controller.dart`, `src/account/watchlist_sync.dart`, `src/notifications/episode_alerts.dart`, `src/notifications/episode_check.dart`, `src/screens/account_settings_screen.dart`, `src/screens/watch_party/create_party_screen.dart`, `src/screens/watch_party/party_widgets.dart`, `src/support/support_service.dart`, `src/watch_party/watch_party_controller.dart`
 
-**Tests importing it:** `test/account_badges_test.dart`, `test/account_test.dart`, `test/app_icon_test.dart`, `test/avatar_frame_test.dart`, `test/entitlements_test.dart`, `test/episode_alerts_test.dart`, `test/help_support_test.dart`, `test/profile_layout_test.dart`, `test/profile_screen_test.dart`, `test/supporter_themes_test.dart`, `test/supporters_test.dart`, `test/trakt_profile_sync_test.dart`, `test/ux_journeys_test.dart`, `test/watch_party_test.dart`, `test/watchlist_sync_test.dart`
+**Tests importing it:** `test/account_badges_test.dart`, `test/account_test.dart`, `test/app_icon_test.dart`, `test/avatar_frame_test.dart`, `test/entitlements_test.dart`, `test/episode_alerts_test.dart`, `test/help_support_test.dart`, `test/profile_layout_test.dart`, `test/profile_screen_test.dart`, `test/splash_art_test.dart`, `test/supporter_themes_test.dart`, `test/supporters_test.dart`, `test/trakt_profile_sync_test.dart`, `test/ux_journeys_test.dart`, `test/watch_party_test.dart`, `test/watchlist_sync_test.dart`
 
 ## lib/src/account/account_badges.dart
 
@@ -291,9 +292,9 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Packages:** `flutter`, `url_launcher`
 
-**Imported by:** `main.dart`, `src/account/account_badges.dart`, `src/account/avatar_frames.dart`, `src/account/profile_controller.dart`, `src/account/supporter_controller.dart`, `src/account/watchlist_sync.dart`, `src/desktop/desktop_settings_page.dart`, `src/notifications/episode_alerts.dart`, `src/screens/account_settings_screen.dart`, `src/screens/avatar_frames_screen.dart`, `src/screens/playback_settings_screen.dart`, `src/screens/profile_screen.dart`, `src/screens/sign_in_screen.dart`, `src/services/tmdb_service.dart`, `src/support/support_service.dart`, `src/watch_party/watch_party_controller.dart`, `src/widgets/profile_avatar.dart`
+**Imported by:** `main.dart`, `src/account/account_badges.dart`, `src/account/avatar_frames.dart`, `src/account/profile_controller.dart`, `src/account/supporter_controller.dart`, `src/account/watchlist_sync.dart`, `src/desktop/desktop_settings_page.dart`, `src/notifications/episode_alerts.dart`, `src/platform/splash_art.dart`, `src/screens/account_settings_screen.dart`, `src/screens/avatar_frames_screen.dart`, `src/screens/playback_settings_screen.dart`, `src/screens/profile_screen.dart`, `src/screens/sign_in_screen.dart`, `src/services/tmdb_service.dart`, `src/support/support_service.dart`, `src/watch_party/watch_party_controller.dart`, `src/widgets/profile_avatar.dart`
 
-**Tests importing it:** `test/account_badges_test.dart`, `test/account_test.dart`, `test/app_icon_test.dart`, `test/avatar_frame_test.dart`, `test/entitlements_test.dart`, `test/episode_alerts_test.dart`, `test/help_support_test.dart`, `test/profile_layout_test.dart`, `test/profile_screen_test.dart`, `test/profile_test.dart`, `test/supporter_themes_test.dart`, `test/supporters_test.dart`, `test/trakt_profile_sync_test.dart`, `test/watch_party_test.dart`, `test/watchlist_sync_test.dart`, `test/widget_test.dart`
+**Tests importing it:** `test/account_badges_test.dart`, `test/account_test.dart`, `test/app_icon_test.dart`, `test/avatar_frame_test.dart`, `test/entitlements_test.dart`, `test/episode_alerts_test.dart`, `test/help_support_test.dart`, `test/profile_layout_test.dart`, `test/profile_screen_test.dart`, `test/profile_test.dart`, `test/splash_art_test.dart`, `test/supporter_themes_test.dart`, `test/supporters_test.dart`, `test/trakt_profile_sync_test.dart`, `test/watch_party_test.dart`, `test/watchlist_sync_test.dart`, `test/widget_test.dart`
 
 ## lib/src/account/avatar_frames.dart
 
@@ -371,7 +372,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Imported by:** `src/account/account_controller.dart`
 
-**Tests importing it:** `test/account_badges_test.dart`, `test/account_test.dart`, `test/app_icon_test.dart`, `test/avatar_frame_test.dart`, `test/entitlements_test.dart`, `test/episode_alerts_test.dart`, `test/help_support_test.dart`, `test/profile_layout_test.dart`, `test/profile_screen_test.dart`, `test/profile_test.dart`, `test/supporter_themes_test.dart`, `test/supporters_test.dart`, `test/trakt_profile_sync_test.dart`, `test/watch_party_test.dart`, `test/watchlist_sync_test.dart`, `test/widget_test.dart`
+**Tests importing it:** `test/account_badges_test.dart`, `test/account_test.dart`, `test/app_icon_test.dart`, `test/avatar_frame_test.dart`, `test/entitlements_test.dart`, `test/episode_alerts_test.dart`, `test/help_support_test.dart`, `test/profile_layout_test.dart`, `test/profile_screen_test.dart`, `test/profile_test.dart`, `test/splash_art_test.dart`, `test/supporter_themes_test.dart`, `test/supporters_test.dart`, `test/trakt_profile_sync_test.dart`, `test/watch_party_test.dart`, `test/watchlist_sync_test.dart`, `test/widget_test.dart`
 
 ## lib/src/account/supporter_controller.dart
 
@@ -385,9 +386,9 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Packages:** `flutter`, `shared_preferences`
 
-**Imported by:** `main.dart`, `src/platform/app_icon.dart`, `src/screens/app_icon_settings_screen.dart`, `src/screens/avatar_frames_screen.dart`, `src/screens/home_screen.dart`, `src/screens/playback_settings_screen.dart`, `src/screens/profile_screen.dart`, `src/screens/supporters_screen.dart`, `src/screens/watch_party/create_party_screen.dart`, `src/services/accent_settings_controller.dart`
+**Imported by:** `main.dart`, `src/platform/app_icon.dart`, `src/platform/splash_art.dart`, `src/screens/app_icon_settings_screen.dart`, `src/screens/avatar_frames_screen.dart`, `src/screens/home_screen.dart`, `src/screens/playback_settings_screen.dart`, `src/screens/profile_screen.dart`, `src/screens/supporters_screen.dart`, `src/screens/watch_party/create_party_screen.dart`, `src/services/accent_settings_controller.dart`
 
-**Tests importing it:** `test/app_icon_test.dart`, `test/avatar_frame_test.dart`, `test/entitlements_test.dart`, `test/profile_layout_test.dart`, `test/supporter_themes_test.dart`, `test/supporters_test.dart`, `test/watch_party_test.dart`
+**Tests importing it:** `test/app_icon_test.dart`, `test/avatar_frame_test.dart`, `test/entitlements_test.dart`, `test/profile_layout_test.dart`, `test/splash_art_test.dart`, `test/supporter_themes_test.dart`, `test/supporters_test.dart`, `test/watch_party_test.dart`
 
 ## lib/src/account/trakt_avatar.dart
 
@@ -1071,6 +1072,22 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Tests importing it:** `integration_test/windows_player_ui_test.dart`, `integration_test/windows_torrent_test.dart`, `test/account_test.dart`, `test/audio_tracks_test.dart`, `test/github_update_check_test.dart`, `test/help_support_test.dart`, `test/paused_overlay_test.dart`, `test/plugin_library_test.dart`, `test/profile_layout_test.dart`, `test/profile_test.dart`, `test/supporter_themes_test.dart`, `test/supporters_test.dart`, `test/tv_home_test.dart`, `test/tv_support_test.dart`, `test/ux_journeys_test.dart`, `test/watch_party_test.dart`
 
+## lib/src/platform/splash_art.dart
+
+**Source:** [`lib/src/platform/splash_art.dart`](../../lib/src/platform/splash_art.dart) · **Platform:** Shared · **Lines:** 148 · **Branches on:** Platform.isAndroid
+
+**Purpose:** The launch screen's artwork: the Reelish logo, or for the Founder the Sovereign Crest (FounderPerk.founderSplash).
+
+**Declares:** `SplashArt` (Enum), `SplashArtStore` (Platform adapter)
+
+**Imports (project):** `src/account/account_controller.dart`, `src/account/supporter_controller.dart`
+
+**Packages:** `flutter`, `shared_preferences`
+
+**Imported by:** `main.dart`, `src/screens/splash_screen.dart`
+
+**Tests importing it:** `test/splash_art_test.dart`, `test/splash_screen_test.dart`
+
 ## lib/src/platform/windows_installation.dart
 
 **Source:** [`lib/src/platform/windows_installation.dart`](../../lib/src/platform/windows_installation.dart) · **Platform:** Windows · **Lines:** 102 · **Branches on:** TargetPlatform.windows
@@ -1399,13 +1416,13 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/screens/splash_screen.dart
 
-**Source:** [`lib/src/screens/splash_screen.dart`](../../lib/src/screens/splash_screen.dart) · **Platform:** Shared · **Lines:** 380 · **Branches on:** TargetPlatform.android
+**Source:** [`lib/src/screens/splash_screen.dart`](../../lib/src/screens/splash_screen.dart) · **Platform:** Shared · **Lines:** 440 · **Branches on:** TargetPlatform.android
 
 **Purpose:** The launch splash and `SplashGate`, which runs startup work before the first screen.
 
 **Declares:** `SplashGate` (Widget), `_SplashGateState` (Widget state), `SplashSpec` (Class), `SplashView` (Widget), `_SplashViewState` (Widget state), `_StartupError` (Widget), `_StartupProgress` (Widget)
 
-**Imports (project):** `src/theme/glass_theme.dart`, `src/widgets/brand_logo.dart`
+**Imports (project):** `src/platform/splash_art.dart`, `src/theme/glass_theme.dart`, `src/widgets/brand_logo.dart`
 
 **Packages:** `flutter`
 

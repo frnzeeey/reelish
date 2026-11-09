@@ -14,6 +14,7 @@ import android.graphics.drawable.Icon
 import androidx.annotation.RequiresApi
 import android.app.UiModeManager
 import android.content.res.Configuration
+import android.content.res.Resources
 import android.util.Rational
 import android.view.WindowManager
 import android.content.ActivityNotFoundException
@@ -165,6 +166,30 @@ class ReelishActivity : FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, deviceChannelName).setMethodCallHandler { call, result ->
             when (call.method) {
                 "capabilities" -> result.success(deviceCapabilities())
+                else -> result.notImplemented()
+            }
+        }
+        // The launch screen's artwork (SplashArtStore in Dart): the Founder's
+        // Sovereign Crest or the Reelish logo. Android 13 and later keep the
+        // theme for every later launch; earlier versions always show the
+        // manifest's, and answer false so Flutter knows.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "onfeed/splash").setMethodCallHandler { call, result ->
+            when (call.method) {
+                "set" -> {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        try {
+                            splashScreen.setSplashScreenTheme(
+                                if (call.argument<Boolean>("crest") == true) R.style.SovereignSplashTheme
+                                else Resources.ID_NULL,
+                            )
+                            result.success(true)
+                        } catch (_: Exception) {
+                            result.success(false)
+                        }
+                    } else {
+                        result.success(false)
+                    }
+                }
                 else -> result.notImplemented()
             }
         }
