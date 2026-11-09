@@ -63,9 +63,17 @@ for the same reason.
 Sovereign Crest (`sovereign_crest`, group `AppIconGroup.founder`) is the
 Founder's own icon, the launcher companion of the Sovereign Edition
 [theme](supporter-themes.md#the-founder-collection). Its mark is its own: a
-geometric R whose top edge rises into three crown points, the stem's outer edge
-running straight up into the first, in champagne gold on obsidian with a faint
-midnight-violet light behind it.
+geometric R cut like metal, with chamfered corners, whose top edge rises into a
+three-point diadem. Each point is cut as a jewel, with a light face and a
+shadowed one, and a bevel catches the light along the upper-left edges. It is
+champagne gold (`#D6B779`, highlights in pale platinum `#F3DCA7`) on obsidian
+(`#090A12`) with a restrained midnight-violet glow (`#A78BFA`). It has no
+hairlines, so it holds at the smallest launcher size.
+
+Windows and Android TV cannot switch launcher icons (see the top of this page),
+so the App icon page, and with it Sovereign Crest, appears on Android phones and
+tablets only. The `.ico` exists for other uses; the Windows build keeps the
+default icon for everyone.
 
 Only the Founder sees the FOUNDER COLLECTION section, at the top of the screen:
 it has nothing to unlock, so it is never shown locked. `AppIconController.select`
@@ -97,13 +105,14 @@ Previews for the screen are 192 px PNGs in `assets/images/app_icons/`.
   it.
 
 - Sovereign Crest: `tool/branding/generate_sovereign_crest.mjs`, also with
-  CanvasKit. Its mark is one SVG path in the 108 dp viewport, so its foreground
-  and monochrome layers are VectorDrawables
-  (`drawable/ic_launcher_foreground_sovereign_crest.xml`, with a champagne
-  metallic gradient, and `..._monochrome_sovereign_crest.xml`), crisp at every
-  size; the script fails if the mark leaves the 66 dp safe zone. The background
-  is a 432 px PNG, and `tool/branding/sovereign_crest.svg` is the whole icon as
-  one vector.
+  CanvasKit. Its geometry (`MARK`, `FACETS`, in the 108 dp viewport) is the
+  master, so its foreground and monochrome layers are VectorDrawables, crisp at
+  every size: `drawable/ic_launcher_foreground_sovereign_crest.xml` (the metal
+  gradient, then the jewel facets and the bevel clipped to the mark) and
+  `..._monochrome_sovereign_crest.xml` (the silhouette). The script fails if the
+  mark leaves the 66 dp safe zone. The background is a 432 px PNG. The script
+  also writes `tool/branding/sovereign_crest.svg`, the whole icon as one
+  vector, and `tool/branding/sovereign_crest.ico` (16 to 256 px).
 
 A new supporter icon needs its alias in the manifest, an entry in
 `AppIconSwitcher.aliases` and an `AppIconPreset` with its group.
