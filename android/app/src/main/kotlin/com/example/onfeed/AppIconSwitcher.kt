@@ -41,6 +41,7 @@ class AppIconSwitcher(private val context: Context) {
             "golden_hour" to ".IconGoldenHour",
             "ember" to ".IconEmber",
             "ivory_studio" to ".IconIvoryStudio",
+            "sovereign_crest" to ".IconSovereignCrest",
         )
 
         private const val PREFS = "reelish_app_icon"

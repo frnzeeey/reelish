@@ -1,7 +1,7 @@
 // Settings → Appearance → App icon: the launcher icon presets in a grid.
 // Android phones and tablets only (see lib/src/platform/app_icon.dart). Two
 // icons are free; the supporter collection shows to everyone, and opens for
-// Reelish Supporters.
+// Reelish Supporters. The Founder Collection shows to the Founder only.
 
 import 'dart:async';
 
@@ -62,6 +62,7 @@ class _AppIconSettingsScreenState extends State<AppIconSettingsScreen> {
     if (!mounted) return;
     // The server said no: the saved status was out of date.
     if (result == AppIconChange.supportersOnly) return _explain(preset);
+    // The Founder Collection has nothing to unlock, so nothing to explain.
     messenger
       ?..hideCurrentSnackBar()
       ..showSnackBar(
@@ -71,8 +72,13 @@ class _AppIconSettingsScreenState extends State<AppIconSettingsScreen> {
               'App icon changed to ${preset.label}. The previous icon '
                   'goes away when you leave Reelish.',
             AppIconChange.unverified =>
-              'Your Supporter status could not be checked. Check your '
-                  'connection and try again.',
+              preset.founderOnly
+                  ? 'Your Founder status could not be checked. Check your '
+                        'connection and try again.'
+                  : 'Your Supporter status could not be checked. Check your '
+                        'connection and try again.',
+            AppIconChange.founderOnly =>
+              '${preset.label} is part of the Founder Collection.',
             _ => 'The icon could not be changed. Try again.',
           }),
         ),
@@ -148,6 +154,31 @@ class _AppIconSettingsScreenState extends State<AppIconSettingsScreen> {
       icon: ReelishIcons.grid,
       onBack: widget.onBack,
       children: [
+        // The Founder's own icons, shown to the Founder only (it has nothing
+        // to unlock), and to anyone whose launcher still shows one.
+        if (_controller.founderCollection ||
+            AppIconPreset.byId(_controller.current).founderOnly)
+          SettingsSection(
+            label: 'FOUNDER COLLECTION',
+            description: _controller.founderCollection
+                ? 'Yours alone, as the creator of Reelish.'
+                : 'The icons of the creator of Reelish.',
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(14),
+                child: _grid(
+                  AppIconPreset.all
+                      .where((p) => p.founderOnly)
+                      .where(
+                        (p) =>
+                            _controller.founderCollection ||
+                            p.id == _controller.current,
+                      )
+                      .toList(),
+                ),
+              ),
+            ],
+          ),
         SettingsSection(
           label: 'FREE',
           description:
@@ -196,12 +227,12 @@ class _AppIconSettingsScreenState extends State<AppIconSettingsScreen> {
             ),
           ],
         ),
-        if (!_controller.supporter &&
-            !AppIconPreset.byId(_controller.current).free)
-          const _FootNote(
+        if (!_controller.unlocked(AppIconPreset.byId(_controller.current)))
+          _FootNote(
             text:
-                'Your current icon is from the supporter collection. It stays '
-                'until you choose another.',
+                'Your current icon is from the '
+                '${AppIconPreset.byId(_controller.current).founderOnly ? 'Founder' : 'supporter'} '
+                'collection. It stays until you choose another.',
           ),
         const _FootNote(
           text:
@@ -290,6 +321,9 @@ class _IconChoiceState extends State<_IconChoice> {
         ? GlassTheme.primary
         : GlassTheme.border;
     return Semantics(
+      // Its own node: the icon in use has no tap action, and would otherwise
+      // be read out as part of the section's heading.
+      container: true,
       button: true,
       selected: widget.selected,
       label: widget.locked

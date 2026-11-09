@@ -58,13 +58,13 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/navigation/app_transitions.dart`](#libsrcnavigationapp_transitionsdart) | Shared | 126 | Page route and tab transitions shared by every interface. |
 | [`lib/src/notifications/episode_alerts.dart`](#libsrcnotificationsepisode_alertsdart) | Shared | 441 | New-episode alerts: the settings the user changes, the system notifications, and the checks: every few hours in the background on Android (WorkManager), and while the app runs (launch, resume, a timer) on Android and Windows. |
 | [`lib/src/notifications/episode_check.dart`](#libsrcnotificationsepisode_checkdart) | Shared | 290 | Finds newly aired episodes of the series the user follows, for alerts. |
-| [`lib/src/platform/app_icon.dart`](#libsrcplatformapp_icondart) | Shared | 207 | Launcher icon presets and switching between them (Settings → Appearance → App icon). |
+| [`lib/src/platform/app_icon.dart`](#libsrcplatformapp_icondart) | Shared | 234 | Launcher icon presets and switching between them (Settings → Appearance → App icon). |
 | [`lib/src/platform/desktop_gamepad.dart`](#libsrcplatformdesktop_gamepaddart) | Windows | 200 | Controller navigation for the Windows interface. |
 | [`lib/src/platform/desktop_window.dart`](#libsrcplatformdesktop_windowdart) | Windows | 123 | The desktop window: fullscreen through the Windows runner's `reelish/window` channel. |
 | [`lib/src/platform/device_capabilities.dart`](#libsrcplatformdevice_capabilitiesdart) | Shared | 153 | What kind of device Reelish is running on, read once during startup. |
 | [`lib/src/platform/windows_installation.dart`](#libsrcplatformwindows_installationdart) | Windows | 102 | How the running Windows copy of Reelish was installed. |
 | [`lib/src/screens/account_settings_screen.dart`](#libsrcscreensaccount_settings_screendart) | Shared | 676 | The signed-in Trakt account in Settings: the profile (display name and avatar, kept on this device), sign out here or everywhere, and delete the Reelish account. |
-| [`lib/src/screens/app_icon_settings_screen.dart`](#libsrcscreensapp_icon_settings_screendart) | Shared | 541 | Settings → Appearance → App icon: the launcher icon presets in a grid. |
+| [`lib/src/screens/app_icon_settings_screen.dart`](#libsrcscreensapp_icon_settings_screendart) | Shared | 575 | Settings → Appearance → App icon: the launcher icon presets in a grid. |
 | [`lib/src/screens/app_information_screens.dart`](#libsrcscreensapp_information_screensdart) | Shared | 163 | About and Support screens, and the Reelish name, icon and tagline used where the app identifies itself. |
 | [`lib/src/screens/credits_screen.dart`](#libsrcscreenscredits_screendart) | Shared | 333 | Credits for the data, services and software Reelish relies on. |
 | [`lib/src/screens/first_run_consent_screen.dart`](#libsrcscreensfirst_run_consent_screendart) | Shared | 271 | First-launch screen where the viewer reads and accepts the privacy policy and terms of use; remembers the acceptance. |
@@ -988,7 +988,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/platform/app_icon.dart
 
-**Source:** [`lib/src/platform/app_icon.dart`](../../lib/src/platform/app_icon.dart) · **Platform:** Shared · **Lines:** 207 · **Branches on:** isTv, Platform.isAndroid
+**Source:** [`lib/src/platform/app_icon.dart`](../../lib/src/platform/app_icon.dart) · **Platform:** Shared · **Lines:** 234 · **Branches on:** isTv, Platform.isAndroid
 
 **Purpose:** Launcher icon presets and switching between them (Settings → Appearance → App icon).
 
@@ -1084,7 +1084,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/screens/app_icon_settings_screen.dart
 
-**Source:** [`lib/src/screens/app_icon_settings_screen.dart`](../../lib/src/screens/app_icon_settings_screen.dart) · **Platform:** Shared · **Lines:** 541
+**Source:** [`lib/src/screens/app_icon_settings_screen.dart`](../../lib/src/screens/app_icon_settings_screen.dart) · **Platform:** Shared · **Lines:** 575
 
 **Purpose:** Settings → Appearance → App icon: the launcher icon presets in a grid.
 

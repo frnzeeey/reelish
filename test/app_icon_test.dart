@@ -232,6 +232,74 @@ void main() {
       }
     });
 
+    test('Sovereign Crest is the Founder\'s alone', () async {
+      final preset = AppIconPreset.byId('sovereign_crest');
+      expect(preset.id, 'sovereign_crest');
+      expect(preset.group, AppIconGroup.founder);
+      expect(preset.free, isFalse);
+      expect(AppIconPreset.all.where((p) => p.founderOnly), [preset]);
+      // A supporter has every supporter icon, but not this one.
+      final supporter = await _controller(['verified']);
+      expect(supporter.unlocked(preset), isFalse);
+      expect(supporter.founderCollection, isFalse);
+      expect(
+        await supporter.select('sovereign_crest'),
+        AppIconChange.founderOnly,
+      );
+      expect(launcher.enabled, 'default');
+      expect(launcher.calls, isNot(contains('select')));
+      // Nor anyone else.
+      final free = await _controller(['none']);
+      expect(await free.select('sovereign_crest'), AppIconChange.founderOnly);
+      expect(launcher.enabled, 'default');
+    });
+
+    test(
+      'Sovereign Crest asks the server, not a saved Founder status',
+      () async {
+        SharedPreferences.setMockInitialValues({
+          'reelish.supporter.v1.user-1': jsonEncode({
+            'code': 'RS-ABCD-2345',
+            'status': 'none',
+            'entitlement': 'founder',
+          }),
+        });
+        final account = _Account([null]);
+        final controller = AppIconController(supporters: await account.start());
+        await controller.load();
+        expect(
+          await controller.select('sovereign_crest'),
+          AppIconChange.unverified,
+        );
+        expect(launcher.enabled, 'default');
+      },
+    );
+
+    test('a saved Founder status the server denies applies nothing', () async {
+      SharedPreferences.setMockInitialValues({
+        'reelish.supporter.v1.user-1': jsonEncode({
+          'code': 'RS-ABCD-2345',
+          'status': 'verified',
+          'entitlement': 'founder',
+        }),
+      });
+      final account = _Account(['verified']);
+      final controller = AppIconController(supporters: await account.start());
+      await controller.load();
+      expect(
+        await controller.select('sovereign_crest'),
+        AppIconChange.founderOnly,
+      );
+      expect(launcher.enabled, 'default');
+    });
+
+    test('the Founder can always return to the default icon', () async {
+      final controller = await _controller(['founder']);
+      expect(await controller.select('sovereign_crest'), AppIconChange.applied);
+      expect(await controller.select('default'), AppIconChange.applied);
+      expect(launcher.enabled, 'default');
+    });
+
     test('every app theme has its icon', () {
       final signature = AppIconPreset.all
           .where((p) => p.group == AppIconGroup.signature)
@@ -351,7 +419,10 @@ void main() {
       tester,
     ) async {
       await show(tester, ['none']);
-      for (final preset in AppIconPreset.all) {
+      // The Founder Collection is not shown to them at all.
+      expect(find.text('FOUNDER COLLECTION'), findsNothing);
+      expect(find.text('Sovereign Crest'), findsNothing);
+      for (final preset in AppIconPreset.all.where((p) => !p.founderOnly)) {
         expect(find.text(preset.label), findsOneWidget);
         expect(
           find.bySemanticsLabel(
@@ -433,6 +504,56 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.textContaining('could not be changed'), findsOneWidget);
       expect(find.textContaining('App icon changed'), findsNothing);
+    });
+
+    testWidgets('a supporter does not see the Founder Collection', (
+      tester,
+    ) async {
+      await show(tester, ['verified']);
+      expect(find.text('FOUNDER COLLECTION'), findsNothing);
+      expect(find.text('Sovereign Crest'), findsNothing);
+    });
+
+    testWidgets('the Founder applies Sovereign Crest from its own section', (
+      tester,
+    ) async {
+      await show(tester, ['founder']);
+      expect(find.text('FOUNDER COLLECTION'), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.text('FOUNDER COLLECTION')).dy,
+        lessThan(tester.getTopLeft(find.text('FREE')).dy),
+      );
+      await tester.tap(find.text('Sovereign Crest'));
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 50)),
+      );
+      await tester.pumpAndSettle();
+      expect(launcher.enabled, 'sovereign_crest');
+      expect(
+        find.textContaining('App icon changed to Sovereign Crest'),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('Sovereign Crest kept on a launcher shows, for anyone', (
+      tester,
+    ) async {
+      launcher.enabled = 'sovereign_crest';
+      await show(tester, ['verified']);
+      expect(
+        tester.getSemantics(find.bySemanticsLabel('Sovereign Crest icon')),
+        matchesSemantics(
+          label: 'Sovereign Crest icon',
+          isButton: true,
+          isSelected: true,
+          hasSelectedState: true,
+        ),
+      );
+      expect(
+        find.textContaining('from the Founder collection'),
+        findsOneWidget,
+      );
     });
   });
 }

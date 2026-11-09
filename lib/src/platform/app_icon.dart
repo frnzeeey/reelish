@@ -11,6 +11,9 @@
 // local data can unlock it. An icon already on the launcher is never changed
 // behind the user's back (that can remove their home-screen shortcut), so one
 // chosen while supporting stays until they choose another.
+//
+// Sovereign Crest, the Founder Collection's icon, is the Founder's alone
+// (FounderPerk.founderIcons, which no donation unlocks), checked the same way.
 
 import 'dart:async';
 import 'dart:io';
@@ -34,6 +37,10 @@ enum AppIconGroup {
 
   /// The supporter collection's colours of the Reelish tile.
   colour,
+
+  /// The Founder Collection: the Founder's own artwork, which no donation
+  /// unlocks (tool/branding/generate_sovereign_crest.mjs).
+  founder,
 }
 
 /// One launcher icon. [id] is shared with AppIconSwitcher.kt.
@@ -45,8 +52,11 @@ class AppIconPreset {
   final String label;
   final AppIconGroup group;
 
-  /// Free for everyone; otherwise for Reelish Supporters.
+  /// Free for everyone; otherwise for Reelish Supporters, or the Founder.
   bool get free => group == AppIconGroup.free;
+
+  /// The Founder's own: for the Founder alone, never a supporter.
+  bool get founderOnly => group == AppIconGroup.founder;
 
   /// A 192 px preview (tool/branding/generate_icon_presets.ps1).
   String get preview => 'assets/images/app_icons/$id.png';
@@ -75,6 +85,7 @@ class AppIconPreset {
     AppIconPreset('teal', 'Teal'),
     AppIconPreset('green', 'Green'),
     AppIconPreset('lime', 'Lime'),
+    AppIconPreset('sovereign_crest', 'Sovereign Crest', AppIconGroup.founder),
   ];
 
   static AppIconPreset byId(String? id) =>
@@ -115,6 +126,9 @@ enum AppIconChange {
   /// The server says this account is not a supporter.
   supportersOnly,
 
+  /// The server says this account is not the Founder.
+  founderOnly,
+
   /// Supporter status could not be checked (offline, signed out, server
   /// down), so a supporter icon was not applied.
   unverified,
@@ -138,8 +152,17 @@ class AppIconController extends ChangeNotifier {
   /// The Founder, who has every supporter perk without donating.
   bool get founder => _supporters.entitlement == Entitlement.founder;
 
+  /// Whether the Founder Collection shows: the last status known for this
+  /// account. Only for display; [select] asks the server.
+  bool get founderCollection =>
+      _supporters.hasFounderPerk(FounderPerk.founderIcons);
+
   /// Whether [preset] can be chosen from the screen as things stand.
-  bool unlocked(AppIconPreset preset) => preset.free || supporter;
+  bool unlocked(AppIconPreset preset) => switch (preset.group) {
+    AppIconGroup.free => true,
+    AppIconGroup.founder => founderCollection,
+    AppIconGroup.signature || AppIconGroup.colour => supporter,
+  };
 
   @override
   void dispose() {
@@ -183,7 +206,11 @@ class AppIconController extends ChangeNotifier {
       if (!preset.free) {
         await _supporters.refresh();
         if (_supporters.failed) return AppIconChange.unverified;
-        if (!_supporters.has(SupporterPerk.appIcons)) {
+        if (preset.founderOnly) {
+          if (!_supporters.hasFounderPerk(FounderPerk.founderIcons)) {
+            return AppIconChange.founderOnly;
+          }
+        } else if (!_supporters.has(SupporterPerk.appIcons)) {
           return AppIconChange.supportersOnly;
         }
       }

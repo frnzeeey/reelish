@@ -18,7 +18,7 @@ default keeps the component name `.MainActivity`, so shortcuts made before
 icon presets still work. Some launchers drop a home-screen shortcut when the
 alias changes; the screen says so.
 
-## Free and supporter icons
+## Free, supporter and Founder icons
 
 | Group | Icons | Who |
 |---|---|---|
@@ -58,6 +58,24 @@ until the user chooses another. The screen notes this, and from then on only
 the free icons can be chosen. Icons chosen before the collection existed stay
 for the same reason.
 
+## The Founder Collection
+
+Sovereign Crest (`sovereign_crest`, group `AppIconGroup.founder`) is the
+Founder's own icon, the launcher companion of the Sovereign Edition
+[theme](supporter-themes.md#the-founder-collection). Its mark is its own: a
+geometric R whose top edge rises into three crown points, the stem's outer edge
+running straight up into the first, in champagne gold on obsidian with a faint
+midnight-violet light behind it.
+
+Only the Founder sees the FOUNDER COLLECTION section, at the top of the screen:
+it has nothing to unlock, so it is never shown locked. `AppIconController.select`
+applies it only after the server answers with the Founder entitlement
+(`FounderPerk.founderIcons`, [Founder perks](../backend/entitlements.md#founder-perks));
+a supporter gets `founderOnly`, an unreachable server `unverified`. Like any
+icon it is never removed behind the user's back: if it is on the launcher when
+someone else signs in, the section shows it, selected, with a note, and they can
+choose another icon. Default stays available to the Founder at all times.
+
 ## Assets
 
 Each icon is an adaptive icon: a 432 px background (108 dp at xxxhdpi) in
@@ -77,6 +95,15 @@ Previews for the screen are 192 px PNGs in `assets/images/app_icons/`.
   white mark would not show on it. The fallback icons and previews
   are the middle two thirds of the composed adaptive icon, as a launcher shows
   it.
+
+- Sovereign Crest: `tool/branding/generate_sovereign_crest.mjs`, also with
+  CanvasKit. Its mark is one SVG path in the 108 dp viewport, so its foreground
+  and monochrome layers are VectorDrawables
+  (`drawable/ic_launcher_foreground_sovereign_crest.xml`, with a champagne
+  metallic gradient, and `..._monochrome_sovereign_crest.xml`), crisp at every
+  size; the script fails if the mark leaves the 66 dp safe zone. The background
+  is a 432 px PNG, and `tool/branding/sovereign_crest.svg` is the whole icon as
+  one vector.
 
 A new supporter icon needs its alias in the manifest, an entry in
 `AppIconSwitcher.aliases` and an `AppIconPreset` with its group.

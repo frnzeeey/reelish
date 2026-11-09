@@ -75,7 +75,7 @@ Top-level functions and methods in `lib/`, A–Z by name, then by declaring type
 | `_buildDesktop` | `_HomeScreenState` | [`home_screen.dart:2664`](../../lib/src/screens/home_screen.dart#L2664) |  | `Widget _buildDesktop(List<({String id, String name, String repository})> availablePlugins)` | The Windows interface: the same catalog, storage, plugins and play flow, in a desktop layout with the TV-style sidebar. |
 | `_buildTv` | `_HomeScreenState` | [`home_screen.dart:2555`](../../lib/src/screens/home_screen.dart#L2555) |  | `Widget _buildTv(List<({String id, String name, String repository})> availablePlugins)` | The TV interface: the same catalog, storage, plugins and play flow as mobile, presented for a remote. |
 | `buildTv` | `GlassTheme` (static) | [`glass_theme.dart:378`](../../lib/src/theme/glass_theme.dart#L378) |  | `static ThemeData buildTv(AccentPalette accent, ThemeSurfaces s)` | `build` for Android TV. |
-| `byId` | `AppIconPreset` (static) | [`app_icon.dart:80`](../../lib/src/platform/app_icon.dart#L80) |  | `static AppIconPreset byId(String? id)` |  |
+| `byId` | `AppIconPreset` (static) | [`app_icon.dart:91`](../../lib/src/platform/app_icon.dart#L91) |  | `static AppIconPreset byId(String? id)` |  |
 | `byId` | `AvatarPreset` (static) | [`profile_controller.dart:40`](../../lib/src/account/profile_controller.dart#L40) |  | `static AvatarPreset? byId(String? id)` |  |
 | `byId` | `SupporterTheme` (static) | [`supporter_themes.dart:314`](../../lib/src/theme/supporter_themes.dart#L314) |  | `static SupporterTheme? byId(String? id)` | The theme saved as `id`, in either collection, including the ids of the themes it replaced. |
 | `byNumber` | `TvEpisode` (static) | [`tv_season.dart:66`](../../lib/src/models/tv_season.dart#L66) |  | `static int byNumber(TvEpisode a, TvEpisode b)` | Episodes in broadcast order; an episode without a number sorts first. |
@@ -162,7 +162,7 @@ Top-level functions and methods in `lib/`, A–Z by name, then by declaring type
 | `createPinnedClient` | `NetworkDestinationValidator` | [`network_target_policy.dart:71`](../../lib/src/services/network_target_policy.dart#L71) | yes | `Future<http.Client> createPinnedClient(Uri uri, { Set<String> allowedSchemes = const {'https'}, bool autoUncompress = true}) async` | Creates an HTTP client whose TCP sockets connect to the validated IPs, while HttpClient retains the URL hostname for Host and TLS verification. |
 | `createWatchParty` | top level | [`watch_party_controller.dart:100`](../../lib/src/watch_party/watch_party_controller.dart#L100) | yes | `Future<String> createWatchParty({ required PartyContent content, PartySettings settings = const PartySettings(), AccountController? account, AccountApi? api, ProfileController? profile}) async` | Creates a party for `content` hosted by the signed-in account and returns its code. |
 | `cueIndexAt` | top level | [`external_cue_clock.dart:158`](../../lib/src/widgets/player/external_cue_clock.dart#L158) |  | `int cueIndexAt(List<SubtitleCue> cues, double t)` | Index of the cue on screen at media time `t` (seconds), or -1. |
-| `current` | `AppIconService` | [`app_icon.dart:97`](../../lib/src/platform/app_icon.dart#L97) | yes | `Future<String> current() async` | The preset the launcher shows now. |
+| `current` | `AppIconService` | [`app_icon.dart:108`](../../lib/src/platform/app_icon.dart#L108) | yes | `Future<String> current() async` | The preset the launcher shows now. |
 | `currentPlatform` | `SupportDiagnostics` (static) | [`support_service.dart:81`](../../lib/src/support/support_service.dart#L81) |  | `static String currentPlatform()` | The platform this device most likely is, for the report form. |
 
 ## D
@@ -237,7 +237,7 @@ Top-level functions and methods in `lib/`, A–Z by name, then by declaring type
 | `event` | `PlaybackMetrics` | [`playback_metrics.dart:177`](../../lib/src/services/playback_metrics.dart#L177) |  | `AnalyticsEvent event({ required String contentType, required String itemId, double? watched, bool watchParty = false})` | The session as one analytics event. |
 | `exitOf` | `AppMotion` (static) | [`design_tokens.dart:182`](../../lib/src/theme/design_tokens.dart#L182) |  | `static Duration exitOf(Duration duration)` | An exit timed at about two thirds of its entrance `duration`, so dismissing feels quicker than arriving. |
 | `expectedPositionMs` | top level | [`playback_sync.dart:41`](../../lib/src/watch_party/playback_sync.dart#L41) |  | `int expectedPositionMs(PartyPlayback playback, int serverNowMs)` | Where the room's timeline is at server time `serverNowMs`. |
-| `_explain` | `_AppIconSettingsScreenState` | [`app_icon_settings_screen.dart:84`](../../lib/src/screens/app_icon_settings_screen.dart#L84) | yes | `Future<void> _explain(AppIconPreset preset) async` | A supporter icon, for someone who is not one: what it is, and the way to support. |
+| `_explain` | `_AppIconSettingsScreenState` | [`app_icon_settings_screen.dart:90`](../../lib/src/screens/app_icon_settings_screen.dart#L90) | yes | `Future<void> _explain(AppIconPreset preset) async` | A supporter icon, for someone who is not one: what it is, and the way to support. |
 | `_explainThemes` | `AppearanceSettingsScreen` | [`playback_settings_screen.dart:367`](../../lib/src/screens/playback_settings_screen.dart#L367) | yes | `Future<void> _explainThemes(BuildContext context) async` | A theme, for someone who cannot use one yet: what themes are, and the way to support. |
 
 ## F
@@ -416,7 +416,7 @@ Top-level functions and methods in `lib/`, A–Z by name, then by declaring type
 | `_load` | `_ProfileScreenState` | [`profile_screen.dart:127`](../../lib/src/screens/profile_screen.dart#L127) | yes | `Future<ProfileActivity> _load() async` | Local reads only: no network request. |
 | `load` | `AccentSettingsController` | [`accent_settings_controller.dart:77`](../../lib/src/services/accent_settings_controller.dart#L77) | yes | `Future<void> load() async` |  |
 | `load` | `AnalyticsService` | [`analytics_service.dart:55`](../../lib/src/analytics/analytics_service.dart#L55) | yes | `Future<void> load()` | Reads the saved choice and tells the native SDK. |
-| `load` | `AppIconController` | [`app_icon.dart:160`](../../lib/src/platform/app_icon.dart#L160) | yes | `Future<void> load() async` |  |
+| `load` | `AppIconController` | [`app_icon.dart:183`](../../lib/src/platform/app_icon.dart#L183) | yes | `Future<void> load() async` |  |
 | `load` | `CrashReporter` | [`crash_reporter.dart:121`](../../lib/src/diagnostics/crash_reporter.dart#L121) | yes | `Future<void> load()` | Reads the saved choice. |
 | `load` | `DeviceCapabilities` (static) | [`device_capabilities.dart:80`](../../lib/src/platform/device_capabilities.dart#L80) | yes | `static Future<DeviceCapabilities> load() async` | Asks Android what this device is. |
 | `load` | `LibraryViewModel` | [`library_view_model.dart:42`](../../lib/src/viewmodels/library_view_model.dart#L42) | yes | `Future<void> load() async` | Reads history and My list again. |
@@ -760,8 +760,8 @@ Top-level functions and methods in `lib/`, A–Z by name, then by declaring type
 | `_seek` | `PartyPlayerSync` | [`party_player_sync.dart:540`](../../lib/src/watch_party/party_player_sync.dart#L540) |  | `void _seek(PartyPlayerHandle player, int expected, int now, { bool commanded = false})` | Seeks to where the room will be once the seek has finished. |
 | `seekBackoffMs` | top level | [`playback_sync.dart:122`](../../lib/src/watch_party/playback_sync.dart#L122) |  | `int seekBackoffMs(int streak)` | How long to wait before another correcting seek after `streak` of them (from 1), on top of the seek itself. |
 | `_select` | `_DesktopHeroState` | [`desktop_hero.dart:143`](../../lib/src/desktop/desktop_hero.dart#L143) |  | `void _select(int index)` | Shows `index`. |
-| `select` | `AppIconController` | [`app_icon.dart:175`](../../lib/src/platform/app_icon.dart#L175) | yes | `Future<AppIconChange> select(String id) async` | Applies `id`. |
-| `select` | `AppIconService` | [`app_icon.dart:102`](../../lib/src/platform/app_icon.dart#L102) | yes | `Future<String> select(String id) async` | Switches to `id`; returns the preset active afterwards, as read back from the system (so a change it refused is never reported as done). |
+| `select` | `AppIconController` | [`app_icon.dart:198`](../../lib/src/platform/app_icon.dart#L198) | yes | `Future<AppIconChange> select(String id) async` | Applies `id`. |
+| `select` | `AppIconService` | [`app_icon.dart:113`](../../lib/src/platform/app_icon.dart#L113) | yes | `Future<String> select(String id) async` | Switches to `id`; returns the preset active afterwards, as read back from the system (so a change it refused is never reported as done). |
 | `selectApkAsset` | `GitHubUpdateService` (static) | [`github_update_service.dart:391`](../../lib/src/services/github_update_service.dart#L391) |  | `static Map<String, dynamic>? selectApkAsset(List<dynamic> assets, { required String tag})` | Picks the Android APK of release `tag`: the asset named exactly `UpdateConfig.apkAssetName`, fully uploaded, of a plausible size, and downloadable only from this release's own download path. |
 | `selectChecksumAsset` | `GitHubUpdateService` (static) | [`github_update_service.dart:353`](../../lib/src/services/github_update_service.dart#L353) |  | `static Map<String, dynamic>? selectChecksumAsset(List<dynamic> assets, { required String tag, required Object? assetName})` | The `<asset>.sha256` file of release `tag`, under the same rules as the asset itself. |
 | `selectPreferredVideoHeight` | top level | [`video_quality_selector.dart:6`](../../lib/src/services/video_quality_selector.dart#L6) |  | `int? selectPreferredVideoHeight(Iterable<int?> available, int preferredHeight)` | Chooses the best available video height for a preferred resolution. |
@@ -913,7 +913,7 @@ Top-level functions and methods in `lib/`, A–Z by name, then by declaring type
 
 | Function | Declared in | Source | Async | Signature | Summary |
 |---|---|---|---|---|---|
-| `unlocked` | `AppIconController` | [`app_icon.dart:142`](../../lib/src/platform/app_icon.dart#L142) |  | `bool unlocked(AppIconPreset preset)` | Whether `preset` can be chosen from the screen as things stand. |
+| `unlocked` | `AppIconController` | [`app_icon.dart:161`](../../lib/src/platform/app_icon.dart#L161) |  | `bool unlocked(AppIconPreset preset)` | Whether `preset` can be chosen from the screen as things stand. |
 | `_update` | `SupporterController` | [`supporter_controller.dart:207`](../../lib/src/account/supporter_controller.dart#L207) | yes | `Future<bool> requestReview()` | Asks for a review of a donation made without the code. |
 | `update` | `AccentSettingsController` | [`accent_settings_controller.dart:96`](../../lib/src/services/accent_settings_controller.dart#L96) | yes | `Future<void> update(AccentPalette value) async` | Uses `value` as the accent. |
 | `update` | `EpisodeAlertStore` (static) | [`episode_check.dart:94`](../../lib/src/notifications/episode_check.dart#L94) | yes | `static Future<void> update(String userId, void Function(Map<String, Object?> entry) change) async` |  |

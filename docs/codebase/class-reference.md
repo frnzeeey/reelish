@@ -47,11 +47,11 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `AnalyticsService` | Class | [`analytics_service.dart:23`](../../lib/src/analytics/analytics_service.dart#L23) |  | Shared | 11 lib files, 4 test files | Sends events to the native Firebase SDK, when it may. |
 | `AppearanceSettingsScreen` | Widget | [`playback_settings_screen.dart:172`](../../lib/src/screens/playback_settings_screen.dart#L172) | extends StatelessWidget | Shared | 3 lib files, 4 test files |  |
 | `AppIcon` | Theme | [`design_tokens.dart:137`](../../lib/src/theme/design_tokens.dart#L137) |  | Shared | 7 lib files | Icon sizes. |
-| `AppIconChange` | Enum | [`app_icon.dart:108`](../../lib/src/platform/app_icon.dart#L108) |  | Shared | 1 lib file, 2 test files | How an attempt to change the icon ended. |
-| `AppIconController` | Notifier / controller | [`app_icon.dart:124`](../../lib/src/platform/app_icon.dart#L124) | extends ChangeNotifier | Shared | 1 lib file, 2 test files | The selection for the settings screen. |
-| `AppIconGroup` | Enum | [`app_icon.dart:27`](../../lib/src/platform/app_icon.dart#L27) |  | Shared | 1 lib file, 1 test file | Which part of the collection an icon belongs to. |
-| `AppIconPreset` | Platform adapter | [`app_icon.dart:41`](../../lib/src/platform/app_icon.dart#L41) |  | Shared | 2 lib files, 2 test files | One launcher icon. |
-| `AppIconService` | Platform adapter | [`app_icon.dart:85`](../../lib/src/platform/app_icon.dart#L85) |  | Shared | 2 lib files | Talks to the Android side. |
+| `AppIconChange` | Enum | [`app_icon.dart:119`](../../lib/src/platform/app_icon.dart#L119) |  | Shared | 1 lib file, 2 test files | How an attempt to change the icon ended. |
+| `AppIconController` | Notifier / controller | [`app_icon.dart:138`](../../lib/src/platform/app_icon.dart#L138) | extends ChangeNotifier | Shared | 1 lib file, 2 test files | The selection for the settings screen. |
+| `AppIconGroup` | Enum | [`app_icon.dart:30`](../../lib/src/platform/app_icon.dart#L30) |  | Shared | 1 lib file, 1 test file | Which part of the collection an icon belongs to. |
+| `AppIconPreset` | Platform adapter | [`app_icon.dart:48`](../../lib/src/platform/app_icon.dart#L48) |  | Shared | 2 lib files, 2 test files | One launcher icon. |
+| `AppIconService` | Platform adapter | [`app_icon.dart:96`](../../lib/src/platform/app_icon.dart#L96) |  | Shared | 2 lib files | Talks to the Android side. |
 | `AppIconSettingsScreen` | Widget | [`app_icon_settings_screen.dart:20`](../../lib/src/screens/app_icon_settings_screen.dart#L20) | extends StatefulWidget | Shared | 2 lib files, 1 test file |  |
 | `_AppIconSettingsScreenState` | Widget state | [`app_icon_settings_screen.dart:40`](../../lib/src/screens/app_icon_settings_screen.dart#L40) | extends State<AppIconSettingsScreen> | Shared | its own file |  |
 | `AppMetadata` | Service type | [`app_metadata.dart:4`](../../lib/src/services/app_metadata.dart#L4) |  | Shared | 4 lib files | Version and build details for the running app. |
@@ -271,10 +271,10 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `_FirstRunConsentScreenState` | Widget state | [`first_run_consent_screen.dart:23`](../../lib/src/screens/first_run_consent_screen.dart#L23) | extends State<FirstRunConsentScreen> | Shared | its own file |  |
 | `_FloatingSurface` | Widget | [`supporter_theme_picker.dart:483`](../../lib/src/widgets/supporter_theme_picker.dart#L483) | extends StatelessWidget | Shared | its own file | A dialog-like surface, as confirmations and sheets draw in the theme. |
 | `FlutterPlatformPlayerEngine` | Service type | [`player_engine.dart:85`](../../lib/src/services/player_engine.dart#L85) | implements PlayerEngine | Shared | 1 test file |  |
-| `_FootNote` | Widget | [`app_icon_settings_screen.dart:219`](../../lib/src/screens/app_icon_settings_screen.dart#L219) | extends StatelessWidget | Shared | its own file | A note under a section, in the section description's style. |
+| `_FootNote` | Widget | [`app_icon_settings_screen.dart:250`](../../lib/src/screens/app_icon_settings_screen.dart#L250) | extends StatelessWidget | Shared | its own file | A note under a section, in the section description's style. |
 | `FounderBadge` | Widget | [`account_badges.dart:145`](../../lib/src/widgets/account_badges.dart#L145) | extends StatelessWidget | Shared | 2 lib files, 2 test files | The identity of the person who created Reelish. |
 | `FounderEmblem` | Widget | [`account_badges.dart:127`](../../lib/src/widgets/account_badges.dart#L127) | extends StatelessWidget | Shared | 1 lib file, 1 test file | The Reelish crown, in violet. |
-| `FounderPerk` | Enum | [`supporter_controller.dart:40`](../../lib/src/account/supporter_controller.dart#L40) |  | Shared | 3 lib files, 1 test file | The Founder's own perks: the Founder Collection's cosmetics, which no donation unlocks. |
+| `FounderPerk` | Enum | [`supporter_controller.dart:40`](../../lib/src/account/supporter_controller.dart#L40) |  | Shared | 4 lib files, 1 test file | The Founder's own perks: the Founder Collection's cosmetics, which no donation unlocks. |
 
 ## G
 
@@ -328,8 +328,8 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | Type | Role | Declared in | Relations | Platform | Named in | Summary |
 |---|---|---|---|---|---|---|
 | `_IconCell` | Widget | [`icon_gallery.dart:132`](../../lib/icon_gallery.dart#L132) | extends StatelessWidget | Shared | its own file |  |
-| `_IconChoice` | Widget | [`app_icon_settings_screen.dart:254`](../../lib/src/screens/app_icon_settings_screen.dart#L254) | extends StatefulWidget | Shared | its own file |  |
-| `_IconChoiceState` | Widget state | [`app_icon_settings_screen.dart:280`](../../lib/src/screens/app_icon_settings_screen.dart#L280) | extends State<_IconChoice> | Shared | its own file |  |
+| `_IconChoice` | Widget | [`app_icon_settings_screen.dart:285`](../../lib/src/screens/app_icon_settings_screen.dart#L285) | extends StatefulWidget | Shared | its own file |  |
+| `_IconChoiceState` | Widget state | [`app_icon_settings_screen.dart:311`](../../lib/src/screens/app_icon_settings_screen.dart#L311) | extends State<_IconChoice> | Shared | its own file |  |
 | `IconGalleryApp` | Widget | [`icon_gallery.dart:13`](../../lib/icon_gallery.dart#L13) | extends StatelessWidget | Shared | 1 test file |  |
 | `IconGalleryScreen` | Widget | [`icon_gallery.dart:27`](../../lib/icon_gallery.dart#L27) | extends StatefulWidget | Shared | its own file only | Every icon, with its name, at any size, on a dark or light surface, in white or the accent, and with its solid form beside it. |
 | `_IconGalleryScreenState` | Widget state | [`icon_gallery.dart:34`](../../lib/icon_gallery.dart#L34) | extends State<IconGalleryScreen> | Shared | its own file |  |
@@ -377,7 +377,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `LiquidGlassEdgePainter` | Painter | [`liquid_glass.dart:338`](../../lib/src/widgets/liquid_glass.dart#L338) | extends CustomPainter | Shared | 1 lib file, 1 test file | Glass edges drawn over the content: a bright, thin outer stroke lit from the upper left that fades and darkens around the corners, and a soft inner rim, bright along the top and shaded along the bottom, that gives the pane visible thickness and stands in for edge refraction. |
 | `LiquidGlassQuality` | Enum | [`liquid_glass.dart:8`](../../lib/src/widgets/liquid_glass.dart#L8) |  | Shared | 3 lib files, 3 test files |  |
 | `LocalErrorLog` | Class | [`local_error_log.dart:11`](../../lib/src/diagnostics/local_error_log.dart#L11) |  | Shared | 2 lib files, 1 test file | Appends scrubbed error reports to `logs/errors.log` in the app's support folder, keeping one older file so the two stay near twice `maxBytes`. |
-| `_Lock` | Widget | [`app_icon_settings_screen.dart:431`](../../lib/src/screens/app_icon_settings_screen.dart#L431) | extends StatelessWidget | Shared | its own file | The small lock on a supporter icon: quiet, in the Supporter gold. |
+| `_Lock` | Widget | [`app_icon_settings_screen.dart:465`](../../lib/src/screens/app_icon_settings_screen.dart#L465) | extends StatelessWidget | Shared | its own file | The small lock on a supporter icon: quiet, in the Supporter gold. |
 
 ## M
 
@@ -764,7 +764,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `SupporterBadge` | Widget | [`account_badges.dart:198`](../../lib/src/widgets/account_badges.dart#L198) | extends StatelessWidget | Shared | 2 lib files, 3 test files | One badge for everyone who supports Reelish. |
 | `SupporterController` | Notifier / controller | [`supporter_controller.dart:115`](../../lib/src/account/supporter_controller.dart#L115) | extends ChangeNotifier | Shared | 8 lib files, 7 test files |  |
 | `SupporterEmblem` | Widget | [`account_badges.dart:181`](../../lib/src/widgets/account_badges.dart#L181) | extends StatelessWidget | Shared | 4 lib files, 1 test file | The Supporter emblem, in warm gold. |
-| `_SupporterIconSheet` | Widget | [`app_icon_settings_screen.dart:447`](../../lib/src/screens/app_icon_settings_screen.dart#L447) | extends StatelessWidget | Shared | its own file | What a supporter icon is, for someone who is not a supporter yet. |
+| `_SupporterIconSheet` | Widget | [`app_icon_settings_screen.dart:481`](../../lib/src/screens/app_icon_settings_screen.dart#L481) | extends StatelessWidget | Shared | its own file | What a supporter icon is, for someone who is not a supporter yet. |
 | `SupporterPerk` | Enum | [`supporter_controller.dart:29`](../../lib/src/account/supporter_controller.dart#L29) |  | Shared | 4 lib files, 1 test file | Every supporter perk. |
 | `_SupportersList` | Widget | [`supporters_screen.dart:635`](../../lib/src/screens/supporters_screen.dart#L635) | extends StatelessWidget | Shared | its own file | The people who chose to be shown. |
 | `SupportersScreen` | Widget | [`supporters_screen.dart:19`](../../lib/src/screens/supporters_screen.dart#L19) | extends StatefulWidget | Shared | 5 lib files, 4 test files |  |
