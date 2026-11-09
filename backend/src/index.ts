@@ -14,6 +14,7 @@ import * as party from './watch-party';
 import { pruneAuditEvents } from './retention';
 import * as support from './support';
 import * as supporters from './supporters';
+import * as frames from './frames';
 
 export { WatchPartyRoom } from './party-room';
 export { TraktEgress } from './trakt-egress';
@@ -102,6 +103,10 @@ async function route(request: Request, env: Env, requestId: string): Promise<Res
   if (post('/auth/logout-all')) return auth.logoutAll(env, principal, requestId);
   if (rest === '/me' && method === 'GET') return auth.me(env, principal, requestId);
   if (rest === '/me' && method === 'DELETE') return auth.deleteAccount(env, principal, requestId);
+  if (rest === '/me/frame' && method === 'PUT') {
+    await limit(env.SYNC_LIMITER, `frame:${principal.userId}`);
+    return frames.setFrame(env, principal, request, requestId);
+  }
   if (rest === '/sessions' && method === 'GET') return auth.listSessions(env, principal, requestId);
   if (post('/notifications/token')) {
     await limit(env.SYNC_LIMITER, principal.userId);

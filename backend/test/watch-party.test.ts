@@ -470,6 +470,33 @@ describe('The Founder badge in a party', () => {
   });
 });
 
+describe('Avatar frames in a party', () => {
+  it('others see the frame the account wears, and a client cannot claim one', async () => {
+    const owner = await supporter();
+    await call('/api/v1/me/frame', { method: 'PUT', token: owner.session.accessToken, body: { frame: 'aurora' } });
+    const created = await create(owner.session.accessToken, { profile: { name: 'Sam', avatar: 'avatar3' } });
+    const { code } = (await created.json()) as { code: string };
+    const host = await connect(owner.session.accessToken, code);
+
+    // A guest without a frame asks for one in the header and the hello.
+    const guest = await signIn();
+    const response = await call(`/api/v1/party/${code}/socket`, {
+      token: guest.session.accessToken,
+      headers: { Upgrade: 'websocket', 'X-Party-Frame': 'founder' },
+    });
+    const client = new Client(response.webSocket!);
+    await client.next('welcome');
+    client.send({ t: 'hello', name: 'Guest', avatar: null, frame: 'founder' });
+    const seen = (await host.next(
+      'participants',
+      (m) => (m.participants as { name: string }[]).some((person) => person.name === 'Guest'),
+    )) as unknown as { participants: { name: string; frame?: string }[] };
+    const frameOf = (name: string) => seen.participants.find((p) => p.name === name)?.frame;
+    expect(frameOf('Sam')).toBe('aurora');
+    expect(frameOf('Guest')).toBeUndefined();
+  });
+});
+
 describe('Hosting is for supporters; joining is for everyone', () => {
   it('an account without a donation cannot create a room, however it asks', async () => {
     const { session } = await signIn();

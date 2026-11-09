@@ -11,6 +11,7 @@ import { DurableObject } from 'cloudflare:workers';
 import type { Env } from './env';
 import { log } from './audit';
 import { sha256 } from './crypto';
+import { frameById } from './frames';
 
 export type ContentType = 'movie' | 'series';
 
@@ -77,6 +78,8 @@ interface Attachment {
   avatar: string | null;
   /** Set by the Worker from the account; no client message can change it. */
   founder: boolean;
+  /** The avatar frame the account wears, set by the Worker the same way. */
+  frame: string | null;
   status: ParticipantStatus;
   joinedAt: number;
   tokens: number;
@@ -284,6 +287,7 @@ export class WatchPartyRoom extends DurableObject<Env> {
       name: userId === room.hostUserId ? room.host.name : 'Viewer',
       avatar: userId === room.hostUserId ? room.host.avatar : null,
       founder: request.headers.get('X-Party-Founder') === '1',
+      frame: frameById(request.headers.get('X-Party-Frame'))?.id ?? null,
       status: 'joined',
       joinedAt: now,
       tokens: bucketSize,
@@ -624,6 +628,7 @@ export class WatchPartyRoom extends DurableObject<Env> {
         name: a.name,
         avatar: a.avatar,
         ...(a.founder ? { founder: true } : {}),
+        ...(a.frame ? { frame: a.frame } : {}),
         host: a.userId === room.hostUserId,
         status: a.status,
       }));

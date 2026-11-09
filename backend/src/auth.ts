@@ -16,6 +16,7 @@ import {
   startDeviceCode, type TraktDeps, type TraktIdentity,
 } from './trakt';
 import { refreshProfileIfStale } from './profile';
+import { frameState } from './frames';
 
 const platforms = new Set(['android', 'android_tv', 'windows']);
 const now = () => Math.floor(Date.now() / 1000);
@@ -219,6 +220,7 @@ export async function me(env: Env, principal: Principal, requestId: string, deps
     traktLinked: !!trakt,
     sessionId: principal.sessionId,
     badges: await badgesOf(env, principal.userId),
+    frames: await frameState(env, principal.userId),
   }, requestId);
 }
 

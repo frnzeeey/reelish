@@ -116,7 +116,8 @@ its own).
 | `DELETE /api/v1/me` | Bearer | Revoke Trakt access, delete the account and its sessions |
 | `GET /api/v1/trakt/watchlist` | Bearer | `{items: [{type, tmdbId, listedAt}]}` (`movie` or `series`) |
 | `POST /api/v1/webhooks/buymeacoffee` | Signature | Buy Me a Coffee events ([supporters](supporters.md)); 503 until configured |
-| `GET /api/v1/me` | Bearer | `{user: {id, username, avatarUrl, profileCheckedAt, createdAt}, traktLinked, sessionId, badges}`; reads Trakt again when the profile is a day old ([Trakt profile](../features/trakt-profile.md)); `badges` holds `founder` and `supporter` ([badges](badges.md)) |
+| `GET /api/v1/me` | Bearer | `{user: {id, username, avatarUrl, profileCheckedAt, createdAt}, traktLinked, sessionId, badges}`; reads Trakt again when the profile is a day old ([Trakt profile](../features/trakt-profile.md)); `badges` holds `founder` and `supporter` ([badges](badges.md)); `frames` is `{equipped, available, collected}` ([avatar frames](frames.md)) |
+| `PUT /api/v1/me/frame` | Bearer | `{frame: id | null}`: wears a frame, or none. 403 `supporter_required` or `founder_only`, 409 `frame_unavailable` for a closed limited edition, 400 `unknown_frame`; returns `{frames}` ([avatar frames](frames.md)) |
 | `GET /api/v1/supporters/me` | Bearer | `{code, status, since, recognition, entitlement}`; `status` is `none`, `pending` or `verified` (the donation); `entitlement` is `free`, `supporter` or `founder` ([entitlements](entitlements.md)) |
 | `POST /api/v1/supporters/claim` | Bearer | Asks for a review; shows as pending, grants nothing |
 | `PUT /api/v1/supporters/recognition` | Bearer | `{listed, name}`; supporters only (409) |

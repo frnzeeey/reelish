@@ -22,6 +22,7 @@ also get the Supporter badge they earned.
 | `host_watch_party` / `hostWatchParty` | `createParty` calls `requirePerk`: 403 `supporter_required` | The create screen shows the room settings or the Supporter prompt |
 | `app_themes` / `appThemes` | Nothing to enforce: a theme is only ever seen by its owner | Settings > Appearance offers the themes; the accent and profile card follow the chosen one |
 | `app_icons` / `appIcons` | Nothing to enforce: the icon is a device setting | Applying a supporter icon asks the server afresh first |
+| `avatar_frames` / `avatarFrames` | `PUT /me/frame` refuses a frame the account may not wear, and `/me` and Watch Party report a frame only while it may ([avatar frames](frames.md)) | Profile > Avatar frame; the frame follows the account |
 
 ## How the app knows
 
@@ -66,7 +67,7 @@ The Founder Collection is the Founder's own: cosmetics no donation unlocks.
 |---|---|---|
 | `founder_themes` / `founderThemes` | Nothing to enforce: a theme is only ever seen by its owner | The Founder Collection on the Appearance page (Sovereign Edition) |
 | `founder_icons` / `founderIcons` | Nothing to enforce: the icon is a device setting | The Founder Collection on the App icon page (Sovereign Crest); applying it asks the server afresh first |
-| `founder_profile_accent` / `profileAccent` | Nothing to enforce: only its owner sees their profile card | The animated gold ring on the profile avatar (`FounderAnimatedAvatarRing`) and the gold rim on the small avatars |
+| `founder_frames` / `founderFrames` | `frames.ts` lets only the Founder wear a Founder frame ([avatar frames](frames.md)) | The Founder frame (laurel and crown) in Profile > Avatar frame, worn by default |
 
 `SupporterController.hasFounderPerk(FounderPerk)` is true for the `founder`
 entitlement only, which the server decides from the `FOUNDER_TRAKT_UUID` secret

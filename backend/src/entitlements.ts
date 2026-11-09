@@ -21,21 +21,23 @@ import { ApiError } from './http';
 export type Entitlement = 'free' | 'supporter' | 'founder';
 
 /** Every supporter perk, by the name the app uses too. */
-export type SupporterPerk = 'host_watch_party' | 'app_themes' | 'app_icons';
+export type SupporterPerk = 'host_watch_party' | 'app_themes' | 'app_icons' | 'avatar_frames';
 
 /**
  * The Founder's own perks: the Founder Collection's cosmetics (a theme, a
- * launcher icon and the profile's laurel frame and gold ring), which no
- * donation unlocks. Only their owner ever sees them, so the server has nothing
- * to enforce; the app reads the entitlement from /supporters/me. Named here so
- * both sides list the same perks.
+ * launcher icon and the Founder avatar frame), which no donation unlocks. The
+ * theme and icon are only ever seen by their owner, so there is nothing to
+ * enforce; the app reads the entitlement from /supporters/me. The frame is seen
+ * by others, so frames.ts enforces it. Named here so both sides list the same
+ * perks.
  */
-export type FounderPerk = 'founder_themes' | 'founder_icons' | 'founder_profile_accent';
+export type FounderPerk = 'founder_themes' | 'founder_icons' | 'founder_frames';
 
 const refusals: Record<SupporterPerk, string> = {
   host_watch_party: 'Hosting a Watch Party is for Reelish Supporters.',
   app_themes: 'App themes are for Reelish Supporters.',
   app_icons: 'The supporter icons are for Reelish Supporters.',
+  avatar_frames: 'Avatar frames are for Reelish Supporters.',
 };
 
 /** The account's entitlement, read fresh: a refund or a new secret applies at once. */
