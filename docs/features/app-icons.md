@@ -66,7 +66,7 @@ Founder's own icon, the launcher companion of the Sovereign Edition
 (`assets/icons/logo_icon.png`) recoloured in champagne gold (`#D6B779`,
 highlights in pale platinum `#F3DCA7`), wearing the Founder Collection's crown,
 on obsidian (`#090A12`) with a restrained midnight-violet glow (`#A78BFA`). The
-crown is the same one the Founder's laurel avatar wears.
+crown is the same one that tops the Founder's profile frame.
 
 Windows and Android TV cannot switch launcher icons (see the top of this page),
 so the App icon page, and with it Sovereign Crest, appears on Android phones and

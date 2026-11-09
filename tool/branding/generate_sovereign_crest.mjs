@@ -54,9 +54,11 @@ const logo = CK.MakeImageFromEncoded(readFileSync(join(root, 'assets', 'icons', 
 const clean = CK.MakeImageFromEncoded(readFileSync(join(branding, 'launcher_monochrome.png')));
 
 // Placement in the logo's own 846 px space: the mark spans about x 178-668,
-// y 240-605; the crown sits above it, centred on the whole mark.
-const crown = { left: 277, top: 69, width: 292 };
-const content = { x: 423, y: 337 };
+// y 240-605, the R alone x 263-668. The crown sits on the R, centred over it
+// (not over the whole mark, whose dot would pull it left), and the group of
+// crown and mark is centred on the canvas.
+const crown = { left: 465 - 146, top: 79, width: 292 };
+const content = { x: (178 + 668) / 2, y: (79 + 605) / 2 };
 // The safe zone's radius at 432 px (33 dp), less a little room for shadows.
 const safe = 132 - 12;
 

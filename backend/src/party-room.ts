@@ -33,15 +33,9 @@ export interface PartySettings {
 
 export interface PartyProfile {
   name: string;
-  /**
-   * A preset id (`avatar1`…`avatar8`, or the Founder's `founder_laurel`) or
-   * null for the name's initial.
-   */
+  /** A preset id (`avatar1`…`avatar8`) or null for the name's initial. */
   avatar: string | null;
 }
-
-/** The Founder's own avatar preset, kept only for a verified Founder. */
-export const founderAvatar = 'founder_laurel';
 
 export interface Playback {
   status: 'idle' | 'playing' | 'paused' | 'ended';
@@ -145,20 +139,12 @@ export async function participantId(code: string, userId: string): Promise<strin
 /** Bidirectional and zero-width controls, stripped from shown names. */
 const invisible = /[\u0000-\u001f\u007f​-‏‪-‮⁦-⁩﻿]/g;
 
-/**
- * The name and avatar a client asks to show. [founder] is what the Worker
- * verified (isFounder), never what the client says: only then is the
- * Founder's avatar kept; from anyone else it becomes the initial.
- */
-export function cleanProfile(value: unknown, founder = false): PartyProfile {
+export function cleanProfile(value: unknown): PartyProfile {
   const raw = (value && typeof value === 'object' ? value : {}) as Record<string, unknown>;
   const name = typeof raw.name === 'string'
     ? raw.name.replace(/\s+/g, ' ').replace(invisible, '').trim().slice(0, 40)
     : '';
-  const avatar = typeof raw.avatar === 'string' &&
-    (/^avatar[1-8]$/.test(raw.avatar) || (founder && raw.avatar === founderAvatar))
-    ? raw.avatar
-    : null;
+  const avatar = typeof raw.avatar === 'string' && /^avatar[1-8]$/.test(raw.avatar) ? raw.avatar : null;
   return { name: name || 'Viewer', avatar };
 }
 
@@ -411,7 +397,7 @@ export class WatchPartyRoom extends DurableObject<Env> {
   // ---- Message handlers ----
 
   private async onHello(ws: WebSocket, a: Attachment, room: RoomRecord, msg: Record<string, unknown>) {
-    const profile = cleanProfile(msg, a.founder);
+    const profile = cleanProfile(msg);
     a.name = profile.name;
     a.avatar = profile.avatar;
     ws.serializeAttachment(a);

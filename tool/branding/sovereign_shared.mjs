@@ -1,6 +1,7 @@
-// The Founder Collection's shared artwork: its crown and its champagne metal,
-// used by generate_sovereign_crest.mjs (the launcher icon) and
-// generate_founder_avatar.mjs (the laurel avatar), so both wear the same crown.
+// The Founder Collection's crown and champagne metal, used by
+// generate_sovereign_crest.mjs (the launcher icon). The Founder's profile
+// frame (_LaurelPainter in lib/src/widgets/founder_avatar_ring.dart) draws the
+// same crown from the same numbers; change both together.
 
 /** Champagne metal lit from the upper left: highlight, body, shadow, the
  *  returning light, and the foot. */

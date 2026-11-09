@@ -113,7 +113,6 @@ flutter:
     - assets/avatars/avatar_6.png
     - assets/avatars/avatar_7.png
     - assets/avatars/avatar_8.png
-    - assets/avatars/founder_laurel.png
 
   fonts:
     - family: ReelishIcons

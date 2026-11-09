@@ -180,12 +180,12 @@ class _FounderAnimatedAvatarRingState extends State<FounderAnimatedAvatarRing>
             ),
           ),
         ),
-        // Painted once, over the ring and the avatar's edge: the crown.
+        // Painted once, around the ring: the laurel and the crown.
         if (size >= 48)
           Positioned.fill(
             child: IgnorePointer(
               child: CustomPaint(
-                painter: _CrownPainter(size: size, weight: weight),
+                painter: _LaurelPainter(size: size, weight: weight),
               ),
             ),
           ),
@@ -254,65 +254,186 @@ class _RingPainter extends CustomPainter {
       old.size != size || old.weight != weight;
 }
 
-/// The Sovereign Crest's diadem on a small obsidian disc at the ring's upper
-/// right, set into it. The edit button keeps the lower right.
-class _CrownPainter extends CustomPainter {
-  const _CrownPainter({required this.size, required this.weight});
+/// The Founder's frame around the ring: two champagne laurel branches rising
+/// from the bottom, either side, toward the crown set on top of the ring, the
+/// Founder Collection's crown (tool/branding/sovereign_shared.mjs). The gap
+/// where the branches meet at the foot holds the edit button. Painted once,
+/// beyond the widget's bounds, so it takes no room.
+class _LaurelPainter extends CustomPainter {
+  const _LaurelPainter({required this.size, required this.weight});
 
   final double size;
   final double weight;
 
+  // The crown, as designed in a 292 x 149 box (sovereign_shared.mjs).
+  static const _crownW = 292.0;
+  static const _crownH = 149.0;
+  static const _body = [
+    Offset(23, 145),
+    Offset(15, 43),
+    Offset(87, 97),
+    Offset(146, 23),
+    Offset(205, 97),
+    Offset(277, 43),
+    Offset(269, 145),
+  ];
+  static const _pearls = [Offset(15, 37), Offset(146, 15), Offset(277, 37)];
+  static const _jewels = [68.0, 146.0, 224.0];
+
   @override
   void paint(Canvas canvas, Size box) {
     final (:center, :radius) = _circle(box, size, weight);
-    final disc = (size * .1).clamp(8.0, 14.0);
-    const angle = -math.pi / 4;
-    final at = center + Offset(math.cos(angle), math.sin(angle)) * radius;
-    canvas.drawCircle(
-      at,
-      disc,
-      Paint()
-        ..color = FounderRingColors.obsidian
-        ..isAntiAlias = true,
+    final bounds = Rect.fromCircle(center: center, radius: radius * 1.5);
+    final metal = Paint()
+      ..isAntiAlias = true
+      ..shader = const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          FounderRingColors.platinum,
+          FounderRingColors.champagne,
+          FounderRingColors.bronze,
+          FounderRingColors.champagne,
+        ],
+        stops: [0, .4, .7, 1],
+      ).createShader(bounds);
+
+    // The branches: a stem on a circle just outside the ring, with pairs of
+    // leaves leaning toward the tip, the inner ones shorter so they stay
+    // clear of the ring.
+    final stem = radius + weight / 2 + size * .07;
+    Offset on(double degrees) =>
+        center +
+        Offset(
+              math.cos(degrees * math.pi / 180),
+              math.sin(degrees * math.pi / 180),
+            ) *
+            stem;
+    final line = Paint()
+      ..isAntiAlias = true
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = math.max(1.2, size * .014)
+      ..shader = metal.shader;
+    for (final (from, to) in [(112.0, 228.0), (68.0, -48.0)]) {
+      final sign = (to - from).sign;
+      final path = Path()..moveTo(on(from).dx, on(from).dy);
+      for (var i = 1; i <= 24; i++) {
+        final point = on(from + (to - from) * i / 24);
+        path.lineTo(point.dx, point.dy);
+      }
+      canvas.drawPath(path, line);
+      const pairs = 6;
+      for (var i = 0; i < pairs; i++) {
+        final t = (i + .5) / pairs;
+        final at = from + (to - from) * t;
+        final forward = at * math.pi / 180 + sign * math.pi / 2;
+        final grow = 1 - t * .35;
+        // Outward (away from the avatar), then inward and shorter.
+        canvas.drawPath(
+          _leaf(
+            on(at),
+            forward - sign * .62,
+            size * .17 * grow,
+            size * .05 * grow,
+          ),
+          metal,
+        );
+        canvas.drawPath(
+          _leaf(
+            on(at),
+            forward + sign * .5,
+            size * .11 * grow,
+            size * .035 * grow,
+          ),
+          metal,
+        );
+      }
+      canvas.drawPath(
+        _leaf(
+          on(to),
+          to * math.pi / 180 + sign * math.pi / 2,
+          size * .12,
+          size * .036,
+        ),
+        metal,
+      );
+    }
+
+    // The crown, resting on the top of the ring.
+    final width = size * .42;
+    final k = width / _crownW;
+    final left = center.dx - width / 2;
+    final top = center.dy - radius - _crownH * k + size * .045;
+    Offset c(Offset p) => Offset(left + p.dx * k, top + p.dy * k);
+    final crown = Path()..addPolygon(_body.map(c).toList(), true);
+    crown.addRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(left + 19 * k, top + 119 * k, 254 * k, 30 * k),
+        Radius.circular(12 * k),
+      ),
     );
-    canvas.drawCircle(
-      at,
-      disc - weight * .35,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = weight * .7
-        ..isAntiAlias = true
-        ..color = FounderRingColors.champagne,
-    );
-    // Three points, the middle tallest, on a band: the crest's diadem.
-    final w = disc * 1.12;
-    final h = disc * .82;
-    final left = at.dx - w / 2;
-    final top = at.dy - h / 2;
-    Offset p(double x, double y) => Offset(left + w * x, top + h * y);
-    final diadem = Path()
-      ..moveTo(p(0, 1).dx, p(0, 1).dy)
-      ..lineTo(p(0, .3).dx, p(0, .3).dy)
-      ..lineTo(p(.25, .58).dx, p(.25, .58).dy)
-      ..lineTo(p(.5, 0).dx, p(.5, 0).dy)
-      ..lineTo(p(.75, .58).dx, p(.75, .58).dy)
-      ..lineTo(p(1, .3).dx, p(1, .3).dy)
-      ..lineTo(p(1, 1).dx, p(1, 1).dy)
-      ..close();
+    for (final pearl in _pearls) {
+      crown.addOval(Rect.fromCircle(center: c(pearl), radius: 15 * k));
+    }
     canvas.drawPath(
-      diadem,
+      crown.shift(Offset(0, 6 * k)),
+      Paint()
+        ..color = const Color(0x66000000)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, 6 * k),
+    );
+    canvas.drawPath(
+      crown,
       Paint()
         ..isAntiAlias = true
         ..shader = const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [FounderRingColors.platinum, FounderRingColors.bronze],
-        ).createShader(Rect.fromLTWH(left, top, w, h)),
+          colors: [
+            FounderRingColors.platinum,
+            FounderRingColors.champagne,
+            FounderRingColors.bronze,
+          ],
+        ).createShader(Rect.fromLTWH(left, top, width, _crownH * k)),
     );
+    final jewel = Paint()
+      ..isAntiAlias = true
+      ..color = FounderRingColors.obsidian;
+    for (final x in _jewels) {
+      canvas.drawCircle(c(Offset(x, 134)), 7 * k, jewel);
+    }
+  }
+
+  /// A laurel leaf: a pointed oval from [base] along [direction] (radians).
+  static Path _leaf(
+    Offset base,
+    double direction,
+    double length,
+    double width,
+  ) {
+    final d = Offset(math.cos(direction), math.sin(direction));
+    final n = Offset(-d.dy, d.dx);
+    final mid = base + d * (length / 2);
+    final tip = base + d * length;
+    return Path()
+      ..moveTo(base.dx, base.dy)
+      ..quadraticBezierTo(
+        (mid + n * width).dx,
+        (mid + n * width).dy,
+        tip.dx,
+        tip.dy,
+      )
+      ..quadraticBezierTo(
+        (mid - n * width).dx,
+        (mid - n * width).dy,
+        base.dx,
+        base.dy,
+      )
+      ..close();
   }
 
   @override
-  bool shouldRepaint(_CrownPainter old) =>
+  bool shouldRepaint(_LaurelPainter old) =>
       old.size != size || old.weight != weight;
 }
 

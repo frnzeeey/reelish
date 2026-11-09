@@ -57,8 +57,12 @@ in, so a Sovereign splash would flash from the default.
 The Founder's avatar on the profile card (phone, TV and Windows) wears
 `FounderAnimatedAvatarRing` (`lib/src/widgets/founder_avatar_ring.dart`) under
 every theme, in place of the theme's ring: a champagne-gold ring over a violet
-undertone, with the Sovereign Crest's diadem on a small obsidian disc at the
-upper right (the edit button keeps the lower right). A soft halo breathes and
+undertone, framed by two champagne laurel branches rising either side to the
+Founder Collection's crown, which rests on top of the ring. It is the same
+crown Sovereign Crest wears (`tool/branding/sovereign_shared.mjs`). The edit
+button sits in the gap at the foot of the laurel, where the branches meet. The
+frame frames the Founder's own avatar, whatever they choose (Trakt picture,
+photo, preset or initial). A soft halo breathes and
 one glint of reflected light travels the ring, both from one 6-second
 controller, slow and faint enough that the ring reads as gold before it reads
 as moving. It is `FounderPerk.profileAccent`
@@ -71,33 +75,13 @@ profile keeps its theme's ring.
 - It stops under reduced motion (`MediaQuery.disableAnimations`), in the
   background (app lifecycle), on a covered page (`TickerMode`), and when the
   card is scrolled out of view, and a still ring shows instead.
-- Below 48 px it has no crown. The small avatars (phone Home, the Windows
+- The laurel and the crown are painted once, beyond the widget's bounds, so
+  they take no room.
+- Below 48 px it has no laurel or crown. The small avatars (phone Home, the Windows
   sidebar, the TV rail) take `FounderAvatarRim`, a still champagne rim drawn
   over the avatar's edge that takes no room, so those layouts do not move.
 
 Tests: `test/founder_avatar_ring_test.dart`.
-
-## The Founder's avatar
-
-The avatar picker (on the profile and the Account page) offers the Founder a
-preset of their own first: `AvatarPreset.founderLaurel` (`founder_laurel`), two
-champagne laurel branches rising round an obsidian disc to the Founder
-Collection's crown, with the Reelish mark at the centre. It is
-`FounderPerk.founderAvatar`.
-
-- It is not in `AvatarPreset.all`; `AvatarPreset.byId` finds it, so a saved
-  choice loads. `MyProfileAvatar` draws it only while the signed-in account has
-  the perk; on any other account the saved choice shows the Trakt picture or the
-  initial instead.
-- Others see it in a Watch Party: the room keeps `founder_laurel` only from a
-  participant the Worker verified as Founder, and the app draws it only for a
-  participant the room marks as Founder (`AvatarPreset.shownFor`), so neither an
-  edited client nor an edited room message can wear it.
-- The artwork is `assets/avatars/founder_laurel.png` (512 px), made by
-  `tool/branding/generate_founder_avatar.mjs` with the crown from
-  `tool/branding/sovereign_shared.mjs`, the same crown Sovereign Crest wears.
-
-Tests: `test/founder_avatar_test.dart`, `backend/test/watch-party.test.ts`.
 
 ## Design tokens
 

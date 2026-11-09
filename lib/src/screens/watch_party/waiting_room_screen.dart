@@ -458,11 +458,7 @@ class _ParticipantTile extends StatelessWidget {
       ),
       child: Row(
         children: [
-          PartyAvatar(
-            name: person.name,
-            avatar: person.avatar,
-            founder: person.founder,
-          ),
+          PartyAvatar(name: person.name, avatar: person.avatar),
           const SizedBox(width: AppSpace.md),
           Expanded(
             child: MergeSemantics(

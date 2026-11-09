@@ -167,7 +167,7 @@ posterPath?}` (season and episode for series). Participants are named by
 
 | Client → room | Who | Fields |
 |---|---|---|
-| `hello` | anyone | `name` (≤ 40), `avatar` (`avatar1`–`avatar8`, `founder_laurel` from a verified Founder only, or null) |
+| `hello` | anyone | `name` (≤ 40), `avatar` (`avatar1`–`avatar8` or null) |
 | `time` | anyone, ≤ 8 | `c` (client clock) → `time {c, s}` |
 | `status` | anyone | `state`: `joined`, `loading`, `ready`, `playing`, `paused`, `buffering`, `unavailable`, `error` |
 | `control` | host, or anyone with `guestControl` | `action`: `play`, `pause`, `seek`, `ended`; `positionMs`; `at` (server-time estimate) |

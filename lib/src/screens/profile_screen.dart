@@ -177,14 +177,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _chooseAvatar() async {
     Widget picker(BuildContext context, {bool heading = true}) =>
         ListenableBuilder(
-          listenable: Listenable.merge([_profile, _account, _supporters]),
+          listenable: Listenable.merge([_profile, _account]),
           builder: (context, _) => ProfileAvatarPicker(
             profile: _profile,
             name: _profile.nameOr(_account.username),
             enabled: true,
             traktUrl: _account.traktAvatarUrl,
             showHeading: heading,
-            founder: _supporters.hasFounderPerk(FounderPerk.founderAvatar),
           ),
         );
     final more = DeviceCapabilities.isTv
@@ -300,7 +299,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         badges: _badges,
         theme: appearance?.theme,
         founderAccent: _supporters.hasFounderPerk(FounderPerk.profileAccent),
-        supporters: _supporters,
         onChangeAvatar: () => unawaited(_chooseAvatar()),
         onAddName: _openAccount,
         onOpenSupporters: _openSupporters,
@@ -443,7 +441,6 @@ class _IdentityCard extends StatelessWidget {
     required this.badges,
     required this.theme,
     this.founderAccent = false,
-    this.supporters,
     required this.onChangeAvatar,
     required this.onAddName,
     required this.onOpenSupporters,
@@ -462,9 +459,6 @@ class _IdentityCard extends StatelessWidget {
 
   /// The Founder's animated gold ring on the avatar (FounderPerk.profileAccent).
   final bool founderAccent;
-
-  /// Whose entitlement decides whether a Founder avatar shows.
-  final SupporterController? supporters;
   final VoidCallback onChangeAvatar;
 
   /// Opens the account page, where the display name is set.
@@ -598,12 +592,14 @@ class _IdentityCard extends StatelessWidget {
                       : 100.0,
                   theme: theme,
                   founderAccent: founderAccent,
-                  supporters: supporters,
                   account: account,
                   profile: profile,
                   onChange: onChangeAvatar,
                 ),
-                const SizedBox(height: AppSpace.md),
+                // The edit button sits below the Founder's frame.
+                SizedBox(
+                  height: founderAccent ? AppSpace.md + 14 : AppSpace.md,
+                ),
                 _name(compact: compact, start: false),
                 const SizedBox(height: AppSpace.sm),
                 // Trakt usernames often repeat the person's name, so the
@@ -631,7 +627,6 @@ class _IdentityCard extends StatelessWidget {
           size: tv ? 120 : 112,
           theme: theme,
           founderAccent: founderAccent,
-          supporters: supporters,
           account: account,
           profile: profile,
           onChange: onChangeAvatar,
@@ -669,7 +664,6 @@ class _EditableAvatar extends StatelessWidget {
     required this.profile,
     required this.onChange,
     this.founderAccent = false,
-    this.supporters,
   });
 
   final double size;
@@ -680,7 +674,6 @@ class _EditableAvatar extends StatelessWidget {
 
   /// The Founder's animated gold ring, whatever the theme.
   final bool founderAccent;
-  final SupporterController? supporters;
 
   @override
   Widget build(BuildContext context) {
@@ -690,7 +683,6 @@ class _EditableAvatar extends StatelessWidget {
       size: size,
       account: account,
       profile: profile,
-      supporters: supporters,
     );
     final framed = founderAccent
         ? FounderAnimatedAvatarRing(size: size, child: avatar)
@@ -720,38 +712,45 @@ class _EditableAvatar extends StatelessWidget {
       children: [
         framed,
         Positioned(
-          right: -offset,
-          bottom: -offset,
-          child: SizedBox.square(
-            dimension: target,
-            child: Center(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: .9),
-                    width: 1.5,
-                  ),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x66000000),
-                      blurRadius: 10,
-                      offset: Offset(0, 3),
+          // In the Founder's frame the button sits in the gap at the foot of
+          // the laurel, where the branches meet; elsewhere at the lower right.
+          left: founderAccent ? 0 : null,
+          right: founderAccent ? 0 : -offset,
+          bottom: founderAccent ? -target / 2 : -offset,
+          child: Center(
+            widthFactor: 1,
+            heightFactor: 1,
+            child: SizedBox.square(
+              dimension: target,
+              child: Center(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: .9),
+                      width: 1.5,
                     ),
-                  ],
-                ),
-                child: IconButton.filled(
-                  tooltip: 'Change avatar',
-                  padding: EdgeInsets.zero,
-                  style: IconButton.styleFrom(
-                    fixedSize: Size.square(visual),
-                    minimumSize: Size.square(visual),
-                    tapTargetSize: MaterialTapTargetSize.padded,
-                    backgroundColor: fill,
-                    foregroundColor: const Color(0xFF101015),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x66000000),
+                        blurRadius: 10,
+                        offset: Offset(0, 3),
+                      ),
+                    ],
                   ),
-                  onPressed: onChange,
-                  icon: Icon(ReelishIcons.edit, size: visual * .48),
+                  child: IconButton.filled(
+                    tooltip: 'Change avatar',
+                    padding: EdgeInsets.zero,
+                    style: IconButton.styleFrom(
+                      fixedSize: Size.square(visual),
+                      minimumSize: Size.square(visual),
+                      tapTargetSize: MaterialTapTargetSize.padded,
+                      backgroundColor: fill,
+                      foregroundColor: const Color(0xFF101015),
+                    ),
+                    onPressed: onChange,
+                    icon: Icon(ReelishIcons.edit, size: visual * .48),
+                  ),
                 ),
               ),
             ),

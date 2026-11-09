@@ -19,12 +19,7 @@ class ProfileAvatarPicker extends StatelessWidget {
     required this.enabled,
     required this.traktUrl,
     this.showHeading = true,
-    this.founder = false,
   });
-
-  /// Offers the Founder Collection's avatar first: the signed-in account
-  /// has FounderPerk.founderAvatar.
-  final bool founder;
 
   final ProfileController profile;
   final String name;
@@ -78,9 +73,6 @@ class ProfileAvatarPicker extends StatelessWidget {
             spacing: AppSpace.xs,
             runSpacing: AppSpace.xs,
             children: [
-              if (founder)
-                for (final preset in AvatarPreset.founderCollection)
-                  choice(ProfileAvatar.preset(preset.id), preset.label),
               if (traktUrl != null)
                 choice(const ProfileAvatar.trakt(), 'Trakt picture'),
               if (photo != null)
