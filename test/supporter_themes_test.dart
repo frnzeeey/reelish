@@ -760,6 +760,36 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
+    testWidgets('Ivory Studio: the dark card keeps light, readable text', (
+      tester,
+    ) async {
+      addTearDown(() => GlassTheme.setSurfaces(ThemeSurfaces.classic));
+      late AccountController account;
+      late AccentSettingsController appearance;
+      await tester.runAsync(() async {
+        final (a, supporters) = await _account(['supporter']);
+        account = a;
+        await supporters.refresh();
+        appearance = AccentSettingsController(supporters: supporters);
+        await appearance.load();
+        await appearance.setTheme('ivory_studio');
+      });
+      await showProfile(tester, appearance, account);
+      // The card's dark base, against which its text must read.
+      final card = SupporterTheme.ivoryStudio.deep;
+      Color colorOf(String text) {
+        final element = tester.element(find.text(text));
+        final explicit = tester.widget<Text>(find.text(text)).style?.color;
+        return explicit ?? DefaultTextStyle.of(element).style.color!;
+      }
+
+      expect(_contrast(colorOf('viewer'), card), greaterThan(7));
+      expect(
+        _contrast(colorOf('Signed in with Trakt'), card),
+        greaterThan(4.5),
+      );
+    });
+
     testWidgets('without a theme, the usual card', (tester) async {
       late AccountController account;
       late AccentSettingsController appearance;

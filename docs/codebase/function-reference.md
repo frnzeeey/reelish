@@ -4,7 +4,7 @@
 
 Top-level functions and methods in `lib/`, A–Z by name, then by declaring type. Included: every public function and method, and private ones that carry a doc comment (those are the behaviour the authors chose to explain). Left out: undocumented private helpers, framework overrides (`build`, `initState`, `dispose`, …) without a doc comment, constructors, getters and setters. **Signature** is the declaration as written, collapsed onto one line. **Async** marks functions that return a `Future` or `Stream` or are declared `async`. Callers are not listed: names such as `load` are too common to match reliably; search the code for `.name(` instead.
 
-866 entries: 61 top-level, 805 methods.
+867 entries: 61 top-level, 806 methods.
 
 [A](#a) · [B](#b) · [C](#c) · [D](#d) · [E](#e) · [F](#f) · [G](#g) · [H](#h) · [I](#i) · [K](#k) · [L](#l) · [M](#m) · [N](#n) · [O](#o) · [P](#p) · [Q](#q) · [R](#r) · [S](#s) · [T](#t) · [U](#u) · [V](#v) · [W](#w)
 
@@ -28,7 +28,7 @@ Top-level functions and methods in `lib/`, A–Z by name, then by declaring type
 | `add` | `SeekCost` | [`playback_sync.dart:109`](../../lib/src/watch_party/playback_sync.dart#L109) |  | `void add(int measuredMs)` |  |
 | `add` | `StreamDiscovery` | [`stream_discovery.dart:76`](../../lib/src/services/stream_discovery.dart#L76) |  | `void add(StreamSource source)` |  |
 | `addCandidate` | `PlaybackCoordinator` | [`playback_coordinator.dart:345`](../../lib/src/services/playback_coordinator.dart#L345) |  | `bool addCandidate(StreamSource source)` |  |
-| `_addName` | `_IdentityCard` | [`profile_screen.dart:582`](../../lib/src/screens/profile_screen.dart#L582) |  | `Widget _addName(bool tv, {required bool start})` | Without a name of their own, the prompt is also the way to set one. |
+| `_addName` | `_IdentityCard` | [`profile_screen.dart:600`](../../lib/src/screens/profile_screen.dart#L600) |  | `Widget _addName(bool tv, {required bool start})` | Without a name of their own, the prompt is also the way to set one. |
 | `addons` | `SubtitleAddonService` | [`subtitle_addon_service.dart:102`](../../lib/src/services/subtitle_addon_service.dart#L102) | yes | `Future<List<SubtitleAddon>> addons() async` |  |
 | `airedBy` | `EpisodeRef` | [`episode_context.dart:45`](../../lib/src/models/episode_context.dart#L45) |  | `bool airedBy(DateTime now)` | Whether providers can have streams for it yet. |
 | `airedBy` | `TvEpisode` | [`tv_season.dart:60`](../../lib/src/models/tv_season.dart#L60) |  | `bool airedBy(DateTime now)` | Whether it has been broadcast by `now`. |
@@ -436,8 +436,8 @@ Top-level functions and methods in `lib/`, A–Z by name, then by declaring type
 | `loadCached` | `PluginLibraryService` | [`plugin_library_service.dart:85`](../../lib/src/services/plugin_library_service.dart#L85) | yes | `Future<PluginCatalogSnapshot?> loadCached() async` | The last downloaded catalog, or null when there is none or it is unreadable. |
 | `loadDetails` | `DetailsViewModel` | [`details_view_model.dart:74`](../../lib/src/viewmodels/details_view_model.dart#L74) | yes | `Future<void> loadDetails() async` |  |
 | `loadFavorites` | `HomeViewModel` | [`home_view_model.dart:212`](../../lib/src/viewmodels/home_view_model.dart#L212) | yes | `Future<void> loadFavorites() async` |  |
-| `_loadFeed` | `_HomeScreenState` | [`home_screen.dart:394`](../../lib/src/screens/home_screen.dart#L394) | yes | `Future<void> _loadTrending({bool forceRefresh = false})` | Trending is served from the TMDB cache when revisited, so switching back to the tab costs no request while the cached list is fresh. |
 | `_loadFeed` | `_HomeScreenState` | [`home_screen.dart:361`](../../lib/src/screens/home_screen.dart#L361) | yes | `Future<void> _loadFeed(_HomeFeed feed, Future<List<MediaItem>> Function(void Function(List<MediaItem>) onRevalidated) fetch, { bool clearOnError = false}) async` | Loads a single-request feed. |
+| `_loadFeed` | `_HomeScreenState` | [`home_screen.dart:394`](../../lib/src/screens/home_screen.dart#L394) | yes | `Future<void> _loadTrending({bool forceRefresh = false})` | Trending is served from the TMDB cache when revisited, so switching back to the tab costs no request while the cached list is fresh. |
 | `loadFor` | `ProfileController` | [`profile_controller.dart:126`](../../lib/src/account/profile_controller.dart#L126) | yes | `Future<void> loadFor(String? userId) async` |  |
 | `loadHistory` | `HomeViewModel` | [`home_view_model.dart:193`](../../lib/src/viewmodels/home_view_model.dart#L193) | yes | `Future<void> loadHistory() async` |  |
 | `_loadList` | `_SupportersScreenState` | [`supporters_screen.dart:134`](../../lib/src/screens/supporters_screen.dart#L134) | yes | `Future<List<PublicSupporter>> _loadList()` | The list is far down a lazily built page, so nothing may be listening yet when this fails. |
@@ -467,8 +467,8 @@ Top-level functions and methods in `lib/`, A–Z by name, then by declaring type
 
 | Function | Declared in | Source | Async | Signature | Summary |
 |---|---|---|---|---|---|
-| `main` | top level | [`icon_gallery.dart:11`](../../lib/icon_gallery.dart#L11) |  | `void main()` |  |
 | `main` | top level | [`main.dart:29`](../../lib/main.dart#L29) |  | `void main()` |  |
+| `main` | top level | [`icon_gallery.dart:11`](../../lib/icon_gallery.dart#L11) |  | `void main()` |  |
 | `makeHost` | `WatchPartyController` | [`watch_party_controller.dart:728`](../../lib/src/watch_party/watch_party_controller.dart#L728) |  | `void makeHost(String pid)` |  |
 | `_markChecked` | `EpisodeCheck` (static) | [`episode_check.dart:250`](../../lib/src/notifications/episode_check.dart#L250) | yes | `static Future<void> _markChecked(String userId, DateTime? now)` | A check with nothing to ask about: no series are followed any more, so none are remembered either. |
 | `markOnce` | `PerfTimeline` (static) | [`perf_timeline.dart:18`](../../lib/src/services/perf_timeline.dart#L18) |  | `static void markOnce(String milestone)` | Logs `milestone` the first time it is reached in this process. |
@@ -528,6 +528,7 @@ Top-level functions and methods in `lib/`, A–Z by name, then by declaring type
 | `_offerWindowsInstall` | `AppUpdateFlow` (static) | [`app_update_flow.dart:252`](../../lib/src/widgets/app_update_flow.dart#L252) | yes | `static Future<void> _offerWindowsInstall(BuildContext context, AppUpdate update, { required bool automatic, required bool confirm}) async` | Installed Windows copies: the download runs in `windowsController`, so it keeps going when the dialog is closed, and the installer starts only from "Restart and install". |
 | `ofRelease` | `_Rated` (static) | [`content_advisory.dart:183`](../../lib/src/models/content_advisory.dart#L183) |  | `static _Rated? ofRelease(Map<dynamic, dynamic> release)` |  |
 | `ofSeries` | `_Rated` (static) | [`content_advisory.dart:196`](../../lib/src/models/content_advisory.dart#L196) |  | `static _Rated? ofSeries(Map<dynamic, dynamic> entry)` |  |
+| `_onCard` | `_IdentityCard` (static) | [`profile_screen.dart:567`](../../lib/src/screens/profile_screen.dart#L567) |  | `static Widget _onCard(Widget child, bool tv)` | The card stays dark in every theme. |
 | `_onCatalogFeedChanged` | `_HomeScreenState` | [`home_screen.dart:286`](../../lib/src/screens/home_screen.dart#L286) |  | `void _onCatalogFeedChanged()` | Rebuilds Home when a catalog row's first-load status or page 1 changes. |
 | `_onFirstPageRevalidated` | `PagedFeedController` | [`paged_feed_controller.dart:361`](../../lib/src/services/paged_feed_controller.dart#L361) |  | `void _onFirstPageRevalidated(int generation, CatalogPage fresh)` | A stale cached page 1 was shown and TMDB has now answered with a fresh one. |
 | `_onHomeChanged` | `_HomeScreenState` | [`home_screen.dart:278`](../../lib/src/screens/home_screen.dart#L278) |  | `void _onHomeChanged()` | Continue watching or My list changed. |

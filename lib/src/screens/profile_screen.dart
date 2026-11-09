@@ -551,11 +551,29 @@ class _IdentityCard extends StatelessWidget {
                       ),
               ),
             ),
-            if (wide)
-              _across(context, name, tv)
-            else
-              _stacked(context, name, tv),
+            _onCard(
+              wide ? _across(context, name, tv) : _stacked(context, name, tv),
+              tv,
+            ),
           ],
+        ),
+      ),
+    );
+  }
+
+  /// The card stays dark in every theme. On a light theme, whose page text
+  /// and accent are dark, its content takes the dark colours the player
+  /// uses (GlassTheme.player), so the name, captions and buttons read.
+  static Widget _onCard(Widget child, bool tv) {
+    if (!GlassTheme.isLight) return child;
+    final dark = GlassTheme.playerSurfaces;
+    return Theme(
+      data: GlassTheme.player(tv: tv),
+      child: DefaultTextStyle.merge(
+        style: TextStyle(color: dark.textPrimary),
+        child: IconTheme.merge(
+          data: IconThemeData(color: dark.textPrimary),
+          child: child,
         ),
       ),
     );
@@ -863,6 +881,12 @@ class _ProfileName extends StatelessWidget {
   }
 }
 
+/// Quiet text on the identity card, which stays dark in every theme: the
+/// page's caption colour on a dark theme, the dark card's on a light one.
+Color get _onCardMuted => GlassTheme.isLight
+    ? GlassTheme.playerSurfaces.textSecondary
+    : GlassTheme.muted;
+
 /// The account behind the profile, as a quiet line: signed in with Trakt.
 /// The username itself is on the account page.
 class _TraktBadge extends StatelessWidget {
@@ -875,7 +899,7 @@ class _TraktBadge extends StatelessWidget {
       Icon(
         ReelishIcons.verifiedFilled,
         size: DeviceCapabilities.isTv ? 18 : 14,
-        color: GlassTheme.muted,
+        color: _onCardMuted,
       ),
       const SizedBox(width: 5),
       Flexible(
@@ -884,7 +908,7 @@ class _TraktBadge extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
-            color: GlassTheme.muted,
+            color: _onCardMuted,
             fontSize: DeviceCapabilities.isTv
                 ? AppTextSize.body
                 : AppTextSize.label,
@@ -922,7 +946,7 @@ class _ActivityRow extends StatelessWidget {
     final tv = DeviceCapabilities.isTv;
     final align = alignStart ? TextAlign.start : TextAlign.center;
     final note = TextStyle(
-      color: GlassTheme.muted,
+      color: _onCardMuted,
       fontSize: tv ? AppTextSize.body : AppTextSize.label,
       height: 1.4,
     );
@@ -1030,7 +1054,7 @@ class _Stat extends StatelessWidget {
                       const TextSpan(text: ' '),
                       TextSpan(
                         text: label,
-                        style: TextStyle(color: GlassTheme.muted),
+                        style: TextStyle(color: _onCardMuted),
                       ),
                     ],
                   ),

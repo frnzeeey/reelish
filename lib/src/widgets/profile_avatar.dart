@@ -125,7 +125,14 @@ class ProfileAvatarView extends StatelessWidget {
                   end: Alignment.bottomRight,
                   colors: colors,
                 ),
-          color: usePhoto ? GlassTheme.elevatedSurface : null,
+          // Behind a picture while it loads (or if it fails, under the
+          // initial): the raised surface, or on a light theme, whose surface
+          // is near white, the accent, so the white initial reads.
+          color: usePhoto
+              ? (GlassTheme.isLight
+                    ? GlassTheme.primary
+                    : GlassTheme.elevatedSurface)
+              : null,
           boxShadow: shadow
               ? [
                   BoxShadow(

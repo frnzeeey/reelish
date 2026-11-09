@@ -81,7 +81,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/screens/plugin_details_screen.dart`](#libsrcscreensplugin_details_screendart) | Shared | 544 | A plugin-library repository's details page, from which it can be installed. |
 | [`lib/src/screens/plugin_library_screen.dart`](#libsrcscreensplugin_library_screendart) | Shared | 766 | Browse the community provider catalog and hand a manifest to the existing installer: the library as its own page, opened from Plugins on phone and TV. |
 | [`lib/src/screens/plugins_screen.dart`](#libsrcscreensplugins_screendart) | Shared | 919 | The phone and TV Plugins page: installed repositories, enabling providers, script updates and the plugin library. |
-| [`lib/src/screens/profile_screen.dart`](#libsrcscreensprofile_screendart) | Shared | 1115 | The signed-in person's page, in three parts: who they are (avatar, name, badges, their viewing at a glance), how Reelish looks for them (avatar, app theme, app icon) and their account. |
+| [`lib/src/screens/profile_screen.dart`](#libsrcscreensprofile_screendart) | Shared | 1139 | The signed-in person's page, in three parts: who they are (avatar, name, badges, their viewing at a glance), how Reelish looks for them (avatar, app theme, app icon) and their account. |
 | [`lib/src/screens/sign_in_screen.dart`](#libsrcscreenssign_in_screendart) | Shared | 805 | Trakt sign-in, shown before Home whenever no session is stored. |
 | [`lib/src/screens/splash_screen.dart`](#libsrcscreenssplash_screendart) | Shared | 380 | The launch splash and `SplashGate`, which runs startup work before the first screen. |
 | [`lib/src/screens/subtitle_addons_screen.dart`](#libsrcscreenssubtitle_addons_screendart) | Shared | 237 | Stremio subtitle addons the player searches while you watch. |
@@ -194,7 +194,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/widgets/plugin_library/plugin_skeleton.dart`](#libsrcwidgetsplugin_libraryplugin_skeletondart) | Shared | 147 | Shimmer placeholders shown while the plugin catalog loads. |
 | [`lib/src/widgets/plugin_library/plugin_stats.dart`](#libsrcwidgetsplugin_libraryplugin_statsdart) | Shared | 58 | Provider, source and language totals computed from the catalog, and when it was updated, as one quiet line under the library's title. |
 | [`lib/src/widgets/poster_image.dart`](#libsrcwidgetsposter_imagedart) | Shared | 47 | The poster placeholder tile and the fade-in used when a poster image arrives. |
-| [`lib/src/widgets/profile_avatar.dart`](#libsrcwidgetsprofile_avatardart) | Shared | 186 | The user's avatar as chosen in their profile: their Trakt picture, their photo, a preset, or the first letter of their name on the accent. |
+| [`lib/src/widgets/profile_avatar.dart`](#libsrcwidgetsprofile_avatardart) | Shared | 193 | The user's avatar as chosen in their profile: their Trakt picture, their photo, a preset, or the first letter of their name on the accent. |
 | [`lib/src/widgets/profile_avatar_picker.dart`](#libsrcwidgetsprofile_avatar_pickerdart) | Shared | 168 | The avatar choices for the signed-in profile, shared by the account screen and the profile page's avatar sheet. |
 | [`lib/src/widgets/provider_installer_modal.dart`](#libsrcwidgetsprovider_installer_modaldart) | Shared | 183 | The sheet for installing a provider repository from a manifest URL. |
 | [`lib/src/widgets/provider_search_dialog.dart`](#libsrcwidgetsprovider_search_dialogdart) | Shared | 93 | "Searching providers…" while a play request looks for a stream. |
@@ -1366,7 +1366,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/screens/profile_screen.dart
 
-**Source:** [`lib/src/screens/profile_screen.dart`](../../lib/src/screens/profile_screen.dart) · **Platform:** Shared · **Lines:** 1115 · **Branches on:** isTv, usesTvLayout
+**Source:** [`lib/src/screens/profile_screen.dart`](../../lib/src/screens/profile_screen.dart) · **Platform:** Shared · **Lines:** 1139 · **Branches on:** isTv, usesTvLayout
 
 **Purpose:** The signed-in person's page, in three parts: who they are (avatar, name, badges, their viewing at a glance), how Reelish looks for them (avatar, app theme, app icon) and their account.
 
@@ -3172,7 +3172,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/widgets/profile_avatar.dart
 
-**Source:** [`lib/src/widgets/profile_avatar.dart`](../../lib/src/widgets/profile_avatar.dart) · **Platform:** Shared · **Lines:** 186
+**Source:** [`lib/src/widgets/profile_avatar.dart`](../../lib/src/widgets/profile_avatar.dart) · **Platform:** Shared · **Lines:** 193
 
 **Purpose:** The user's avatar as chosen in their profile: their Trakt picture, their photo, a preset, or the first letter of their name on the accent.
 
