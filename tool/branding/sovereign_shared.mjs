@@ -1,6 +1,6 @@
 // The Founder Collection's crown and champagne metal, used by
 // generate_sovereign_crest.mjs (the launcher icon). The Founder's profile
-// frame (_LaurelPainter in lib/src/widgets/founder_avatar_ring.dart) draws the
+// frame (_LaurelPainter in lib/src/widgets/avatar_frame.dart) draws the
 // same crown from the same numbers; change both together.
 
 /** Champagne metal lit from the upper left: highlight, body, shadow, the

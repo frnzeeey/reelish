@@ -66,7 +66,8 @@ Founder's own icon, the launcher companion of the Sovereign Edition
 (`assets/icons/logo_icon.png`) recoloured in champagne gold (`#D6B779`,
 highlights in pale platinum `#F3DCA7`), wearing the Founder Collection's crown,
 on obsidian (`#090A12`) with a restrained midnight-violet glow (`#A78BFA`). The
-crown is the same one that tops the Founder's profile frame.
+crown is the same one that tops the Founder's profile frame, and a champagne
+laurel wreath, drawn with that frame's leaves, encircles both.
 
 Windows and Android TV cannot switch launcher icons (see the top of this page),
 so the App icon page, and with it Sovereign Crest, appears on Android phones and
@@ -106,10 +107,12 @@ Previews for the screen are 192 px PNGs in `assets/images/app_icons/`.
   CanvasKit. The gold fills the clean mark
   (`tool/branding/launcher_monochrome.png`, the logo without its shadow), with
   `logo_icon.png`'s own shadow underneath in dark ink, and the crown from
-  `tool/branding/sovereign_shared.mjs` above. Its layers are 432 px PNGs in
+  `tool/branding/sovereign_shared.mjs` above, inside a laurel wreath. Its layers
+  are 432 px PNGs in
   `drawable-nodpi/`: the foreground, the monochrome silhouette and the
-  background. The script sizes the artwork by measuring its rendered pixels, so
-  it always sits inside the 66 dp safe zone. It also writes
+  background. The script sizes the wreath by measuring its rendered pixels, so
+  it always sits inside the 66 dp safe zone, then fits the logo and crown inside
+  the wreath, reaching 78% of the room inside it. It also writes
   `tool/branding/sovereign_crest.ico` (16 to 256 px).
 
 A new supporter icon needs its alias in the manifest, an entry in
