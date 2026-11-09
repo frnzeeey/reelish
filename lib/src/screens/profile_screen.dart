@@ -24,6 +24,7 @@ import '../theme/design_tokens.dart';
 import '../theme/glass_theme.dart';
 import '../theme/supporter_themes.dart';
 import '../widgets/profile_avatar.dart';
+import '../widgets/founder_avatar_ring.dart';
 import '../widgets/profile_avatar_picker.dart';
 import '../widgets/settings/settings_components.dart';
 import '../widgets/account_badges.dart';
@@ -297,6 +298,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         profile: _profile,
         badges: _badges,
         theme: appearance?.theme,
+        founderAccent: _supporters.hasFounderPerk(FounderPerk.profileAccent),
         onChangeAvatar: () => unawaited(_chooseAvatar()),
         onAddName: _openAccount,
         onOpenSupporters: _openSupporters,
@@ -438,6 +440,7 @@ class _IdentityCard extends StatelessWidget {
     required this.profile,
     required this.badges,
     required this.theme,
+    this.founderAccent = false,
     required this.onChangeAvatar,
     required this.onAddName,
     required this.onOpenSupporters,
@@ -453,6 +456,9 @@ class _IdentityCard extends StatelessWidget {
 
   /// The app theme, when one applies.
   final SupporterTheme? theme;
+
+  /// The Founder's animated gold ring on the avatar (FounderPerk.profileAccent).
+  final bool founderAccent;
   final VoidCallback onChangeAvatar;
 
   /// Opens the account page, where the display name is set.
@@ -585,6 +591,7 @@ class _IdentityCard extends StatelessWidget {
                       ? 84.0
                       : 100.0,
                   theme: theme,
+                  founderAccent: founderAccent,
                   account: account,
                   profile: profile,
                   onChange: onChangeAvatar,
@@ -616,6 +623,7 @@ class _IdentityCard extends StatelessWidget {
         _EditableAvatar(
           size: tv ? 120 : 112,
           theme: theme,
+          founderAccent: founderAccent,
           account: account,
           profile: profile,
           onChange: onChangeAvatar,
@@ -652,6 +660,7 @@ class _EditableAvatar extends StatelessWidget {
     required this.account,
     required this.profile,
     required this.onChange,
+    this.founderAccent = false,
   });
 
   final double size;
@@ -659,6 +668,9 @@ class _EditableAvatar extends StatelessWidget {
   final AccountController account;
   final ProfileController profile;
   final VoidCallback onChange;
+
+  /// The Founder's animated gold ring, whatever the theme.
+  final bool founderAccent;
 
   @override
   Widget build(BuildContext context) {
@@ -669,7 +681,9 @@ class _EditableAvatar extends StatelessWidget {
       account: account,
       profile: profile,
     );
-    final framed = theme != null
+    final framed = founderAccent
+        ? FounderAnimatedAvatarRing(size: size, child: avatar)
+        : theme != null
         ? SupporterAvatarRing(theme: theme, child: avatar)
         : Container(
             padding: const EdgeInsets.all(3),
@@ -683,7 +697,9 @@ class _EditableAvatar extends StatelessWidget {
             child: avatar,
           );
     final visual = DeviceCapabilities.isTv ? 38.0 : 30.0;
-    final fill = theme?.ink ?? GlassTheme.coralBright;
+    final fill = founderAccent
+        ? FounderRingColors.platinum
+        : theme?.ink ?? GlassTheme.coralBright;
     // The tap target is 48 or more around the smaller disc, and the disc is
     // ringed in the card's colour so it reads as cut out of the frame.
     const target = 48.0;

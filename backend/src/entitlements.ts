@@ -24,12 +24,12 @@ export type Entitlement = 'free' | 'supporter' | 'founder';
 export type SupporterPerk = 'host_watch_party' | 'app_themes' | 'app_icons';
 
 /**
- * The Founder's own perks: the Founder Collection's cosmetics (a theme and a
- * launcher icon), which no donation unlocks. Only their owner ever sees them,
- * so the server has nothing to enforce; the app reads the entitlement from
+ * The Founder's own perks: the Founder Collection's cosmetics (a theme, a
+ * launcher icon and the animated profile ring), which no donation unlocks.
+ * Only their owner ever sees them, so the server has nothing to enforce; the app reads the entitlement from
  * /supporters/me. Named here so both sides list the same perks.
  */
-export type FounderPerk = 'founder_themes' | 'founder_icons';
+export type FounderPerk = 'founder_themes' | 'founder_icons' | 'founder_profile_accent';
 
 const refusals: Record<SupporterPerk, string> = {
   host_watch_party: 'Hosting a Watch Party is for Reelish Supporters.',

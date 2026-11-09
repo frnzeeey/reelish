@@ -7,6 +7,7 @@ import '../../theme/reelish_icons.dart';
 import '../../widgets/ambient_backdrop.dart';
 import '../../widgets/tv/tv_focus.dart';
 import '../../widgets/brand_logo.dart';
+import '../../widgets/founder_avatar_ring.dart';
 import '../../widgets/profile_avatar.dart';
 
 export '../../navigation/app_destination.dart';
@@ -428,7 +429,7 @@ class _RailItemState extends State<_RailItem> {
                 if (widget.destination == TvDestination.profile)
                   const SizedBox.square(
                     dimension: 24,
-                    child: MyProfileAvatar(size: 24),
+                    child: FounderAvatarRim(child: MyProfileAvatar(size: 24)),
                   )
                 else
                   Icon(

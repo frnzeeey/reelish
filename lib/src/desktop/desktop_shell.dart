@@ -16,6 +16,7 @@ import '../widgets/ambient_backdrop.dart';
 import '../widgets/poster_image.dart';
 import 'desktop_widgets.dart';
 import '../widgets/brand_logo.dart';
+import '../widgets/founder_avatar_ring.dart';
 import '../widgets/profile_avatar.dart';
 import '../widgets/artwork_image.dart';
 
@@ -632,7 +633,9 @@ class _SidebarItemState extends State<_SidebarItem> {
                       if (widget.destination == TvDestination.profile)
                         const SizedBox.square(
                           dimension: 23,
-                          child: MyProfileAvatar(size: 23),
+                          child: FounderAvatarRim(
+                            child: MyProfileAvatar(size: 23),
+                          ),
                         )
                       else
                         Icon(

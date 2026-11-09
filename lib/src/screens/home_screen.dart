@@ -68,6 +68,7 @@ import 'watch_party/join_party_screen.dart';
 import 'watch_party/party_launcher.dart';
 import '../watch_party/party_models.dart';
 import '../widgets/brand_logo.dart';
+import '../widgets/founder_avatar_ring.dart';
 import '../widgets/profile_avatar.dart';
 import '../widgets/artwork_image.dart';
 import '../widgets/ambient_backdrop.dart';
@@ -1687,7 +1688,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         ),
                       ),
                       padding: const EdgeInsets.all(2),
-                      child: const MyProfileAvatar(size: 36),
+                      child: const FounderAvatarRim(
+                        child: MyProfileAvatar(size: 36),
+                      ),
                     ),
                   ),
                 ],

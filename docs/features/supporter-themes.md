@@ -45,14 +45,37 @@ never has. Choosing it waits for a fresh answer from the server; at launch the
 saved status applies it, as for every theme, and the server's answer replaces
 that. The Founder can switch to Classic or any other theme at any time.
 
-Under Sovereign Edition the profile card is the Founder's own: the avatar ring
-is all champagne (`SupporterAvatarRing` with the crest ornament) over a faint
-violet halo, and the Founder & Developer capsule takes its Sovereign finish
-(`FounderBadge(sovereign: true)`): the same violet capsule and words, with the
-crown, name and rim in champagne. Everywhere else (Watch Party, the Supporters
-page) and under any other theme, the badge is unchanged. None of it animates.
-The launch screen is unchanged: the native splash shows before Reelish knows
-who is signed in, so a Sovereign splash would flash from the default.
+Under Sovereign Edition the Founder & Developer capsule takes its Sovereign
+finish (`FounderBadge(sovereign: true)`): the same violet capsule and words,
+with the crown, name and rim in champagne. Everywhere else (Watch Party, the
+Supporters page) and under any other theme, the badge is unchanged. The launch
+screen is unchanged: the native splash shows before Reelish knows who is signed
+in, so a Sovereign splash would flash from the default.
+
+## The Founder's profile accent
+
+The Founder's avatar on the profile card (phone, TV and Windows) wears
+`FounderAnimatedAvatarRing` (`lib/src/widgets/founder_avatar_ring.dart`) under
+every theme, in place of the theme's ring: a champagne-gold ring over a violet
+undertone, with the Sovereign Crest's diadem on a small obsidian disc at the
+upper right (the edit button keeps the lower right). A soft halo breathes and
+one glint of reflected light travels the ring, both from one 6-second
+controller, slow and faint enough that the ring reads as gold before it reads
+as moving. It is `FounderPerk.profileAccent`
+([Founder perks](../backend/entitlements.md#founder-perks)); a supporter's
+profile keeps its theme's ring.
+
+- Only the light (halo and glint) repaints, in its own `RepaintBoundary`. The
+  ring, undertone and crown are painted once, and the avatar is never repainted
+  by it. No blur, no shader beyond gradients.
+- It stops under reduced motion (`MediaQuery.disableAnimations`), in the
+  background (app lifecycle), on a covered page (`TickerMode`), and when the
+  card is scrolled out of view, and a still ring shows instead.
+- Below 48 px it has no crown. The small avatars (phone Home, the Windows
+  sidebar, the TV rail) take `FounderAvatarRim`, a still champagne rim drawn
+  over the avatar's edge that takes no room, so those layouts do not move.
+
+Tests: `test/founder_avatar_ring_test.dart`.
 
 ## Design tokens
 
