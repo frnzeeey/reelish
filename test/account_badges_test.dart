@@ -263,7 +263,7 @@ void main() {
   });
 
   test('the words are the ones agreed', () {
-    expect(ui.FounderBadge.title, 'Founder & Developer');
+    expect(ui.FounderBadge.title, 'Sovereign');
     expect(ui.FounderBadge.label, 'REELISH FOUNDER');
     expect(
       ui.FounderBadge.description,

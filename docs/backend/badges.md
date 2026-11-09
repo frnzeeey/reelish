@@ -52,7 +52,7 @@ If a secret is changed, the badge moves at once, on the next `/me`.
 
 The profile on every interface shows them as identity capsules beside the name
 (`FounderBadge`, `SupporterBadge` in `lib/src/widgets/account_badges.dart`). They
-share one geometry (`CapsuleMetrics`). Founder & Developer has a violet gradient and
+share one geometry (`CapsuleMetrics`). The Founder's Sovereign capsule has a violet gradient and
 the crown; Supporter has a flat gold tint and the seal. They move below the name
 when it needs the room, and each opens the Supporters page. Watch Party participant
 lists show the crown. Badge names shrink to fit rather than being cut short.

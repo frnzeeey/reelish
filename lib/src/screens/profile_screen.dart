@@ -812,7 +812,7 @@ class _EditableAvatar extends StatelessWidget {
 }
 
 /// The name on its own line, and under it the account's identity capsules:
-/// Founder & Developer, then Supporter. Each opens the Supporters page.
+/// Sovereign, then Supporter. Each opens the Supporters page.
 class _ProfileName extends StatelessWidget {
   const _ProfileName({
     required this.name,

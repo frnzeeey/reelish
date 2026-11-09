@@ -176,7 +176,7 @@ void main() {
       expect(find.byType(FounderBadge), findsNothing);
     });
 
-    testWidgets('the Founder carries Founder & Developer, once, under the '
+    testWidgets('the Founder carries Sovereign, once, under the '
         'name', (tester) async {
       await _show(tester, entitlement: 'founder', badges: ['founder']);
       expect(find.byType(FounderBadge), findsOneWidget);

@@ -170,7 +170,7 @@ class FounderBadge extends StatelessWidget {
   final bool sovereign;
 
   static const label = 'REELISH FOUNDER';
-  static const title = 'Founder & Developer';
+  static const title = 'Sovereign';
   static const description = 'The original creator and developer of Reelish.';
 
   /// The colour of [title] where it sits by the name.
