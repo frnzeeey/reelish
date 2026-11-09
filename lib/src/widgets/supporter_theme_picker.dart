@@ -25,7 +25,15 @@ class SupporterThemePicker extends StatelessWidget {
     this.locked = false,
     this.onLocked,
     this.classicAccent,
+    this.themes = SupporterTheme.all,
+    this.includeClassic = true,
   });
+
+  /// The themes to offer: the supporter collection, or the Founder's.
+  final List<SupporterTheme> themes;
+
+  /// Whether Classic, the look without a theme, leads the cards.
+  final bool includeClassic;
 
   /// The accent Classic returns to, for its card; the current accent when
   /// null. Under a theme the current accent is the theme's, so the
@@ -69,16 +77,17 @@ class SupporterThemePicker extends StatelessWidget {
           spacing: spacing,
           runSpacing: spacing,
           children: [
-            _ThemeCard(
-              width: width,
-              name: 'Classic',
-              description: 'Your accent on Reelish black',
-              surfaces: ThemeSurfaces.classic,
-              accent: classicAccent ?? GlassTheme.accent,
-              selected: current == SupporterTheme.classicId,
-              onSelect: () => onSelect(SupporterTheme.classicId),
-            ),
-            for (final theme in SupporterTheme.all)
+            if (includeClassic)
+              _ThemeCard(
+                width: width,
+                name: 'Classic',
+                description: 'Your accent on Reelish black',
+                surfaces: ThemeSurfaces.classic,
+                accent: classicAccent ?? GlassTheme.accent,
+                selected: current == SupporterTheme.classicId,
+                onSelect: () => onSelect(SupporterTheme.classicId),
+              ),
+            for (final theme in themes)
               _ThemeCard(
                 width: width,
                 name: theme.name,
@@ -187,7 +196,7 @@ class ThemePreview extends StatelessWidget {
                           ),
                         ),
                       ),
-                      const _SupportersBadge(),
+                      _CollectionBadge(theme.collection),
                     ],
                   ),
                   const SizedBox(height: AppSpace.xxs),
@@ -276,7 +285,7 @@ class _PreviewScreen extends StatelessWidget {
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: s.background,
-          gradient: _ambient(theme.glow, s.background),
+          gradient: _ambient(theme.ambient, s.background),
           border: Border.all(color: s.border),
           borderRadius: BorderRadius.circular(AppRadius.lg),
         ),
@@ -586,11 +595,17 @@ class _ThemeCard extends StatelessWidget {
               clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
                 color: s.background,
-                gradient: _ambient(theme?.glow ?? accent.primary, s.background),
+                gradient: _ambient(
+                  theme?.ambient ?? accent.primary,
+                  s.background,
+                ),
                 borderRadius: BorderRadius.circular(AppRadius.lg),
                 border: Border.all(
                   color: selected
                       ? accent.primary
+                      // The Founder Collection's card keeps a champagne rim.
+                      : theme?.collection == ThemeCollection.founder
+                      ? accent.primary.withValues(alpha: .4)
                       : GlassTheme.textPrimary.withValues(alpha: .12),
                   width: selected ? 2 : 1,
                 ),
@@ -606,11 +621,11 @@ class _ThemeCard extends StatelessWidget {
                 fit: StackFit.expand,
                 children: [
                   _MiniPage(s: s, accent: accent),
-                  if (theme != null)
-                    const Positioned(
+                  if (theme case final theme?)
+                    Positioned(
                       right: AppSpace.xs,
                       bottom: AppSpace.xs,
-                      child: _SupportersBadge(compact: true),
+                      child: _CollectionBadge(theme.collection, compact: true),
                     ),
                   Positioned(
                     right: AppSpace.xs,
@@ -767,41 +782,54 @@ class _MiniPage extends StatelessWidget {
   );
 }
 
-/// The Supporters mark: a small gold capsule, never a prompt.
-class _SupportersBadge extends StatelessWidget {
-  const _SupportersBadge({this.compact = false});
+/// The collection's mark, never a prompt: a small gold Supporters capsule,
+/// or the Founder's crown in champagne.
+class _CollectionBadge extends StatelessWidget {
+  const _CollectionBadge(this.collection, {this.compact = false});
 
+  final ThemeCollection collection;
   final bool compact;
 
   static const _gold = Color(0xFFFFD98A);
+  static const _champagne = Color(0xFFEAD7A8);
 
   @override
-  Widget build(BuildContext context) => Container(
-    padding: EdgeInsets.symmetric(
-      horizontal: compact ? 5 : AppSpace.xs,
-      vertical: compact ? 2 : 3,
-    ),
-    decoration: BoxDecoration(
-      color: Colors.black.withValues(alpha: .45),
-      borderRadius: BorderRadius.circular(AppRadius.sm),
-      border: Border.all(color: const Color(0x66F5B942)),
-    ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(ReelishIcons.star, size: compact ? 9 : 12, color: _gold),
-        if (!compact) ...[
-          const SizedBox(width: 4),
-          const Text(
-            'Supporters',
-            style: TextStyle(
-              color: _gold,
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-            ),
+  Widget build(BuildContext context) {
+    final founder = collection == ThemeCollection.founder;
+    final ink = founder ? _champagne : _gold;
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 5 : AppSpace.xs,
+        vertical: compact ? 2 : 3,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: .45),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(
+          color: founder ? const Color(0x80D6B779) : const Color(0x66F5B942),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            founder ? ReelishIcons.founder : ReelishIcons.star,
+            size: compact ? 9 : 12,
+            color: ink,
           ),
+          if (!compact) ...[
+            const SizedBox(width: 4),
+            Text(
+              founder ? 'Founder' : 'Supporters',
+              style: TextStyle(
+                color: ink,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
         ],
-      ],
-    ),
-  );
+      ),
+    );
+  }
 }

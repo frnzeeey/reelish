@@ -21,6 +21,30 @@ are a step deeper than its palette so small text keeps AA contrast on ivory:
 the accent (`#856D4C`, with the palette's `#B49B78` as its light partner) and
 the captions (`#6F685C` for `#777064`).
 
+## The Founder Collection
+
+Sovereign Edition is the Founder's own theme, in its own FOUNDER COLLECTION
+section above THEMES. Only the Founder sees that section: the collection has no
+way to unlock it, so it is never shown locked to anyone else.
+
+| Theme | Character | Profile ornament |
+|---|---|---|
+| Sovereign Edition | Obsidian black, champagne gold and midnight violet | Crest: a violet band, a champagne light along the top, a fine sheen |
+
+Its page is `#090A12`, its cards `#151326` and its text `#E8E4F0`. Champagne
+`#D6B779` is the accent and the hairlines (`borderOverride`, at low opacity);
+midnight violet `#A78BFA` is the ambient light across the pages. That violet
+light is what sets it apart from Obsidian Gold, whose light is gold.
+
+It is a `SupporterTheme` with `collection: ThemeCollection.founder`, listed in
+`SupporterTheme.founderCollection` (not `all`); `SupporterTheme.offered` is
+both, and `byId` finds either. `AccentSettingsController.mayUse` checks the
+theme's own perk: `FounderPerk.founderThemes` for the Founder Collection
+([entitlements](../backend/entitlements.md#founder-perks)), which a supporter
+never has. Choosing it waits for a fresh answer from the server; at launch the
+saved status applies it, as for every theme, and the server's answer replaces
+that. The Founder can switch to Classic or any other theme at any time.
+
 ## Design tokens
 
 Every colour a theme changes is a token, so no screen names a theme:
@@ -111,7 +135,7 @@ nothing is recreated. Material's own theme change fades in over
 (`AppearanceSettingsScreen` in `playback_settings_screen.dart`) on phone, TV
 and Windows:
 
-- Classic, then the seven themes, each a card drawn from that theme's own
+- Classic, then the seven themes (with the Founder Collection above them, for the Founder), each a card drawn from that theme's own
   tokens (its page, a poster, a card, the accent button), with its name and
   one-line description. Cards lay out in even columns: four on Windows and TV
   where they fit, otherwise three or two. Each card is a `TvFocusable`, so it

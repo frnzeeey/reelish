@@ -186,6 +186,35 @@ class AppearanceSettingsScreen extends StatelessWidget {
     icon: ReelishIcons.palette,
     onBack: onBack,
     children: [
+      // The Founder's own themes. Only the Founder sees this section: the
+      // collection cannot be unlocked, so it is never shown locked.
+      AnimatedBuilder(
+        animation: controller,
+        builder: (context, _) {
+          if (!controller.supporters.hasFounderPerk(
+            FounderPerk.founderThemes,
+          )) {
+            return const SizedBox.shrink();
+          }
+          return SettingsSection(
+            label: 'FOUNDER COLLECTION',
+            description:
+                'Yours alone, as the creator of Reelish. Choose Classic or '
+                'any theme below to switch back at any time.',
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(14),
+                child: SupporterThemePicker(
+                  savedId: controller.theme?.id,
+                  themes: SupporterTheme.founderCollection,
+                  includeClassic: false,
+                  onSelect: (id) => unawaited(_applyFounderTheme(context, id)),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
       AnimatedBuilder(
         animation: controller,
         builder: (context, _) {
@@ -305,6 +334,23 @@ class AppearanceSettingsScreen extends StatelessWidget {
         ),
     ],
   );
+
+  /// Applies a Founder Collection theme, which waits for the server to
+  /// confirm the entitlement; says so when it could not be checked.
+  Future<void> _applyFounderTheme(BuildContext context, String id) async {
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    if (await controller.setTheme(id)) return;
+    messenger
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Your Founder status could not be checked. Check your '
+            'connection and try again.',
+          ),
+        ),
+      );
+  }
 
   /// Opens the custom accent editor from the current custom colour (or the
   /// current accent) and applies what the user chooses.

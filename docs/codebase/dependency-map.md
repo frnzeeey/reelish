@@ -169,27 +169,27 @@ The files imported by the most other `lib/` files. A change to one of these reac
 
 | File | Imported by (lib files) | Imported by (tests) |
 |---|---|---|
-| [`lib/src/theme/glass_theme.dart`](../../lib/src/theme/glass_theme.dart) | 83 | 40 |
+| [`lib/src/theme/glass_theme.dart`](../../lib/src/theme/glass_theme.dart) | 83 | 41 |
 | [`lib/src/theme/reelish_icons.dart`](../../lib/src/theme/reelish_icons.dart) | 75 | 8 |
 | [`lib/src/theme/design_tokens.dart`](../../lib/src/theme/design_tokens.dart) | 46 | 1 |
 | [`lib/src/platform/device_capabilities.dart`](../../lib/src/platform/device_capabilities.dart) | 33 | 15 |
 | [`lib/src/models/media_item.dart`](../../lib/src/models/media_item.dart) | 32 | 38 |
-| [`lib/src/services/storage_service.dart`](../../lib/src/services/storage_service.dart) | 20 | 25 |
+| [`lib/src/services/storage_service.dart`](../../lib/src/services/storage_service.dart) | 20 | 26 |
 | [`lib/src/models/stream_source.dart`](../../lib/src/models/stream_source.dart) | 18 | 15 |
 | [`lib/src/widgets/settings/settings_components.dart`](../../lib/src/widgets/settings/settings_components.dart) | 18 | 2 |
 | [`lib/src/widgets/tv/tv_focus.dart`](../../lib/src/widgets/tv/tv_focus.dart) | 16 | 7 |
-| [`lib/src/account/account_controller.dart`](../../lib/src/account/account_controller.dart) | 15 | 15 |
+| [`lib/src/account/account_controller.dart`](../../lib/src/account/account_controller.dart) | 15 | 16 |
 | [`lib/src/widgets/glass_button.dart`](../../lib/src/widgets/glass_button.dart) | 15 | 1 |
 | [`lib/src/watch_party/party_models.dart`](../../lib/src/watch_party/party_models.dart) | 14 | 5 |
 | [`lib/src/widgets/artwork_image.dart`](../../lib/src/widgets/artwork_image.dart) | 14 | 5 |
 | [`lib/src/analytics/analytics_service.dart`](../../lib/src/analytics/analytics_service.dart) | 13 | 5 |
 | [`lib/src/services/tmdb_service.dart`](../../lib/src/services/tmdb_service.dart) | 12 | 18 |
-| [`lib/src/account/account_api.dart`](../../lib/src/account/account_api.dart) | 10 | 14 |
+| [`lib/src/account/account_api.dart`](../../lib/src/account/account_api.dart) | 10 | 15 |
 | [`lib/src/analytics/analytics_events.dart`](../../lib/src/analytics/analytics_events.dart) | 10 | 2 |
 | [`lib/src/desktop/desktop_widgets.dart`](../../lib/src/desktop/desktop_widgets.dart) | 10 | 5 |
 | [`lib/src/navigation/app_transitions.dart`](../../lib/src/navigation/app_transitions.dart) | 10 | 1 |
-| [`lib/src/account/profile_controller.dart`](../../lib/src/account/profile_controller.dart) | 9 | 7 |
-| [`lib/src/account/supporter_controller.dart`](../../lib/src/account/supporter_controller.dart) | 9 | 6 |
+| [`lib/src/account/profile_controller.dart`](../../lib/src/account/profile_controller.dart) | 9 | 8 |
+| [`lib/src/account/supporter_controller.dart`](../../lib/src/account/supporter_controller.dart) | 9 | 7 |
 | [`lib/src/models/media_details.dart`](../../lib/src/models/media_details.dart) | 9 | 6 |
 | [`lib/src/models/plugin_catalog.dart`](../../lib/src/models/plugin_catalog.dart) | 9 | 1 |
 | [`lib/src/services/network_target_policy.dart`](../../lib/src/services/network_target_policy.dart) | 9 | 17 |

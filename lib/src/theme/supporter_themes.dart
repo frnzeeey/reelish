@@ -2,6 +2,8 @@
 // whole look: the page colours every screen reads through GlassTheme
 // (ThemeSurfaces), the accent across the app, and the profile card's lights,
 // ring and ornament. New themes are new entries here; no screen names one.
+// The Founder Collection (Sovereign Edition) lives here too: same tokens,
+// a different perk (FounderPerk, which no donation unlocks).
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -11,7 +13,10 @@ import 'glass_theme.dart';
 import 'theme_tokens.dart';
 
 /// The ornament a theme adds to its backdrop, drawn once and cheaply.
-enum ThemeOrnament { none, stars, aurora, sheen }
+enum ThemeOrnament { none, stars, aurora, sheen, crest }
+
+/// Who a theme belongs to: the supporter perks, or the Founder's own.
+enum ThemeCollection { supporter, founder }
 
 @immutable
 class SupporterTheme {
@@ -29,6 +34,7 @@ class SupporterTheme {
     required this.ink,
     this.ornament = ThemeOrnament.none,
     this.replaces = const [],
+    this.collection = ThemeCollection.supporter,
   });
 
   /// Saved on the device; never rename one.
@@ -66,6 +72,13 @@ class SupporterTheme {
   /// Ids of retired themes that now open as this one, so a saved choice
   /// keeps working.
   final List<String> replaces;
+
+  /// The perk that applies this theme: the supporter perks, or (for the
+  /// Founder Collection) the Founder's own.
+  final ThemeCollection collection;
+
+  /// The light the theme casts across its pages and its cards.
+  Color get ambient => surfaces.ambient ?? glow;
 
   /// The accent the theme sets across the app.
   AccentPalette get accent => AccentPalette(
@@ -244,7 +257,38 @@ class SupporterTheme {
     ornament: ThemeOrnament.sheen,
   );
 
-  /// The themes offered, flagship first.
+  /// Sovereign Edition, the Founder Collection's theme: obsidian pages lit
+  /// in midnight violet, with champagne gold kept for the accent, the
+  /// hairlines and the profile. Distinct from Obsidian Gold, whose light is
+  /// gold too: here the pages glow violet and the gold is the detail.
+  static const sovereign = SupporterTheme(
+    id: 'sovereign',
+    name: 'Sovereign Edition',
+    description: 'Obsidian black, champagne gold and midnight violet',
+    surfaces: ThemeSurfaces(
+      background: Color(0xFF090A12),
+      surface: Color(0xFF151326),
+      raised: Color(0xFF1D1A33),
+      textPrimary: Color(0xFFE8E4F0),
+      textSecondary: Color(0xFFA7A0B8),
+      // Champagne hairlines, kept quiet so they read as a finish.
+      borderOverride: Color(0x24D6B779),
+      // Translucent charcoal glass, tinted toward the night.
+      glassTintOverride: Color(0xFF100F1C),
+      ambient: Color(0xFFA78BFA),
+    ),
+    primary: Color(0xFFD6B779),
+    light: Color(0xFFEAD7A8),
+    deepAccent: Color(0xFFB0904F),
+    glow: Color(0xFFD6B779),
+    second: Color(0xFFA78BFA),
+    deep: Color(0xFF110F20),
+    ink: Color(0xFFEAD7A8),
+    ornament: ThemeOrnament.crest,
+    collection: ThemeCollection.founder,
+  );
+
+  /// The themes offered to supporters, flagship first.
   static const all = [
     velvetCinema,
     aurora,
@@ -255,14 +299,21 @@ class SupporterTheme {
     roseNoir,
   ];
 
+  /// The Founder Collection: themes for the Founder alone, which no
+  /// donation unlocks. Shown only to the Founder.
+  static const founderCollection = [sovereign];
+
+  /// Every theme, in either collection.
+  static const offered = [...all, ...founderCollection];
+
   /// The picker's choice for no theme: the accent the user picked.
   static const classicId = 'classic';
 
-  /// The offered theme saved as [id], including the ids of the themes it
-  /// replaced.
+  /// The theme saved as [id], in either collection, including the ids of
+  /// the themes it replaced.
   static SupporterTheme? byId(String? id) {
     if (id == null || id.isEmpty) return null;
-    for (final theme in all) {
+    for (final theme in offered) {
       if (theme.id == id || theme.replaces.contains(id)) return theme;
     }
     return null;
@@ -305,19 +356,24 @@ class _BackdropPainter extends CustomPainter {
         ).createShader(rect),
     );
     final longest = math.max(size.width, size.height);
+    // Sovereign keeps its gold for details: a broad gold light reads as
+    // brown on its violet night, so the night's violet leads instead.
+    final crest = theme.ornament == ThemeOrnament.crest;
     _light(
       canvas,
       rect,
       const Alignment(-.85, -.9),
       longest * .75,
-      theme.glow.withValues(alpha: .34),
+      crest
+          ? theme.second.withValues(alpha: .22)
+          : theme.glow.withValues(alpha: .34),
     );
     _light(
       canvas,
       rect,
       const Alignment(1.05, 1.1),
       longest * .7,
-      theme.second.withValues(alpha: .26),
+      theme.second.withValues(alpha: crest ? .18 : .26),
     );
 
     switch (theme.ornament) {
@@ -339,6 +395,72 @@ class _BackdropPainter extends CustomPainter {
               end: Alignment.bottomCenter,
               colors: [
                 theme.ink.withValues(alpha: .07),
+                theme.ink.withValues(alpha: 0),
+              ],
+            ).createShader(rect),
+        );
+      case ThemeOrnament.crest:
+        // Sovereign: a band of midnight violet across the card, a soft
+        // champagne light along the top edge, and one fine champagne sheen.
+        // Painted once; no animation.
+        canvas.drawRect(
+          rect,
+          Paint()
+            ..shader = RadialGradient(
+              center: const Alignment(0, -1.4),
+              radius: .9,
+              colors: [
+                theme.glow.withValues(alpha: .16),
+                theme.glow.withValues(alpha: 0),
+              ],
+            ).createShader(rect),
+        );
+        final band = Path()
+          ..moveTo(0, size.height * .78)
+          ..cubicTo(
+            size.width * .35,
+            size.height * .42,
+            size.width * .7,
+            size.height * .95,
+            size.width,
+            size.height * .55,
+          )
+          ..lineTo(size.width, size.height * .72)
+          ..cubicTo(
+            size.width * .7,
+            size.height * 1.1,
+            size.width * .35,
+            size.height * .6,
+            0,
+            size.height * .98,
+          )
+          ..close();
+        canvas.drawPath(
+          band,
+          Paint()
+            ..shader = LinearGradient(
+              colors: [
+                theme.second.withValues(alpha: 0),
+                theme.second.withValues(alpha: .14),
+                theme.second.withValues(alpha: 0),
+              ],
+            ).createShader(rect)
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14),
+        );
+        final sheen = Path()
+          ..moveTo(size.width * .60, 0)
+          ..lineTo(size.width * .66, 0)
+          ..lineTo(size.width * .40, size.height)
+          ..lineTo(size.width * .34, size.height)
+          ..close();
+        canvas.drawPath(
+          sheen,
+          Paint()
+            ..shader = LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                theme.ink.withValues(alpha: .06),
                 theme.ink.withValues(alpha: 0),
               ],
             ).createShader(rect),

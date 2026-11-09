@@ -112,6 +112,28 @@ void main() {
       expect(SupporterTheme.byId('ivory_studio'), SupporterTheme.ivoryStudio);
     });
 
+    test('the Founder Collection is Sovereign Edition, kept apart', () {
+      expect(SupporterTheme.founderCollection, [SupporterTheme.sovereign]);
+      expect(SupporterTheme.all, isNot(contains(SupporterTheme.sovereign)));
+      for (final theme in SupporterTheme.all) {
+        expect(theme.collection, ThemeCollection.supporter, reason: theme.id);
+      }
+      final sovereign = SupporterTheme.sovereign;
+      expect(sovereign.collection, ThemeCollection.founder);
+      expect(SupporterTheme.byId('sovereign'), sovereign);
+      // Champagne for the accent, midnight violet for the light.
+      expect(sovereign.primary, const Color(0xFFD6B779));
+      expect(sovereign.second, const Color(0xFFA78BFA));
+      expect(sovereign.ambient, const Color(0xFFA78BFA));
+      expect(sovereign.surfaces.textPrimary, const Color(0xFFE8E4F0));
+      // Not a copy of Obsidian Gold, the supporters' gold theme.
+      expect(sovereign.ambient, isNot(SupporterTheme.obsidianGold.ambient));
+      expect(
+        sovereign.surfaces.background,
+        isNot(SupporterTheme.obsidianGold.surfaces.background),
+      );
+    });
+
     test('Ivory Studio is a light theme in the palette given', () {
       final ivory = SupporterTheme.ivoryStudio;
       final s = ivory.surfaces;
@@ -130,7 +152,7 @@ void main() {
     });
 
     test('artwork stays dark behind white titles, whatever the theme', () {
-      for (final theme in SupporterTheme.all) {
+      for (final theme in SupporterTheme.offered) {
         final s = theme.surfaces;
         // White titles over the scrim read in every theme.
         expect(
@@ -148,7 +170,7 @@ void main() {
       addTearDown(() => GlassTheme.setSurfaces(ThemeSurfaces.classic));
       for (final surfaces in [
         ThemeSurfaces.classic,
-        for (final theme in SupporterTheme.all) theme.surfaces,
+        for (final theme in SupporterTheme.offered) theme.surfaces,
       ]) {
         GlassTheme.setSurfaces(surfaces);
         // Light themes: white, not their dark page text. Dark themes: their
@@ -168,7 +190,7 @@ void main() {
 
     test('every theme casts its own light; Classic stays flat', () {
       expect(ThemeSurfaces.classic.ambient, isNull);
-      for (final theme in SupporterTheme.all) {
+      for (final theme in SupporterTheme.offered) {
         expect(theme.surfaces.ambient, isNotNull, reason: theme.name);
       }
     });
@@ -182,8 +204,9 @@ void main() {
         'arctic': (0xFF8CCBFF, 0xFF08111C, 0xFF111E2D, 0xFF192A3C),
         'rose_noir': (0xFFF18EB5, 0xFF140D14, 0xFF211622, 0xFF302033),
         'ivory_studio': (0xFF856D4C, 0xFFFAF8F3, 0xFFFFFFFF, 0xFFF4F0E8),
+        'sovereign': (0xFFD6B779, 0xFF090A12, 0xFF151326, 0xFF1D1A33),
       };
-      for (final theme in SupporterTheme.all) {
+      for (final theme in SupporterTheme.offered) {
         final (primary, page, surface, raised) = spec[theme.id]!;
         expect(theme.primary, Color(primary), reason: theme.name);
         expect(theme.surfaces.background, Color(page), reason: theme.name);
@@ -194,7 +217,7 @@ void main() {
 
     test('every theme reads: text, captions and its accent', () {
       final ids = <String>{};
-      for (final theme in SupporterTheme.all) {
+      for (final theme in SupporterTheme.offered) {
         final s = theme.surfaces;
         expect(theme.accent.id, 'theme:${theme.id}');
         expect(theme.accent.label, theme.name);
@@ -212,7 +235,7 @@ void main() {
           reason: theme.name,
         );
       }
-      expect(ids, hasLength(SupporterTheme.all.length));
+      expect(ids, hasLength(SupporterTheme.offered.length));
     });
 
     test('retired themes open as the ones that replaced them', () {
@@ -265,7 +288,7 @@ void main() {
 
     test('the Founder can use every theme without donating', () async {
       final (appearance, _) = await _appearance(['founder']);
-      for (final theme in SupporterTheme.all) {
+      for (final theme in SupporterTheme.offered) {
         await appearance.setTheme(theme.id);
         expect(appearance.theme, theme);
         expect(GlassTheme.background, theme.surfaces.background);
@@ -347,6 +370,98 @@ void main() {
       expect(appearance.usesThemeAccent, isTrue);
       expect(GlassTheme.primary, SupporterTheme.ember.primary);
     });
+
+    test(
+      'Sovereign Edition is the Founder\'s; supporters cannot set it',
+      () async {
+        final (appearance, _) = await _appearance(['supporter']);
+        expect(await appearance.setTheme('sovereign'), isFalse);
+        expect(appearance.themeId, isNull);
+        expect(GlassTheme.surfaces, ThemeSurfaces.classic);
+        // Their own themes still work.
+        expect(await appearance.setTheme('aurora'), isTrue);
+        expect(appearance.theme, SupporterTheme.aurora);
+      },
+    );
+
+    test('a free account cannot set Sovereign Edition either', () async {
+      final (appearance, _) = await _appearance(['free']);
+      expect(await appearance.setTheme('sovereign'), isFalse);
+      expect(appearance.theme, isNull);
+    });
+
+    test(
+      'Sovereign Edition saved on a supporter\'s device does nothing',
+      () async {
+        SharedPreferences.setMockInitialValues({
+          'onfeed.appearance.theme': 'sovereign',
+        });
+        final (appearance, _) = await _appearance(['supporter']);
+        expect(appearance.theme, isNull);
+        expect(GlassTheme.surfaces, ThemeSurfaces.classic);
+      },
+    );
+
+    test('the Founder sets Sovereign Edition, keeps it after a restart, and '
+        'can switch back', () async {
+      final (appearance, _) = await _appearance(['founder']);
+      expect(await appearance.setTheme('sovereign'), isTrue);
+      expect(appearance.theme, SupporterTheme.sovereign);
+      expect(GlassTheme.primary, SupporterTheme.sovereign.primary);
+      expect(
+        GlassTheme.background,
+        SupporterTheme.sovereign.surfaces.background,
+      );
+      expect(GlassTheme.ambient, const Color(0xFFA78BFA));
+      final (again, _) = await _appearance(['founder']);
+      expect(again.theme, SupporterTheme.sovereign);
+      // Never mandatory: Classic, or any other theme.
+      await again.setTheme(null);
+      expect(again.theme, isNull);
+      expect(GlassTheme.surfaces, ThemeSurfaces.classic);
+      await again.setTheme('velvet_cinema');
+      expect(again.theme, SupporterTheme.velvetCinema);
+    });
+
+    test(
+      'Sovereign Edition waits for the server: offline, it is not set',
+      () async {
+        SharedPreferences.setMockInitialValues({
+          'reelish.supporter.v1.user-1': jsonEncode({
+            'code': 'RS-ABCD-2345',
+            'status': 'none',
+            'entitlement': 'founder',
+          }),
+        });
+        final (_, supporters) = await _account([null]);
+        await supporters.restoreSaved();
+        final appearance = AccentSettingsController(supporters: supporters);
+        await appearance.load();
+        expect(await appearance.setTheme('sovereign'), isFalse);
+        expect(appearance.themeId, isNull);
+      },
+    );
+
+    test(
+      'a saved status edited to say Founder is undone by the server',
+      () async {
+        SharedPreferences.setMockInitialValues({
+          'onfeed.appearance.theme': 'sovereign',
+          'reelish.supporter.v1.user-1': jsonEncode({
+            'code': 'RS-ABCD-2345',
+            'status': 'verified',
+            'entitlement': 'founder',
+          }),
+        });
+        final (_, supporters) = await _account(['supporter']);
+        await supporters.restoreSaved();
+        final appearance = AccentSettingsController(supporters: supporters);
+        await appearance.load();
+        await supporters.refresh();
+        expect(appearance.theme, isNull);
+        expect(GlassTheme.surfaces, ThemeSurfaces.classic);
+      },
+    );
 
     test('when support ends, Classic and the picked accent return; the theme '
         'waits', () async {
@@ -485,6 +600,47 @@ void main() {
       await tester.tap(find.text(GlassTheme.teal.label));
       await tester.pump();
       expect(appearance.accent, GlassTheme.teal);
+    });
+
+    testWidgets('only the Founder sees the Founder Collection', (tester) async {
+      for (final entitlement in ['free', 'supporter']) {
+        await show(tester, entitlement);
+        expect(find.text('FOUNDER COLLECTION'), findsNothing);
+        expect(find.text('Sovereign Edition'), findsNothing);
+      }
+    });
+
+    testWidgets('the Founder previews Sovereign Edition, then applies it', (
+      tester,
+    ) async {
+      final appearance = await show(tester, 'founder');
+      expect(find.text('FOUNDER COLLECTION'), findsOneWidget);
+      // Above the supporter themes, and not one of them.
+      expect(
+        tester.getTopLeft(find.text('FOUNDER COLLECTION')).dy,
+        lessThan(tester.getTopLeft(find.text('THEMES')).dy),
+      );
+      await tester.tap(find.text('Sovereign Edition'));
+      await tester.pumpAndSettle();
+      expect(find.byType(ThemePreview), findsOneWidget);
+      expect(find.text('Founder'), findsOneWidget);
+      await tester.tap(find.text('Apply theme'));
+      await settle(tester);
+      expect(appearance.theme, SupporterTheme.sovereign);
+      await tester.pumpAndSettle();
+      expect(
+        find.bySemanticsLabel(RegExp('Sovereign Edition theme.*selected')),
+        findsOneWidget,
+      );
+      // Classic is not selected while Sovereign is on, and switches back.
+      expect(
+        find.bySemanticsLabel(RegExp('Classic theme.*selected')),
+        findsNothing,
+      );
+      await tester.tap(find.text('Classic'));
+      await settle(tester);
+      expect(appearance.theme, isNull);
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('TV: the remote opens a preview and applies it', (
