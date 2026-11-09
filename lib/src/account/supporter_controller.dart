@@ -28,6 +28,17 @@ enum Entitlement { free, supporter, founder }
 /// Founder: inheritance happens in the entitlement.
 enum SupporterPerk { hostWatchParty, appThemes, appIcons }
 
+/// The Founder's own perks: the Founder Collection's cosmetics, which no
+/// donation unlocks. Each is the Founder entitlement as a whole, so a
+/// cosmetic added to the collection later is the Founder's with no extra
+/// work, and never a supporter's.
+///
+/// Adding one: name it here and in `FounderPerk` in
+/// backend/src/entitlements.ts, and check [SupporterController.hasFounderPerk].
+/// Nothing names the Founder's account: the server decides the entitlement
+/// from its own secret.
+enum FounderPerk { founderThemes, founderIcons }
+
 /// The account's status, as the server reported it.
 @immutable
 class SupporterStatus {
@@ -134,6 +145,12 @@ class SupporterController extends ChangeNotifier {
   /// entitlement, which the Founder inherits, so this is the one check any
   /// supporter feature makes.
   bool has(SupporterPerk perk) => entitlement != Entitlement.free;
+
+  /// Whether this account has the Founder's [perk]: the Founder entitlement
+  /// only, never a donation. Like [has] it reads the last answer for this
+  /// account, which decides only what shows; activating a Founder cosmetic
+  /// asks the server afresh first.
+  bool hasFounderPerk(FounderPerk perk) => entitlement == Entitlement.founder;
 
   Future<void>? _refreshing;
 

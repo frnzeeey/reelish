@@ -58,4 +58,25 @@ badge.
 Never check `isSupporter`, a badge or the Founder for a perk. `isSupporter`
 means a verified donation, which is for the Supporters page and the badge.
 
+## Founder perks
+
+The Founder Collection is the Founder's own: cosmetics no donation unlocks.
+
+| Perk | Server | App |
+|---|---|---|
+| `founder_themes` / `founderThemes` | Nothing to enforce: a theme is only ever seen by its owner | The Founder Collection on the Appearance page (Sovereign Edition) |
+| `founder_icons` / `founderIcons` | Nothing to enforce: the icon is a device setting | The Founder Collection on the App icon page (Sovereign Crest); applying it asks the server afresh first |
+
+`SupporterController.hasFounderPerk(FounderPerk)` is true for the `founder`
+entitlement only, which the server decides from the `FOUNDER_TRAKT_UUID` secret
+(`hasFounderPerks` in `entitlements.ts`). Like every perk it is the entitlement
+as a whole, so a cosmetic added to the collection later is the Founder's with
+no list to update, and never a supporter's. The saved copy is per account and
+only chooses what shows; activating a Founder theme or icon waits for a fresh
+answer from the server, so an edited saved status or an offline device never
+activates one.
+
+To add one, name it in `FounderPerk` on both sides and gate it on
+`hasFounderPerk`. Never check the Founder badge, a name or a username.
+
 Tests: `backend/test/entitlements.test.ts`, `test/entitlements_test.dart`.

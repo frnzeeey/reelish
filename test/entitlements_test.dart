@@ -120,11 +120,51 @@ void main() {
       });
     }
 
+    // Every value, so a cosmetic added to the Founder Collection later is
+    // covered too: a supporter never has one.
+    for (final (name, answer, expected) in [
+      ('the Founder', _founder, true),
+      ('a supporter', _supporter, false),
+      ('a free account', _free, false),
+    ]) {
+      test(
+        '$name ${expected ? 'has' : 'has none of'} the Founder perks',
+        () async {
+          final (_, supporters) = await _account([answer]);
+          await supporters.refresh();
+          for (final perk in FounderPerk.values) {
+            expect(
+              supporters.hasFounderPerk(perk),
+              expected,
+              reason: perk.name,
+            );
+          }
+        },
+      );
+    }
+
+    test(
+      'a supporter listed publicly as "Founder" is not the Founder',
+      () async {
+        final (_, supporters) = await _account([
+          {
+            ..._supporter,
+            'recognition': {'listed': true, 'name': 'Founder'},
+          },
+        ]);
+        await supporters.refresh();
+        expect(supporters.hasFounderPerk(FounderPerk.founderThemes), isFalse);
+      },
+    );
+
     test('nothing has them before the server answers', () async {
       final (_, supporters) = await _account([null]);
       await supporters.refresh();
       for (final perk in SupporterPerk.values) {
         expect(supporters.has(perk), isFalse);
+      }
+      for (final perk in FounderPerk.values) {
+        expect(supporters.hasFounderPerk(perk), isFalse);
       }
     });
 
@@ -137,6 +177,7 @@ void main() {
         final (_, supporters) = await _account([_free]);
         await supporters.refresh();
         expect(supporters.has(SupporterPerk.appThemes), isFalse);
+        expect(supporters.hasFounderPerk(FounderPerk.founderThemes), isFalse);
         expect(supporters.entitlement, Entitlement.free);
       },
     );

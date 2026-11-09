@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { call, freshIp, signIn, testEnv } from './helpers';
 import worker from '../src/index';
-import { hasSupporterPerks, type Entitlement } from '../src/entitlements';
+import { hasFounderPerks, hasSupporterPerks, type Entitlement } from '../src/entitlements';
 
 const founderUuid = 'founder-uuid';
 const movie = { tmdbId: 603, type: 'movie', title: 'The Matrix' };
@@ -126,5 +126,11 @@ describe('Entitlements', () => {
     expect(hasSupporterPerks('founder')).toBe(true);
     expect(hasSupporterPerks('supporter')).toBe(true);
     expect(hasSupporterPerks('free')).toBe(false);
+  });
+
+  it('the Founder perks are the Founder\'s alone: no donation unlocks them', () => {
+    expect(hasFounderPerks('founder')).toBe(true);
+    expect(hasFounderPerks('supporter')).toBe(false);
+    expect(hasFounderPerks('free')).toBe(false);
   });
 });

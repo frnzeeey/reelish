@@ -4,7 +4,7 @@
 
 Top-level functions and methods in `lib/`, A–Z by name, then by declaring type. Included: every public function and method, and private ones that carry a doc comment (those are the behaviour the authors chose to explain). Left out: undocumented private helpers, framework overrides (`build`, `initState`, `dispose`, …) without a doc comment, constructors, getters and setters. **Signature** is the declaration as written, collapsed onto one line. **Async** marks functions that return a `Future` or `Stream` or are declared `async`. Callers are not listed: names such as `load` are too common to match reliably; search the code for `.name(` instead.
 
-844 entries: 60 top-level, 784 methods.
+845 entries: 60 top-level, 785 methods.
 
 [A](#a) · [B](#b) · [C](#c) · [D](#d) · [E](#e) · [F](#f) · [G](#g) · [H](#h) · [I](#i) · [K](#k) · [L](#l) · [M](#m) · [N](#n) · [O](#o) · [P](#p) · [Q](#q) · [R](#r) · [S](#s) · [T](#t) · [U](#u) · [V](#v) · [W](#w)
 
@@ -291,7 +291,7 @@ Top-level functions and methods in `lib/`, A–Z by name, then by declaring type
 | `fromJson` | `PartyRoom` (static) | [`party_models.dart:255`](../../lib/src/watch_party/party_models.dart#L255) |  | `static PartyRoom? fromJson(Object? json)` |  |
 | `fromJson` | `RememberedSubtitle` (static) | [`storage_service.dart:709`](../../lib/src/services/storage_service.dart#L709) |  | `static RememberedSubtitle? fromJson(Object? json)` |  |
 | `fromJson` | `SubtitleAddon` (static) | [`subtitle_addon.dart:157`](../../lib/src/models/subtitle_addon.dart#L157) |  | `static SubtitleAddon? fromJson(Object? json)` |  |
-| `fromJson` | `SupporterStatus` (static) | [`supporter_controller.dart:58`](../../lib/src/account/supporter_controller.dart#L58) |  | `static SupporterStatus? fromJson(Object? value)` |  |
+| `fromJson` | `SupporterStatus` (static) | [`supporter_controller.dart:69`](../../lib/src/account/supporter_controller.dart#L69) |  | `static SupporterStatus? fromJson(Object? value)` |  |
 | `fromManifest` | `SubtitleAddon` (static) | [`subtitle_addon.dart:103`](../../lib/src/models/subtitle_addon.dart#L103) |  | `static SubtitleAddon fromManifest(String manifestUrl, Object? json)` | Reads a Stremio manifest. |
 | `fromMovie` | `ContentAdvisory` (static) | [`content_advisory.dart:71`](../../lib/src/models/content_advisory.dart#L71) |  | `static ContentAdvisory? fromMovie(Object? json, {String? region})` | Reads `/movie/{id}/release_dates`; null when nothing reliable is there. |
 | `fromResponse` | `StoredSession` (static) | [`session_store.dart:70`](../../lib/src/account/session_store.dart#L70) |  | `static StoredSession fromResponse(Map<String, dynamic> session, Map<String, dynamic> user)` |  |
@@ -304,8 +304,8 @@ Top-level functions and methods in `lib/`, A–Z by name, then by declaring type
 | `Function` | `PartyPlayerLauncher` (static) | [`party_launcher.dart:12`](../../lib/src/screens/watch_party/party_launcher.dart#L12) | yes | `static Future<void> Function(BuildContext context, PartyContent content)` | Opens the player for `content`; completes when the player closes (or when no source was found). |
 | `Function` | `PluginLibraryQuery` (static) | [`plugin_library_query.dart:96`](../../lib/src/services/plugin_library_query.dart#L96) |  | `static int Function(ReelishPlugin, ReelishPlugin)` |  |
 | `Function` | `ProviderPluginService` | [`provider_plugin_service.dart:104`](../../lib/src/services/provider_plugin_service.dart#L104) | yes | `Future<T> _serialized<T>(Future<T> Function() action)` |  |
-| `Function` | `ProviderScriptCache` | [`provider_script_cache.dart:38`](../../lib/src/services/provider_script_cache.dart#L38) | yes | `Future<String> _load(String url, Future<String> Function() fetch) async` |  |
 | `Function` | `ProviderScriptCache` | [`provider_script_cache.dart:24`](../../lib/src/services/provider_script_cache.dart#L24) | yes | `Future<String> get(String url, Future<String> Function() fetch)` | Returns the script at `url`, downloading it with `fetch` when it is not cached or older than `ttl`. |
+| `Function` | `ProviderScriptCache` | [`provider_script_cache.dart:38`](../../lib/src/services/provider_script_cache.dart#L38) | yes | `Future<String> _load(String url, Future<String> Function() fetch) async` |  |
 | `Function` | `StorageService` (static) | [`storage_service.dart:38`](../../lib/src/services/storage_service.dart#L38) | yes | `static Future<T> _serialized<T>(Future<T> Function() update)` |  |
 | `Function` | `UpdateDownloadCancellation` | [`github_update_service.dart:19`](../../lib/src/services/github_update_service.dart#L19) |  | `void Function()` |  |
 
@@ -322,8 +322,9 @@ Top-level functions and methods in `lib/`, A–Z by name, then by declaring type
 |---|---|---|---|---|---|
 | `_handleFailure` | `_CustomVideoPlayerState` | [`custom_video_player.dart:832`](../../lib/src/widgets/player/custom_video_player.dart#L832) | yes | `Future<void> _handleFailure(StreamSource failedCandidate, Object error, int generation) async` | Single failure policy for open and mid-playback errors. |
 | `has` | `AccountBadges` | [`account_badges.dart:28`](../../lib/src/account/account_badges.dart#L28) |  | `bool has(AccountBadge badge)` |  |
-| `has` | `SupporterController` | [`supporter_controller.dart:136`](../../lib/src/account/supporter_controller.dart#L136) |  | `bool has(SupporterPerk perk)` | Whether this account has `perk`. |
+| `has` | `SupporterController` | [`supporter_controller.dart:147`](../../lib/src/account/supporter_controller.dart#L147) |  | `bool has(SupporterPerk perk)` | Whether this account has `perk`. |
 | `hasAccepted` | `FirstRunConsentScreen` (static) | [`first_run_consent_screen.dart:16`](../../lib/src/screens/first_run_consent_screen.dart#L16) | yes | `static Future<bool> hasAccepted() async` |  |
+| `hasFounderPerk` | `SupporterController` | [`supporter_controller.dart:153`](../../lib/src/account/supporter_controller.dart#L153) |  | `bool hasFounderPerk(FounderPerk perk)` | Whether this account has the Founder's `perk`: the Founder entitlement only, never a donation. |
 | `_hasMoreAfter` | `PagedFeedController` | [`paged_feed_controller.dart:452`](../../lib/src/services/paged_feed_controller.dart#L452) |  | `bool _hasMoreAfter(_Batch batch)` | A fixed-size row never pages on scroll. |
 | `hasValidTmdbId` | `MediaCatalogFilter` (static) | [`media_catalog_rules.dart:53`](../../lib/src/services/media_catalog_rules.dart#L53) |  | `static bool hasValidTmdbId(MediaItem item)` | TMDB ids are positive integers; parsed TMDB records without one are skipped before they reach any list. |
 | `headerFor` | `_ProviderCookieJar` | [`provider_fetch_bridge.dart:1047`](../../lib/src/services/provider_fetch_bridge.dart#L1047) |  | `String headerFor(Uri uri)` |  |
@@ -458,8 +459,8 @@ Top-level functions and methods in `lib/`, A–Z by name, then by declaring type
 
 | Function | Declared in | Source | Async | Signature | Summary |
 |---|---|---|---|---|---|
-| `main` | top level | [`main.dart:29`](../../lib/main.dart#L29) |  | `void main()` |  |
 | `main` | top level | [`icon_gallery.dart:11`](../../lib/icon_gallery.dart#L11) |  | `void main()` |  |
+| `main` | top level | [`main.dart:29`](../../lib/main.dart#L29) |  | `void main()` |  |
 | `makeHost` | `WatchPartyController` | [`watch_party_controller.dart:728`](../../lib/src/watch_party/watch_party_controller.dart#L728) |  | `void makeHost(String pid)` |  |
 | `_markChecked` | `EpisodeCheck` (static) | [`episode_check.dart:250`](../../lib/src/notifications/episode_check.dart#L250) | yes | `static Future<void> _markChecked(String userId, DateTime? now)` | A check with nothing to ask about: no series are followed any more, so none are remembered either. |
 | `markOnce` | `PerfTimeline` (static) | [`perf_timeline.dart:18`](../../lib/src/services/perf_timeline.dart#L18) |  | `static void markOnce(String milestone)` | Logs `milestone` the first time it is reached in this process. |
@@ -605,7 +606,7 @@ Top-level functions and methods in `lib/`, A–Z by name, then by declaring type
 | `providerKnownScripts` | `StorageService` | [`storage_service.dart:162`](../../lib/src/services/storage_service.dart#L162) | yes | `Future<Map<String, Set<String>>> providerKnownScripts() async` | Script URLs each repository listed when it was installed (or approved later), by repository URL. |
 | `providerRepositoryUrls` | `StorageService` | [`storage_service.dart:47`](../../lib/src/services/storage_service.dart#L47) | yes | `Future<List<String>> providerRepositoryUrls() async` |  |
 | `providerScriptHashes` | `StorageService` | [`storage_service.dart:80`](../../lib/src/services/storage_service.dart#L80) | yes | `Future<Map<String, String>> providerScriptHashes() async` | SHA-256 of each provider script the viewer has allowed to run, by script URL. |
-| `publicList` | `SupporterController` | [`supporter_controller.dart:216`](../../lib/src/account/supporter_controller.dart#L216) | yes | `Future<List<PublicSupporter>> publicList() async` | The people who chose to appear; throws when it cannot be loaded. |
+| `publicList` | `SupporterController` | [`supporter_controller.dart:233`](../../lib/src/account/supporter_controller.dart#L233) | yes | `Future<List<PublicSupporter>> publicList() async` | The people who chose to appear; throws when it cannot be loaded. |
 | `publicSupporters` | `AccountApi` | [`account_api.dart:314`](../../lib/src/account/account_api.dart#L314) | yes | `Future<List<({String name, String since})` |  |
 | `_publicTrackers` | `TorrentSourcePreparer` | [`torrent_source_preparer.dart:139`](../../lib/src/services/torrent_source_preparer.dart#L139) | yes | `Future<List<String>> _publicTrackers(StreamSource source) async` | Up to eight provider-supplied trackers that resolve to public addresses, checked four at a time. |
 
@@ -647,7 +648,7 @@ Top-level functions and methods in `lib/`, A–Z by name, then by declaring type
 | `refresh` | `AccountBadges` | [`account_badges.dart:31`](../../lib/src/account/account_badges.dart#L31) | yes | `Future<void> refresh() async` | Shows the saved badges for this account, then asks the server. |
 | `refresh` | `PagedFeedController` | [`paged_feed_controller.dart:238`](../../lib/src/services/paged_feed_controller.dart#L238) | yes | `Future<void> refresh()` | Fetches page 1 from TMDB again and replaces the row with it. |
 | `refresh` | `PluginLibraryRepository` | [`plugin_library_repository.dart:111`](../../lib/src/services/plugin_library_repository.dart#L111) | yes | `Future<void> refresh()` | Downloads the latest catalog. |
-| `refresh` | `SupporterController` | [`supporter_controller.dart:153`](../../lib/src/account/supporter_controller.dart#L153) | yes | `Future<void> refresh()` | Shows the saved status for this account, then asks the server. |
+| `refresh` | `SupporterController` | [`supporter_controller.dart:170`](../../lib/src/account/supporter_controller.dart#L170) | yes | `Future<void> refresh()` | Shows the saved status for this account, then asks the server. |
 | `_refreshAfterCachedFailure` | `_CustomVideoPlayerState` | [`custom_video_player.dart:1325`](../../lib/src/widgets/player/custom_video_player.dart#L1325) | yes | `Future<bool> _refreshAfterCachedFailure(StreamSource failed) async` | A cached link that fails is usually an expired signed URL. |
 | `_refreshDeadLink` | `_CustomVideoPlayerState` | [`custom_video_player.dart:1340`](../../lib/src/widgets/player/custom_video_player.dart#L1340) | yes | `Future<bool> _refreshDeadLink(StreamSource failed, PlaybackFailure failure) async` | A source that was playing and no longer opens usually has an expired link. |
 | `_refreshSpotlight` | `_HomeScreenState` | [`home_screen.dart:348`](../../lib/src/screens/home_screen.dart#L348) |  | `void _refreshSpotlight()` | The spotlight is built from page 1 of each row, so paging a row never reshuffles it. |
@@ -697,7 +698,7 @@ Top-level functions and methods in `lib/`, A–Z by name, then by declaring type
 | `restart` | `ClockSync` | [`playback_sync.dart:30`](../../lib/src/watch_party/playback_sync.dart#L30) |  | `void restart()` | A new connection: its round trips replace the old ones, which may have taken another network path. |
 | `restore` | `AccountController` | [`account_controller.dart:59`](../../lib/src/account/account_controller.dart#L59) | yes | `Future<void> restore() async` | Reads the stored session. |
 | `restoreHistory` | `StorageService` | [`storage_service.dart:341`](../../lib/src/services/storage_service.dart#L341) | yes | `Future<void> restoreHistory(MediaItem item, int index)` | Puts back a title `removeHistory` took out, at `index` as it was then. |
-| `restoreSaved` | `SupporterController` | [`supporter_controller.dart:142`](../../lib/src/account/supporter_controller.dart#L142) | yes | `Future<void> restoreSaved() async` | Shows this account's saved status without asking the server: for launch, so a theme's accent is right on the first screen. |
+| `restoreSaved` | `SupporterController` | [`supporter_controller.dart:159`](../../lib/src/account/supporter_controller.dart#L159) | yes | `Future<void> restoreSaved() async` | Shows this account's saved status without asking the server: for launch, so a theme's accent is right on the first screen. |
 | `restoreToHistory` | `LibraryViewModel` | [`library_view_model.dart:76`](../../lib/src/viewmodels/library_view_model.dart#L76) | yes | `Future<void> restoreToHistory(MediaItem item, int index) async` | Puts back a title just removed, with its resume point, where it was. |
 | `_resultGrid` | `_HomeScreenState` | [`home_screen.dart:1404`](../../lib/src/screens/home_screen.dart#L1404) |  | `List<Widget> _resultGrid(String title, List<MediaItem> items, { VoidCallback? onNearEnd})` | Titles in columns that fill the screen, rather than one sideways row. |
 | `_resumeFromSidebar` | `_HomeScreenState` | [`home_screen.dart:2643`](../../lib/src/screens/home_screen.dart#L2643) | yes | `Future<void> _resumeFromSidebar(MediaItem item) async` | Continue watching in the Windows sidebar: a movie plays on from its saved position; a series plays on in the episode watched last. |
@@ -786,7 +787,7 @@ Top-level functions and methods in `lib/`, A–Z by name, then by declaring type
 | `setFullscreen` | `DesktopWindow` (static) | [`desktop_window.dart:29`](../../lib/src/platform/desktop_window.dart#L29) | yes | `static Future<void> toggleFullscreen()` |  |
 | `setPhoto` | `ProfileController` | [`profile_controller.dart:188`](../../lib/src/account/profile_controller.dart#L188) | yes | `Future<void> setPhoto(Uint8List bytes) async` | Makes `bytes` (a picked image, untrusted) the avatar: checked, cut to a square and re-encoded by `AvatarImage`, which also drops the original's metadata such as its location. |
 | `setPluginEnabled` | `ProviderPluginService` | [`provider_plugin_service.dart:234`](../../lib/src/services/provider_plugin_service.dart#L234) | yes | `Future<void> setPluginEnabled(ProviderRepository repository, ProviderPlugin plugin, bool enabled) async` |  |
-| `setRecognition` | `SupporterController` | [`supporter_controller.dart:193`](../../lib/src/account/supporter_controller.dart#L193) | yes | `Future<bool> setRecognition({required bool listed, String name = ''})` | Joins or leaves the public list. |
+| `setRecognition` | `SupporterController` | [`supporter_controller.dart:210`](../../lib/src/account/supporter_controller.dart#L210) | yes | `Future<bool> setRecognition({required bool listed, String name = ''})` | Joins or leaves the public list. |
 | `setSources` | `EpisodeAlerts` | [`episode_alerts.dart:312`](../../lib/src/notifications/episode_alerts.dart#L312) | yes | `Future<void> setSources({bool? myList, bool? watching, bool? popular})` |  |
 | `setSupporterRecognition` | `AccountApi` | [`account_api.dart:303`](../../lib/src/account/account_api.dart#L303) | yes | `Future<Map<String, dynamic>> setSupporterRecognition(String accessToken, { required bool listed, required String name})` |  |
 | `setSurfaces` | `GlassTheme` (static) | [`glass_theme.dart:114`](../../lib/src/theme/glass_theme.dart#L114) |  | `static void setSurfaces(ThemeSurfaces value)` |  |
@@ -889,7 +890,7 @@ Top-level functions and methods in `lib/`, A–Z by name, then by declaring type
 | `toJson` | `StoredSession` | [`session_store.dart:84`](../../lib/src/account/session_store.dart#L84) |  | `Map<String, Object> toJson()` |  |
 | `toJson` | `StreamSource` | [`stream_source.dart:121`](../../lib/src/models/stream_source.dart#L121) |  | `Map<String, dynamic> toJson()` |  |
 | `toJson` | `SubtitleAddon` | [`subtitle_addon.dart:148`](../../lib/src/models/subtitle_addon.dart#L148) |  | `Map<String, Object?> toJson()` |  |
-| `toJson` | `SupporterStatus` | [`supporter_controller.dart:92`](../../lib/src/account/supporter_controller.dart#L92) |  | `Map<String, Object?> toJson()` |  |
+| `toJson` | `SupporterStatus` | [`supporter_controller.dart:103`](../../lib/src/account/supporter_controller.dart#L103) |  | `Map<String, Object?> toJson()` |  |
 | `toJson` | `SupportReport` | [`support_service.dart:148`](../../lib/src/support/support_service.dart#L148) |  | `Map<String, Object> toJson()` |  |
 | `topBarExtent` | `PlayerControlsLayout` (static) | [`player_controls.dart:233`](../../lib/src/widgets/player/player_controls.dart#L233) |  | `static double topBarExtent({required bool tv})` | Height kept clear for the top bar (back button, title), and for the bottom bar (timeline and buttons), from the safe area's edges. |
 | `topicOf` | `TorrentSourcePreparer` (static) | [`torrent_source_preparer.dart:62`](../../lib/src/services/torrent_source_preparer.dart#L62) |  | `static String? topicOf(StreamSource source)` | The torrent's `xt` topic from its magnet link or info hash, or null when it has no valid one. |
@@ -911,7 +912,7 @@ Top-level functions and methods in `lib/`, A–Z by name, then by declaring type
 | Function | Declared in | Source | Async | Signature | Summary |
 |---|---|---|---|---|---|
 | `unlocked` | `AppIconController` | [`app_icon.dart:142`](../../lib/src/platform/app_icon.dart#L142) |  | `bool unlocked(AppIconPreset preset)` | Whether `preset` can be chosen from the screen as things stand. |
-| `_update` | `SupporterController` | [`supporter_controller.dart:190`](../../lib/src/account/supporter_controller.dart#L190) | yes | `Future<bool> requestReview()` | Asks for a review of a donation made without the code. |
+| `_update` | `SupporterController` | [`supporter_controller.dart:207`](../../lib/src/account/supporter_controller.dart#L207) | yes | `Future<bool> requestReview()` | Asks for a review of a donation made without the code. |
 | `update` | `AccentSettingsController` | [`accent_settings_controller.dart:85`](../../lib/src/services/accent_settings_controller.dart#L85) | yes | `Future<void> update(AccentPalette value) async` | Uses `value` as the accent. |
 | `update` | `EpisodeAlertStore` (static) | [`episode_check.dart:94`](../../lib/src/notifications/episode_check.dart#L94) | yes | `static Future<void> update(String userId, void Function(Map<String, Object?> entry) change) async` |  |
 | `update` | `GamepadNavigator` | [`desktop_gamepad.dart:49`](../../lib/src/platform/desktop_gamepad.dart#L49) |  | `void update(int buttons, int stickX, int stickY)` | The latest state of every connected controller, merged. |

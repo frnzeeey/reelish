@@ -23,6 +23,14 @@ export type Entitlement = 'free' | 'supporter' | 'founder';
 /** Every supporter perk, by the name the app uses too. */
 export type SupporterPerk = 'host_watch_party' | 'app_themes' | 'app_icons';
 
+/**
+ * The Founder's own perks: the Founder Collection's cosmetics (a theme and a
+ * launcher icon), which no donation unlocks. Only their owner ever sees them,
+ * so the server has nothing to enforce; the app reads the entitlement from
+ * /supporters/me. Named here so both sides list the same perks.
+ */
+export type FounderPerk = 'founder_themes' | 'founder_icons';
+
 const refusals: Record<SupporterPerk, string> = {
   host_watch_party: 'Hosting a Watch Party is for Reelish Supporters.',
   app_themes: 'App themes are for Reelish Supporters.',
@@ -45,6 +53,9 @@ export async function entitlementOf(env: Env, userId: string): Promise<Entitleme
 
 /** Whether [entitlement] includes the supporter perks. */
 export const hasSupporterPerks = (entitlement: Entitlement): boolean => entitlement !== 'free';
+
+/** Whether [entitlement] includes the Founder's own perks: the Founder only. */
+export const hasFounderPerks = (entitlement: Entitlement): boolean => entitlement === 'founder';
 
 /** Throws 403 supporter_required unless the account has [perk]. */
 export async function requirePerk(env: Env, userId: string, perk: SupporterPerk): Promise<void> {

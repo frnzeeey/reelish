@@ -17,7 +17,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/account/backend_config.dart`](#libsrcaccountbackend_configdart) | Shared | 25 | Where the Reelish API lives. |
 | [`lib/src/account/profile_controller.dart`](#libsrcaccountprofile_controllerdart) | Shared | 304 | The user's Reelish profile on this device: a display name and an avatar (initials, a preset, or their own photo). |
 | [`lib/src/account/session_store.dart`](#libsrcaccountsession_storedart) | Shared | 167 | Keeps the Reelish session in the platform's secure storage (Android Keystore, Windows DPAPI), never in SharedPreferences. |
-| [`lib/src/account/supporter_controller.dart`](#libsrcaccountsupporter_controllerdart) | Shared | 250 | The signed-in account's place in the Reelish Supporters Program, and its entitlement: whether it has the supporter perks. |
+| [`lib/src/account/supporter_controller.dart`](#libsrcaccountsupporter_controllerdart) | Shared | 267 | The signed-in account's place in the Reelish Supporters Program, and its entitlement: whether it has the supporter perks. |
 | [`lib/src/account/trakt_avatar.dart`](#libsrcaccounttrakt_avatardart) | Shared | 30 | Trakt's avatar URL, checked on the device the way the Reelish API checks it (backend/src/trakt.ts, cleanAvatarUrl): HTTPS on Trakt's image hosts or Gravatar, with no credentials or unusual port, and never Trakt's stand-in picture. |
 | [`lib/src/account/watchlist_sync.dart`](#libsrcaccountwatchlist_syncdart) | Shared | 313 | Keeps My list and the Trakt watchlist in step, when the user turns it on. |
 | [`lib/src/analytics/analytics_events.dart`](#libsrcanalyticsanalytics_eventsdart) | Shared | 171 | The complete list of analytics events Reelish sends, in one place. |
@@ -354,11 +354,11 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/account/supporter_controller.dart
 
-**Source:** [`lib/src/account/supporter_controller.dart`](../../lib/src/account/supporter_controller.dart) · **Platform:** Shared · **Lines:** 250
+**Source:** [`lib/src/account/supporter_controller.dart`](../../lib/src/account/supporter_controller.dart) · **Platform:** Shared · **Lines:** 267
 
 **Purpose:** The signed-in account's place in the Reelish Supporters Program, and its entitlement: whether it has the supporter perks.
 
-**Declares:** `Entitlement` (Enum), `PublicSupporter` (Typedef), `SupporterController` (Notifier / controller), `SupporterPerk` (Enum), `SupporterState` (Enum), `SupporterStatus` (Class)
+**Declares:** `Entitlement` (Enum), `FounderPerk` (Enum), `PublicSupporter` (Typedef), `SupporterController` (Notifier / controller), `SupporterPerk` (Enum), `SupporterState` (Enum), `SupporterStatus` (Class)
 
 **Imports (project):** `src/account/account_api.dart`, `src/account/account_controller.dart`, `src/account/backend_config.dart`
 
