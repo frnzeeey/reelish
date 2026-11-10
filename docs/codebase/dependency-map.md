@@ -173,7 +173,7 @@ The files imported by the most other `lib/` files. A change to one of these reac
 | [`lib/src/theme/reelish_icons.dart`](../../lib/src/theme/reelish_icons.dart) | 76 | 8 |
 | [`lib/src/theme/design_tokens.dart`](../../lib/src/theme/design_tokens.dart) | 47 | 1 |
 | [`lib/src/platform/device_capabilities.dart`](../../lib/src/platform/device_capabilities.dart) | 34 | 16 |
-| [`lib/src/models/media_item.dart`](../../lib/src/models/media_item.dart) | 32 | 38 |
+| [`lib/src/models/media_item.dart`](../../lib/src/models/media_item.dart) | 32 | 39 |
 | [`lib/src/services/storage_service.dart`](../../lib/src/services/storage_service.dart) | 20 | 26 |
 | [`lib/src/widgets/settings/settings_components.dart`](../../lib/src/widgets/settings/settings_components.dart) | 19 | 2 |
 | [`lib/src/account/account_controller.dart`](../../lib/src/account/account_controller.dart) | 18 | 17 |

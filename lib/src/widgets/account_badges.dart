@@ -98,9 +98,14 @@ class _Capsule extends StatelessWidget {
         ),
       ),
     );
+    // A node of its own with its own tap: excluding the InkWell's semantics
+    // would otherwise drop the action and fold the badge into its
+    // neighbours for a screen reader.
     return Semantics(
+      container: true,
       label: semantics,
       button: onTap != null,
+      onTap: onTap,
       excludeSemantics: true,
       child: Material(
         type: MaterialType.transparency,

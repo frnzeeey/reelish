@@ -12,6 +12,7 @@ import 'package:onfeed/src/account/account_controller.dart';
 import 'package:onfeed/src/account/profile_controller.dart';
 import 'package:onfeed/src/account/session_store.dart';
 import 'package:onfeed/src/account/supporter_controller.dart';
+import 'package:onfeed/src/models/media_item.dart';
 import 'package:onfeed/src/platform/device_capabilities.dart';
 import 'package:onfeed/src/screens/profile_screen.dart';
 import 'package:onfeed/src/screens/supporters_screen.dart';
@@ -32,6 +33,7 @@ Future<ProfileController> _show(
   List<String> badges = const [],
   Size size = const Size(412, 1400),
   String? theme,
+  bool library = false,
 }) async {
   SharedPreferences.setMockInitialValues({
     ProfileController.storageKey: jsonEncode({
@@ -95,6 +97,14 @@ Future<ProfileController> _show(
     await profile.loadFor('u');
     appearance = AccentSettingsController(supporters: supporters);
     await appearance.load();
+    if (library) {
+      // One title watched and one on My list, so the counts show.
+      StorageService.debugResetWrites();
+      final storage = StorageService(filesDirectory: () async => files);
+      const title = MediaItem(id: '1', type: 'movie', name: 'A');
+      await storage.saveProgress(title, 1000, durationMs: 7200000);
+      await storage.toggleFavorite(title);
+    }
   });
   await tester.pumpWidget(
     MaterialApp(
@@ -112,6 +122,15 @@ Future<ProfileController> _show(
   );
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 800));
+  if (library) {
+    // The page reads the library from disk, which needs real time.
+    for (var i = 0; i < 6; i++) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 20)),
+      );
+      await tester.pump(const Duration(milliseconds: 200));
+    }
+  }
   return profile;
 }
 
@@ -287,13 +306,95 @@ void main() {
       );
     });
 
-    testWidgets('a small phone fits, with both badges', (tester) async {
+    testWidgets('a small phone fits, with both badges and the counts', (
+      tester,
+    ) async {
       await _show(
         tester,
         entitlement: 'founder',
         badges: ['founder', 'supporter'],
         size: const Size(320, 1400),
+        library: true,
       );
+      // Each count on one line, in a column of its own, whole.
+      final watched = tester.getRect(find.bySemanticsLabel('1 Watched'));
+      final progress = tester.getRect(find.bySemanticsLabel('1 In progress'));
+      final myList = tester.getRect(find.bySemanticsLabel('1 On My list'));
+      // On one line (a label shrunk to fit may sit a fraction lower).
+      expect(watched.center.dy, closeTo(progress.center.dy, 1));
+      expect(progress.center.dy, closeTo(myList.center.dy, 1));
+      expect(watched.right, lessThanOrEqualTo(progress.left));
+      expect(progress.right, lessThanOrEqualTo(myList.left));
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('The counts, apart from the identity', () {
+    testWidgets('phone: along the card foot, under the name and badges', (
+      tester,
+    ) async {
+      await _show(
+        tester,
+        entitlement: 'supporter',
+        badges: ['supporter'],
+        library: true,
+      );
+      final name = tester.getRect(find.text('Sam'));
+      final trakt = tester.getRect(find.text('Signed in with Trakt'));
+      final badge = tester.getRect(find.byType(SupporterBadge));
+      final watched = tester.getRect(find.bySemanticsLabel('1 Watched'));
+      // Name, then the account it signs in with, then the badge.
+      expect(trakt.top, greaterThanOrEqualTo(name.bottom));
+      expect(badge.top, greaterThan(trakt.bottom));
+      expect(watched.top, greaterThan(badge.bottom));
+      // Each count is a node of its own for a screen reader (a button where
+      // the library can open; here nothing opens it), and each badge is a
+      // button: not folded into the name and the rest of the page.
+      expect(
+        tester.getSemantics(find.bySemanticsLabel('1 Watched')).label,
+        '1 Watched',
+      );
+      expect(
+        tester.getSemantics(find.bySemanticsLabel(SupporterBadge.label)),
+        isSemantics(
+          label: SupporterBadge.label,
+          isButton: true,
+          hasTapAction: true,
+        ),
+      );
+      expect(
+        tester.getSemantics(find.text('Sam')).label,
+        isNot(contains('Watched')),
+      );
+    });
+
+    testWidgets(
+      'Windows: beside the identity, where the card has room',
+      (tester) async {
+        await _show(tester, size: const Size(1280, 900), library: true);
+        final avatar = tester.getCenter(find.byTooltip('Change avatar'));
+        final name = tester.getRect(find.text('Sam'));
+        final watched = tester.getRect(find.bySemanticsLabel('1 Watched'));
+        expect(watched.left, greaterThan(name.right));
+        // On the identity's row, not below it.
+        expect(watched.center.dy, lessThan(avatar.dy));
+        expect(tester.takeException(), isNull);
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.windows),
+    );
+
+    testWidgets('TV: along the card foot, below the avatar', (tester) async {
+      DeviceCapabilities.debugOverride = const DeviceCapabilities(
+        isTelevision: true,
+        hasTouchscreen: false,
+      );
+      addTearDown(
+        () => DeviceCapabilities.debugOverride = const DeviceCapabilities(),
+      );
+      await _show(tester, size: const Size(820, 1400), library: true);
+      final avatar = tester.getRect(find.byTooltip('Change avatar'));
+      final watched = tester.getRect(find.bySemanticsLabel('1 Watched'));
+      expect(watched.top, greaterThan(avatar.bottom));
       expect(tester.takeException(), isNull);
     });
   });
