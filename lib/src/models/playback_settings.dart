@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/painting.dart';
 
+import '../intro_skip/skip_planner.dart';
+
 class PlaybackSettings {
   const PlaybackSettings({
     this.touchGestures = true,
@@ -35,6 +37,8 @@ class PlaybackSettings {
     this.subtitleOutline = true,
     this.subtitleOutlineColor = 0xFF000000,
     this.desktopVolume = 1,
+    this.introSkip = SkipMode.auto,
+    this.outroSkip = SkipMode.button,
   });
 
   final bool touchGestures;
@@ -84,6 +88,17 @@ class PlaybackSettings {
   /// volume to the device.
   final double desktopVolume;
 
+  /// Intros (IntroDB): skipped automatically by default, when the data is
+  /// strong enough; otherwise a Skip intro button.
+  final SkipMode introSkip;
+
+  /// Outros: a Skip outro button by default, never skipped unasked.
+  final SkipMode outroSkip;
+
+  /// Whether IntroDB is asked at all.
+  bool get usesIntroDb =>
+      introSkip != SkipMode.off || outroSkip != SkipMode.off;
+
   PlaybackSettings copyWith({
     bool? touchGestures,
     bool? holdToSpeed,
@@ -117,6 +132,8 @@ class PlaybackSettings {
     bool? subtitleOutline,
     int? subtitleOutlineColor,
     double? desktopVolume,
+    SkipMode? introSkip,
+    SkipMode? outroSkip,
   }) => PlaybackSettings(
     touchGestures: touchGestures ?? this.touchGestures,
     holdToSpeed: holdToSpeed ?? this.holdToSpeed,
@@ -159,6 +176,8 @@ class PlaybackSettings {
     subtitleOutline: subtitleOutline ?? this.subtitleOutline,
     subtitleOutlineColor: subtitleOutlineColor ?? this.subtitleOutlineColor,
     desktopVolume: desktopVolume ?? this.desktopVolume,
+    introSkip: introSkip ?? this.introSkip,
+    outroSkip: outroSkip ?? this.outroSkip,
   );
 
   Map<String, dynamic> toJson() => {
@@ -193,6 +212,8 @@ class PlaybackSettings {
     'subtitleOutline': subtitleOutline,
     'subtitleOutlineColor': subtitleOutlineColor,
     'desktopVolume': desktopVolume,
+    'introSkip': introSkip.name,
+    'outroSkip': outroSkip.name,
   };
 
   factory PlaybackSettings.fromJson(
@@ -247,6 +268,9 @@ class PlaybackSettings {
     subtitleOutline: json['subtitleOutline'] != false,
     subtitleOutlineColor: _int(json['subtitleOutlineColor'], 0xFF000000),
     desktopVolume: _volume(json['desktopVolume']),
+    // Saves from before these existed get the defaults.
+    introSkip: SkipMode.parse(json['introSkip'], SkipMode.auto),
+    outroSkip: SkipMode.parse(json['outroSkip'], SkipMode.button),
   );
 
   /// Reads [desktopVolume]: full volume when missing (saves from before it

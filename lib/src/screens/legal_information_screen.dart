@@ -57,6 +57,12 @@ class LegalInformationScreen extends StatefulWidget {
           'and attribution requirements before redistributing any material.',
     ),
     (
+      'Intro and outro timestamps',
+      'Intro and outro timestamps come from IntroDB (introdb.app), a '
+          'community database of submitted timestamps. Reelish does not '
+          'verify them beyond checking that they fit the episode playing.',
+    ),
+    (
       'Plugin library',
       'The plugin library lists provider repositories from a '
           'community-maintained catalog curated by wolf knight. Repository '
@@ -336,7 +342,9 @@ class _LegalInformationScreenState extends State<LegalInformationScreen> {
           'and each participant’s display name, chosen preset avatar (never a '
           'photo) and player status are shared through the service with the '
           'people in that party. Subtitle searches send a title or episode '
-          'identifier to the OpenSubtitles v3 service. Opening the plugin '
+          'identifier to the OpenSubtitles v3 service. Intro and outro '
+          'skipping sends an episode’s IMDb and episode numbers to IntroDB; '
+          'turn both off in Settings > Playback to send nothing. Opening the plugin '
           'library downloads its catalog from the app’s GitHub repository and '
           'loads provider logos from the addresses listed in it; those hosts '
           'can receive your IP address and request data, but no title or '
@@ -431,7 +439,7 @@ class _LegalInformationScreenState extends State<LegalInformationScreen> {
       'Third-party services and add-ons',
       'Trakt, TMDB, Cloudflare (which hosts the Reelish API), Google '
           '(usage statistics and crash reports, only if you agree), Buy Me a '
-          'Coffee (only if you donate), OpenSubtitles, '
+          'Coffee (only if you donate), OpenSubtitles, IntroDB, '
           'add-on publishers, media hosts, torrent peers, GitHub, and your '
           'device platform operate independently. Their privacy practices, '
           'logs, retention and locations are governed by their own policies. '

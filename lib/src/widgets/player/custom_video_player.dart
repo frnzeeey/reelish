@@ -11,6 +11,9 @@ import 'package:video_player_media_kit/video_player_media_kit.dart';
 import '../../models/content_advisory.dart';
 import '../../diagnostics/crash_reporter.dart';
 import '../../diagnostics/playback_diagnostics.dart';
+import '../../intro_skip/intro_outro_service.dart';
+import '../../intro_skip/skip_planner.dart';
+import '../../intro_skip/skip_segments.dart';
 import '../../models/episode_context.dart';
 import '../../models/episode_progress.dart';
 import '../../models/media_details.dart';
@@ -49,6 +52,7 @@ import 'player_lock_overlay.dart';
 import 'subtitle_position_panel.dart';
 import 'player_settings_sheet.dart';
 import 'player_pip.dart';
+import 'skip_segment_button.dart';
 import 'stall_watchdog.dart';
 import 'stream_selector_sheet.dart';
 import 'subtitle_picker_sheet.dart';
@@ -177,6 +181,14 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
   /// The watch party this title plays in, if any. Null outside a party,
   /// and then nothing below behaves differently.
   PartyPlayerSync? _party;
+
+  /// Intro and outro skipping (IntroDB). The planner decides; the player
+  /// seeks through [_seekTo]. Automatic skips are off in a party.
+  late final SkipPlanner _skipPlanner;
+
+  /// The segment a Skip button offers now, if any.
+  final ValueNotifier<SkipSegment?> _skipOffer = ValueNotifier(null);
+  bool _skipSegmentsRequested = false;
 
   /// Friends' "Watching now". Null unless the viewer shares activity and is
   /// not in a party; it only ever reports, and never waits on the network.
@@ -503,6 +515,12 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
       },
     );
     unawaited(_startPosition); // Read alongside the stream opening.
+    _skipPlanner = SkipPlanner(
+      introMode: _playback.introSkip,
+      outroMode: _playback.outroSkip,
+      allowAutomatic: _party == null,
+    );
+    unawaited(_loadSkipSegments()); // Also alongside; playback never waits.
     _remembered = widget.storage
         .rememberedSubtitle(_titleKey)
         .catchError((Object _) => null);
@@ -1604,6 +1622,16 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
       _doubleTapSeek(key == LogicalKeyboardKey.arrowRight);
       return KeyEventResult.handled;
     }
+    // While Skip intro / Skip outro shows over hidden controls, Select
+    // presses it (remote, or Enter on Windows).
+    final offer = _skipOffer.value;
+    if (offer != null &&
+        !repeat &&
+        !_controlsShown.value &&
+        _selectKeys.contains(key)) {
+      _skipSegment(offer);
+      return KeyEventResult.handled;
+    }
     if (!repeat) _showControlsFromRemote();
     return KeyEventResult.handled;
   }
@@ -1837,6 +1865,8 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
     }
     final value = c.value;
     if (value.isCompleted && !value.isPlaying) {
+      // Watching again from the start: the intro may be skipped again.
+      _skipPlanner.userSeeked(Duration.zero);
       unawaited(c.seekTo(Duration.zero).then((_) => c.play()));
       party?.localPlay(Duration.zero);
     } else if (value.isPlaying) {
@@ -1859,7 +1889,9 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
     _show();
   }
 
-  void _seekTo(Duration target) {
+  /// [skip]: a seek past an intro or outro, which the skip planner made or
+  /// approved; every other seek is the viewer's and is reported to it.
+  void _seekTo(Duration target, {bool skip = false}) {
     final c = _controller;
     if (c == null || !_ready) return;
     final party = _party;
@@ -1868,8 +1900,67 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
     final clamped = target < Duration.zero
         ? Duration.zero
         : (max > Duration.zero && target > max ? max : target);
+    if (!skip) _skipPlanner.userSeeked(clamped);
     unawaited(c.seekTo(clamped));
     party?.localSeek(clamped);
+  }
+
+  /// Asks IntroDB (through [IntroOutroService], cached) about this episode,
+  /// once, when skipping is on. Playback never waits for it; an answer that
+  /// comes late is used only while its segment is still playing.
+  Future<void> _loadSkipSegments() async {
+    if (_skipSegmentsRequested ||
+        !_playback.usesIntroDb ||
+        widget.item.type != 'series') {
+      return;
+    }
+    final imdbId = widget.imdbId;
+    if (imdbId == null) return;
+    _skipSegmentsRequested = true;
+    String id;
+    try {
+      id = await imdbId.timeout(const Duration(seconds: 15));
+    } catch (_) {
+      return;
+    }
+    // Without a certain episode, nothing is ever skipped.
+    final key = EpisodeKey.of(id, widget.season, widget.episode);
+    if (key == null || !mounted) return;
+    final segments = await IntroOutroService.instance.segmentsFor(key);
+    if (!mounted) return;
+    _skipPlanner.setSegments(segments);
+  }
+
+  /// Runs on every player update: an automatic skip, or the Skip button.
+  void _updateSkip(VideoPlayerValue value) {
+    final plan = _skipPlanner.update(
+      position: value.position,
+      duration: value.duration,
+      playing: value.isPlaying,
+      buffering: value.isBuffering,
+      ready:
+          _ready &&
+          !_error &&
+          value.isInitialized &&
+          !_switchingEpisode &&
+          !_scrubbing.value,
+    );
+    if (plan.seekTo case final target?) _seekTo(target, skip: true);
+    // The outro button would sit under the next-episode card.
+    final offer =
+        plan.offer?.kind == SkipKind.outro && _nextEpisodePromptVisible
+        ? null
+        : plan.offer;
+    if (_skipOffer.value != offer) _skipOffer.value = offer;
+  }
+
+  /// The Skip intro / Skip outro button, or Select on the remote while it
+  /// shows.
+  void _skipSegment(SkipSegment segment) {
+    final target = _skipPlanner.skip(segment);
+    if (target == null) return;
+    _skipOffer.value = null;
+    _seekTo(target, skip: true);
   }
 
   void _seekBy(Duration delta) {
@@ -2482,6 +2573,10 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
     final previous = _playback;
     _playback = widget.playbackSettings.value;
     if (!mounted) return;
+    _skipPlanner
+      ..introMode = _playback.introSkip
+      ..outroMode = _playback.outroSkip;
+    unawaited(_loadSkipSegments());
     _subtitlePosition.value = _playback.subtitlePosition;
     // Moving subtitles only redraws their layer, and a saved volume is
     // already playing: neither rebuilds the player.
@@ -3162,6 +3257,8 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
     _volumeLevel.dispose();
     _scrubbing.dispose();
     _pauseOverlay.dispose();
+    _skipPlanner.dispose();
+    _skipOffer.dispose();
     _seekFlash.dispose();
     _playerFocus.dispose();
     _playButtonFocus.dispose();
@@ -3248,6 +3345,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
     if (_ready && c.value.isCompleted) {
       _party?.playerCompleted(c.value.position);
     }
+    _updateSkip(c.value);
     _metrics.buffering(_ready && c.value.isPlaying && c.value.isBuffering);
     _metrics.playing(_ready && c.value.isPlaying && !c.value.isBuffering);
     // Playing (not paused, not being scrubbed) yet buffering in place.
@@ -3657,6 +3755,36 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
                       : null,
                   onToggleMute: _desktop ? _toggleMute : null,
                   playFocusNode: _playButtonFocus,
+                ),
+              ),
+            // Skip intro / Skip outro while the segment plays: bottom right,
+            // clear of subtitles (centred) and, with controls up, above the
+            // bottom bar.
+            if (playable)
+              ValueListenableBuilder<SkipSegment?>(
+                valueListenable: _skipOffer,
+                builder: (context, offer, _) => ValueListenableBuilder<bool>(
+                  valueListenable: _controlsShown,
+                  builder: (context, controlsVisible, _) => SafeArea(
+                    child: Align(
+                      alignment: Alignment.bottomRight,
+                      child: AnimatedPadding(
+                        duration: playerFade,
+                        curve: Curves.easeOutCubic,
+                        padding: EdgeInsets.fromLTRB(
+                          16,
+                          16,
+                          _tv ? 48 : 20,
+                          controlsVisible ? (_tv ? 168 : 132) : 32,
+                        ),
+                        child: SkipSegmentButton(
+                          segment: offer,
+                          onSkip: _skipSegment,
+                          large: _tv,
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
             // The floating card shows while controls are hidden; with controls

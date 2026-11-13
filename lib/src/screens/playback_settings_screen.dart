@@ -13,6 +13,7 @@ import '../analytics/analytics_service.dart';
 import '../diagnostics/crash_reporter.dart';
 import '../account/account_controller.dart';
 import '../account/profile_controller.dart';
+import '../intro_skip/skip_planner.dart';
 import '../models/playback_settings.dart';
 import '../navigation/app_transitions.dart';
 import '../notifications/episode_alerts.dart';
@@ -956,11 +957,51 @@ class PlaybackSettingsScreen extends StatelessWidget {
               'Android uses Media3 with a MediaKit fallback; other platforms use their registered video_player backend. These adapters do not expose decoder, renderer, Dolby Vision, or tunneled playback controls.',
             ),
           ]),
-          _section('SKIP SEGMENTS', [
+          _section('INTRO & OUTRO', [
+            _choiceRow(
+              'Intros',
+              'Skipped as they start when IntroDB has well-agreed '
+                  'timestamps for the episode; otherwise a Skip intro '
+                  'button shows. Nothing is skipped without timestamps.',
+              _skipModeLabel(settings.introSkip),
+              () async {
+                final value = await _choose<SkipMode>(
+                  context,
+                  'Intros',
+                  SkipMode.values,
+                  settings.introSkip,
+                  label: _skipModeLabel,
+                );
+                if (value != null) {
+                  await _save(settings.copyWith(introSkip: value));
+                }
+              },
+            ),
+            _choiceRow(
+              'Outros',
+              'End credits. A skip stops where the credits end, before '
+                  'any scene that follows them.',
+              _skipModeLabel(settings.outroSkip),
+              () async {
+                final value = await _choose<SkipMode>(
+                  context,
+                  'Outros',
+                  SkipMode.values,
+                  settings.outroSkip,
+                  label: _skipModeLabel,
+                );
+                if (value != null) {
+                  await _save(settings.copyWith(outroSkip: value));
+                }
+              },
+            ),
             _infoRow(
-              'Intro and outro detection',
-              'Unavailable in this build',
-              'Episode data and stream providers do not supply intro or outro timestamps, so automatic segment skipping is unavailable.',
+              'Timestamps',
+              'IntroDB',
+              'From introdb.app, a community database. Reelish sends it '
+                  'the series’ IMDb id and the season and episode number. '
+                  'Off for both sends nothing. Not used in a Watch Party '
+                  'for automatic skips.',
             ),
           ]),
           _section('NEXT EPISODE', [
@@ -1636,6 +1677,12 @@ class PlaybackSettingsScreen extends StatelessWidget {
   };
 
   String _qualityLabel(int height) => height == 0 ? 'Auto' : '${height}p';
+
+  String _skipModeLabel(SkipMode mode) => switch (mode) {
+    SkipMode.auto => 'Skip automatically',
+    SkipMode.button => 'Show Skip button',
+    SkipMode.off => 'Off',
+  };
 
   /// `2.0` reads as "2×" and `1.25` as "1.25×".
   String _speedLabel(double speed) =>

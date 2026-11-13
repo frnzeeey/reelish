@@ -86,6 +86,8 @@ search the generated references below: every file, class and function in
 | Page | What it covers |
 |---|---|
 | [Playback architecture](playback/playback-architecture.md) | The pipeline from Play to picture, the play request flow, recovery |
+| [Intro and outro audit](player/INTRO_OUTRO_AUDIT.md) | The player and IntroDB as found: identity, seeking, engines, the API's real shape |
+| [Intro and outro skipping](player/INTRO_OUTRO_IMPLEMENTATION.md) | IntroDB integration, validation, skip rules, button, settings, cache, tests, limits |
 | [Playback lifecycle](playback/playback-lifecycle.md) | The player session: opening, playing, subtitles, episodes, closing |
 | [Provider integration](playback/provider-integration.md) | Repositories, script approval, the QuickJS sandbox, discovery |
 | [Player engines](playback/platform-player-engines.md) | Media3 and libmpv, selection, the engine gate, torrents |
