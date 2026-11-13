@@ -186,7 +186,11 @@ dart run tool/generate_plugin_catalog.dart          # regenerate assets/data/plu
 
 `test/flutter_test_config.dart` preloads
 `third_party/flutter_js/windows/shared/quickjs_c_bridge.dll` so provider
-tests can start QuickJS under `flutter test` on Windows. Native code lives
+tests can start QuickJS under `flutter test` on Windows; on Linux (as in CI)
+set `LIBQUICKJSC_TEST_PATH` to
+`third_party/flutter_js/linux/shared/libquickjs_c_bridge_plugin.so`. The
+vendored packages are separate pub packages the root `pub get` does not
+resolve, so analyze only the app's own directories. Native code lives
 in vendored packages: `packages/video_player_media_kit` (libmpv bridge),
 `packages/flutter_go_torrent_streamer` (Go torrent engine) and
 `third_party/flutter_js` (QuickJS). Releases are built only by CI from a
@@ -196,7 +200,8 @@ version tag (`.github/workflows/`, `docs/releasing.md`).
 
 - Run `dart format` on the files you touched only, then
   `flutter analyze lib test integration_test test_driver` (CI fails on
-  warnings and errors; the baseline has 16 info-level notes) and
+  warnings and errors — it runs `--no-fatal-infos`; the baseline has 16
+  info-level notes) and
   `flutter test`.
 - Backend changes: `npm run typecheck` and `npm test` in `backend/`. Tests
   run inside the Workers runtime (`@cloudflare/vitest-pool-workers`) with
