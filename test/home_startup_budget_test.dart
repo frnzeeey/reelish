@@ -333,6 +333,49 @@ void main() {
     await disposeHome(tester);
   });
 
+  testWidgets('Top 10 is the first row, right under the Spotlight', (
+    tester,
+  ) async {
+    const started = MediaItem(id: '601', type: 'movie', name: 'Half Watched');
+    await pumpHome(
+      tester,
+      seed: () =>
+          StorageService().saveProgress(started, 60000, durationMs: 600000),
+    );
+    await settle(tester, rounds: 40);
+
+    // Both rows are built (Continue watching sits just below Top 10).
+    final top10 = find.byKey(
+      const PageStorageKey<String>('row:Top 10 picks'),
+      skipOffstage: false,
+    );
+    expect(top10, findsOneWidget);
+    // "Continue watching" is also a label higher up; the row's header is
+    // the lowest one.
+    final resumeHeader = find
+        .text('Continue watching', skipOffstage: false)
+        .evaluate()
+        .map(
+          (element) => (element.renderObject! as RenderBox)
+              .localToGlobal(Offset.zero)
+              .dy,
+        )
+        .reduce((a, b) => a > b ? a : b);
+    expect(
+      tester.getTopLeft(top10).dy,
+      lessThan(resumeHeader),
+      reason: 'Top 10 leads; Continue watching follows it',
+    );
+    final chips = find.text('Trending', skipOffstage: false).first;
+    expect(
+      tester.getTopLeft(top10).dy,
+      greaterThan(tester.getTopLeft(chips).dy),
+      reason: 'below the Spotlight and its category chips',
+    );
+
+    await disposeHome(tester);
+  });
+
   testWidgets('removing a title in the Library takes it off Home at once', (
     tester,
   ) async {

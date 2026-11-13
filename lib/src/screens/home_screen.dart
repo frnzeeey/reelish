@@ -2033,6 +2033,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ),
           ),
           SliverToBoxAdapter(child: _filtersAndSearch()),
+          // Top 10 leads For you, right under the Spotlight, as on Windows.
+          // It still loads only once New movies and Series (its seeds)
+          // have, holding its place with placeholders until then.
+          if (_category == 'For you' && !isSearch)
+            _deferredSectionGate(
+              enabled: _catalogSettled,
+              feed: _top10,
+              child: _pagedRow(
+                'Top 10 picks',
+                _top10,
+                showRanks: true,
+                reserveSpace: _catalogSettled,
+              ),
+            ),
           SliverToBoxAdapter(
             child: AnimatedSize(
               duration: sectionCollapseDuration,
@@ -2202,17 +2216,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     ),
                   ),
               ],
-            ),
-          if (_category == 'For you' && !isSearch)
-            _deferredSectionGate(
-              enabled: _catalogSettled,
-              feed: _top10,
-              child: _pagedRow(
-                'Top 10 picks',
-                _top10,
-                showRanks: true,
-                reserveSpace: _catalogSettled,
-              ),
             ),
           if (_category == 'For you' && !isSearch)
             _deferredSectionGate(

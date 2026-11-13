@@ -40,8 +40,8 @@ push out "Because you watched".
 
 ## 3. Home hierarchy
 
-Phone (For you): Spotlight → Continue watching → *genre prompt* → personal
-rows → Top 10 picks → New releases → Trending → New movies → Series.
+Phone (For you): Spotlight → Top 10 picks → Continue watching → *genre prompt* →
+personal rows → New releases → Trending → New movies → Series.
 Windows: hero → Top 10 picks → *genre prompt* → personal rows → Trending →
 Watch together → New movies → Series → New releases. TV: Continue watching
 → New movies → Series → *genre prompt* → personal rows → Watch together →
