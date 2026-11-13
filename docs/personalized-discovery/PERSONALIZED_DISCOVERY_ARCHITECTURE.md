@@ -84,8 +84,10 @@ flowchart TD
 No activity, no My list, no picked genres → no personalised rows at all. Home
 shows exactly what it showed before (New movies, Series worth the queue,
 Top 10, New releases, Trending), which is the cold-start experience. With
-only picked genres, one row, "Picked for your genres", is built from the
-rows Home already has, at no request. Rows appear as soon as there is one
+picked genres (the first-run genre step, the Home card or Settings), TMDB is
+asked for popular, well-rated movies and series of up to two of them, so a
+genre-only account gets "Picked for your genres" and one "Because you like
+<genre>" row per queried genre ([genre onboarding](../discovery/DISCOVERY_IMPLEMENTATION_REPORT.md)). Rows appear as soon as there is one
 signal and fill out as more arrive. A row needs six titles to be shown.
 
 ## Trakt
@@ -103,11 +105,13 @@ same with or without Trakt watchlist sync turned on.
 - **Actors and directors** are not scored. Candidate lists from TMDB carry no
   cast, scoring cast would need a details request per candidate, and the
   gateway allows no person or `with_cast` discover route. Adding
-  `with_cast`/`with_crew`/`with_genres` to the discover allowlist would
-  enable "More from actors you watch" and genre rows beyond what Home has
-  loaded; that is a backend change for a later step.
-- **Cross-device sync** is not implemented (by design for this phase). Each
-  device learns on its own; the Trakt watchlist is the shared signal.
+  `with_cast`/`with_crew` to the discover allowlist would enable "More from
+  actors you watch"; that is a backend change for a later step.
+  (`with_genres` was added for the genre rows.)
+- **Cross-device sync** covers the preferences only (picked genres, the genre
+  step, personalisation on/off; `/api/v1/discovery/preferences`). Viewing
+  activity and feedback stay per device; the Trakt watchlist and synced
+  progress are the shared viewing signals.
 - **TV feedback**: TV shows the rows but has no per-card feedback action
   (cards have no secondary action on a remote). Settings > Recommendations
   works on TV.

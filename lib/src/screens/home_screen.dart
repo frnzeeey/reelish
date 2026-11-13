@@ -7,6 +7,7 @@ import '../theme/reelish_icons.dart';
 import '../account/account_badges.dart';
 import '../account/account_controller.dart';
 import '../account/avatar_frames.dart';
+import '../account/discovery_preferences_sync.dart';
 import '../account/progress_sync.dart';
 import '../account/supporter_controller.dart';
 import '../collections/collection_store.dart';
@@ -15,6 +16,7 @@ import '../models/episode_context.dart';
 import '../models/episode_progress.dart';
 import '../models/media_details.dart';
 import '../discovery/discovery_controller.dart';
+import '../discovery/discovery_preferences.dart';
 import '../models/media_item.dart';
 import '../models/resume_summary.dart';
 import '../models/stream_source.dart';
@@ -50,6 +52,7 @@ import '../widgets/social/share_dialog.dart';
 import '../widgets/provider_installer_modal.dart';
 import '../widgets/analytics_consent_dialog.dart';
 import '../widgets/crash_report_consent_dialog.dart';
+import '../widgets/discovery_prompt_card.dart';
 import '../widgets/app_update_flow.dart';
 import '../widgets/category_chip.dart';
 import '../widgets/top_lit_edge.dart';
@@ -67,6 +70,7 @@ import '../widgets/tv/tv_focus.dart';
 import 'tv/tv_details_screen.dart';
 import 'tv/tv_home_shell.dart';
 import 'tv/tv_pages.dart';
+import 'genre_onboarding_screen.dart';
 import 'plugins_screen.dart';
 import 'library_screen.dart';
 import 'player_screen.dart';
@@ -167,6 +171,91 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _openingDetails = false;
   int _spotlightPage = 0;
   int _libraryRefreshToken = 0;
+
+  /// The preferences the rows were last refreshed for; a change (Settings,
+  /// the genre step, another device) refreshes them at once.
+  DiscoveryPreferences _discoveryPreferences = const DiscoveryPreferences();
+
+  void _onDiscoveryChanged() {
+    _onHomeChanged();
+    final preferences = _discovery.data.preferences;
+    if (preferences == _discoveryPreferences) return;
+    _discoveryPreferences = preferences;
+    _refreshDiscovery();
+  }
+
+  /// Whether this launch has worked out the genre step; until it has, the
+  /// Home card stays hidden, so it never flashes before the full screen.
+  bool _genreStepDecided = false;
+
+  /// The Home card offering the genre step: an account that never answered
+  /// it, whose preferences are known.
+  bool get _showGenrePrompt =>
+      _genreStepDecided && _discovery.onboardingNeed() == OnboardingNeed.prompt;
+
+  /// A brand-new account gets the full-screen genre step once; an existing
+  /// account without preferences gets the Home card. Waits (briefly) for
+  /// the account's preferences from the Reelish API, so a step answered on
+  /// another device is not asked again.
+  Future<void> _decideGenreStep() async {
+    final decided = Completer<OnboardingNeed>();
+    void settle(OnboardingNeed need) {
+      if (!decided.isCompleted) decided.complete(need);
+    }
+
+    // The consent and update prompts wait for this, so it gets 8 seconds;
+    // later than that the card is offered, never the full screen.
+    _genreStepLimit = Timer(
+      const Duration(seconds: 8),
+      () => settle(OnboardingNeed.none),
+    );
+    _genreStepNeed().then(
+      settle,
+      onError: (Object _) {
+        settle(OnboardingNeed.none);
+      },
+    );
+    final need = await decided.future;
+    _genreStepLimit?.cancel();
+    if (!mounted) return;
+    setState(() => _genreStepDecided = true);
+    if (need == OnboardingNeed.fullScreen) await _openGenreStep();
+  }
+
+  Timer? _genreStepLimit;
+
+  Future<OnboardingNeed> _genreStepNeed() async {
+    await _discovery.preferencesSettled;
+    if (!mounted) return OnboardingNeed.none;
+    final need = _discovery.onboardingNeed();
+    // Only an unanswered account that the server knows about may be new.
+    if (need != OnboardingNeed.prompt || !_discovery.remoteChecked) {
+      return need;
+    }
+    final created = await _accountCreatedAt();
+    if (!mounted) return OnboardingNeed.none;
+    return _discovery.onboardingNeed(accountCreatedAt: created);
+  }
+
+  /// When the account was created, from `GET /me` (shared with the badge
+  /// refresh when both ask at once).
+  static Future<DateTime?> _accountCreatedAt() async {
+    final body = await AccountController.instance.fetchMe();
+    final user = body?['user'];
+    final created = user is Map ? user['createdAt'] : null;
+    return created is int && created > 0
+        ? DateTime.fromMillisecondsSinceEpoch(created * 1000)
+        : null;
+  }
+
+  Future<void> _openGenreStep() async {
+    await GenreOnboardingScreen.show(
+      context,
+      discovery: _discovery,
+      loadGenres: _tmdb.genreCatalog,
+    );
+  }
+
   Timer? _debounce;
   Timer? _spotlightTimer;
 
@@ -179,15 +268,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _services = AppServices(tmdb: widget.tmdbService);
     _homeModel = HomeViewModel(tmdb: _tmdb, storage: _storage)
       ..addListener(_onHomeChanged);
+    final preferencesSync = DiscoveryPreferencesSync();
     _discovery = DiscoveryController(
       recommendationsFor: (seed) => _tmdb.recommendations(seed),
+      genreTitles: (type, genre) => _tmdb.genreTitles(type, genre),
+      genreCatalog: () => _tmdb.genreCatalog(),
+      // A build without the Reelish API keeps preferences on the device.
+      remote: preferencesSync.configured ? preferencesSync : null,
       storage: _storage,
     )..startRecording();
     DiscoveryController.active = _discovery;
     // Bound before Home listens: binding notifies at once, and Home cannot
     // rebuild while it is still being set up.
     _onAccountChanged();
-    _discovery.addListener(_onHomeChanged);
+    _discoveryPreferences = _discovery.data.preferences;
+    _discovery.addListener(_onDiscoveryChanged);
     AccountController.instance.addListener(_onAccountChanged);
     ProgressSync.revision.addListener(_onProgressSynced);
     for (final feed in _catalogFeeds) {
@@ -215,6 +310,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   /// The one-time analytics question (Android, when configured) comes
   /// first, so it never hides an update prompt; then the update check.
   Future<void> _startupPrompts() async {
+    // The genre step comes before the consent questions, so they are never
+    // drawn over it.
+    await _decideGenreStep();
+    if (!mounted) return;
     try {
       await AnalyticsConsentDialog.maybeAsk(context);
       if (mounted) await CrashReportConsentDialog.maybeAsk(context);
@@ -284,9 +383,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         _revalidateStaleFeeds();
         _refreshDiscovery();
       }
+      // Another device may have changed the genres (at most every 2 min).
+      unawaited(_discovery.syncPreferences(pull: false));
     } else {
       _spotlightTimer?.cancel();
       _spotlightTimer = null;
+      // A preference change still waiting goes before the app is closed.
+      if (state == AppLifecycleState.hidden &&
+          _discovery.data.preferencesUnsent) {
+        unawaited(_discovery.syncPreferences(pull: false));
+      }
     }
   }
 
@@ -1279,8 +1385,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     // Requests still running for its rows finish without touching them.
     _homeModel.dispose();
     AccountController.instance.removeListener(_onAccountChanged);
+    _genreStepLimit?.cancel();
     _discovery
-      ..removeListener(_onHomeChanged)
+      ..removeListener(_onDiscoveryChanged)
       ..dispose();
     super.dispose();
   }
@@ -2076,6 +2183,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           if (_category == 'For you' && !isSearch)
             SliverList.list(
               children: [
+                if (_showGenrePrompt)
+                  DiscoveryPromptCard(
+                    key: const ValueKey('genre-prompt'),
+                    onChoose: () => unawaited(_openGenreStep()),
+                    onDismiss: () => unawaited(_discovery.skipOnboarding()),
+                  ),
                 for (final section in _discovery.sections)
                   _section(
                     section.title,
@@ -2095,7 +2208,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               enabled: _catalogSettled,
               feed: _top10,
               child: _pagedRow(
-                'Top 10 recommendations',
+                'Top 10 picks',
                 _top10,
                 showRanks: true,
                 reserveSpace: _catalogSettled,
@@ -2244,7 +2357,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ? const SizedBox.shrink()
             : _section(
                 'Trending now',
-                feed.items,
+                HomeViewModel.distinctTrending([
+                  for (final section in _discovery.sections) ...section.items,
+                  ..._top10.state.items,
+                ], feed.items),
                 storageKey: 'row:Trending now',
               ),
       );
@@ -2718,6 +2834,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       hasSources: _providerPlugins.repositories.isNotEmpty,
       catalogError: _tvCatalogError,
       discovery: _discovery,
+      showGenrePrompt: _showGenrePrompt,
     );
     return Stack(
       fit: StackFit.expand,
@@ -2733,6 +2850,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               onAddSource: () =>
                   ProviderInstallerModal.show(context, _providerPlugins),
               onJoinParty: _openJoinParty,
+              onChooseGenres: () => unawaited(_openGenreStep()),
             ),
             TvDestination.movies => TvCatalogPage(
               title: 'Movies',
@@ -2825,6 +2943,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       hasSources: _providerPlugins.repositories.isNotEmpty,
       catalogError: _tvCatalogError,
       discovery: _discovery,
+      showGenrePrompt: _showGenrePrompt,
     );
     return Stack(
       fit: StackFit.expand,
@@ -2852,6 +2971,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               onAddSource: () =>
                   ProviderInstallerModal.show(context, _providerPlugins),
               onJoinParty: _openJoinParty,
+              onChooseGenres: () => unawaited(_openGenreStep()),
+              onDismissGenres: () => unawaited(_discovery.skipOnboarding()),
             ),
             TvDestination.movies => DesktopCatalogPage(
               title: 'Movies',

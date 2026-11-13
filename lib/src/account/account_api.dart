@@ -368,6 +368,26 @@ class AccountApi {
     return id;
   }
 
+  /// The account's discovery preferences: `{stored, serverTime}`, where
+  /// stored is null or `{preferences, device, at}`.
+  Future<Map<String, dynamic>> discoveryPreferences(String accessToken) =>
+      _send('GET', '/discovery/preferences', token: accessToken);
+
+  /// Offers discovery preferences changed on [device]; the server keeps the
+  /// newer change and answers like [discoveryPreferences].
+  Future<Map<String, dynamic>> putDiscoveryPreferences(
+    String accessToken, {
+    required String device,
+    required int seq,
+    required int at,
+    required Map<String, Object?> preferences,
+  }) => _send(
+    'PUT',
+    '/discovery/preferences',
+    token: accessToken,
+    body: {'device': device, 'seq': seq, 'at': at, 'preferences': preferences},
+  );
+
   /// The account as the server sees it, including its badges.
   Future<Map<String, dynamic>> me(String accessToken) =>
       _send('GET', '/me', token: accessToken);

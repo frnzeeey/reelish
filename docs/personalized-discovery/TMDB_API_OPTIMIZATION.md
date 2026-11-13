@@ -5,14 +5,16 @@
 | When | Requests | Endpoint |
 |---|---|---|
 | Launch | **0** — last rows are read from disk | — |
-| Refresh due (rows older than 6 h, or tastes changed) | **≤ 4**, one per seed, page 1 only | `GET /movie|tv/{id}/recommendations` |
+| Refresh due (rows older than 6 h, or tastes changed) | **≤ 4**, one per seed, page 1 only, plus **≤ 4** for picked genres (2 genres × movies, series) | `GET /movie|tv/{id}/recommendations`, `GET /discover/movie|tv?with_genres=` |
 | Refresh not due | **0** | — |
 | Cold start (no signals) | **0** | — |
-| Picked genres only | **0** — built from rows Home already has | — |
+| Picked genres only | **≤ 4** per refresh (the strongest genre and one rotating daily, movies and series each); none when personalisation is off | `GET /discover/movie|tv?with_genres=` |
+| Genre picker opened, or a refresh with picked genres | **≤ 2** a day (cached 24 h) | `GET /genre/movie|tv/list` |
 | Feedback, Settings, reset | **0** | — |
 
-There are no detail requests per candidate, no pagination and no new
-endpoint. Every candidate's metadata (genres, rating, votes, popularity,
+There are no detail requests per candidate and no pagination; the genre
+rows added the only new endpoints (`with_genres` and the genre lists).
+Every candidate's metadata (genres, rating, votes, popularity,
 dates, artwork) comes from list results already parsed into `MediaItem`.
 
 ## Reuse
@@ -31,8 +33,8 @@ dates, artwork) comes from list results already parsed into `MediaItem`.
 
 ## Bounding
 
-- Seeds: `DiscoveryWeights.maxSeeds` = 4.
-- Candidates: at most 4 × 20 + the loaded rows (typically ~140–200), scored
+- Seeds: `DiscoveryWeights.maxSeeds` = 4; queried genres: `DiscoveryController.maxGenreRows` = 2.
+- Candidates: at most 4 × 20 + 4 × 20 genre titles + the loaded rows (typically ~140–200), scored
   in one pass on the UI isolate. The engine is linear in candidates apart
   from sorting.
 - Single flight: concurrent `refresh` calls share one; there is no timer and

@@ -128,7 +128,7 @@ void main() {
         () => [for (var i = 1; i <= 14; i++) _item(i)],
       ]);
       await _pump(tester, feed, size: const Size(3840, 1000));
-      expect(find.text('Top 10 recommendations'), findsOneWidget);
+      expect(find.text('Top 10 picks'), findsOneWidget);
       expect(_numerals(tester), [for (var i = 1; i <= 10; i++) '$i']);
       for (var i = 1; i <= 10; i++) {
         expect(find.text('Title $i'), findsOneWidget);
@@ -180,7 +180,7 @@ void main() {
       await _pump(tester, feed);
       // Placeholders keep the row's height while page 1 loads.
       expect(
-        find.bySemanticsLabel(RegExp(r'^Loading Top 10 recommendations')),
+        find.bySemanticsLabel(RegExp(r'^Loading Top 10 picks')),
         findsOneWidget,
       );
 
@@ -193,7 +193,7 @@ void main() {
 
       final empty = _Feed([() => const <MediaItem>[]]);
       await _pump(tester, empty);
-      expect(find.text('Top 10 recommendations'), findsNothing);
+      expect(find.text('Top 10 picks'), findsNothing);
     });
 
     testWidgets('a click opens the title it shows', (tester) async {
@@ -309,23 +309,14 @@ void main() {
       await mouse.addPointer(location: tester.getCenter(_card(2)));
       addTearDown(mouse.removePointer);
       await tester.pumpAndSettle();
-      expect(
-        find.byTooltip('Scroll Top 10 recommendations forward'),
-        findsOneWidget,
-      );
-      expect(
-        find.byTooltip('Scroll Top 10 recommendations back'),
-        findsNothing,
-      );
+      expect(find.byTooltip('Scroll Top 10 picks forward'), findsOneWidget);
+      expect(find.byTooltip('Scroll Top 10 picks back'), findsNothing);
 
-      await tester.tap(find.byTooltip('Scroll Top 10 recommendations forward'));
+      await tester.tap(find.byTooltip('Scroll Top 10 picks forward'));
       await tester.pumpAndSettle();
       final paged = scroll.offset;
       expect(paged, greaterThan(0));
-      expect(
-        find.byTooltip('Scroll Top 10 recommendations back'),
-        findsOneWidget,
-      );
+      expect(find.byTooltip('Scroll Top 10 picks back'), findsOneWidget);
 
       await tester.dragFrom(
         tester.getCenter(find.byType(SingleChildScrollView)),

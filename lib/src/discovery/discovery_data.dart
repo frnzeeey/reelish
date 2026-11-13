@@ -3,6 +3,7 @@
 // here are persisted user data; keep old values readable.
 
 import '../models/media_item.dart';
+import 'discovery_preferences.dart';
 import 'viewing_activity.dart';
 
 /// What the viewer said about a recommended title.
@@ -88,6 +89,10 @@ class DiscoveryData {
     this.feedback = const {},
     this.favoriteGenres = const [],
     this.seededFromHistory = false,
+    this.onboarding,
+    this.personalization = true,
+    this.preferencesChangedAt,
+    this.preferencesUnsent = false,
   });
 
   static const empty = DiscoveryData();
@@ -109,6 +114,26 @@ class DiscoveryData {
   /// deliberately not, see `DiscoveryStore`); it is never read again, so a
   /// reset stays reset.
   final bool seededFromHistory;
+
+  /// How the genre step was answered; null if it never was.
+  final OnboardingState? onboarding;
+
+  /// Personalised rows wanted on Home.
+  final bool personalization;
+
+  /// When the genres, [onboarding] or [personalization] last changed on
+  /// this device; null if they never did.
+  final DateTime? preferencesChangedAt;
+
+  /// That change has not reached the Reelish API yet.
+  final bool preferencesUnsent;
+
+  /// What is synced across the account's devices.
+  DiscoveryPreferences get preferences => DiscoveryPreferences(
+    onboarding: onboarding,
+    genres: favoriteGenres,
+    personalization: personalization,
+  );
 
   bool get hasSignals =>
       activity.isNotEmpty ||
@@ -148,13 +173,38 @@ class DiscoveryData {
   DiscoveryData withFavoriteGenres(List<int> genres) =>
       _copy(favoriteGenres: List.unmodifiable(genres.toSet()));
 
+  /// [preferences] as changed on this device at [at], waiting to be sent.
+  DiscoveryData withPreferences(
+    DiscoveryPreferences preferences,
+    DateTime at,
+  ) => _copy(
+    favoriteGenres: List.unmodifiable(preferences.genres.toSet()),
+    onboarding: () => preferences.onboarding,
+    personalization: preferences.personalization,
+    preferencesChangedAt: () => at,
+    preferencesUnsent: true,
+  );
+
+  /// [preferences] as the Reelish API holds them: nothing left to send.
+  DiscoveryData withSyncedPreferences(DiscoveryPreferences preferences) =>
+      _copy(
+        favoriteGenres: List.unmodifiable(preferences.genres.toSet()),
+        onboarding: () => preferences.onboarding,
+        personalization: preferences.personalization,
+        preferencesUnsent: false,
+      );
+
   DiscoveryData seeded() => _copy(seededFromHistory: true);
 
-  /// Viewing activity and feedback forgotten; picked genres and the
+  /// Viewing activity and feedback forgotten; the preferences and the
   /// history-seeded mark stay.
   DiscoveryData reset() => DiscoveryData(
     favoriteGenres: favoriteGenres,
     seededFromHistory: seededFromHistory,
+    onboarding: onboarding,
+    personalization: personalization,
+    preferencesChangedAt: preferencesChangedAt,
+    preferencesUnsent: preferencesUnsent,
   );
 
   DiscoveryData _copy({
@@ -162,19 +212,36 @@ class DiscoveryData {
     Map<String, TitleFeedback>? feedback,
     List<int>? favoriteGenres,
     bool? seededFromHistory,
+    OnboardingState? Function()? onboarding,
+    bool? personalization,
+    DateTime? Function()? preferencesChangedAt,
+    bool? preferencesUnsent,
   }) => DiscoveryData(
     activity: activity ?? this.activity,
     feedback: feedback ?? this.feedback,
     favoriteGenres: favoriteGenres ?? this.favoriteGenres,
     seededFromHistory: seededFromHistory ?? this.seededFromHistory,
+    onboarding: onboarding == null ? this.onboarding : onboarding(),
+    personalization: personalization ?? this.personalization,
+    preferencesChangedAt: preferencesChangedAt == null
+        ? this.preferencesChangedAt
+        : preferencesChangedAt(),
+    preferencesUnsent: preferencesUnsent ?? this.preferencesUnsent,
   );
 
+  // Fields added after version 1 are optional and omitted at their
+  // defaults, so data written before them reads as it always did.
   Map<String, Object?> toJson() => {
     'v': 1,
     'activity': [for (final entry in activity.values) entry.toJson()],
     'feedback': [for (final entry in feedback.values) entry.toJson()],
     if (favoriteGenres.isNotEmpty) 'genres': favoriteGenres,
     if (seededFromHistory) 'seeded': true,
+    if (onboarding != null) 'onboarding': onboarding!.name,
+    if (!personalization) 'personalization': false,
+    if (preferencesChangedAt != null)
+      'prefsAt': preferencesChangedAt!.toUtc().toIso8601String(),
+    if (preferencesUnsent) 'prefsUnsent': true,
   };
 
   /// Unreadable entries are skipped; an unreadable whole is [empty].
@@ -200,6 +267,10 @@ class DiscoveryData {
           ? List.unmodifiable(genres.whereType<num>().map((g) => g.toInt()))
           : const [],
       seededFromHistory: json['seeded'] == true,
+      onboarding: OnboardingState.values.asNameMap()[json['onboarding']],
+      personalization: json['personalization'] != false,
+      preferencesChangedAt: DateTime.tryParse('${json['prefsAt'] ?? ''}'),
+      preferencesUnsent: json['prefsUnsent'] == true,
     );
   }
 }

@@ -10,6 +10,7 @@ import '../../services/storage_service.dart';
 import '../../services/tmdb_service.dart';
 import '../../theme/glass_theme.dart';
 import '../../viewmodels/home_catalog.dart';
+import '../../viewmodels/home_view_model.dart';
 import '../../viewmodels/library_view_model.dart';
 import '../../viewmodels/search_view_model.dart';
 import '../../widgets/settings/tmdb_attribution.dart';
@@ -28,12 +29,17 @@ class TvHomePage extends StatefulWidget {
     required this.onRetry,
     required this.onAddSource,
     this.onJoinParty,
+    this.onChooseGenres,
   });
 
   final TvCatalog catalog;
   final ValueChanged<MediaItem> onOpen;
   final VoidCallback onRetry;
   final VoidCallback onAddSource;
+
+  /// Opens the genre step when [TvCatalog.showGenrePrompt] offers it. The
+  /// step's Skip dismisses the offer, so the row needs no second target.
+  final VoidCallback? onChooseGenres;
 
   /// Opens Join a party; without it Home has no Watch together row.
   final VoidCallback? onJoinParty;
@@ -138,6 +144,9 @@ class _TvHomePageState extends State<TvHomePage> {
         cards: cards,
         autofocus: true,
       ),
+      if (catalog.showGenrePrompt)
+        if (widget.onChooseGenres case final onChoose?)
+          _GenrePromptRow(key: const ValueKey('genre-prompt'), onTap: onChoose),
       // Personalised rows after the first two catalog rows, so focus still
       // starts on New movies; none on a cold start.
       for (final section
@@ -152,7 +161,7 @@ class _TvHomePageState extends State<TvHomePage> {
         _WatchTogetherRow(key: const ValueKey('join-party'), onJoin: onJoin),
       TvPagedRow(
         key: const ValueKey('row:Top 10 recommendations'),
-        title: 'Top 10 recommendations',
+        title: 'Top 10 picks',
         feed: catalog.top10,
         cards: cards,
         ranked: true,
@@ -169,7 +178,12 @@ class _TvHomePageState extends State<TvHomePage> {
         TvMediaRow(
           key: const ValueKey('row:Trending now'),
           title: 'Trending now',
-          items: _trending,
+          items: HomeViewModel.distinctTrending([
+            for (final section
+                in catalog.discovery?.sections ?? const <DiscoverySection>[])
+              ...section.items,
+            ...catalog.top10.state.items,
+          ], _trending),
           cards: cards,
         ),
       const Padding(
@@ -223,6 +237,63 @@ class _AddSourceBanner extends StatelessWidget {
           label: const Text('Add a source'),
         ),
       ],
+    ),
+  );
+}
+
+/// Offers the genre step to an account without discovery preferences. One
+/// target as wide as the poster rows, like Watch together below, so the
+/// D-pad reaches it moving down.
+class _GenrePromptRow extends StatelessWidget {
+  const _GenrePromptRow({super.key, required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(12, 6, 12, 18),
+    child: TvFocusable(
+      onSelect: onTap,
+      borderRadius: 16,
+      focusScale: 1.01,
+      scrollAlignment: 0,
+      semanticLabel:
+          'Tell us what you love watching. Pick a few genres for '
+          'recommendations.',
+      child: ColoredBox(
+        color: GlassTheme.surface,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+          child: Row(
+            children: [
+              Icon(ReelishIcons.sparkle, color: GlassTheme.primary),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Tell us what you love watching',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: GlassTheme.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Pick a few genres and Home will lead with titles '
+                      'picked for you.',
+                      style: TextStyle(color: GlassTheme.muted),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(ReelishIcons.chevronRight, color: GlassTheme.muted),
+            ],
+          ),
+        ),
+      ),
     ),
   );
 }

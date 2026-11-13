@@ -50,6 +50,8 @@ search the generated references below: every file, class and function in
 | [Icon system](design/icon-system.md) | Reelish's own icons: design rules, solid forms, how to add one, the gallery |
 | [Content advisory](features/content-advisory.md) | The age rating card at playback start: TMDB coverage, sourcing rules, behaviour |
 | [Crash reporting](features/crash-reporting.md) | Opt-in Crashlytics on Android, the Windows error log, what is reported, testing, symbols |
+| [Home discovery audit](discovery/DISCOVERY_AUDIT.md) | Every Home section: source, overlap, cache, recommendation; the proposed hierarchy |
+| [Genre onboarding and discovery preferences](discovery/DISCOVERY_IMPLEMENTATION_REPORT.md) | First-run genre step, Home card, genre rows, preferences sync, personalisation switch, tests |
 | [Personalised discovery](personalized-discovery/PERSONALIZED_DISCOVERY_ARCHITECTURE.md) | On-device recommendations: audit, components, data flow, cold start, limits |
 | [Recommendation scoring](personalized-discovery/RECOMMENDATION_SCORING_MODEL.md) | Viewing status, weights, genre affinity, seeds, score terms, rows, diversity, feedback |
 | [Personalisation data](personalized-discovery/PERSONALIZATION_DATA_MODEL.md) | What is stored per account, JSON shapes, account isolation, privacy, sync analysis |

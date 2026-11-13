@@ -9,12 +9,14 @@ import '../discovery/discovery_data.dart';
 import '../discovery/discovery_engine.dart';
 import '../models/media_item.dart';
 import '../viewmodels/home_catalog.dart';
+import '../viewmodels/home_view_model.dart';
 import '../services/paged_feed_controller.dart';
 import '../services/storage_service.dart';
 import '../services/tmdb_service.dart';
 import '../theme/glass_theme.dart';
 import '../viewmodels/library_view_model.dart';
 import '../viewmodels/search_view_model.dart';
+import '../widgets/discovery_prompt_card.dart';
 import '../widgets/settings/tmdb_attribution.dart';
 import '../widgets/glass_button.dart';
 import 'desktop_collections.dart';
@@ -35,11 +37,17 @@ class DesktopHomePage extends StatefulWidget {
     required this.onRetry,
     required this.onAddSource,
     this.onJoinParty,
+    this.onChooseGenres,
+    this.onDismissGenres,
   });
 
   final TvCatalog catalog;
   final ValueChanged<MediaItem> onOpen;
   final ValueChanged<MediaItem> onPlay;
+
+  /// Open the genre step / dismiss its card, when
+  /// [TvCatalog.showGenrePrompt] offers it.
+  final VoidCallback? onChooseGenres, onDismissGenres;
   final Future<bool> Function(MediaItem item) onToggleFavorite;
   final VoidCallback onRetry;
   final VoidCallback onAddSource;
@@ -123,6 +131,22 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
         onToggleFavorite: widget.onToggleFavorite,
         loadWhenShown: catalog.catalogSettled,
       ),
+      if (catalog.showGenrePrompt)
+        if ((widget.onChooseGenres, widget.onDismissGenres) case (
+          final onChoose?,
+          final onDismiss?,
+        ))
+          DiscoveryPromptCard(
+            key: const ValueKey('genre-prompt'),
+            onChoose: onChoose,
+            onDismiss: onDismiss,
+            padding: const EdgeInsets.fromLTRB(
+              DesktopMetrics.pagePadding,
+              8,
+              DesktopMetrics.pagePadding,
+              8,
+            ),
+          ),
       // Personalised rows, right under Top 10; none on a cold start.
       if (catalog.discovery case final discovery?)
         for (final section in discovery.sections)
@@ -147,7 +171,12 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
         DesktopMediaRow(
           key: const ValueKey('row:trending'),
           title: 'Trending now',
-          items: _trending,
+          items: HomeViewModel.distinctTrending([
+            for (final section
+                in catalog.discovery?.sections ?? const <DiscoverySection>[])
+              ...section.items,
+            ...catalog.top10.state.items,
+          ], _trending),
           onOpen: widget.onOpen,
           isFavorite: catalog.isFavorite,
           onToggleFavorite: widget.onToggleFavorite,

@@ -1,6 +1,6 @@
-// Settings → Recommendations: the genres the viewer likes, titles hidden
-// from recommendations, and a reset. Phone, TV and Windows (in its
-// Settings pane) show this same page.
+// Settings → Recommendations: personalised rows on or off, the genres the
+// viewer likes, titles hidden from recommendations, and a reset. Phone, TV
+// and Windows (in its Settings pane) show this same page.
 
 import 'package:flutter/material.dart';
 
@@ -47,10 +47,26 @@ class RecommendationSettingsScreen extends StatelessWidget {
           onBack: onBack,
           children: [
             SettingsSection(
+              label: 'DISCOVERY',
+              children: [
+                SettingsSwitchTile(
+                  icon: ReelishIcons.sparkle,
+                  title: 'Personalised rows on Home',
+                  description: discovery.personalization
+                      ? 'Home leads with rows picked for you'
+                      : 'Off: Home shows the same rows for everyone, and '
+                            'nothing is learned from what you watch',
+                  value: discovery.personalization,
+                  onChanged: discovery.setPersonalization,
+                ),
+              ],
+            ),
+            SettingsSection(
               label: 'GENRES YOU LIKE',
               description:
                   'Picked genres count from the start, alongside what you '
-                  'watch. Choose as many as you like, or none.',
+                  'watch, and follow your account to your other devices. '
+                  'Choose as many as you like, or none.',
               children: [
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
@@ -89,8 +105,9 @@ class RecommendationSettingsScreen extends StatelessWidget {
                   'Worked out on this device from what this account watches '
                   'and saves, and kept apart from other accounts. To find '
                   'similar titles Reelish asks TMDB, through the Reelish '
-                  'API, about a few titles you watched, as it does when you '
-                  'open a title.',
+                  'API, about a few titles you watched and the genres you '
+                  'picked, as it does when you open a title. Only the genres '
+                  'and whether these rows are on are kept with your account.',
               children: [
                 SettingsTile(
                   icon: ReelishIcons.playCircle,

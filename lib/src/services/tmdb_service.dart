@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../account/account_controller.dart';
 import '../account/backend_config.dart';
+import '../discovery/tmdb_genres.dart';
 import '../models/content_advisory.dart';
 import '../models/media_details.dart';
 import '../models/media_item.dart';
@@ -432,6 +433,46 @@ class TmdbService {
             ),
     );
     return _recommendationItems(data['results'], item.id, pathType);
+  }
+
+  /// Well-rated, popular titles of one TMDB genre ([genreId] is a movie
+  /// genre for `movie`, a TV genre for `series`), released by today, for the
+  /// personalised genre rows. Page 1 only, at deferred priority: rows are
+  /// rebuilt at most every few hours, and never ahead of the catalog.
+  Future<List<MediaItem>> genreTitles(String type, int genreId) async {
+    final today = _date(DateTime.now().toUtc());
+    final series = type == 'series';
+    final data = await _get(
+      series ? '/discover/tv' : '/discover/movie',
+      params: {
+        if (series) ..._scriptedTvParams,
+        'with_genres': '$genreId',
+        'sort_by': 'popularity.desc',
+        'vote_count.gte': series ? '60' : '150',
+        'vote_average.gte': '6.5',
+        if (series)
+          'first_air_date.lte': today
+        else
+          'primary_release_date.lte': today,
+      },
+      ttl: TmdbCacheTtl.catalog,
+      priority: _TmdbRequestPriority.deferred,
+    );
+    return _mediaItems(data['results'], series ? 'tv' : 'movie');
+  }
+
+  /// TMDB's genre lists for the genre picker. A list that cannot be read is
+  /// taken from [GenreCatalog.fallback], so the picker always opens.
+  Future<GenreCatalog> genreCatalog() async {
+    Future<Map<int, String>> list(String type, Map<int, String> fallback) =>
+        _get('/genre/$type/list', ttl: TmdbCacheTtl.metadata)
+            .then((data) => GenreCatalog.parseList(data) ?? fallback)
+            .catchError((Object _) => fallback);
+    final lists = await Future.wait([
+      list('movie', GenreCatalog.fallback.movie),
+      list('tv', GenreCatalog.fallback.tv),
+    ]);
+    return GenreCatalog(movie: lists[0], tv: lists[1]);
   }
 
   /// One page of recommendations for each of [seeds], as unranked

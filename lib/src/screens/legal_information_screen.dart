@@ -263,6 +263,16 @@ class _LegalInformationScreenState extends State<LegalInformationScreen> {
           'Everything is deleted when you delete your account.',
     ),
     (
+      'Recommendation preferences',
+      'So recommendations follow you to each device, the Reelish API '
+          'stores, for your account, the genres you pick, whether you '
+          'answered or skipped the genre question, and whether personalised '
+          'rows are on, with the random device identifier described above '
+          'and when the change was made. What you watch and your feedback '
+          'on recommendations are worked out on each device and not sent '
+          'for this. They are deleted when you delete your account.',
+    ),
+    (
       'Friends',
       'Friends is off until you turn it on in Profile > Friends & privacy. '
           'Then the Reelish API stores, for your account, the handle you '
@@ -437,7 +447,8 @@ class _LegalInformationScreenState extends State<LegalInformationScreen> {
           'account. You can sign out of one device or of all devices, and '
           'delete your account in Settings > Profile and account; deleting '
           'it asks Trakt to revoke Reelish’s access and removes your account, '
-          'your viewing progress and collections, '
+          'your viewing progress, collections and recommendation '
+          'preferences, '
           'your encrypted Trakt tokens and your device sessions, including '
           'those already signed out. A minimal security log, holding an '
           'internal account number, the kind of event (such as a sign-in or '

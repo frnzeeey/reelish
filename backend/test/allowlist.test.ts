@@ -20,6 +20,12 @@ describe('TMDB allowlist', () => {
     ok('/discover/tv', 'with_type=2|4&without_genres=10767|10763|10764|10766&air_date.gte=2026-10-01' +
       '&air_date.lte=2026-10-30&sort_by=popularity.desc&vote_count.gte=5&page=1');
     ok('/discover/tv', 'first_air_date.gte=2026-09-01&first_air_date.lte=2026-10-30&sort_by=first_air_date.desc');
+    ok('/discover/movie', 'with_genres=878&sort_by=popularity.desc&vote_count.gte=150' +
+      '&vote_average.gte=6.5&primary_release_date.lte=2026-11-13&page=1');
+    ok('/discover/tv', 'with_type=2|4&without_genres=10767|10763|10764|10766&with_genres=10765' +
+      '&sort_by=popularity.desc&vote_count.gte=60&vote_average.gte=6.5&first_air_date.lte=2026-11-13');
+    ok('/genre/movie/list');
+    ok('/genre/tv/list', 'language=en-US');
     ok('/trending/all/day', 'page=2');
     ok('/movie/550', 'append_to_response=credits,external_ids');
     ok('/tv/1399', 'append_to_response=credits,external_ids&language=en-US');
@@ -62,6 +68,11 @@ describe('TMDB allowlist', () => {
     refused('/discover/movie', 'sort_by=revenue.desc');
     refused('/discover/movie', 'with_release_type=7');
     refused('/discover/movie', 'region=usa');
+    refused('/discover/movie', 'with_genres=action');
+    refused('/discover/movie', 'with_genres=1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22');
+    refused('/discover/movie', 'with_cast=287');
+    refused('/genre/person/list');
+    refused('/genre/movie/list', 'page=2');
     refused('/movie/550', 'append_to_response=videos,images,reviews');
     refused('/search/multi', 'query=');
     refused('/search/multi', 'page=2');

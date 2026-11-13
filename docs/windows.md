@@ -99,7 +99,7 @@ tooltips) or expands it; Reelish remembers the choice.
 From a fresh start, the first arrow key (or D-pad press) moves focus to the
 side menu's Home item; from there arrows move into the page, as on TV.
 
-**Top 10 recommendations** shows the same ten titles, in the same order, as
+**Top 10 picks** shows the same ten titles, in the same order, as
 Android and TV (one shared feed, ranking and cache), as outlined numerals
 beside their posters. All ten are reachable with the arrow keys or a D-pad,
 and the focused one, numeral included, is scrolled into view. The row also

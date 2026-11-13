@@ -16,6 +16,9 @@ enum DiscoverySectionKind {
   becauseYouWatched,
   favoriteGenre,
   somethingDifferent,
+
+  /// Built from TMDB's titles of a genre the viewer picked.
+  likedGenre,
 }
 
 /// One personalised Home row.
@@ -90,6 +93,16 @@ class SeedCandidates {
   final List<MediaItem> items;
 }
 
+/// TMDB's popular, well-rated titles of a genre the viewer picked: movies
+/// and series together.
+class GenreCandidates {
+  const GenreCandidates(this.genre, this.items);
+
+  /// The picked genre (see `TmdbGenres.pickable`).
+  final int genre;
+  final List<MediaItem> items;
+}
+
 /// A candidate with its score terms, kept for explanations and tests.
 class ScoredCandidate {
   ScoredCandidate._(this.item);
@@ -111,7 +124,7 @@ abstract final class DiscoveryEngine {
   static const rowSize = 12;
 
   /// Personalised rows shown at most, so Home is not crowded.
-  static const maxSections = 4;
+  static const maxSections = 5;
 
   /// A title must score at least this well on genre to be counted as
   /// matching, and at most [exploreMaxMatch] to count as different.
@@ -122,12 +135,13 @@ abstract final class DiscoveryEngine {
   /// .relaxedVoteThreshold] votes.
   static const minRating = 5.0;
 
-  /// Rows for [profile] from [seedLists] and the titles Home already loaded
-  /// ([pool]). Empty when the profile is empty: Home's ordinary rows are the
-  /// cold start.
+  /// Rows for [profile] from [seedLists], [genreLists] (picked genres) and
+  /// the titles Home already loaded ([pool]). Empty when the profile is
+  /// empty: Home's ordinary rows are the cold start.
   static List<DiscoverySection> build(
     TasteProfile profile, {
     List<SeedCandidates> seedLists = const [],
+    List<GenreCandidates> genreLists = const [],
     List<MediaItem> pool = const [],
     DiscoveryWeights weights = DiscoveryWeights.standard,
     DateTime? now,
@@ -136,7 +150,8 @@ abstract final class DiscoveryEngine {
     final candidates = score(
       profile,
       seedLists: seedLists,
-      pool: pool,
+      // Genre titles compete with everything else for the main row.
+      pool: [for (final list in genreLists) ...list.items, ...pool],
       weights: weights,
       now: now,
     );
@@ -155,7 +170,22 @@ abstract final class DiscoveryEngine {
       final row = _becauseRow(seedLists[index], byKey, used);
       if (row != null) because.add(row);
     }
-    final genre = _genreRow(profile, candidates, used);
+    final liked = <DiscoverySection>[];
+    for (final list in genreLists) {
+      final row = _likedGenreRow(list, byKey, used);
+      if (row != null) liked.add(row);
+    }
+    // A genre with its own row is not repeated as "Top picks".
+    final genre = _genreRow(
+      profile,
+      candidates,
+      used,
+      skip: {
+        for (final list in genreLists)
+          if (liked.any((row) => row.seedKey == 'genre:${list.genre}'))
+            ...TmdbGenres.expand([list.genre]),
+      },
+    );
     final different = profile.signalCount >= 3
         ? _differentRow(candidates, used)
         : null;
@@ -163,10 +193,52 @@ abstract final class DiscoveryEngine {
     return [
       forYou,
       because.firstOrNull,
+      liked.firstOrNull,
       genre,
       because.length > 1 ? because[1] : null,
+      liked.length > 1 ? liked[1] : null,
       different,
     ].nonNulls.take(maxSections).toList();
+  }
+
+  /// "Because you like" a picked genre: the genre's titles not already in a row
+  /// above, best for the viewer first, movies and series alternating so
+  /// neither crowds the other out.
+  static DiscoverySection? _likedGenreRow(
+    GenreCandidates list,
+    Map<String, ScoredCandidate> byKey,
+    Set<String> used,
+  ) {
+    final name = TmdbGenres.nameOf(list.genre);
+    if (name == null) return null;
+    final ranked = <ScoredCandidate>{
+      for (final item in list.items)
+        if (byKey[MediaCatalogFilter.key(item)] case final c?
+            when !used.contains(c.key))
+          c,
+    }.toList()..sort(_bestFirst);
+    final movies = ranked.where((c) => c.item.type == 'movie').toList();
+    final series = ranked.where((c) => c.item.type != 'movie').toList();
+    final items = <ScoredCandidate>[];
+    for (var i = 0; items.length < rowSize; i++) {
+      if (i >= movies.length && i >= series.length) break;
+      // The better of the two leads each pair.
+      final pair = [
+        if (i < movies.length) movies[i],
+        if (i < series.length) series[i],
+      ]..sort(_bestFirst);
+      items.addAll(pair.take(rowSize - items.length));
+    }
+    if (items.length < minRowSize) return null;
+    used.addAll(items.map((c) => c.key));
+    final title = 'Because you like ${name.toLowerCase()}';
+    return DiscoverySection(
+      kind: DiscoverySectionKind.likedGenre,
+      title: title,
+      seedKey: 'genre:${list.genre}',
+      items: [for (final c in items) c.item],
+      reasons: {for (final c in items) c.key: 'Based on your preferred genres'},
+    );
   }
 
   /// Every eligible candidate, scored, best first.
@@ -449,11 +521,14 @@ abstract final class DiscoveryEngine {
   static DiscoverySection? _genreRow(
     TasteProfile profile,
     List<ScoredCandidate> candidates,
-    Set<String> used,
-  ) {
+    Set<String> used, {
+    Set<int> skip = const {},
+  }) {
     for (final genre in profile.topGenres.take(3)) {
       final name = TmdbGenres.nameOf(genre);
-      if (name == null || (profile.genreAffinity[genre] ?? 0) < strongMatch) {
+      if (name == null ||
+          skip.contains(genre) ||
+          (profile.genreAffinity[genre] ?? 0) < strongMatch) {
         continue;
       }
       final items = candidates

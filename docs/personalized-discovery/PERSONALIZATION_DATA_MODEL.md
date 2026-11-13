@@ -101,10 +101,26 @@ only discovery's own data is per account.
 
 ## Synchronisation
 
-None in this phase. The analysis for later: a compact profile (genre
-affinity + seeds + feedback, a few KB) could sync through the Reelish API's
-D1 on the existing Workers Free plan (one write per meaningful change, read
-at launch), with last-writer-wins per field. Firestore is not configured in
-the app (Firebase runs only Analytics and Crashlytics through the Android
-SDK) and would add a dependency that builds into Windows; it is not
-recommended.
+The preferences sync through the Reelish API (`GET`/`PUT
+/api/v1/discovery/preferences`, D1 table `discovery_preferences`, one row per
+account): picked genres, the genre step (`onboarding`: completed or skipped)
+and personalisation on/off. The newest change wins, ordered as playback
+progress is (per-device counter, then the change time corrected by the
+measured clock offset). Activity, feedback and rows stay on the device.
+Details: [implementation report](../discovery/DISCOVERY_IMPLEMENTATION_REPORT.md).
+
+Added to `onfeed.discovery.v1.<userId>` (all optional, omitted at their
+defaults, so earlier data reads unchanged):
+
+```jsonc
+{
+  "onboarding": "completed",            // or "skipped"; absent: never answered
+  "personalization": false,             // absent: on
+  "prefsAt": "2026-11-13T09:00:00.000Z", // last preference change here
+  "prefsUnsent": true                   // that change has not reached the API
+}
+```
+
+The sync's own state is `onfeed.discoveryPrefsSync.v1`:
+`{userId: {device, seq, offset}}` (a random device id, the change counter and
+the server clock offset).

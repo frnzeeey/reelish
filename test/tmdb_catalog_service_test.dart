@@ -440,4 +440,72 @@ void main() {
     }, mediaType: 'tv');
     expect(MediaItem.fromStorage(item.toJson()).genreIds, [18, 80]);
   });
+
+  test('genre rows ask only what the Reelish API gateway allows', () async {
+    final urls = <Uri>[];
+    final client = MockClient((request) async {
+      urls.add(request.url);
+      return http.Response(
+        jsonEncode({
+          'results': [
+            {
+              'id': 1,
+              'title': 'A',
+              'genre_ids': [878],
+            },
+          ],
+        }),
+        200,
+      );
+    });
+    final tmdb = service(client);
+    final movies = await tmdb.genreTitles('movie', 878);
+    final series = await tmdb.genreTitles('series', 10765);
+    expect(movies.single.type, 'movie');
+    expect(series.single.type, 'series');
+    // Mirrors backend/src/tmdb/allowlist.ts: anything else is refused.
+    const movieAllowed = {
+      'page', 'sort_by', 'vote_count.gte', 'vote_average.gte', //
+      'primary_release_date.gte', 'primary_release_date.lte',
+      'release_date.gte', 'release_date.lte', 'with_release_type', 'region',
+      'with_genres', 'language',
+    };
+    const tvAllowed = {
+      'page', 'sort_by', 'vote_count.gte', 'vote_average.gte', //
+      'air_date.gte', 'air_date.lte', 'first_air_date.gte',
+      'first_air_date.lte', 'with_type', 'with_genres', 'without_genres',
+      'language',
+    };
+    final movie = urls.firstWhere((u) => u.path.endsWith('/discover/movie'));
+    final tv = urls.firstWhere((u) => u.path.endsWith('/discover/tv'));
+    expect(movieAllowed.containsAll(movie.queryParameters.keys), isTrue);
+    expect(tvAllowed.containsAll(tv.queryParameters.keys), isTrue);
+    expect(movie.queryParameters['with_genres'], '878');
+    expect(movie.queryParameters['sort_by'], 'popularity.desc');
+    expect(tv.queryParameters['with_genres'], '10765');
+    // Series rows stay scripted, like Home's other series rows.
+    expect(
+      tv.queryParameters['with_type'],
+      MediaCatalogFilter.tmdbScriptedTvTypes,
+    );
+  });
+
+  test('the genre picker falls back to the built-in lists', () async {
+    final working = service(
+      MockClient(
+        (request) async => http.Response(
+          jsonEncode({
+            'genres': [
+              {'id': 878, 'name': 'Science Fiction'},
+            ],
+          }),
+          request.url.path.endsWith('/genre/movie/list') ? 200 : 500,
+        ),
+      ),
+    );
+    final catalog = await working.genreCatalog();
+    expect(catalog.movie, {878: 'Science Fiction'});
+    expect(catalog.tv, isNotEmpty, reason: 'the TV list failed: built-in');
+    expect(catalog.tv.containsKey(10765), isTrue);
+  });
 }

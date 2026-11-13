@@ -21,6 +21,7 @@ class TvCatalog {
     required this.hasSources,
     this.catalogError,
     this.discovery,
+    this.showGenrePrompt = false,
   });
 
   final TmdbService tmdb;
@@ -49,6 +50,10 @@ class TvCatalog {
   /// Personalised rows for the signed-in account; null where they are not
   /// wanted (tests of other rows).
   final DiscoveryController? discovery;
+
+  /// Offer the genre step on Home: an existing account without discovery
+  /// preferences (see `OnboardingNeed.prompt`).
+  final bool showGenrePrompt;
 
   bool isFavorite(MediaItem item) =>
       favoriteKeys.contains('${item.type}:${item.id}');

@@ -29,7 +29,7 @@ class DesktopTopTenRow extends StatelessWidget {
     this.isFavorite,
     this.onToggleFavorite,
     this.loadWhenShown = true,
-    this.title = 'Top 10 recommendations',
+    this.title = 'Top 10 picks',
   });
 
   /// The shared Top 10 feed (`targetCount: 10`).

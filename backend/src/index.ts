@@ -17,6 +17,7 @@ import * as supporters from './supporters';
 import * as frames from './frames';
 import * as progress from './progress';
 import * as collections from './collections';
+import * as discoveryPreferences from './discovery-preferences';
 import * as social from './social/profiles';
 import * as activity from './social/activity';
 import * as friends from './social/friends';
@@ -143,6 +144,12 @@ async function route(request: Request, env: Env, requestId: string): Promise<Res
     return method === 'GET'
       ? progress.pullProgress(env, principal, url, requestId)
       : progress.pushProgress(env, principal, request, requestId);
+  }
+  if (rest === '/discovery/preferences' && (method === 'GET' || method === 'PUT')) {
+    await limit(env.SYNC_LIMITER, `discovery:${principal.userId}`);
+    return method === 'GET'
+      ? discoveryPreferences.getPreferences(env, principal, requestId)
+      : discoveryPreferences.putPreferences(env, principal, request, requestId);
   }
   if (rest === '/collections' && (method === 'GET' || method === 'POST')) {
     await limit(env.SYNC_LIMITER, `collections:${principal.userId}`);

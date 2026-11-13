@@ -39,6 +39,8 @@ const discoverMovie: Record<string, Validator> = {
   'release_date.lte': date,
   with_release_type: pattern(/^[1-6](\|[1-6]){0,5}$/),
   region: pattern(/^[A-Z]{2}$/),
+  // Personalised genre rows (lib/src/discovery/genre_discovery.dart).
+  with_genres: idList,
 };
 
 const discoverTv: Record<string, Validator> = {
@@ -51,6 +53,7 @@ const discoverTv: Record<string, Validator> = {
   'first_air_date.gte': date,
   'first_air_date.lte': date,
   with_type: idList,
+  with_genres: idList,
   without_genres: idList,
 };
 
@@ -69,6 +72,8 @@ const routes: Route[] = [
   { path: /^\/discover\/movie$/, params: discoverMovie, cache: 'catalog' },
   { path: /^\/discover\/tv$/, params: discoverTv, cache: 'catalog' },
   { path: /^\/trending\/all\/day$/, params: { page }, cache: 'catalog' },
+  // TMDB's genre ids and names, for the genre picker.
+  { path: /^\/genre\/(movie|tv)\/list$/, params: {}, cache: 'metadata' },
   {
     path: new RegExp(`^/(movie|tv)/${id}$`),
     params: { append_to_response: oneOf('credits,external_ids') },

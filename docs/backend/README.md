@@ -135,6 +135,8 @@ its own).
 | `GET /api/v1/progress?since=` | Bearer | Rows changed at or after the cursor, oldest first, 200 a page → `{items, cursor, more, serverTime}` |
 | `POST /api/v1/collections` | Bearer | `{device, changes}` (≤ 50 records `{kind, key, deleted?, seq, at, …fields}`, 64 KB): folders and collections by id, titles by `collectionId\|type:id`; a collection carries `visibility`: `"friends"` shares it, any other value is private, and none at all (older apps) keeps the stored value; stored in its own column; fields checked and the stored body rebuilt from them → `{accepted, serverTime}`; newer changes only ([collection sync](../custom-collections/COLLECTION_SYNC_STRATEGY.md), `src/collections.ts`) |
 | `GET /api/v1/collections?since=` | Bearer | Records changed at or after the cursor, oldest first, 200 a page → `{items, cursor, more, serverTime}` |
+| `GET /api/v1/discovery/preferences` | Bearer | The account's discovery preferences → `{stored: null \| {preferences: {onboarding, genres, personalization}, device, at}, serverTime}` (`src/discovery-preferences.ts`) |
+| `PUT /api/v1/discovery/preferences` | Bearer | `{device, seq, at, preferences}` (`onboarding`: `completed`/`skipped`/null; `genres`: ≤ 40 TMDB genre ids; `personalization`: boolean; 4 KB); stored only when newer, ordered like progress → `{accepted, stored, serverTime}`, so a device that lost adopts the winner ([report](../discovery/DISCOVERY_IMPLEMENTATION_REPORT.md)) |
 | `GET /api/v1/social/profile` | Bearer | Friends: the caller's own `{profile, counts}`: `counts` is `{friends, incoming, unread}`, `profile` is `{handle, friendCode, displayName, avatar, findByCode, findByHandle, allowRecommendations, shareActivity, handleChangeableAt, createdAt}`; or `{profile: null}` while Friends is off. Never another user's data ([Friends](../friends-activity/SECURITY_AND_PRIVACY.md), `src/social/profiles.ts`) |
 | `PUT /api/v1/social/profile` | Bearer | Turns Friends on (`handle` required, `201`) or changes it; fields left out keep their value, `null` clears `displayName` or `avatar`. 400 `invalid_handle`, `handle_reserved`, `invalid_display_name` (links refused), `invalid_avatar`, `invalid_setting`; 409 `handle_taken` (also a handle held for 30 days after it was given up); 429 `handle_change_too_soon` (once a week), 429 `too_many_attempts` after 10 "taken" answers in an hour. Limited to 10 a minute per account and per address |
 | `POST /api/v1/social/profile/code` | Bearer | A new friend code; the old one stops working. 409 `friends_off` |
@@ -247,8 +249,9 @@ gateway accepts exactly these requests (paths relative to TMDB v3):
 | Path | Parameters | Edge cache |
 |---|---|---|
 | `/movie/popular`, `/tv/popular`, `/trending/all/day` | `page` | 20 min |
-| `/discover/movie` | `page`, `sort_by`, vote and release-date filters, `with_release_type`, `region` | 20 min |
-| `/discover/tv` | `page`, `sort_by`, vote and air-date filters, `with_type`, `without_genres` | 20 min |
+| `/discover/movie` | `page`, `sort_by`, vote and release-date filters, `with_release_type`, `region`, `with_genres` | 20 min |
+| `/discover/tv` | `page`, `sort_by`, vote and air-date filters, `with_type`, `with_genres`, `without_genres` | 20 min |
+| `/genre/{movie,tv}/list` | — | 24 h |
 | `/{movie,tv}/{id}` | `append_to_response=credits,external_ids` | 24 h |
 | `/{movie,tv}/{id}/recommendations` | `page` | 20 min |
 | `/{movie,tv}/{id}/images` | `include_image_language` | 24 h |
@@ -276,6 +279,7 @@ which needs no credential.
 | `web_authorizations` | Pending browser sign-ins: hashed state and poll token, encrypted PKCE verifier, outcome | Reelish (minutes) |
 | `playback_progress` | Per account and title (`movie:`, `series:`, `episode:` keys): position, length, next episode, removal, card title/year/TMDB artwork, device id (random), order fields; pruned after 400 days unchanged; deleted with the account | Reelish |
 | `collection_records` | Per account and record (folder, collection, or title in a collection): the checked fields, deletion mark, device id (random), order fields; deletion marks pruned after 400 days, live records kept; deleted with the account | Reelish |
+| `discovery_preferences` | One row per account: whether the genre step was completed or skipped, picked TMDB genre ids, personalised rows on/off, device id (random), order fields; deleted with the account. Viewing activity and feedback are not stored | Reelish |
 | `audit_events` | Security events by id (sign-in, logout, reuse, deletion); erased after 12 months by the daily cron (`src/retention.ts`) | Reelish |
 
 Trakt owns the user's profile, history and lists; Reelish stores none of

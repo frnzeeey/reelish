@@ -155,7 +155,7 @@ void main() {
 
   Future<void> revealTopTen(WidgetTester tester) async {
     await tester.scrollUntilVisible(
-      find.text('Top 10 recommendations'),
+      find.text('Top 10 picks'),
       300,
       scrollable: find
           .descendant(

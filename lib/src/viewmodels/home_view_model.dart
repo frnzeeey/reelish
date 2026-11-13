@@ -94,6 +94,26 @@ class HomeViewModel extends ChangeNotifier {
     return distinct.length >= _minDistinctReleases ? distinct : candidates;
   }
 
+  /// Trending keeps at least this many titles once those shown above it
+  /// (personalised rows, Top 10) are taken out.
+  static const _minDistinctTrending = 10;
+
+  /// Trending on Home without the titles the personalised rows and Top 10
+  /// already show, so it brings in something new; the whole list when too
+  /// few would remain. The Trending tab shows the list as it is.
+  static List<MediaItem> distinctTrending(
+    Iterable<MediaItem> shown,
+    List<MediaItem> trending,
+  ) {
+    final keys = shown.map(MediaCatalogFilter.key).toSet();
+    if (keys.isEmpty) return trending;
+    final distinct = [
+      for (final item in trending)
+        if (!keys.contains(MediaCatalogFilter.key(item))) item,
+    ];
+    return distinct.length >= _minDistinctTrending ? distinct : trending;
+  }
+
   final TmdbService _tmdb;
   final StorageService _storage;
 
