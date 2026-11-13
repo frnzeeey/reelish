@@ -62,6 +62,16 @@ search the generated references below: every file, class and function in
 | [Audio tracks](playback/audio-tracks.md) | Dual audio: discovery, naming, switching, engine support and limits |
 | [Troubleshooting](playback/troubleshooting.md) | Symptoms mapped to code and logs |
 
+Playback audit (2026-11-13, static review of v1.33.1; findings await review):
+
+| Page | What it covers |
+|---|---|
+| [Audit: architecture overview](playback-audit/PLAYBACK_ARCHITECTURE_OVERVIEW.md) | Verified components, lifecycle and failure diagrams, invariants, platform matrix |
+| [Audit: report](playback-audit/PLAYBACK_AUDIT_REPORT.md) | Findings PB-01 to PB-15 with evidence, failure scenarios, answers |
+| [Audit: performance](playback-audit/PLAYBACK_PERFORMANCE_REPORT.md) | Stage model, timeout budget, bottlenecks, metrics and targets |
+| [Audit: test strategy](playback-audit/PLAYBACK_TEST_STRATEGY.md) | Existing coverage, gaps, fake-engine harness, device and stress tests |
+| [Audit: remediation roadmap](playback-audit/PLAYBACK_REMEDIATION_ROADMAP.md) | Phased fixes with dependencies, risks and definitions of done |
+
 ## Backend
 
 | Page | What it covers |
