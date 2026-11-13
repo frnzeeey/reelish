@@ -52,8 +52,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
   List<MediaItem> get _favorites => _model.favorites;
   bool get _loading => _model.loading;
 
-  List<MediaItem> get _continueWatching =>
-      _history.where((item) => item.resumeMs > 0).toList();
+  List<MediaItem> get _continueWatching => _model.continueWatching;
 
   @override
   void initState() {

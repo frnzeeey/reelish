@@ -27,7 +27,22 @@ class ResumeSummary {
       if (last == null || progress == null) return unknown;
       final code = 'S${last.season} E${last.episode}';
       if (progress.isWatched) {
-        return ResumeSummary(fraction: 1, label: '$code · Watched');
+        final next = series!.next;
+        if (next == null) {
+          return ResumeSummary(fraction: 1, label: '$code · Watched');
+        }
+        // Finished: the card offers the next episode, with any progress
+        // it already has.
+        final nextCode = 'S${next.season} E${next.episode}';
+        final started = series.of(next.season, next.episode);
+        if (started != null && started.isInProgress) {
+          final left = started.timeLeft;
+          return ResumeSummary(
+            fraction: started.fraction,
+            label: left.isEmpty ? nextCode : '$nextCode · $left',
+          );
+        }
+        return ResumeSummary(label: 'Up next · $nextCode');
       }
       final left = progress.isInProgress ? progress.timeLeft : '';
       return ResumeSummary(
@@ -50,6 +65,25 @@ class ResumeSummary {
     }
     if (!progress.isInProgress) return unknown;
     return ResumeSummary(fraction: progress.fraction, label: progress.timeLeft);
+  }
+
+  /// Whether a watch-history entry belongs in Continue watching. Finished
+  /// titles leave it but stay in the history (Library, recommendations):
+  /// a watched movie, and a series whose last episode is watched with no
+  /// next one known. A series whose episodes were never recorded, or whose
+  /// progress could not be read ([series] null), stays as before.
+  static bool continues(MediaItem item, {SeriesProgress? series}) {
+    if (item.resumeMs <= 0) return false;
+    if (item.type == 'series') {
+      if (series == null || series.last == null) return true;
+      return series.continueAt != null;
+    }
+    // A length never saved: the position is all there is.
+    if (item.durationMs <= 0) return true;
+    return !EpisodeProgress(
+      positionMs: item.resumeMs,
+      durationMs: item.durationMs,
+    ).isWatched;
   }
 
   static String _clock(int positionMs) {

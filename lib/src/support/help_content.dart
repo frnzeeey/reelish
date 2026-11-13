@@ -142,14 +142,18 @@ const faqEntries = <FaqEntry>[
   FaqEntry(
     FaqCategory.library,
     'Is my history shared between my devices?',
-    'Continue watching, watch history and My list are kept on each device. '
-        'My list can follow your Trakt watchlist: turn on Sync My list with '
-        'Trakt watchlist in Profile and account.',
+    'Continue watching and where you stopped follow your Reelish account: '
+        'stop on one device and continue on another signed in to the same '
+        'account. Progress saved offline is sent once you are back online. '
+        'My list is kept on each device; it can follow your Trakt watchlist: '
+        'turn on Sync My list with Trakt watchlist in Profile and account.',
   ),
   FaqEntry(
     FaqCategory.library,
     'How do I remove a title from Continue watching?',
-    'Remove it from your watch history in Library. My list is not affected.',
+    'Remove it from your watch history in Library; it leaves your other '
+        'devices too. Finished titles leave Continue watching on their own. '
+        'My list is not affected.',
   ),
   FaqEntry(
     FaqCategory.trakt,

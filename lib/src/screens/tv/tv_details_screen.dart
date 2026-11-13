@@ -32,11 +32,16 @@ class TvMediaDetailsScreen extends StatefulWidget {
     this.onToggleFavorite,
     this.onWatchTogether,
     this.onRemoveFromHistory,
+    this.onStartOver,
   });
 
   final MediaItem item;
   final TmdbService tmdb;
   final ValueChanged<BuildContext> onPlay;
+
+  /// Plays the movie from the beginning. Given only for a movie with a
+  /// saved position; Play then reads Resume.
+  final ValueChanged<BuildContext>? onStartOver;
 
   /// Starts a watch party for the movie or a chosen episode; without it the
   /// page offers no Watch together button.
@@ -367,8 +372,21 @@ class _TvMediaDetailsScreenState extends State<TvMediaDetailsScreen> {
               style: _actionStyle(filled: true),
               onPressed: () => widget.onPlay(context),
               icon: const Icon(ReelishIcons.play),
-              label: Text(_isSeries ? 'Play' : 'Play movie'),
+              label: Text(
+                _isSeries
+                    ? 'Play'
+                    : widget.onStartOver != null
+                    ? 'Resume'
+                    : 'Play movie',
+              ),
             ),
+            if (widget.onStartOver case final startOver?)
+              OutlinedButton.icon(
+                style: _actionStyle(filled: false),
+                onPressed: () => startOver(context),
+                icon: const Icon(ReelishIcons.restart),
+                label: const Text('Start over'),
+              ),
             if (widget.onToggleFavorite != null)
               OutlinedButton.icon(
                 style: _actionStyle(filled: false),

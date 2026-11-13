@@ -56,6 +56,11 @@ search the generated references below: every file, class and function in
 | [Discovery TMDB usage](personalized-discovery/TMDB_API_OPTIMIZATION.md) | Requests per refresh, caching, bounding, failure handling |
 | [Discovery test report](personalized-discovery/PERSONALIZED_DISCOVERY_TEST_REPORT.md) | Scenarios, results, what was not verified |
 | [Discovery changelog](personalized-discovery/IMPLEMENTATION_CHANGELOG.md) | Files created and changed, decisions, follow-ups |
+| [Continue watching](intelligent-continue-watching/CONTINUE_WATCHING_ARCHITECTURE.md) | Progress checkpoints, resume, completion, up next, start over, per-account history; diagrams |
+| [Playback progress data](intelligent-continue-watching/PLAYBACK_PROGRESS_DATA_MODEL.md) | Stored keys and JSON shapes, derived rules, the per-account migration |
+| [Cross-device sync](intelligent-continue-watching/CROSS_DEVICE_SYNC_STRATEGY.md) | Planned sync through the Reelish API: ordering, conflicts, offline outbox, free-tier budget |
+| [Continue watching tests](intelligent-continue-watching/CONTINUE_WATCHING_TEST_REPORT.md) | Tests, results, what was not verified |
+| [Continue watching changelog](intelligent-continue-watching/IMPLEMENTATION_CHANGELOG.md) | Files created and changed, decisions, limitations |
 
 ## Playback
 

@@ -35,7 +35,12 @@ class DesktopDetailsScreen extends StatefulWidget {
     required this.onToggleFavorite,
     this.seriesProgress,
     this.onWatchTogether,
+    this.onStartOver,
   });
+
+  /// Plays the movie from the beginning. Given only for a movie with a
+  /// saved position; Play then reads Resume.
+  final ValueChanged<BuildContext>? onStartOver;
 
   /// Starts a watch party for the movie or a chosen episode; without it the
   /// page offers no Watch together button.
@@ -529,12 +534,41 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
                                 label: Text(
                                   _isSeries && _selectedSeason != null
                                       ? 'Play season $_selectedSeason'
+                                      : !_isSeries && widget.onStartOver != null
+                                      ? 'Resume'
                                       : 'Play',
                                   style: const TextStyle(
                                     fontWeight: FontWeight.w800,
                                   ),
                                 ),
                               ),
+                              if (!_isSeries)
+                                if (widget.onStartOver case final startOver?)
+                                  OutlinedButton.icon(
+                                    onPressed: () => startOver(context),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: Colors.white,
+                                      backgroundColor: Colors.white.withValues(
+                                        alpha: .1,
+                                      ),
+                                      side: BorderSide(
+                                        color: Colors.white.withValues(
+                                          alpha: .28,
+                                        ),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 22,
+                                        vertical: 18,
+                                      ),
+                                    ),
+                                    icon: const Icon(ReelishIcons.restart),
+                                    label: const Text(
+                                      'Start over',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
                               OutlinedButton.icon(
                                 onPressed: _toggleFavorite,
                                 style: OutlinedButton.styleFrom(

@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'src/account/account_controller.dart';
+import 'src/account/account_history.dart';
+import 'src/account/progress_sync.dart';
 import 'src/account/supporter_controller.dart';
 import 'src/account/profile_controller.dart';
 import 'src/account/watchlist_sync.dart';
@@ -186,6 +188,11 @@ class _StartupScreenState extends State<_StartupScreen> {
       AccountController.instance,
       SupporterController.instance,
     );
+    // Watch history and progress belong to the signed-in account, and
+    // follow it across devices (attached after, so it sees the account's
+    // own history).
+    AccountHistory.attach(AccountController.instance);
+    ProgressSync.instance.attach(AccountController.instance);
     // The device-local profile follows whichever Trakt account is signed in.
     ProfileController.instance.attach(AccountController.instance);
     // My list and the Trakt watchlist, when the user turned that on.

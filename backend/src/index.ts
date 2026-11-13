@@ -15,6 +15,7 @@ import { pruneAuditEvents } from './retention';
 import * as support from './support';
 import * as supporters from './supporters';
 import * as frames from './frames';
+import * as progress from './progress';
 
 export { WatchPartyRoom } from './party-room';
 export { TraktEgress } from './trakt-egress';
@@ -118,6 +119,12 @@ async function route(request: Request, env: Env, requestId: string): Promise<Res
       ? sync.getWatchlist(env, principal, requestId)
       : sync.updateWatchlist(env, principal, request, requestId);
   }
+  if (rest === '/progress' && (method === 'GET' || method === 'POST')) {
+    await limit(env.SYNC_LIMITER, `progress:${principal.userId}`);
+    return method === 'GET'
+      ? progress.pullProgress(env, principal, url, requestId)
+      : progress.pushProgress(env, principal, request, requestId);
+  }
   if (rest.startsWith('/supporters/')) {
     await limit(env.SYNC_LIMITER, `supporters:${principal.userId}`);
     if (rest === '/supporters/me' && method === 'GET') {
@@ -195,10 +202,14 @@ export default {
     return response;
   },
 
-  /** The daily cron in wrangler.toml: erases expired security log rows. */
+  /** The daily cron in wrangler.toml: erases expired security log rows and stale progress. */
   async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
     ctx.waitUntil(
-      Promise.all([pruneAuditEvents(env), support.pruneSupportReports(env)]).then(() => undefined),
+      Promise.all([
+        pruneAuditEvents(env),
+        support.pruneSupportReports(env),
+        progress.pruneProgress(env),
+      ]).then(() => undefined),
     );
   },
 } satisfies ExportedHandler<Env>;

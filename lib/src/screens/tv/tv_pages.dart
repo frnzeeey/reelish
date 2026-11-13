@@ -598,7 +598,7 @@ class _TvLibraryPageState extends State<TvLibraryPage> {
   @override
   Widget build(BuildContext context) {
     if (_loading) return const _PageProgress();
-    final continuing = _history.where((item) => item.resumeMs > 0).toList();
+    final continuing = _model.continueWatching;
     final favoriteKeys = {
       for (final item in _favorites) '${item.type}:${item.id}',
     };

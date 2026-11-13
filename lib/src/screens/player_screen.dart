@@ -31,6 +31,7 @@ class PlayerScreen extends StatelessWidget {
     this.imdbId,
     this.details,
     this.advisory,
+    this.startFromBeginning = false,
   });
   final MediaItem item;
   final StreamSource source;
@@ -49,6 +50,9 @@ class PlayerScreen extends StatelessWidget {
   final Future<String>? imdbId;
   final Future<MediaDetails?>? details;
   final Future<ContentAdvisory?>? advisory;
+
+  /// Start over: play from the beginning instead of the saved position.
+  final bool startFromBeginning;
 
   // The player's own theme: dark in every app theme, since it sits over
   // video (GlassTheme.player). Its sheets and dialogs open under it.
@@ -79,6 +83,7 @@ class PlayerScreen extends StatelessWidget {
       imdbId: imdbId,
       details: details,
       advisory: advisory,
+      startFromBeginning: startFromBeginning,
     ),
   );
 }

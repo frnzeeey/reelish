@@ -11,6 +11,7 @@ class MediaItem {
     this.externalId = '',
     this.resumeMs = 0,
     this.durationMs = 0,
+    this.progressAt = 0,
     this.subtitleQuery = '',
     this.releaseDate = '',
     this.lastAirDate = '',
@@ -35,6 +36,11 @@ class MediaItem {
   /// shown as a share. Zero when unknown (saved before this was recorded,
   /// or a live stream).
   final int durationMs;
+
+  /// When [resumeMs] was saved, in milliseconds since the epoch on this
+  /// device's clock (a position from another device is converted to it);
+  /// zero when unknown. Sync keeps the newer of two positions by it.
+  final int progressAt;
   final String subtitleQuery;
   final String releaseDate, lastAirDate;
   final int voteCount;
@@ -85,6 +91,7 @@ class MediaItem {
       MediaItem.fromJson(j).copyWith(
         resumeMs: int.tryParse('${j['resumeMs']}') ?? 0,
         durationMs: int.tryParse('${j['durationMs']}') ?? 0,
+        progressAt: int.tryParse('${j['progressAt'] ?? 0}') ?? 0,
       );
   factory MediaItem.fromTmdb(Map<String, dynamic> json, {String? mediaType}) {
     final rawType = '${mediaType ?? json['media_type'] ?? 'movie'}';
@@ -141,6 +148,7 @@ class MediaItem {
     'externalId': externalId,
     'resumeMs': resumeMs,
     'durationMs': durationMs,
+    if (progressAt > 0) 'progressAt': progressAt,
     'subtitleQuery': subtitleQuery,
     'releaseDate': releaseDate,
     'lastAirDate': lastAirDate,
@@ -153,6 +161,7 @@ class MediaItem {
   MediaItem copyWith({
     int? resumeMs,
     int? durationMs,
+    int? progressAt,
     String? externalId,
     String? id,
     String? subtitleQuery,
@@ -170,6 +179,7 @@ class MediaItem {
     externalId: externalId ?? this.externalId,
     resumeMs: resumeMs ?? this.resumeMs,
     durationMs: durationMs ?? this.durationMs,
+    progressAt: progressAt ?? this.progressAt,
     subtitleQuery: subtitleQuery ?? this.subtitleQuery,
     releaseDate: releaseDate ?? this.releaseDate,
     lastAirDate: lastAirDate ?? this.lastAirDate,

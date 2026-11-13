@@ -27,6 +27,17 @@ class LibraryViewModel extends ChangeNotifier {
 
   List<MediaItem> get history => _history;
   List<MediaItem> get favorites => _favorites;
+
+  /// The history's titles still being watched: finished ones leave
+  /// Continue watching but stay in [history].
+  List<MediaItem> get continueWatching => _history
+      .where(
+        (item) => ResumeSummary.continues(
+          item,
+          series: _seriesProgress['${item.type}:${item.id}'],
+        ),
+      )
+      .toList();
   bool get loading => _loading;
 
   /// Per-episode progress of the series in the history, by `type:id`.

@@ -197,6 +197,46 @@ class AccountApi {
     };
   }
 
+  /// Sends playback progress changes (at most 50) made on [device]; the
+  /// server keeps those newer than what it holds. Returns the server's
+  /// clock, in milliseconds since the epoch.
+  Future<int> pushProgress(
+    String accessToken, {
+    required String device,
+    required List<Map<String, Object?>> changes,
+  }) async {
+    final body = await _send(
+      'POST',
+      '/progress',
+      token: accessToken,
+      body: {'device': device, 'changes': changes},
+    );
+    final serverTime = body['serverTime'];
+    return serverTime is int ? serverTime : 0;
+  }
+
+  /// Progress rows changed at or after [since] (a cursor from an earlier
+  /// pull; 0 for everything), oldest first, one page.
+  Future<ProgressPage> pullProgress(String accessToken, int since) async {
+    final body = await _send(
+      'GET',
+      '/progress?since=$since',
+      token: accessToken,
+    );
+    final items = body['items'];
+    final cursor = body['cursor'];
+    final serverTime = body['serverTime'];
+    return ProgressPage(
+      items: [
+        for (final item in items is List ? items : const [])
+          if (item is Map) Map<String, dynamic>.from(item),
+      ],
+      cursor: cursor is int && cursor >= since ? cursor : since,
+      more: body['more'] == true,
+      serverTime: serverTime is int ? serverTime : 0,
+    );
+  }
+
   /// A token for background new-episode checks, tied to this session.
   Future<String> notificationToken(String accessToken) async {
     final body = await _send(
@@ -388,4 +428,25 @@ class AccountApi {
     final message = error is Map ? '${error['message']}' : 'Request failed.';
     throw AccountApiException(code, message, status: response.statusCode);
   }
+}
+
+/// One page of `GET /progress`: raw rows, checked by `ProgressSync`.
+class ProgressPage {
+  const ProgressPage({
+    required this.items,
+    required this.cursor,
+    required this.more,
+    required this.serverTime,
+  });
+
+  final List<Map<String, dynamic>> items;
+
+  /// Where the next pull starts.
+  final int cursor;
+
+  /// Whether more rows follow at [cursor].
+  final bool more;
+
+  /// The server's clock, in milliseconds since the epoch.
+  final int serverTime;
 }

@@ -203,7 +203,13 @@ class HomeViewModel extends ChangeNotifier {
       } catch (_) {}
     }
     if (_disposed || read != _historyRead) return;
-    _continueWatching = value.where((item) => item.resumeMs > 0).toList();
+    // Finished titles leave the row; they stay in the history.
+    _continueWatching = value
+        .where(
+          (item) =>
+              ResumeSummary.continues(item, series: progress[keyOf(item)]),
+        )
+        .toList();
     _historyLoaded = true;
     _seriesProgress = progress;
     notifyListeners();

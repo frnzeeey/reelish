@@ -7,6 +7,7 @@ import '../theme/reelish_icons.dart';
 import '../account/account_badges.dart';
 import '../account/account_controller.dart';
 import '../account/avatar_frames.dart';
+import '../account/progress_sync.dart';
 import '../account/supporter_controller.dart';
 import '../models/app_update.dart';
 import '../models/episode_context.dart';
@@ -183,6 +184,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _onAccountChanged();
     _discovery.addListener(_onHomeChanged);
     AccountController.instance.addListener(_onAccountChanged);
+    ProgressSync.revision.addListener(_onProgressSynced);
     for (final feed in _catalogFeeds) {
       feed.addListener(_onCatalogFeedChanged);
     }
@@ -535,6 +537,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ),
     );
     _spotlightTimer?.cancel();
+    // A movie still in Continue watching resumes on Play; Start over plays
+    // it from the beginning. Episodes resume from the episode list.
+    final ValueChanged<BuildContext>? startOver =
+        item.type != 'series' &&
+            _continueWatching.any((e) => e.id == item.id && e.type == item.type)
+        ? (detailsContext) => _openItem(
+            item,
+            presentationContext: detailsContext,
+            fromStart: true,
+          )
+        : null;
     try {
       await Navigator.push<void>(
         context,
@@ -559,6 +572,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   onToggleFavorite: _toggleFavorite,
                   seriesProgress: _storage.seriesProgress,
                   onWatchTogether: _startParty,
+                  onStartOver: startOver,
                 )
               : DeviceCapabilities.isTv
               ? TvMediaDetailsScreen(
@@ -579,6 +593,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     selectedEpisode: episode,
                   ),
                   onWatchTogether: _startParty,
+                  onStartOver: startOver,
                 )
               : MediaDetailsScreen(
                   item: item,
@@ -594,6 +609,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     selectedEpisode: episode,
                   ),
                   onWatchTogether: _startParty,
+                  onStartOver: startOver,
                 ),
         ),
       );
@@ -615,6 +631,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (!mounted) return;
     setState(() => _libraryRefreshToken++);
     await _loadHistory();
+  }
+
+  /// Progress from the account's other devices arrived: Home and the
+  /// Library read the history again.
+  void _onProgressSynced() {
+    if (!mounted) return;
+    setState(() => _libraryRefreshToken++);
+    unawaited(_loadHistory());
   }
 
   // History and My list live in the shared HomeViewModel.
@@ -716,6 +740,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     EpisodeHandOff? handOff,
     int? selectedSeason,
     int? selectedEpisode,
+    bool fromStart = false,
   }) async {
     if (_playbackStart != null) return;
     final token = Object();
@@ -731,6 +756,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         handOff: handOff,
         selectedSeason: selectedSeason,
         selectedEpisode: selectedEpisode,
+        fromStart: fromStart,
         beforePlayerOpens: release,
       );
     } finally {
@@ -744,6 +770,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     EpisodeHandOff? handOff,
     int? selectedSeason,
     int? selectedEpisode,
+    bool fromStart = false,
     required VoidCallback beforePlayerOpens,
   }) async {
     // The screen the player belongs to (the details page, or null for home)
@@ -800,8 +827,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         progress = await _storage.seriesProgress(item);
       } catch (_) {}
       if (!mounted || presentationContext?.mounted == false) return;
-      // Opens on the episode watched last, so continuing is one tap.
-      final last = progress.last;
+      // Opens on the episode to continue (the one watched last, or the next
+      // once that is finished), so continuing is one tap.
+      final last = progress.continueAt ?? progress.last;
       final lastWatched = last == null
           ? null
           : episodes
@@ -1054,6 +1082,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           imdbId: imdbId,
           details: details,
           advisory: _tmdb.contentAdvisory(item),
+          startFromBeginning: fromStart,
           // Every episode change (the panel, Previous/Next, auto-play)
           // goes through this same flow.
           onPlayEpisode: season == null || episode == null
@@ -1201,6 +1230,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    ProgressSync.revision.removeListener(_onProgressSynced);
     WidgetsBinding.instance.removeObserver(this);
     _debounce?.cancel();
     _spotlightTimer?.cancel();
@@ -2732,9 +2762,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   /// Continue watching in the Windows sidebar: a movie plays on from its
-  /// saved position; a series plays on in the episode watched last. A
-  /// series whose last episode is finished, or whose episode is not known,
-  /// opens the episode list there instead, as Play does.
+  /// saved position; a series plays on in the episode watched last, or the
+  /// next one once that is finished. A series with neither known opens the
+  /// episode list there instead, as Play does.
   Future<void> _resumeFromSidebar(MediaItem item) async {
     if (item.type != 'series') return _openItem(item);
     var progress = SeriesProgress.empty;
@@ -2742,15 +2772,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       progress = await _storage.seriesProgress(item);
     } catch (_) {}
     if (!mounted) return;
-    final last = progress.last;
-    if (last == null ||
-        progress.of(last.season, last.episode)?.isWatched == true) {
-      return _openItem(item);
-    }
+    final target = progress.continueAt;
+    if (target == null) return _openItem(item);
     return _openItem(
       item,
-      selectedSeason: last.season,
-      selectedEpisode: last.episode,
+      selectedSeason: target.season,
+      selectedEpisode: target.episode,
     );
   }
 

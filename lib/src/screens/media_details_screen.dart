@@ -19,11 +19,16 @@ class MediaDetailsScreen extends StatefulWidget {
     this.isFavorite = false,
     this.onToggleFavorite,
     this.onWatchTogether,
+    this.onStartOver,
   });
 
   final MediaItem item;
   final TmdbService tmdb;
   final ValueChanged<BuildContext> onPlay;
+
+  /// Plays the movie from the beginning. Given only for a movie with a
+  /// saved position; Play then reads Resume.
+  final ValueChanged<BuildContext>? onStartOver;
   final void Function(BuildContext context, int season, int episode)
   onPlayEpisode;
 
@@ -806,17 +811,48 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
       child: SizedBox(
         height: 54,
         width: double.infinity,
-        child: FilledButton.icon(
-          style: FilledButton.styleFrom(
-            backgroundColor: GlassTheme.primary,
-            foregroundColor: GlassTheme.background,
-          ),
-          onPressed: () => widget.onPlay(context),
-          icon: const Icon(ReelishIcons.play),
-          label: Text(
-            item.type == 'series' ? 'Play' : 'Play movie',
-            style: const TextStyle(fontWeight: FontWeight.w800),
-          ),
+        child: Row(
+          children: [
+            Expanded(
+              child: SizedBox(
+                height: 54,
+                child: FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: GlassTheme.primary,
+                    foregroundColor: GlassTheme.background,
+                  ),
+                  onPressed: () => widget.onPlay(context),
+                  icon: const Icon(ReelishIcons.play),
+                  label: Text(
+                    item.type == 'series'
+                        ? 'Play'
+                        : widget.onStartOver != null
+                        ? 'Resume'
+                        : 'Play movie',
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                ),
+              ),
+            ),
+            if (widget.onStartOver case final startOver?) ...[
+              const SizedBox(width: 10),
+              SizedBox(
+                height: 54,
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: GlassTheme.textPrimary,
+                    side: BorderSide(color: GlassTheme.border),
+                  ),
+                  onPressed: () => startOver(context),
+                  icon: const Icon(ReelishIcons.restart),
+                  label: const Text(
+                    'Start over',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+            ],
+          ],
         ),
       ),
     ),

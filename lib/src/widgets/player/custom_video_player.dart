@@ -91,11 +91,15 @@ class CustomVideoPlayer extends StatefulWidget {
     this.imdbId,
     this.details,
     this.advisory,
+    this.startFromBeginning = false,
   });
   final MediaItem item;
   final StreamSource source;
   final List<StreamSource> sources;
   final List<SubtitleTrack> subtitles;
+
+  /// Start over: play from the beginning instead of the saved position.
+  final bool startFromBeginning;
   final StorageService storage;
   final PlaybackSettingsController playbackSettings;
   final bool sourceFromCache;
@@ -143,6 +147,21 @@ class CustomVideoPlayer extends StatefulWidget {
       durationMs: item.durationMs,
     ).resumeMs,
   );
+
+  /// A saved start checked against this stream's own length: from the
+  /// beginning when it falls in the watched end of the title or past it
+  /// (another source of the same title can be shorter). An unknown length
+  /// (live streams) keeps it; the seek itself is clamped to the end.
+  static Duration validResume(Duration saved, Duration duration) {
+    if (saved <= Duration.zero) return Duration.zero;
+    if (duration <= Duration.zero) return saved;
+    return EpisodeProgress(
+          positionMs: saved.inMilliseconds,
+          durationMs: duration.inMilliseconds,
+        ).isWatched
+        ? Duration.zero
+        : saved;
+  }
 
   @override
   State<CustomVideoPlayer> createState() => _CustomVideoPlayerState();
@@ -330,6 +349,12 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
   double? _speedBeforeHold;
   TorrentStreamSession? _torrentSession;
   Timer? _hide, _save, _hint;
+
+  /// Saves the position when the app is hidden (sent to the background,
+  /// the screen turned off, or the Windows window minimised): the process
+  /// may then be killed without this screen being disposed. A close or
+  /// kill is not reported, so the 15-second checkpoints cover that.
+  AppLifecycleListener? _lifecycle;
   String? _gestureHint;
   String? _errorMessage;
   int _initializationGeneration = 0;
@@ -457,6 +482,13 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
     unawaited(_resolveEpisodes());
     unawaited(_resolveDetails());
     _livePlayers++;
+    _lifecycle = AppLifecycleListener(
+      onHide: () {
+        if (_progressHandedOff) return;
+        _save?.cancel();
+        unawaited(_saveProgress().catchError((Object _) => <void>[]));
+      },
+    );
     unawaited(_startPosition); // Read alongside the stream opening.
     _remembered = widget.storage
         .rememberedSubtitle(_titleKey)
@@ -688,12 +720,12 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
         }
       }
       // A party decides where to start, from its state at this moment.
+      final duration = c.value.duration;
       final resume =
           _party?.takeOpeningPosition() ??
           _lastPosition ??
-          await _startPosition;
+          CustomVideoPlayer.validResume(await _startPosition, duration);
       if (resume > Duration.zero) {
-        final duration = c.value.duration;
         final safeResume =
             duration > const Duration(seconds: 1) && resume >= duration
             ? duration - const Duration(seconds: 1)
@@ -2167,6 +2199,13 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
         ? c.value.duration
         : _lastDuration;
     final season = widget.season, episode = widget.episode;
+    // A watched episode names the one after it (when the list has resolved
+    // and it has aired), so Continue watching moves on to it.
+    final watched = EpisodeProgress(
+      positionMs: position.inMilliseconds,
+      durationMs: duration.inMilliseconds,
+    ).isWatched;
+    final next = watched ? _episodes?.next : null;
     return Future.wait([
       widget.storage.saveProgress(
         widget.item,
@@ -2181,6 +2220,9 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
           episode: episode,
           positionMs: position.inMilliseconds,
           durationMs: duration.inMilliseconds,
+          next: next == null
+              ? null
+              : (season: next.season, episode: next.episode),
         ),
     ]);
   }
@@ -2189,8 +2231,18 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
   /// saved position, never from another episode's; a movie from its history
   /// entry. Either starts from the beginning once watched.
   late final Future<Duration> _startPosition = () async {
+    // Start over: progress is kept until this playback saves its own.
+    if (widget.startFromBeginning) return Duration.zero;
     final season = widget.season, episode = widget.episode;
     if (widget.item.type != 'series' || season == null || episode == null) {
+      // The saved entry, wherever the title was opened from: a search
+      // result or catalog card carries no position of its own.
+      try {
+        final saved = (await widget.storage.history())
+            .where((e) => e.id == widget.item.id && e.type == widget.item.type)
+            .firstOrNull;
+        if (saved != null) return CustomVideoPlayer.historyStart(saved);
+      } catch (_) {}
       return CustomVideoPlayer.historyStart(widget.item);
     }
     try {
@@ -3057,6 +3109,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
     if (openCancellation != null && !openCancellation.isCompleted) {
       openCancellation.complete();
     }
+    _lifecycle?.dispose();
     // After a hand-over this episode is already saved; saving it again here
     // would mark it as watched last, after the next episode started.
     if (!_progressHandedOff) _saveProgress();

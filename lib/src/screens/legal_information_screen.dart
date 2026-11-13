@@ -23,7 +23,7 @@ class LegalInformationScreen extends StatefulWidget {
 
   /// The privacy policy's own date: it changed with accounts and the
   /// Reelish API, while the terms did not.
-  static const _privacyDate = 'November 6, 2026';
+  static const _privacyDate = 'November 13, 2026';
 
   /// What Reelish is and is not responsible for. Shown first in the Terms of
   /// use and on the Credits screen; keep the wording exact.
@@ -238,6 +238,19 @@ class _LegalInformationScreenState extends State<LegalInformationScreen> {
           'policy applies to your Trakt account.',
     ),
     (
+      'Viewing progress across your devices',
+      'So you can stop on one device and continue on another, the Reelish '
+          'API stores, for your account, where you left each movie and '
+          'episode you play: its TMDB number, the position and length, the '
+          'next episode once one is finished, whether you removed it from '
+          'Continue watching, and the title, year and TMDB artwork addresses '
+          'its card shows. Each entry also holds a random identifier made by '
+          'the app for each device (not a hardware identifier) and when the '
+          'change was made. Nothing about the stream or provider you used is '
+          'sent. Entries unchanged for over a year are deleted, and all of '
+          'them when you delete your account.',
+    ),
+    (
       'Information kept on your device',
       'The app stores your favorites, recently played titles and resume '
           'positions, playback and notification preferences, your profile '
@@ -379,6 +392,7 @@ class _LegalInformationScreenState extends State<LegalInformationScreen> {
           'account. You can sign out of one device or of all devices, and '
           'delete your account in Settings > Profile and account; deleting '
           'it asks Trakt to revoke Reelish’s access and removes your account, '
+          'your viewing progress, '
           'your encrypted Trakt tokens and your device sessions, including '
           'those already signed out. A minimal security log, holding an '
           'internal account number, the kind of event (such as a sign-in or '

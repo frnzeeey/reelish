@@ -417,6 +417,10 @@ class EpisodeAlerts extends ChangeNotifier {
     const tokens = AlertTokenStore();
     final token = await tokens.read(userId);
     if (token == null) return;
+    // This account's history only. The app moves the device's older
+    // history into its owner's; until it has run once, that history is not
+    // read here.
+    StorageService.useAccount(userId);
     try {
       await EpisodeCheck.run(
         userId: userId,

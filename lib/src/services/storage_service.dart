@@ -203,7 +203,105 @@ class StorageService {
     return items;
   }
 
-  Future<List<MediaItem>> history() => _items(_history);
+  // Watch history per account ---------------------------------------------
+
+  /// The account whose watch history and episode progress are read and
+  /// written, set by [useAccount]. Null (signed out, and tests) keeps the
+  /// device-wide keys used before accounts were separated.
+  static String? _account;
+
+  /// The one-time move of the device-wide history into the account that
+  /// owns it, while it runs; reads wait for it, so Home never shows a
+  /// half-moved history. Null otherwise: a finished future kept here would
+  /// resume its awaiters in the zone that created it (an ended test's).
+  static Future<void>? _adopting;
+
+  static Future<void> _adoptionDone() async {
+    final adopting = _adopting;
+    if (adopting != null) await adopting;
+  }
+
+  static String get _historyKey =>
+      _account == null ? _history : '$_history.u.$_account';
+  static String get _episodesKey => _account == null
+      ? _episodeProgressKey
+      : '$_episodeProgressKey.u.$_account';
+
+  /// Reads and writes [userId]'s watch history from now on; null when no
+  /// one is signed in. When [ownsDeviceHistory] resolves true, the history
+  /// this device kept before accounts were separated becomes this
+  /// account's (merged under what it already has), and the device-wide
+  /// copy is removed so no other account can read it.
+  static void useAccount(String? userId, {Future<bool>? ownsDeviceHistory}) {
+    if (userId == _account) return;
+    _account = userId;
+    if (userId == null || ownsDeviceHistory == null) return;
+    final historyKey = _historyKey, episodesKey = _episodesKey;
+    late final Future<void> move;
+    move = _serialized(() async {
+      try {
+        if (!await ownsDeviceHistory) return;
+        await StorageService()._adoptDeviceHistory(historyKey, episodesKey);
+      } catch (_) {
+        // Left for the next launch; the account's own history still works.
+      } finally {
+        if (identical(_adopting, move)) _adopting = null;
+      }
+    });
+    _adopting = move;
+  }
+
+  @visibleForTesting
+  static void debugResetAccount() {
+    _account = null;
+    _adopting = null;
+  }
+
+  /// Inside the write queue. Safe to repeat: entries already in the
+  /// account win, and the device-wide keys are removed only after the
+  /// account's copy is written.
+  Future<void> _adoptDeviceHistory(
+    String historyKey,
+    String episodesKey,
+  ) async {
+    final preferences = await SharedPreferences.getInstance();
+    final hasHistory = preferences.containsKey(_history);
+    final hasEpisodes = preferences.containsKey(_episodeProgressKey);
+    if (!hasHistory && !hasEpisodes) return;
+    if (hasHistory) {
+      final own = await _items(historyKey);
+      final present = {for (final e in own) '${e.type}:${e.id}'};
+      final merged = [
+        ...own,
+        for (final e in await _items(_history))
+          if (present.add('${e.type}:${e.id}')) e,
+      ];
+      await _saveItems(historyKey, merged.take(50).toList());
+    }
+    if (hasEpisodes) {
+      final device = await _episodeProgressStore(_episodeProgressKey);
+      final own = await _episodeProgressStore(episodesKey);
+      // The account's own entries last: the map runs oldest to newest.
+      final merged = <String, dynamic>{
+        for (final MapEntry(:key, :value) in device.entries)
+          if (!own.containsKey(key)) key: value,
+        ...own,
+      };
+      while (merged.length > _maxSeriesWithProgress) {
+        merged.remove(merged.keys.first);
+      }
+      await preferences.setString(episodesKey, jsonEncode(merged));
+    }
+    await preferences.remove(_history);
+    await preferences.remove(_episodeProgressKey);
+  }
+
+  Future<List<MediaItem>> history() async {
+    final key = _historyKey;
+    await _adoptionDone();
+    return _items(key);
+  }
+
   Future<List<MediaItem>> favorites() => _items(_favorites);
   Future<void> _saveItems(String key, List<MediaItem> items) async =>
       (await SharedPreferences.getInstance()).setStringList(
@@ -217,13 +315,48 @@ class StorageService {
     MediaItem item,
     int positionMs, {
     int durationMs = 0,
-  }) => _serialized(() async {
-    final all = await history();
-    all.removeWhere((e) => e.id == item.id && e.type == item.type);
-    all.insert(0, item.copyWith(resumeMs: positionMs, durationMs: durationMs));
-    await _saveItems(_history, all.take(50).toList());
-    _tellProgressSaved(item, positionMs, durationMs, null);
-  });
+  }) {
+    // The account at the time of the save, whenever the queue reaches it.
+    final key = _historyKey, account = _account;
+    return _serialized(() async {
+      final at = clock();
+      final all = await _items(key);
+      all.removeWhere((e) => e.id == item.id && e.type == item.type);
+      all.insert(
+        0,
+        item.copyWith(
+          resumeMs: positionMs,
+          durationMs: durationMs,
+          progressAt: at,
+        ),
+      );
+      await _saveItems(key, all.take(50).toList());
+      _tellProgressSaved(item, positionMs, durationMs, null);
+      _tellChanged(account, '${item.type}:${item.id}', at);
+    });
+  }
+
+  /// The time saves are stamped with ([MediaItem.progressAt],
+  /// [EpisodeProgress.at]); progress sync measures its clock offset with
+  /// the same clock. Replaced in tests.
+  static int Function() clock = () => DateTime.now().millisecondsSinceEpoch;
+
+  /// Told the account and key (`movie:<id>`, `series:<id>`,
+  /// `episode:<id>:<season>:<episode>`) of each change made on this device
+  /// to history or progress, with its time, for cross-device sync. Changes
+  /// applied from sync are not told. Null unless sync runs; signed out,
+  /// nothing is told. It must not wait on anything.
+  static void Function(String account, String key, int at)? onProgressChanged;
+
+  static void _tellChanged(String? account, String key, int at) {
+    final listener = onProgressChanged;
+    if (listener == null || account == null) return;
+    try {
+      listener(account, key, at);
+    } catch (_) {
+      // Sync must never fail a save.
+    }
+  }
 
   /// Told about each watch position [saveProgress] and [saveEpisodeProgress]
   /// wrote (an episode's with its number), for personalised discovery. Null,
@@ -260,9 +393,14 @@ class StorageService {
   /// single `resumeMs` for continue-watching rows; this keeps each episode's
   /// own position, so one episode never resumes at another's.
   Future<SeriesProgress> seriesProgress(MediaItem series) async {
-    final all = await _episodeProgressStore();
-    final entry = all[_mediaKey(series)];
-    if (entry is! Map) return SeriesProgress.empty;
+    final key = _episodesKey;
+    await _adoptionDone();
+    final all = await _episodeProgressStore(key);
+    return _seriesProgressOf(all[_mediaKey(series)]) ?? SeriesProgress.empty;
+  }
+
+  static SeriesProgress? _seriesProgressOf(Object? entry) {
+    if (entry is! Map) return null;
     final episodes = <String, EpisodeProgress>{};
     final raw = entry['episodes'];
     if (raw is Map) {
@@ -271,56 +409,191 @@ class StorageService {
         if (progress != null) episodes['$key'] = progress;
       }
     }
-    final last = entry['last'];
+    ({int season, int episode})? pair(Object? value) =>
+        value is List && value.length == 2 && value[0] is int && value[1] is int
+        ? (season: value[0] as int, episode: value[1] as int)
+        : null;
     return SeriesProgress(
       episodes: episodes,
-      last: last is List && last.length == 2 && last[0] is int && last[1] is int
-          ? (season: last[0] as int, episode: last[1] as int)
-          : null,
+      last: pair(entry['last']),
+      next: pair(entry['next']),
     );
   }
 
   /// Records [positionMs] of [durationMs] for one episode of [series] and
-  /// marks it as the episode watched last.
+  /// marks it as the episode watched last. [next] is the episode after it,
+  /// given once this one is watched and the episode list names it; it is
+  /// what Continue watching offers next.
   Future<void> saveEpisodeProgress(
     MediaItem series, {
     required int season,
     required int episode,
     required int positionMs,
     required int durationMs,
-  }) => _serialized(() async {
-    final all = await _episodeProgressStore();
-    final key = _mediaKey(series);
-    final entry = all.remove(key);
+    ({int season, int episode})? next,
+  }) {
+    final storeKey = _episodesKey, account = _account;
+    return _serialized(() async {
+      final at = clock();
+      final all = await _episodeProgressStore(storeKey);
+      final key = _mediaKey(series);
+      final entry = all.remove(key);
+      final episodes = entry is Map && entry['episodes'] is Map
+          ? Map<String, dynamic>.from(entry['episodes'] as Map)
+          : <String, dynamic>{};
+      episodes[SeriesProgress.key(season, episode)] = EpisodeProgress(
+        positionMs: positionMs,
+        durationMs: durationMs,
+        at: at,
+      ).toJson();
+      // Re-inserted last, so map order is least to most recently watched.
+      all[key] = {
+        'last': [season, episode],
+        'next': ?(next == null ? null : [next.season, next.episode]),
+        'episodes': episodes,
+      };
+      while (all.length > _maxSeriesWithProgress) {
+        all.remove(all.keys.first);
+      }
+      await (await SharedPreferences.getInstance()).setString(
+        storeKey,
+        jsonEncode(all),
+      );
+      _tellProgressSaved(series, positionMs, durationMs, (
+        season: season,
+        episode: episode,
+      ));
+      _tellChanged(account, 'episode:${series.id}:$season:$episode', at);
+    });
+  }
+
+  /// Every series' per-episode progress, by `series:<id>`, for sync.
+  Future<Map<String, SeriesProgress>> allSeriesProgress() async {
+    final key = _episodesKey;
+    await _adoptionDone();
+    final all = await _episodeProgressStore(key);
+    return {
+      for (final id in all.keys)
+        if (id.startsWith('series:'))
+          id: _seriesProgressOf(all[id]) ?? SeriesProgress.empty,
+    };
+  }
+
+  /// Applies progress pulled from the account's other devices, inside the
+  /// write queue: each change only where it is newer than what this device
+  /// holds. Returns whether anything changed. Nothing here is told to
+  /// [onProgressChanged] or [onProgressSaved]: it came from elsewhere.
+  Future<bool> applySynced(List<SyncedProgress> changes) {
+    final historyKey = _historyKey, episodesKey = _episodesKey;
+    return _serialized(() async {
+      final history = await _items(historyKey);
+      final store = await _episodeProgressStore(episodesKey);
+      var historyChanged = false, episodesChanged = false;
+      for (final change in changes) {
+        final parts = change.key.split(':');
+        final kind = parts.first, id = parts.length > 1 ? parts[1] : '';
+        if ((kind == 'movie' || kind == 'series') && parts.length == 2) {
+          historyChanged |= _applyTitle(history, kind, id, change);
+        } else if (kind == 'episode' && parts.length == 4) {
+          final season = int.tryParse(parts[2]);
+          final episode = int.tryParse(parts[3]);
+          if (season == null || episode == null) continue;
+          episodesChanged |= _applyEpisode(store, id, season, episode, change);
+        }
+      }
+      if (historyChanged) {
+        await _saveItems(historyKey, history.take(50).toList());
+      }
+      if (episodesChanged) {
+        while (store.length > _maxSeriesWithProgress) {
+          store.remove(store.keys.first);
+        }
+        await (await SharedPreferences.getInstance()).setString(
+          episodesKey,
+          jsonEncode(store),
+        );
+      }
+      return historyChanged || episodesChanged;
+    });
+  }
+
+  static bool _applyTitle(
+    List<MediaItem> history,
+    String type,
+    String id,
+    SyncedProgress change,
+  ) {
+    final index = history.indexWhere((e) => e.type == type && e.id == id);
+    final current = index < 0 ? null : history[index];
+    if (current != null && current.progressAt >= change.at) return false;
+    if (change.removed) {
+      if (current == null) return false;
+      history.removeAt(index);
+      return true;
+    }
+    final base = current ?? change.card(type, id);
+    if (base == null) return false;
+    if (index >= 0) history.removeAt(index);
+    // Newest first: before the first entry saved earlier.
+    final at = history.indexWhere((e) => e.progressAt < change.at);
+    history.insert(
+      at < 0 ? history.length : at,
+      base.copyWith(
+        resumeMs: change.positionMs,
+        durationMs: change.durationMs,
+        progressAt: change.at,
+      ),
+    );
+    return true;
+  }
+
+  static bool _applyEpisode(
+    Map<String, dynamic> store,
+    String seriesId,
+    int season,
+    int episode,
+    SyncedProgress change,
+  ) {
+    final key = 'series:$seriesId';
+    final entry = store[key];
     final episodes = entry is Map && entry['episodes'] is Map
         ? Map<String, dynamic>.from(entry['episodes'] as Map)
         : <String, dynamic>{};
-    episodes[SeriesProgress.key(season, episode)] = EpisodeProgress(
-      positionMs: positionMs,
-      durationMs: durationMs,
+    final episodeKey = SeriesProgress.key(season, episode);
+    final current = EpisodeProgress.fromJson(episodes[episodeKey]);
+    if (current != null && current.at >= change.at) return false;
+    episodes[episodeKey] = EpisodeProgress(
+      positionMs: change.positionMs,
+      durationMs: change.durationMs,
+      at: change.at,
     ).toJson();
-    // Re-inserted last, so map order is least to most recently watched.
-    all[key] = {
-      'last': [season, episode],
-      'episodes': episodes,
-    };
-    while (all.length > _maxSeriesWithProgress) {
-      all.remove(all.keys.first);
+    final progress = _seriesProgressOf(entry) ?? SeriesProgress.empty;
+    final last = progress.last;
+    final lastAt = last == null
+        ? 0
+        : progress.of(last.season, last.episode)?.at ?? 0;
+    final next = change.next;
+    if (last == null ||
+        change.at >= lastAt ||
+        last == (season: season, episode: episode)) {
+      // The episode watched last anywhere; re-inserted as most recent.
+      store.remove(key);
+      store[key] = {
+        'last': [season, episode],
+        'next': ?(next == null ? null : [next.season, next.episode]),
+        'episodes': episodes,
+      };
+    } else {
+      store[key] = {
+        ...Map<String, dynamic>.from(entry as Map),
+        'episodes': episodes,
+      };
     }
-    await (await SharedPreferences.getInstance()).setString(
-      _episodeProgressKey,
-      jsonEncode(all),
-    );
-    _tellProgressSaved(series, positionMs, durationMs, (
-      season: season,
-      episode: episode,
-    ));
-  });
+    return true;
+  }
 
-  Future<Map<String, dynamic>> _episodeProgressStore() async {
-    final raw = (await SharedPreferences.getInstance()).getString(
-      _episodeProgressKey,
-    );
+  Future<Map<String, dynamic>> _episodeProgressStore(String key) async {
+    final raw = (await SharedPreferences.getInstance()).getString(key);
     if (raw == null) return {};
     try {
       final decoded = jsonDecode(raw);
@@ -362,20 +635,29 @@ class StorageService {
     favoritesRevision.value++;
   });
 
-  Future<void> removeHistory(MediaItem item) => _serialized(() async {
-    final all = await history()
-      ..removeWhere((e) => e.id == item.id && e.type == item.type);
-    await _saveItems(_history, all);
-  });
+  Future<void> removeHistory(MediaItem item) {
+    final key = _historyKey, account = _account;
+    return _serialized(() async {
+      final all = await _items(key)
+        ..removeWhere((e) => e.id == item.id && e.type == item.type);
+      await _saveItems(key, all);
+      _tellChanged(account, '${item.type}:${item.id}', clock());
+    });
+  }
 
   /// Puts back a title [removeHistory] took out, at [index] as it was then.
-  Future<void> restoreHistory(MediaItem item, int index) =>
-      _serialized(() async {
-        final all = await history()
-          ..removeWhere((e) => e.id == item.id && e.type == item.type);
-        all.insert(index.clamp(0, all.length), item);
-        await _saveItems(_history, all.take(50).toList());
-      });
+  /// It counts as a new change, so it outranks the removal on other devices.
+  Future<void> restoreHistory(MediaItem item, int index) {
+    final key = _historyKey, account = _account;
+    return _serialized(() async {
+      final at = clock();
+      final all = await _items(key)
+        ..removeWhere((e) => e.id == item.id && e.type == item.type);
+      all.insert(index.clamp(0, all.length), item.copyWith(progressAt: at));
+      await _saveItems(key, all.take(50).toList());
+      _tellChanged(account, '${item.type}:${item.id}', at);
+    });
+  }
 
   Future<bool> isFavorite(MediaItem item) async =>
       (await favorites()).any((e) => e.id == item.id && e.type == item.type);
@@ -697,6 +979,55 @@ typedef SavedProgress = ({
   int durationMs,
   ({int season, int episode})? episode,
 });
+
+/// A title's progress as another device of the account last saved it, read
+/// from the Reelish API (see `ProgressSync`). [at] is already on this
+/// device's clock. Remote data: [card] admits only TMDB artwork.
+class SyncedProgress {
+  const SyncedProgress({
+    required this.key,
+    required this.positionMs,
+    required this.durationMs,
+    required this.at,
+    this.next,
+    this.removed = false,
+    this.title,
+    this.year,
+    this.poster,
+    this.backdrop,
+  });
+
+  final String key;
+  final int positionMs, durationMs, at;
+  final ({int season, int episode})? next;
+  final bool removed;
+  final String? title, year, poster, backdrop;
+
+  static final _artwork = RegExp(
+    r'^https://image\.tmdb\.org/t/p/(w\d{2,4}|original)/[A-Za-z0-9_-]{1,64}\.(jpg|jpeg|png|webp)$',
+  );
+
+  /// Artwork from TMDB's image host, or nothing.
+  static String artwork(String? url) =>
+      url != null && _artwork.hasMatch(url) ? url : '';
+
+  /// A history entry for a title this device has not played; null without
+  /// a title to show.
+  MediaItem? card(String type, String id) {
+    final name = title?.trim() ?? '';
+    if (name.isEmpty) return null;
+    final poster = artwork(this.poster);
+    final backdrop = artwork(this.backdrop);
+    return MediaItem(
+      id: id,
+      type: type,
+      name: name.length > 300 ? name.substring(0, 300) : name,
+      year: RegExp(r'^\d{4}$').hasMatch(year ?? '') ? year! : '',
+      poster: poster,
+      background: backdrop.isNotEmpty ? backdrop : poster,
+    );
+  }
+}
 
 /// A provider manifest as last downloaded, with its HTTP validators.
 class CachedManifest {

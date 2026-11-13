@@ -1,6 +1,16 @@
 /// Where the viewer stopped in one episode.
 class EpisodeProgress {
-  const EpisodeProgress({required this.positionMs, required this.durationMs});
+  const EpisodeProgress({
+    required this.positionMs,
+    required this.durationMs,
+    this.at = 0,
+  });
+
+  /// When this position was saved, in milliseconds since the epoch on this
+  /// device's clock (a position from another device is converted to it).
+  /// Zero when unknown: saved before sync existed. Sync keeps the newer of
+  /// two positions by it.
+  final int at;
 
   /// From this share of the runtime on, an episode counts as watched (the
   /// end credits are often all that is left).
@@ -38,7 +48,9 @@ class EpisodeProgress {
     return rest == 0 ? '${hours}h left' : '${hours}h ${rest}m left';
   }
 
-  List<int> toJson() => [positionMs, durationMs];
+  /// `[positionMs, durationMs]`, then the save time when known. Versions
+  /// before sync read the first two and ignore the rest.
+  List<int> toJson() => [positionMs, durationMs, if (at > 0) at];
 
   static EpisodeProgress? fromJson(Object? json) =>
       json is List &&
@@ -46,13 +58,17 @@ class EpisodeProgress {
           json[0] is int &&
           json[1] is int &&
           (json[0] as int) >= 0
-      ? EpisodeProgress(positionMs: json[0] as int, durationMs: json[1] as int)
+      ? EpisodeProgress(
+          positionMs: json[0] as int,
+          durationMs: json[1] as int,
+          at: json.length >= 3 && json[2] is int ? json[2] as int : 0,
+        )
       : null;
 }
 
 /// Per-episode progress for one series, plus the episode watched last.
 class SeriesProgress {
-  const SeriesProgress({this.episodes = const {}, this.last});
+  const SeriesProgress({this.episodes = const {}, this.last, this.next});
 
   static const empty = SeriesProgress();
 
@@ -62,8 +78,23 @@ class SeriesProgress {
   /// The most recently watched episode, as (season, episode).
   final ({int season, int episode})? last;
 
+  /// The episode after [last], recorded once [last] was watched and the
+  /// episode list named an aired one. Null at the finale, before the next
+  /// episode airs, and for progress saved before it was recorded.
+  final ({int season, int episode})? next;
+
   static String key(int season, int episode) => '$season:$episode';
 
   EpisodeProgress? of(int season, int episode) =>
       episodes[key(season, episode)];
+
+  /// The episode Continue watching plays: [last] while unfinished, then
+  /// [next]. Null when there is nothing to continue: nothing watched yet,
+  /// or the last episode finished with no known next one.
+  ({int season, int episode})? get continueAt {
+    final last = this.last;
+    if (last == null) return null;
+    if (of(last.season, last.episode)?.isWatched != true) return last;
+    return next;
+  }
 }
