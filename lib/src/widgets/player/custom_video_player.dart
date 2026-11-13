@@ -894,7 +894,15 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
     _torrentSession = null;
     if (!mounted || generation != _initializationGeneration) return;
 
-    final failure = PlaybackFailure.classify(error);
+    // Every cancellation Reelish makes (a newer source, an episode change,
+    // closing) moves the generation on first and returned above. Here
+    // "cancelled" is only wording in the engine's own error for this player,
+    // so it is handled like any unexplained failure: stopping would leave
+    // the viewer on the loading screen with nothing to retry.
+    final classified = PlaybackFailure.classify(error);
+    final failure = classified.kind == PlaybackFailureKind.cancelled
+        ? PlaybackFailure(PlaybackFailureKind.unknown, error)
+        : classified;
     _metrics.failure(failure.kind);
     PlaybackDiagnostics.failed(
       failure.kind,
@@ -909,7 +917,6 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
           '${PlaybackLog.describe(failedCandidate)} '
           'detail="${_safePlaybackError(error.toString())}"',
     );
-    if (failure.kind == PlaybackFailureKind.cancelled) return;
     if (wasPlaying) {
       _metrics.recovering();
       _linkRefresh.played(_sourceKey(failedCandidate));

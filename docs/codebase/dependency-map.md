@@ -172,12 +172,12 @@ The files imported by the most other `lib/` files. A change to one of these reac
 | [`lib/src/theme/glass_theme.dart`](../../lib/src/theme/glass_theme.dart) | 84 | 41 |
 | [`lib/src/theme/reelish_icons.dart`](../../lib/src/theme/reelish_icons.dart) | 76 | 8 |
 | [`lib/src/theme/design_tokens.dart`](../../lib/src/theme/design_tokens.dart) | 47 | 1 |
-| [`lib/src/platform/device_capabilities.dart`](../../lib/src/platform/device_capabilities.dart) | 34 | 16 |
-| [`lib/src/models/media_item.dart`](../../lib/src/models/media_item.dart) | 32 | 39 |
-| [`lib/src/services/storage_service.dart`](../../lib/src/services/storage_service.dart) | 20 | 26 |
+| [`lib/src/platform/device_capabilities.dart`](../../lib/src/platform/device_capabilities.dart) | 34 | 17 |
+| [`lib/src/models/media_item.dart`](../../lib/src/models/media_item.dart) | 32 | 40 |
+| [`lib/src/services/storage_service.dart`](../../lib/src/services/storage_service.dart) | 20 | 27 |
 | [`lib/src/widgets/settings/settings_components.dart`](../../lib/src/widgets/settings/settings_components.dart) | 19 | 2 |
 | [`lib/src/account/account_controller.dart`](../../lib/src/account/account_controller.dart) | 18 | 17 |
-| [`lib/src/models/stream_source.dart`](../../lib/src/models/stream_source.dart) | 18 | 17 |
+| [`lib/src/models/stream_source.dart`](../../lib/src/models/stream_source.dart) | 18 | 18 |
 | [`lib/src/widgets/tv/tv_focus.dart`](../../lib/src/widgets/tv/tv_focus.dart) | 17 | 7 |
 | [`lib/src/widgets/glass_button.dart`](../../lib/src/widgets/glass_button.dart) | 15 | 1 |
 | [`lib/src/watch_party/party_models.dart`](../../lib/src/watch_party/party_models.dart) | 14 | 6 |
