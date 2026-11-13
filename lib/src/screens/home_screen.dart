@@ -5,12 +5,14 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import '../theme/reelish_icons.dart';
 import '../account/account_badges.dart';
+import '../account/account_controller.dart';
 import '../account/avatar_frames.dart';
 import '../account/supporter_controller.dart';
 import '../models/app_update.dart';
 import '../models/episode_context.dart';
 import '../models/episode_progress.dart';
 import '../models/media_details.dart';
+import '../discovery/discovery_controller.dart';
 import '../models/media_item.dart';
 import '../models/resume_summary.dart';
 import '../models/stream_source.dart';
@@ -47,6 +49,7 @@ import '../widgets/category_chip.dart';
 import '../widgets/top_lit_edge.dart';
 import '../widgets/glass_box.dart';
 import '../widgets/media_card.dart';
+import '../widgets/recommendation_feedback_sheet.dart';
 import '../widgets/settings/settings_components.dart';
 import '../widgets/settings/tmdb_attribution.dart';
 import '../widgets/soft_glass_dock.dart';
@@ -128,6 +131,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   List<MediaItem> get _continueWatching => _homeModel.continueWatching;
   Set<String> get _favoriteKeys => _homeModel.favoriteKeys;
 
+  /// Personalised rows for the signed-in account, shared by the phone, TV
+  /// and Windows layouts. It records viewing while Home is alive.
+  late final DiscoveryController _discovery;
+
   /// What Home itself shows from the catalog rows: their first-load status
   /// and page 1. Home rebuilds only when this changes, so a row loading a
   /// later page rebuilds just that row.
@@ -166,6 +173,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _services = AppServices(tmdb: widget.tmdbService);
     _homeModel = HomeViewModel(tmdb: _tmdb, storage: _storage)
       ..addListener(_onHomeChanged);
+    _discovery = DiscoveryController(
+      recommendationsFor: (seed) => _tmdb.recommendations(seed),
+      storage: _storage,
+    )..startRecording();
+    DiscoveryController.active = _discovery;
+    // Bound before Home listens: binding notifies at once, and Home cannot
+    // rebuild while it is still being set up.
+    _onAccountChanged();
+    _discovery.addListener(_onHomeChanged);
+    AccountController.instance.addListener(_onAccountChanged);
     for (final feed in _catalogFeeds) {
       feed.addListener(_onCatalogFeedChanged);
     }
@@ -257,6 +274,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       if (mounted && ModalRoute.of(context)?.isCurrent == true) {
         _startSpotlightTimer();
         _revalidateStaleFeeds();
+        _refreshDiscovery();
       }
     } else {
       _spotlightTimer?.cancel();
@@ -299,6 +317,37 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (_movies.state.items.isNotEmpty || _series.state.items.isNotEmpty) {
       _markContentVisible([..._movies.state.items, ..._series.state.items]);
     }
+    _refreshDiscovery();
+  }
+
+  /// Personalised rows follow the signed-in account; another account's
+  /// rows are dropped before anything of the new one's is read.
+  void _onAccountChanged() {
+    final account = AccountController.instance;
+    final userId = account.status == AccountStatus.signedIn
+        ? account.userId
+        : null;
+    if (userId != _discovery.userId || !_discovery.loaded) {
+      unawaited(_discovery.bindUser(userId).then((_) => _refreshDiscovery()));
+    }
+  }
+
+  /// Rebuilds the personalised rows in the background when they are out of
+  /// date, once the catalog they also draw on has loaded. The controller
+  /// decides whether anything is due; this costs nothing when not.
+  void _refreshDiscovery() {
+    if (!mounted || !_catalogSettled) return;
+    unawaited(
+      _discovery.refresh(
+        pool: [
+          ..._movies.state.items,
+          ..._series.state.items,
+          ..._top10.state.items,
+          ..._releases.state.items,
+          ..._trending.items,
+        ],
+      ),
+    );
   }
 
   /// Quietly renews rows whose page 1 has outlived its cache lifetime.
@@ -569,7 +618,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   // History and My list live in the shared HomeViewModel.
-  Future<void> _loadHistory() => _homeModel.loadHistory();
+  Future<void> _loadHistory() async {
+    await _homeModel.loadHistory();
+    // Back from the player, or history changed: tastes may have too.
+    _refreshDiscovery();
+  }
+
   ResumeSummary _resumeSummary(MediaItem item) =>
       _homeModel.resumeSummary(item);
   String _favoriteKey(MediaItem item) => HomeViewModel.keyOf(item);
@@ -1169,6 +1223,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _homeModel.removeListener(_onHomeChanged);
     // Requests still running for its rows finish without touching them.
     _homeModel.dispose();
+    AccountController.instance.removeListener(_onAccountChanged);
+    _discovery
+      ..removeListener(_onHomeChanged)
+      ..dispose();
     super.dispose();
   }
 
@@ -1259,6 +1317,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     String? storageKey,
     VoidCallback? onNearEnd,
     Widget? trailing,
+    ValueChanged<MediaItem>? onLongPress,
   }) => Padding(
     padding: const EdgeInsets.fromLTRB(18, 8, 0, 22),
     child: Column(
@@ -1290,7 +1349,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       notification.depth,
                       onNearEnd,
                     ),
-                child: _rowList(items, showRanks, storageKey, trailing),
+                child: _rowList(
+                  items,
+                  showRanks,
+                  storageKey,
+                  trailing,
+                  onLongPress: onLongPress,
+                ),
               ),
             ),
           ),
@@ -1300,7 +1365,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   );
 
   /// A poster card; [width] defaults to a row card's width.
-  Widget _mediaCard(MediaItem item, {double? width}) {
+  Widget _mediaCard(
+    MediaItem item, {
+    double? width,
+    ValueChanged<MediaItem>? onLongPress,
+  }) {
     // Real progress for watch-history entries; catalog items have none.
     final resume = item.resumeMs > 0
         ? _resumeSummary(item)
@@ -1313,6 +1382,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       progressLabel: resume.label,
       onTap: () => _showDetails(item),
       onFavorite: () => _toggleFavoriteAndSay(item),
+      onLongPress: onLongPress == null ? null : () => onLongPress(item),
     );
   }
 
@@ -1461,8 +1531,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     List<MediaItem> items,
     bool showRanks,
     String? storageKey,
-    Widget? trailing,
-  ) => ListView.separated(
+    Widget? trailing, {
+    ValueChanged<MediaItem>? onLongPress,
+  }) => ListView.separated(
     // Keeps each row's scroll position across tab switches and
     // rebuilds.
     key: storageKey == null ? null : PageStorageKey(storageKey),
@@ -1473,7 +1544,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     itemBuilder: (context, index) {
       if (index == items.length) return trailing!;
       final item = items[index];
-      final card = _mediaCard(item);
+      final card = _mediaCard(item, onLongPress: onLongPress);
       if (!showRanks) return card;
 
       final rank = '${index + 1}';
@@ -1945,6 +2016,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   ],
                 ),
               ),
+            ),
+          // Personalised rows lead the catalog rows; none on a cold start.
+          if (_category == 'For you' && !isSearch)
+            SliverList.list(
+              children: [
+                for (final section in _discovery.sections)
+                  _section(
+                    section.title,
+                    section.items,
+                    storageKey: 'row:discovery:${section.id}',
+                    onLongPress: (item) => RecommendationFeedbackSheet.show(
+                      context,
+                      discovery: _discovery,
+                      item: item,
+                      reason: section.reasonFor(item),
+                    ),
+                  ),
+              ],
             ),
           if (_category == 'For you' && !isSearch)
             _deferredSectionGate(
@@ -2573,6 +2662,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       favoriteKeys: _favoriteKeys,
       hasSources: _providerPlugins.repositories.isNotEmpty,
       catalogError: _tvCatalogError,
+      discovery: _discovery,
     );
     return Stack(
       fit: StackFit.expand,
@@ -2682,6 +2772,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       favoriteKeys: _favoriteKeys,
       hasSources: _providerPlugins.repositories.isNotEmpty,
       catalogError: _tvCatalogError,
+      discovery: _discovery,
     );
     return Stack(
       fit: StackFit.expand,

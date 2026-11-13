@@ -1,3 +1,4 @@
+import '../discovery/discovery_controller.dart';
 import '../models/media_item.dart';
 import '../services/paged_feed_controller.dart';
 import '../services/tmdb_service.dart';
@@ -19,6 +20,7 @@ class TvCatalog {
     required this.favoriteKeys,
     required this.hasSources,
     this.catalogError,
+    this.discovery,
   });
 
   final TmdbService tmdb;
@@ -43,6 +45,10 @@ class TvCatalog {
 
   /// Why nothing could be loaded, when nothing could.
   final String? catalogError;
+
+  /// Personalised rows for the signed-in account; null where they are not
+  /// wanted (tests of other rows).
+  final DiscoveryController? discovery;
 
   bool isFavorite(MediaItem item) =>
       favoriteKeys.contains('${item.type}:${item.id}');

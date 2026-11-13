@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../theme/reelish_icons.dart';
 
+import '../../discovery/discovery_engine.dart';
 import '../../models/media_item.dart';
 import '../../services/paged_feed_controller.dart';
 import '../../services/storage_service.dart';
@@ -136,6 +137,16 @@ class _TvHomePageState extends State<TvHomePage> {
         cards: cards,
         autofocus: true,
       ),
+      // Personalised rows after the first two catalog rows, so focus still
+      // starts on New movies; none on a cold start.
+      for (final section
+          in catalog.discovery?.sections ?? const <DiscoverySection>[])
+        TvMediaRow(
+          key: ValueKey('row:discovery:${section.id}'),
+          title: section.title,
+          items: section.items,
+          cards: cards,
+        ),
       if (widget.onJoinParty case final onJoin?)
         _WatchTogetherRow(key: const ValueKey('join-party'), onJoin: onJoin),
       TvPagedRow(

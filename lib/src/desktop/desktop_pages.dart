@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import '../theme/reelish_icons.dart';
 
+import '../discovery/discovery_data.dart';
+import '../discovery/discovery_engine.dart';
 import '../models/media_item.dart';
 import '../viewmodels/home_catalog.dart';
 import '../services/paged_feed_controller.dart';
@@ -120,6 +122,25 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
         onToggleFavorite: widget.onToggleFavorite,
         loadWhenShown: catalog.catalogSettled,
       ),
+      // Personalised rows, right under Top 10; none on a cold start.
+      if (catalog.discovery case final discovery?)
+        for (final section in discovery.sections)
+          DesktopMediaRow(
+            key: ValueKey('row:discovery:${section.id}'),
+            title: section.title,
+            items: section.items,
+            onOpen: widget.onOpen,
+            isFavorite: catalog.isFavorite,
+            onToggleFavorite: widget.onToggleFavorite,
+            // The mixed row says why each title is there; the others say
+            // it in their title.
+            captionOf: section.kind == DiscoverySectionKind.forYou
+                ? section.reasonFor
+                : null,
+            removeLabel: 'Not interested',
+            onRemove: (item) =>
+                discovery.giveFeedback(FeedbackKind.notInterested, item),
+          ),
       // Continue watching is in the sidebar on Windows, not a row here.
       if (_trending.isNotEmpty)
         DesktopMediaRow(

@@ -30,6 +30,7 @@ import 'account_settings_screen.dart';
 import 'app_icon_settings_screen.dart';
 import 'help_support_screen.dart';
 import 'notification_settings_screen.dart';
+import 'recommendation_settings_screen.dart';
 import 'subtitle_addons_screen.dart';
 import 'watch_party/join_party_screen.dart';
 
@@ -121,6 +122,20 @@ class SettingsScreen extends StatelessWidget {
                 ),
               ),
             ),
+          SettingsTile(
+            icon: ReelishIcons.sparkle,
+            title: 'Recommendations',
+            description: 'Genres you like, hidden titles and reset',
+            onTap: () => _open(
+              context,
+              (context) => Scaffold(
+                backgroundColor: GlassTheme.background,
+                body: RecommendationSettingsScreen(
+                  onBack: () => Navigator.of(context).pop(),
+                ),
+              ),
+            ),
+          ),
           // On TV this is the way into a party; phones also have the
           // button on Home.
           SettingsTile(

@@ -5,6 +5,7 @@ import '../account/account_controller.dart';
 import '../navigation/app_transitions.dart';
 import '../screens/account_settings_screen.dart';
 import '../screens/notification_settings_screen.dart';
+import '../screens/recommendation_settings_screen.dart';
 import '../screens/help_support_screen.dart';
 import '../screens/playback_settings_screen.dart';
 import '../screens/subtitle_addons_screen.dart';
@@ -33,6 +34,11 @@ enum DesktopSettingsSection {
     'Notifications',
     'Alerts when new episodes are out',
     ReelishIcons.bell,
+  ),
+  recommendations(
+    'Recommendations',
+    'Genres you like, hidden titles and reset',
+    ReelishIcons.sparkle,
   ),
   playback(
     'Playback',
@@ -90,7 +96,11 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
     ('ACCOUNT', [DesktopSettingsSection.account]),
     (
       'GENERAL',
-      [DesktopSettingsSection.appearance, DesktopSettingsSection.notifications],
+      [
+        DesktopSettingsSection.appearance,
+        DesktopSettingsSection.notifications,
+        DesktopSettingsSection.recommendations,
+      ],
     ),
     (
       'PLAYBACK',
@@ -110,6 +120,9 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
       onBack: () {},
     ),
     DesktopSettingsSection.notifications => NotificationSettingsScreen(
+      onBack: () {},
+    ),
+    DesktopSettingsSection.recommendations => RecommendationSettingsScreen(
       onBack: () {},
     ),
     DesktopSettingsSection.playback => PlaybackSettingsScreen(

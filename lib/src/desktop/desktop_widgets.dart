@@ -713,6 +713,7 @@ class DesktopMediaRow extends StatefulWidget {
     this.isFavorite,
     this.onToggleFavorite,
     this.onRemove,
+    this.removeLabel = 'Remove from watch history',
     this.onNearEnd,
     this.loadingMore = false,
     this.landscape = false,
@@ -730,8 +731,10 @@ class DesktopMediaRow extends StatefulWidget {
   /// Adds a title to My list or takes it off, from its card.
   final Future<void> Function(MediaItem item)? onToggleFavorite;
 
-  /// Removes a title from the list this row shows (watch history).
+  /// Removes a title from the list this row shows (watch history), or
+  /// hides a recommendation; [removeLabel] says which.
   final Future<void> Function(MediaItem item)? onRemove;
+  final String removeLabel;
   final VoidCallback? onNearEnd;
   final bool loadingMore;
 
@@ -867,6 +870,7 @@ class _DesktopMediaRowState extends State<DesktopMediaRow> {
                             item,
                           ),
                           onRemove: bindItem(widget.onRemove, item),
+                          removeLabel: widget.removeLabel,
                           landscape: widget.landscape,
                         );
                       },

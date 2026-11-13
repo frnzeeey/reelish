@@ -24,7 +24,12 @@ class MediaCard extends StatefulWidget {
     this.isFavorite = false,
     this.showTypeBadge = true,
     this.width = defaultWidth,
+    this.onLongPress,
   });
+
+  /// More actions for the title (recommendation feedback). Null, the
+  /// default, leaves long press doing nothing, as before.
+  final VoidCallback? onLongPress;
 
   /// A card's width in a phone row.
   static const double defaultWidth = 146;
@@ -277,6 +282,12 @@ class _MediaCardState extends State<MediaCard> {
           label: _semanticLabel(),
           child: InkWell(
             onTap: _activate,
+            onLongPress: widget.onLongPress == null
+                ? null
+                : () {
+                    _pressed.value = false;
+                    widget.onLongPress!();
+                  },
             onTapDown: (_) => _pressed.value = true,
             onTapCancel: () {
               if (_pressed.value && !_navigating) _pressed.value = false;

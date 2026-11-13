@@ -222,7 +222,34 @@ class StorageService {
     all.removeWhere((e) => e.id == item.id && e.type == item.type);
     all.insert(0, item.copyWith(resumeMs: positionMs, durationMs: durationMs));
     await _saveItems(_history, all.take(50).toList());
+    _tellProgressSaved(item, positionMs, durationMs, null);
   });
+
+  /// Told about each watch position [saveProgress] and [saveEpisodeProgress]
+  /// wrote (an episode's with its number), for personalised discovery. Null,
+  /// so nothing is told, unless Home's discovery is running. It must not
+  /// wait on anything: it runs inside the queue of writes.
+  static void Function(SavedProgress saved)? onProgressSaved;
+
+  static void _tellProgressSaved(
+    MediaItem item,
+    int positionMs,
+    int durationMs,
+    ({int season, int episode})? episode,
+  ) {
+    final listener = onProgressSaved;
+    if (listener == null) return;
+    try {
+      listener((
+        item: item,
+        positionMs: positionMs,
+        durationMs: durationMs,
+        episode: episode,
+      ));
+    } catch (_) {
+      // Discovery must never fail a progress save.
+    }
+  }
 
   static const _episodeProgressKey = 'onfeed.history.episodes.v1';
 
@@ -284,6 +311,10 @@ class StorageService {
       _episodeProgressKey,
       jsonEncode(all),
     );
+    _tellProgressSaved(series, positionMs, durationMs, (
+      season: season,
+      episode: episode,
+    ));
   });
 
   Future<Map<String, dynamic>> _episodeProgressStore() async {
@@ -658,6 +689,14 @@ class StorageService {
     return false;
   }
 }
+
+/// A watch position as [StorageService] saved it.
+typedef SavedProgress = ({
+  MediaItem item,
+  int positionMs,
+  int durationMs,
+  ({int season, int episode})? episode,
+});
 
 /// A provider manifest as last downloaded, with its HTTP validators.
 class CachedManifest {

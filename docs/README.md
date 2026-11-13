@@ -50,6 +50,12 @@ search the generated references below: every file, class and function in
 | [Icon system](design/icon-system.md) | Reelish's own icons: design rules, solid forms, how to add one, the gallery |
 | [Content advisory](features/content-advisory.md) | The age rating card at playback start: TMDB coverage, sourcing rules, behaviour |
 | [Crash reporting](features/crash-reporting.md) | Opt-in Crashlytics on Android, the Windows error log, what is reported, testing, symbols |
+| [Personalised discovery](personalized-discovery/PERSONALIZED_DISCOVERY_ARCHITECTURE.md) | On-device recommendations: audit, components, data flow, cold start, limits |
+| [Recommendation scoring](personalized-discovery/RECOMMENDATION_SCORING_MODEL.md) | Viewing status, weights, genre affinity, seeds, score terms, rows, diversity, feedback |
+| [Personalisation data](personalized-discovery/PERSONALIZATION_DATA_MODEL.md) | What is stored per account, JSON shapes, account isolation, privacy, sync analysis |
+| [Discovery TMDB usage](personalized-discovery/TMDB_API_OPTIMIZATION.md) | Requests per refresh, caching, bounding, failure handling |
+| [Discovery test report](personalized-discovery/PERSONALIZED_DISCOVERY_TEST_REPORT.md) | Scenarios, results, what was not verified |
+| [Discovery changelog](personalized-discovery/IMPLEMENTATION_CHANGELOG.md) | Files created and changed, decisions, follow-ups |
 
 ## Playback
 
