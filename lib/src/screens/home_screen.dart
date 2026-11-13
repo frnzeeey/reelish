@@ -9,6 +9,7 @@ import '../account/account_controller.dart';
 import '../account/avatar_frames.dart';
 import '../account/progress_sync.dart';
 import '../account/supporter_controller.dart';
+import '../collections/collection_store.dart';
 import '../models/app_update.dart';
 import '../models/episode_context.dart';
 import '../models/episode_progress.dart';
@@ -42,6 +43,7 @@ import '../services/accent_settings_controller.dart';
 import '../theme/design_tokens.dart';
 import '../theme/glass_theme.dart';
 import '../viewmodels/home_view_model.dart';
+import '../widgets/collections/collection_actions.dart';
 import '../widgets/provider_installer_modal.dart';
 import '../widgets/analytics_consent_dialog.dart';
 import '../widgets/crash_report_consent_dialog.dart';
@@ -573,6 +575,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   seriesProgress: _storage.seriesProgress,
                   onWatchTogether: _startParty,
                   onStartOver: startOver,
+                  onCollections: _chooseCollections,
                 )
               : DeviceCapabilities.isTv
               ? TvMediaDetailsScreen(
@@ -594,6 +597,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   ),
                   onWatchTogether: _startParty,
                   onStartOver: startOver,
+                  onCollections: _chooseCollections,
                 )
               : MediaDetailsScreen(
                   item: item,
@@ -610,6 +614,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   ),
                   onWatchTogether: _startParty,
                   onStartOver: startOver,
+                  onCollections: _chooseCollections,
                 ),
         ),
       );
@@ -661,6 +666,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
     return saved;
   }
+
+  /// A details page's Collections button: which collections the title is
+  /// in, changed in place.
+  void _chooseCollections(BuildContext context, MediaItem item) => unawaited(
+    CollectionActions.addToCollections(context, CollectionStore.instance, item),
+  );
 
   void _markContentVisible(List<MediaItem> items) {
     if (items.isEmpty) return;

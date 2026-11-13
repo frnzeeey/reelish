@@ -9,10 +9,11 @@ import '../services/storage_service.dart';
 import '../theme/design_tokens.dart';
 import '../theme/glass_theme.dart';
 import '../viewmodels/library_view_model.dart';
+import 'collections/collection_pages.dart';
 import '../widgets/media_card.dart';
 import '../widgets/soft_glass_dock.dart';
 
-enum _LibraryFilter { all, continueWatching, favorites }
+enum _LibraryFilter { all, continueWatching, favorites, collections }
 
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({
@@ -194,6 +195,15 @@ class _LibraryScreenState extends State<LibraryScreen> {
                               () => _filter = _LibraryFilter.favorites,
                             ),
                           ),
+                          const SizedBox(width: 8),
+                          _FilterChip(
+                            label: 'Collections',
+                            count: _model.collections.collections.length,
+                            selected: _filter == _LibraryFilter.collections,
+                            onTap: () => setState(
+                              () => _filter = _LibraryFilter.collections,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -242,6 +252,15 @@ class _LibraryScreenState extends State<LibraryScreen> {
                         onPlay: widget.onPlay,
                         onRemove: _removeHistory,
                         resumeOf: _resumeSummary,
+                      ),
+                    ),
+                  if (_filter == _LibraryFilter.all ||
+                      _filter == _LibraryFilter.collections)
+                    SliverToBoxAdapter(
+                      child: CollectionsSection(
+                        model: _model,
+                        storage: widget.storage,
+                        onOpen: widget.onPlay,
                       ),
                     ),
                   const SliverToBoxAdapter(child: SizedBox(height: 128)),

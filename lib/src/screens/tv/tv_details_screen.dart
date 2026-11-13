@@ -33,11 +33,16 @@ class TvMediaDetailsScreen extends StatefulWidget {
     this.onWatchTogether,
     this.onRemoveFromHistory,
     this.onStartOver,
+    this.onCollections,
   });
 
   final MediaItem item;
   final TmdbService tmdb;
   final ValueChanged<BuildContext> onPlay;
+
+  /// Chooses the collections the title is in. Without it the page offers
+  /// no Collections button.
+  final void Function(BuildContext context, MediaItem item)? onCollections;
 
   /// Plays the movie from the beginning. Given only for a movie with a
   /// saved position; Play then reads Resume.
@@ -393,6 +398,13 @@ class _TvMediaDetailsScreenState extends State<TvMediaDetailsScreen> {
                 onPressed: _toggleFavorite,
                 icon: Icon(_favorite ? ReelishIcons.check : ReelishIcons.add),
                 label: Text(_favorite ? 'On My list' : 'My list'),
+              ),
+            if (widget.onCollections case final collections?)
+              OutlinedButton.icon(
+                style: _actionStyle(filled: false),
+                onPressed: () => collections(context, item),
+                icon: const Icon(ReelishIcons.playlist),
+                label: const Text('Collections'),
               ),
             if (widget.onWatchTogether != null &&
                 int.tryParse(widget.item.id) != null)

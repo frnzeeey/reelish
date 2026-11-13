@@ -20,11 +20,16 @@ class MediaDetailsScreen extends StatefulWidget {
     this.onToggleFavorite,
     this.onWatchTogether,
     this.onStartOver,
+    this.onCollections,
   });
 
   final MediaItem item;
   final TmdbService tmdb;
   final ValueChanged<BuildContext> onPlay;
+
+  /// Chooses the collections the title is in. Without it the page offers
+  /// no Collections button.
+  final void Function(BuildContext context, MediaItem item)? onCollections;
 
   /// Plays the movie from the beginning. Given only for a movie with a
   /// saved position; Play then reads Resume.
@@ -404,13 +409,17 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                     ),
                   ),
                 ],
-                if (widget.onToggleFavorite != null || _offersParty(item)) ...[
+                if (widget.onToggleFavorite != null ||
+                    widget.onCollections != null ||
+                    _offersParty(item)) ...[
                   const SizedBox(height: 14),
                   Wrap(
                     spacing: 10,
                     runSpacing: 10,
                     children: [
                       if (widget.onToggleFavorite != null) _myListButton(),
+                      if (widget.onCollections case final collections?)
+                        _collectionsButton(() => collections(context, item)),
                       if (_offersParty(item)) _watchTogetherButton(item),
                     ],
                   ),
@@ -451,6 +460,23 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
     icon: const Icon(ReelishIcons.people, size: 19),
     label: const Text(
       'Watch together',
+      style: TextStyle(fontWeight: FontWeight.w700),
+    ),
+  );
+
+  /// Collections, in the Watch together button's style.
+  Widget _collectionsButton(VoidCallback onPressed) => OutlinedButton.icon(
+    style: OutlinedButton.styleFrom(
+      foregroundColor: Colors.white,
+      backgroundColor: Colors.black.withValues(alpha: .28),
+      shape: const StadiumBorder(),
+      side: BorderSide(color: Colors.white.withValues(alpha: .35)),
+      padding: const EdgeInsets.symmetric(horizontal: 19, vertical: 13),
+    ),
+    onPressed: onPressed,
+    icon: const Icon(ReelishIcons.playlist, size: 19),
+    label: const Text(
+      'Collections',
       style: TextStyle(fontWeight: FontWeight.w700),
     ),
   );

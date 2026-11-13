@@ -237,6 +237,44 @@ class AccountApi {
     );
   }
 
+  /// Sends collection records changed on this device; returns the server's
+  /// clock.
+  Future<int> pushCollections(
+    String accessToken, {
+    required String device,
+    required List<Map<String, Object?>> changes,
+  }) async {
+    final body = await _send(
+      'POST',
+      '/collections',
+      token: accessToken,
+      body: {'device': device, 'changes': changes},
+    );
+    final serverTime = body['serverTime'];
+    return serverTime is int ? serverTime : 0;
+  }
+
+  /// Collection records changed at or after [since], oldest first, one page.
+  Future<ProgressPage> pullCollections(String accessToken, int since) async {
+    final body = await _send(
+      'GET',
+      '/collections?since=$since',
+      token: accessToken,
+    );
+    final items = body['items'];
+    final cursor = body['cursor'];
+    final serverTime = body['serverTime'];
+    return ProgressPage(
+      items: [
+        for (final item in items is List ? items : const [])
+          if (item is Map) Map<String, dynamic>.from(item),
+      ],
+      cursor: cursor is int && cursor >= since ? cursor : since,
+      more: body['more'] == true,
+      serverTime: serverTime is int ? serverTime : 0,
+    );
+  }
+
   /// A token for background new-episode checks, tied to this session.
   Future<String> notificationToken(String accessToken) async {
     final body = await _send(

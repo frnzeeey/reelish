@@ -12,6 +12,7 @@ class MediaItem {
     this.resumeMs = 0,
     this.durationMs = 0,
     this.progressAt = 0,
+    this.savedAt = 0,
     this.subtitleQuery = '',
     this.releaseDate = '',
     this.lastAirDate = '',
@@ -41,6 +42,10 @@ class MediaItem {
   /// device's clock (a position from another device is converted to it);
   /// zero when unknown. Sync keeps the newer of two positions by it.
   final int progressAt;
+
+  /// When the title was added to My list, in milliseconds since the epoch;
+  /// zero for titles added before this was recorded, and outside My list.
+  final int savedAt;
   final String subtitleQuery;
   final String releaseDate, lastAirDate;
   final int voteCount;
@@ -92,6 +97,7 @@ class MediaItem {
         resumeMs: int.tryParse('${j['resumeMs']}') ?? 0,
         durationMs: int.tryParse('${j['durationMs']}') ?? 0,
         progressAt: int.tryParse('${j['progressAt'] ?? 0}') ?? 0,
+        savedAt: int.tryParse('${j['savedAt'] ?? 0}') ?? 0,
       );
   factory MediaItem.fromTmdb(Map<String, dynamic> json, {String? mediaType}) {
     final rawType = '${mediaType ?? json['media_type'] ?? 'movie'}';
@@ -149,6 +155,7 @@ class MediaItem {
     'resumeMs': resumeMs,
     'durationMs': durationMs,
     if (progressAt > 0) 'progressAt': progressAt,
+    if (savedAt > 0) 'savedAt': savedAt,
     'subtitleQuery': subtitleQuery,
     'releaseDate': releaseDate,
     'lastAirDate': lastAirDate,
@@ -162,6 +169,7 @@ class MediaItem {
     int? resumeMs,
     int? durationMs,
     int? progressAt,
+    int? savedAt,
     String? externalId,
     String? id,
     String? subtitleQuery,
@@ -180,6 +188,7 @@ class MediaItem {
     resumeMs: resumeMs ?? this.resumeMs,
     durationMs: durationMs ?? this.durationMs,
     progressAt: progressAt ?? this.progressAt,
+    savedAt: savedAt ?? this.savedAt,
     subtitleQuery: subtitleQuery ?? this.subtitleQuery,
     releaseDate: releaseDate ?? this.releaseDate,
     lastAirDate: lastAirDate ?? this.lastAirDate,

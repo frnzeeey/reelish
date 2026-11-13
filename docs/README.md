@@ -58,9 +58,15 @@ search the generated references below: every file, class and function in
 | [Discovery changelog](personalized-discovery/IMPLEMENTATION_CHANGELOG.md) | Files created and changed, decisions, follow-ups |
 | [Continue watching](intelligent-continue-watching/CONTINUE_WATCHING_ARCHITECTURE.md) | Progress checkpoints, resume, completion, up next, start over, per-account history; diagrams |
 | [Playback progress data](intelligent-continue-watching/PLAYBACK_PROGRESS_DATA_MODEL.md) | Stored keys and JSON shapes, derived rules, the per-account migration |
-| [Cross-device sync](intelligent-continue-watching/CROSS_DEVICE_SYNC_STRATEGY.md) | Planned sync through the Reelish API: ordering, conflicts, offline outbox, free-tier budget |
+| [Cross-device sync](intelligent-continue-watching/CROSS_DEVICE_SYNC_STRATEGY.md) | Sync through the Reelish API: ordering, conflicts, offline outbox, free-tier budget |
 | [Continue watching tests](intelligent-continue-watching/CONTINUE_WATCHING_TEST_REPORT.md) | Tests, results, what was not verified |
 | [Continue watching changelog](intelligent-continue-watching/IMPLEMENTATION_CHANGELOG.md) | Files created and changed, decisions, limitations |
+| [Custom collections](custom-collections/CUSTOM_COLLECTIONS_ARCHITECTURE.md) | Collections, folders and smart collections on phone, TV and Windows; data and UI flow |
+| [Collection data](custom-collections/COLLECTION_DATA_MODEL.md) | Stored records and JSON shape, constraints, ordering, deletion marks, migration |
+| [Collection sync](custom-collections/COLLECTION_SYNC_STRATEGY.md) | Local-first storage and sync through the Reelish API: ordering, conflicts, Trakt, free-tier budget |
+| [Smart collections](custom-collections/SMART_COLLECTIONS_SPECIFICATION.md) | Recently added, My list, Not started, Finished: sources, rules, edge cases |
+| [Collections tests](custom-collections/CUSTOM_COLLECTIONS_TEST_REPORT.md) | Tests, results, what was not verified |
+| [Collections changelog](custom-collections/IMPLEMENTATION_CHANGELOG.md) | Files created and changed, decisions, limitations |
 
 ## Playback
 

@@ -17,6 +17,7 @@ import '../viewmodels/library_view_model.dart';
 import '../viewmodels/search_view_model.dart';
 import '../widgets/settings/tmdb_attribution.dart';
 import '../widgets/glass_button.dart';
+import 'desktop_collections.dart';
 import 'desktop_hero.dart';
 import 'desktop_top_ten.dart';
 import 'desktop_widgets.dart';
@@ -875,6 +876,13 @@ class _DesktopLibraryPageState extends State<DesktopLibraryPage> {
           onToggleFavorite: _toggleFavorite,
           onRemove: _removeFromHistory,
         ),
+      DesktopCollectionsSection(
+        model: _model,
+        storage: widget.storage,
+        onOpen: widget.onOpen,
+        isFavorite: isFavorite,
+        onToggleFavorite: _toggleFavorite,
+      ),
     ];
     return CustomScrollView(
       slivers: [

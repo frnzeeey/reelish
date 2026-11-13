@@ -612,7 +612,7 @@ class StorageService {
     if (all.any((e) => e.id == item.id && e.type == item.type)) {
       all.removeWhere((e) => e.id == item.id && e.type == item.type);
     } else {
-      all.insert(0, item);
+      all.insert(0, item.copyWith(savedAt: clock()));
     }
     await _saveItems(_favorites, all);
     favoritesRevision.value++;
@@ -629,6 +629,8 @@ class StorageService {
       ..removeWhere((e) => remove.contains('${e.type}:${e.id}'));
     final present = {for (final e in all) '${e.type}:${e.id}'};
     for (final item in add) {
+      // Not dated: a first sync brings the whole Trakt watchlist at once,
+      // which would fill Recently added.
       if (present.add('${item.type}:${item.id}')) all.add(item);
     }
     await _saveItems(_favorites, all);

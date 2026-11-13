@@ -133,6 +133,8 @@ its own).
 | `GET /api/v1/party/{code}/socket` | Bearer | WebSocket upgrade into the room (below); 409 `party_full`, 403 `party_removed` |
 | `POST /api/v1/progress` | Bearer | `{device, changes}` (≤ 50 `{key, positionMs, durationMs, next?, removed?, title?, year?, poster?, backdrop?, seq, at}`, 32 KB) → `{accepted, serverTime}`; a change replaces a stored row only when newer ([sync strategy](../intelligent-continue-watching/CROSS_DEVICE_SYNC_STRATEGY.md), `src/progress.ts`) |
 | `GET /api/v1/progress?since=` | Bearer | Rows changed at or after the cursor, oldest first, 200 a page → `{items, cursor, more, serverTime}` |
+| `POST /api/v1/collections` | Bearer | `{device, changes}` (≤ 50 records `{kind, key, deleted?, seq, at, …fields}`, 64 KB): folders and collections by id, titles by `collectionId\|type:id`; fields checked and the stored body rebuilt from them → `{accepted, serverTime}`; newer changes only ([collection sync](../custom-collections/COLLECTION_SYNC_STRATEGY.md), `src/collections.ts`) |
+| `GET /api/v1/collections?since=` | Bearer | Records changed at or after the cursor, oldest first, 200 a page → `{items, cursor, more, serverTime}` |
 | `POST /api/v1/support/reports` | Bearer | `{kind, category, platform, title, description, steps?, diagnostics?}` (16 KB; `kind` is `bug` or `feedback`) → `201 {id, createdAt}`; a repeat within 10 minutes → `200 {id, duplicate: true}`; 429 `report_limit` after 5 a day per account (`backend/src/support.ts`) |
 
 `session` is `{sessionId, accessToken, accessExpiresAt, refreshToken,
@@ -249,6 +251,7 @@ which needs no credential.
 | `device_authorizations` | Pending sign-ins: hashed poll token, encrypted Trakt device code | Reelish (minutes) |
 | `web_authorizations` | Pending browser sign-ins: hashed state and poll token, encrypted PKCE verifier, outcome | Reelish (minutes) |
 | `playback_progress` | Per account and title (`movie:`, `series:`, `episode:` keys): position, length, next episode, removal, card title/year/TMDB artwork, device id (random), order fields; pruned after 400 days unchanged; deleted with the account | Reelish |
+| `collection_records` | Per account and record (folder, collection, or title in a collection): the checked fields, deletion mark, device id (random), order fields; deletion marks pruned after 400 days, live records kept; deleted with the account | Reelish |
 | `audit_events` | Security events by id (sign-in, logout, reuse, deletion); erased after 12 months by the daily cron (`src/retention.ts`) | Reelish |
 
 Trakt owns the user's profile, history and lists; Reelish stores none of

@@ -1,17 +1,52 @@
 import 'package:flutter/foundation.dart';
 
+import '../collections/collection_models.dart';
+import '../collections/collection_store.dart';
+import '../collections/smart_collections.dart';
 import '../models/episode_progress.dart';
 import '../models/media_item.dart';
 import '../models/resume_summary.dart';
 import '../services/storage_service.dart';
 
 /// The viewer's library for the mobile, TV and Windows library pages: watch
-/// history, My list, and where each series in the history was left.
+/// history, My list, where each series in the history was left, and the
+/// custom and smart collections.
 class LibraryViewModel extends ChangeNotifier {
-  LibraryViewModel({required this._storage}) {
+  LibraryViewModel({required this._storage, CollectionStore? collections})
+    : _collectionStore = collections ?? CollectionStore.instance {
     // My list can change elsewhere too (Trakt sync, another screen).
     StorageService.favoritesRevision.addListener(_favoritesChanged);
+    _collectionStore.addListener(_collectionsChanged);
   }
+
+  final CollectionStore _collectionStore;
+
+  void _collectionsChanged() {
+    if (_disposed) return;
+    _smart.clear();
+    notifyListeners();
+  }
+
+  /// The custom collections and folders.
+  CollectionLibrary get collections => _collectionStore.library;
+
+  /// The store collections are changed through.
+  CollectionStore get collectionStore => _collectionStore;
+
+  final _smart = <SmartCollection, List<MediaItem>>{};
+
+  /// The titles in a smart collection, worked out once per change.
+  List<MediaItem> smart(SmartCollection kind) =>
+      _smart[kind] ??= SmartCollections.of(
+        kind,
+        SmartCollectionSources(
+          favorites: _favorites,
+          history: _history,
+          seriesProgress: _seriesProgress,
+          collections: collections,
+        ),
+        now: StorageService.clock(),
+      );
 
   void _favoritesChanged() {
     if (!_disposed) load().catchError((Object _) {});
@@ -69,6 +104,7 @@ class LibraryViewModel extends ChangeNotifier {
     _history = values[0];
     _favorites = values[1];
     _seriesProgress = progress;
+    _smart.clear();
     _loading = false;
     notifyListeners();
   }
@@ -98,6 +134,7 @@ class LibraryViewModel extends ChangeNotifier {
   void dispose() {
     _disposed = true;
     StorageService.favoritesRevision.removeListener(_favoritesChanged);
+    _collectionStore.removeListener(_collectionsChanged);
     super.dispose();
   }
 }

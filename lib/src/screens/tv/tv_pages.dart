@@ -15,6 +15,7 @@ import '../../viewmodels/search_view_model.dart';
 import '../../widgets/settings/tmdb_attribution.dart';
 import '../../widgets/tv/tv_focus.dart';
 import 'tv_browse.dart';
+import 'tv_collections.dart';
 
 export '../../viewmodels/home_catalog.dart';
 
@@ -633,6 +634,13 @@ class _TvLibraryPageState extends State<TvLibraryPage> {
           autofocus: true,
           cards: cards,
         ),
+      // Always shown: the smart collections and Create are always there.
+      TvCollectionsRow(
+        model: _model,
+        storage: widget.storage,
+        onOpen: widget.onOpen,
+        autofocus: true,
+      ),
     ];
     return TvBrowseFrame(
       featured: _featured,

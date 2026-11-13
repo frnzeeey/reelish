@@ -150,6 +150,16 @@ const faqEntries = <FaqEntry>[
   ),
   FaqEntry(
     FaqCategory.library,
+    'How do I make my own collections?',
+    'Open a title and choose Collections to add it to one or more of your '
+        'collections, or to make a new one. Your collections, their folders '
+        'and the collections that fill themselves (Recently added, Not '
+        'started, Finished) are at the end of Library. They follow your '
+        'Reelish account to your other devices; changes made offline are '
+        'sent once you are back online.',
+  ),
+  FaqEntry(
+    FaqCategory.library,
     'How do I remove a title from Continue watching?',
     'Remove it from your watch history in Library; it leaves your other '
         'devices too. Finished titles leave Continue watching on their own. '

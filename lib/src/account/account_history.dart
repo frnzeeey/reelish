@@ -1,8 +1,10 @@
 // Keeps watch history and episode progress per account: points
 // StorageService at whichever account is signed in, and hands the history
 // this device kept before accounts were separated to the one account that
-// owns it (the same owner personalised discovery uses).
+// owns it (the same owner personalised discovery uses). Custom collections
+// follow the same account.
 
+import '../collections/collection_store.dart';
 import '../discovery/discovery_store.dart';
 import '../services/storage_service.dart';
 import 'account_controller.dart';
@@ -46,5 +48,6 @@ class AccountHistory {
           ? null
           : _discovery.claimDeviceHistory(userId),
     );
+    CollectionStore.instance.useAccount(userId);
   }
 }

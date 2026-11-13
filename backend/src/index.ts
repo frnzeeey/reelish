@@ -16,6 +16,7 @@ import * as support from './support';
 import * as supporters from './supporters';
 import * as frames from './frames';
 import * as progress from './progress';
+import * as collections from './collections';
 
 export { WatchPartyRoom } from './party-room';
 export { TraktEgress } from './trakt-egress';
@@ -125,6 +126,12 @@ async function route(request: Request, env: Env, requestId: string): Promise<Res
       ? progress.pullProgress(env, principal, url, requestId)
       : progress.pushProgress(env, principal, request, requestId);
   }
+  if (rest === '/collections' && (method === 'GET' || method === 'POST')) {
+    await limit(env.SYNC_LIMITER, `collections:${principal.userId}`);
+    return method === 'GET'
+      ? collections.pullCollections(env, principal, url, requestId)
+      : collections.pushCollections(env, principal, request, requestId);
+  }
   if (rest.startsWith('/supporters/')) {
     await limit(env.SYNC_LIMITER, `supporters:${principal.userId}`);
     if (rest === '/supporters/me' && method === 'GET') {
@@ -202,13 +209,14 @@ export default {
     return response;
   },
 
-  /** The daily cron in wrangler.toml: erases expired security log rows and stale progress. */
+  /** The daily cron in wrangler.toml: erases expired security log rows, stale progress and old collection deletion marks. */
   async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
     ctx.waitUntil(
       Promise.all([
         pruneAuditEvents(env),
         support.pruneSupportReports(env),
         progress.pruneProgress(env),
+        collections.pruneCollections(env),
       ]).then(() => undefined),
     );
   },

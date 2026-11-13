@@ -251,6 +251,18 @@ class _LegalInformationScreenState extends State<LegalInformationScreen> {
           'them when you delete your account.',
     ),
     (
+      'Your collections across your devices',
+      'So your collections are the same on each device, the Reelish API '
+          'stores, for your account, the folders and collections you make '
+          '(their names, descriptions, order and chosen cover) and the '
+          'titles in each: TMDB number, title, year, TMDB artwork addresses '
+          'and when it was added. Each entry also holds the random device '
+          'identifier described above and when the change was made. A '
+          'deletion is kept as a short mark, with no name or title, for a '
+          'year so your other devices remove the item too, then deleted. '
+          'Everything is deleted when you delete your account.',
+    ),
+    (
       'Information kept on your device',
       'The app stores your favorites, recently played titles and resume '
           'positions, playback and notification preferences, your profile '
@@ -392,7 +404,7 @@ class _LegalInformationScreenState extends State<LegalInformationScreen> {
           'account. You can sign out of one device or of all devices, and '
           'delete your account in Settings > Profile and account; deleting '
           'it asks Trakt to revoke Reelish’s access and removes your account, '
-          'your viewing progress, '
+          'your viewing progress and collections, '
           'your encrypted Trakt tokens and your device sessions, including '
           'those already signed out. A minimal security log, holding an '
           'internal account number, the kind of event (such as a sign-in or '
