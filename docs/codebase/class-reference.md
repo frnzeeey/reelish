@@ -978,7 +978,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `_TitleFallback` | Widget | [`tv_poster_card.dart:117`](../../lib/src/widgets/tv/tv_poster_card.dart#L117) | extends StatelessWidget | Android TV | its own file |  |
 | `TitleFeedback` | Class | [`discovery_data.dart:23`](../../lib/src/discovery/discovery_data.dart#L23) |  | Shared | 1 lib file, 2 test files |  |
 | `TmdbAttribution` | Class | [`tmdb_attribution.dart:9`](../../lib/src/widgets/settings/tmdb_attribution.dart#L9) |  | Shared | 1 lib file, 1 test file | TMDB attribution wording and assets, per https://developer.themoviedb.org/docs/faq and https://www.themoviedb.org/about/logos-attribution. |
-| `_TmdbAttributionBlock` | Widget | [`credits_screen.dart:288`](../../lib/src/screens/credits_screen.dart#L288) | extends StatelessWidget | Shared | its own file |  |
+| `_TmdbAttributionBlock` | Widget | [`credits_screen.dart:300`](../../lib/src/screens/credits_screen.dart#L300) | extends StatelessWidget | Shared | its own file |  |
 | `TmdbAttributionFooter` | Widget | [`tmdb_attribution.dart:49`](../../lib/src/widgets/settings/tmdb_attribution.dart#L49) | extends StatelessWidget | Shared | 6 lib files, 1 test file | The TMDB notice at the end of every settings page. |
 | `TmdbCachedResponse` | Service type | [`tmdb_response_cache.dart:87`](../../lib/src/services/tmdb_response_cache.dart#L87) |  | Shared | 1 lib file |  |
 | `TmdbCacheEntry` | Service type | [`tmdb_response_cache.dart:69`](../../lib/src/services/tmdb_response_cache.dart#L69) |  | Shared | its own file only |  |
@@ -1007,7 +1007,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `TorrentSupport` | Service type | [`torrent_source_preparer.dart:24`](../../lib/src/services/torrent_source_preparer.dart#L24) |  | Shared | 4 lib files, 2 test files | Whether torrent playback can work in this app process. |
 | `_TrailingProgress` | Widget | [`tv_browse.dart:616`](../../lib/src/screens/tv/tv_browse.dart#L616) | extends StatelessWidget | Android TV | its own file |  |
 | `_TrailingRetry` | Widget | [`tv_browse.dart:634`](../../lib/src/screens/tv/tv_browse.dart#L634) | extends StatelessWidget | Android TV | its own file |  |
-| `_TraktAttributionBlock` | Widget | [`credits_screen.dart:232`](../../lib/src/screens/credits_screen.dart#L232) | extends StatelessWidget | Shared | its own file | TMDB's logo, required notice and a description of what TMDB supplies. |
+| `_TraktAttributionBlock` | Widget | [`credits_screen.dart:244`](../../lib/src/screens/credits_screen.dart#L244) | extends StatelessWidget | Shared | its own file | TMDB's logo, required notice and a description of what TMDB supplies. |
 | `_TraktBadge` | Widget | [`profile_screen.dart:1050`](../../lib/src/screens/profile_screen.dart#L1050) | extends StatelessWidget | Shared | its own file | The account behind the profile, as a quiet line: signed in with Trakt. |
 | `TroubleshootingArticle` | Class | [`help_content.dart:43`](../../lib/src/support/help_content.dart#L43) |  | Shared | 1 lib file | A problem, why it happens, and what to try, ending in a report. |
 | `TroubleshootingArticleScreen` | Widget | [`help_support_screen.dart:383`](../../lib/src/screens/help_support_screen.dart#L383) | extends StatelessWidget | Shared | its own file only |  |

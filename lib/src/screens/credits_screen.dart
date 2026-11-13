@@ -80,6 +80,7 @@ class CreditsScreen extends StatelessWidget {
     final pluginLibrary = _notice('Plugin library');
     final externalContent = _notice('External content');
     final reporting = _notice('Reporting and support');
+    final introDb = _notice('Intro and outro timestamps');
     return SettingsScaffold(
       title: 'Credits & attribution',
       subtitle: 'Data, services and software behind Reelish.',
@@ -100,6 +101,17 @@ class CreditsScreen extends StatelessWidget {
                 context,
                 TmdbAttribution.website,
                 'The Movie Database',
+              ),
+            ),
+            SettingsTile(
+              icon: ReelishIcons.skipIntro,
+              title: 'IntroDB',
+              description:
+                  '${introDb.$2} Reelish is not affiliated with IntroDB.',
+              onTap: () => _openExternal(
+                context,
+                Uri.https('introdb.app', '/'),
+                'IntroDB',
               ),
             ),
           ],

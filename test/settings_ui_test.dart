@@ -170,6 +170,14 @@ void main() {
     expect(_logo, findsOneWidget);
     expect(find.text('The Movie Database (TMDB)'), findsOneWidget);
     expect(find.text(_disclaimer), findsOneWidget);
+    // IntroDB, whose timestamps drive intro and outro skipping, is credited
+    // alongside TMDB.
+    await _scrollTo(tester, find.text('IntroDB'));
+    expect(
+      find.textContaining('IntroDB (introdb.app), a community database'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('not affiliated with IntroDB'), findsOneWidget);
     await _scrollTo(tester, find.text('Powered by Trakt'));
     expect(find.bySemanticsLabel('Trakt logo'), findsOneWidget);
     expect(

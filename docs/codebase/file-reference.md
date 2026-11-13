@@ -89,7 +89,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/screens/app_information_screens.dart`](#libsrcscreensapp_information_screensdart) | Shared | 163 | About and Support screens, and the Reelish name, icon and tagline used where the app identifies itself. |
 | [`lib/src/screens/avatar_frames_screen.dart`](#libsrcscreensavatar_frames_screendart) | Shared | 530 | Profile > Avatar frame: the collection of avatar frames, with a live preview of the person's own avatar in the frame they are looking at. |
 | [`lib/src/screens/collections/collection_pages.dart`](#libsrcscreenscollectionscollection_pagesdart) | Shared | 792 | Collections on the phone: the Library's Collections section (smart collections, folders and the viewer's own collections) and the page each of them opens, a grid of titles or of a folder's collections. |
-| [`lib/src/screens/credits_screen.dart`](#libsrcscreenscredits_screendart) | Shared | 333 | Credits for the data, services and software Reelish relies on. |
+| [`lib/src/screens/credits_screen.dart`](#libsrcscreenscredits_screendart) | Shared | 345 | Credits for the data, services and software Reelish relies on. |
 | [`lib/src/screens/first_run_consent_screen.dart`](#libsrcscreensfirst_run_consent_screendart) | Shared | 271 | First-launch screen where the viewer reads and accepts the privacy policy and terms of use; remembers the acceptance. |
 | [`lib/src/screens/genre_onboarding_screen.dart`](#libsrcscreensgenre_onboarding_screendart) | Shared | 327 | The genre step: "What do you love watching?". |
 | [`lib/src/screens/help_support_screen.dart`](#libsrcscreenshelp_support_screendart) | Shared | 782 | Help & Support in Settings: answers (FAQ, troubleshooting), a bug report and feedback form that sends to the Reelish API, and links to app information. |
@@ -1507,7 +1507,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/screens/credits_screen.dart
 
-**Source:** [`lib/src/screens/credits_screen.dart`](../../lib/src/screens/credits_screen.dart) · **Platform:** Shared · **Lines:** 333
+**Source:** [`lib/src/screens/credits_screen.dart`](../../lib/src/screens/credits_screen.dart) · **Platform:** Shared · **Lines:** 345
 
 **Purpose:** Credits for the data, services and software Reelish relies on.
 
