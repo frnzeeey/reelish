@@ -17,11 +17,29 @@ import * as supporters from './supporters';
 import * as frames from './frames';
 import * as progress from './progress';
 import * as collections from './collections';
+import * as social from './social/profiles';
+import * as activity from './social/activity';
+import * as friends from './social/friends';
+import * as recommendations from './social/recommendations';
+import * as sharedCollections from './social/shared-collections';
+import { pruneSocial } from './social/retention';
 
 export { WatchPartyRoom } from './party-room';
 export { TraktEgress } from './trakt-egress';
 
 const version = '/api/v1';
+
+/**
+ * The path as logged: a party code is an invitation, and a handle or an id
+ * in a Friends path names a person, so each is replaced by a placeholder.
+ */
+export function maskPath(path: string): string {
+  return path
+    .replace(/^(\/api\/v1\/party\/)[^/]+/, '$1:code')
+    .replace(/^(\/api\/v1\/social\/(?:friends|requests|blocks)\/)[^/]+/, '$1:handle')
+    .replace(/^(\/api\/v1\/social\/friends\/:handle\/collections\/)[^/]+/, '$1:id')
+    .replace(/^(\/api\/v1\/social\/recommendations\/)(?!sent$|read$)[^/]+$/, '$1:id');
+}
 
 async function limit(limiter: RateLimit, key: string): Promise<void> {
   const { success } = await limiter.limit({ key });
@@ -132,6 +150,77 @@ async function route(request: Request, env: Env, requestId: string): Promise<Res
       ? collections.pullCollections(env, principal, url, requestId)
       : collections.pushCollections(env, principal, request, requestId);
   }
+  if (rest.startsWith('/social/')) {
+    await limit(env.SOCIAL_LIMITER, `social:${principal.userId}`);
+    if (rest === '/social/profile') {
+      if (method === 'GET') return social.getProfile(env, principal, requestId);
+      if (method === 'PUT') {
+        // Claiming a handle answers whether it is taken: limited more tightly.
+        await limit(env.SOCIAL_LOOKUP_LIMITER, `claim:${principal.userId}`);
+        await limit(env.SOCIAL_LOOKUP_LIMITER, `claim-ip:${ip}`);
+        return social.putProfile(env, principal, request, requestId);
+      }
+      if (method === 'DELETE') return social.deleteProfile(env, principal, requestId);
+    }
+    if (post('/social/profile/code')) {
+      await limit(env.SOCIAL_LOOKUP_LIMITER, `code:${principal.userId}`);
+      return social.resetFriendCode(env, principal, requestId);
+    }
+    if (post('/social/requests')) {
+      // Finding someone by code or handle: limited so neither can be guessed.
+      await limit(env.SOCIAL_LOOKUP_LIMITER, `find:${principal.userId}`);
+      await limit(env.SOCIAL_LOOKUP_LIMITER, `find-ip:${ip}`);
+      return friends.sendRequest(env, principal, request, requestId);
+    }
+    const requestRoute = /^\/social\/requests\/([^/]+)(\/accept|\/decline)?$/.exec(rest);
+    if (requestRoute) {
+      const handle = requestRoute[1];
+      if (method === 'POST' && requestRoute[2] === '/accept') {
+        return friends.acceptRequest(env, principal, handle, requestId);
+      }
+      if (method === 'POST' && requestRoute[2] === '/decline') {
+        return friends.declineRequest(env, principal, handle, requestId);
+      }
+      if (method === 'DELETE' && !requestRoute[2]) return friends.cancelRequest(env, principal, handle, requestId);
+    }
+    if (rest === '/social/friends' && method === 'GET') return friends.listFriends(env, principal, url, requestId);
+    const sharedRoute = /^\/social\/friends\/([^/]+)\/collections\/([^/]+)$/.exec(rest);
+    if (sharedRoute && method === 'GET') {
+      return sharedCollections.friendCollection(env, principal, sharedRoute[1], sharedRoute[2], url, requestId);
+    }
+    const friendRoute = /^\/social\/friends\/([^/]+)$/.exec(rest);
+    if (friendRoute) {
+      const handle = friendRoute[1];
+      if (method === 'GET') return friends.getFriend(env, principal, handle, requestId);
+      if (method === 'DELETE') return friends.removeFriend(env, principal, handle, requestId);
+    }
+    if (rest === '/social/blocks') {
+      if (method === 'GET') return friends.listBlocks(env, principal, requestId);
+      if (method === 'POST') return friends.block(env, principal, request, requestId);
+    }
+    const blockRoute = /^\/social\/blocks\/([^/]+)$/.exec(rest);
+    if (blockRoute && method === 'DELETE') {
+      return friends.unblock(env, principal, blockRoute[1], requestId);
+    }
+    if (post('/social/reports')) return friends.reportPerson(env, principal, request, requestId);
+    if (rest === '/social/activity') {
+      if (method === 'GET') return activity.friendsWatching(env, principal, requestId);
+      if (method === 'PUT') return activity.publish(env, principal, request, requestId);
+      if (method === 'DELETE') return activity.clear(env, principal, requestId);
+    }
+    if (rest === '/social/recommendations') {
+      if (method === 'GET') return recommendations.inbox(env, principal, url, requestId);
+      if (method === 'POST') return recommendations.sendRecommendation(env, principal, request, requestId);
+    }
+    if (rest === '/social/recommendations/sent' && method === 'GET') {
+      return recommendations.sent(env, principal, requestId);
+    }
+    if (post('/social/recommendations/read')) return recommendations.markRead(env, principal, request, requestId);
+    const recommendationRoute = /^\/social\/recommendations\/([^/]+)$/.exec(rest);
+    if (recommendationRoute && method === 'DELETE') {
+      return recommendations.removeRecommendation(env, principal, recommendationRoute[1], requestId);
+    }
+  }
   if (rest.startsWith('/supporters/')) {
     await limit(env.SYNC_LIMITER, `supporters:${principal.userId}`);
     if (rest === '/supporters/me' && method === 'GET') {
@@ -202,14 +291,14 @@ export default {
     log('info', 'request', {
       requestId,
       method: request.method,
-      path: new URL(request.url).pathname.replace(/^(\/api\/v1\/party\/)[^/]+/, '$1:code'),
+      path: maskPath(new URL(request.url).pathname),
       status: response.status,
       ms: Date.now() - started,
     });
     return response;
   },
 
-  /** The daily cron in wrangler.toml: erases expired security log rows, stale progress and old collection deletion marks. */
+  /** The daily cron in wrangler.toml: erases expired security log rows, stale progress, old collection deletion marks and expired social rows. */
   async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
     ctx.waitUntil(
       Promise.all([
@@ -217,6 +306,7 @@ export default {
         support.pruneSupportReports(env),
         progress.pruneProgress(env),
         collections.pruneCollections(env),
+        pruneSocial(env),
       ]).then(() => undefined),
     );
   },

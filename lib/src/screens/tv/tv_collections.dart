@@ -86,6 +86,7 @@ class TvCollectionsRow extends StatelessWidget {
           caption: _count(library.countOf(collection.id), 'title'),
           icon: ReelishIcons.playlist,
           posters: library.coverArtOf(collection),
+          shared: collection.shared,
           onSelect: () => _open(context, CustomTarget(collection.id)),
         ),
       if (model.collectionStore.account != null)
@@ -137,11 +138,15 @@ class TvCollectionTile extends StatelessWidget {
     required this.posters,
     required this.onSelect,
     this.autofocus = false,
+    this.shared = false,
   });
 
   final String title, caption;
   final IconData icon;
   final List<String> posters;
+
+  /// Friends can see it; the cover shows a badge.
+  final bool shared;
   final VoidCallback onSelect;
   final bool autofocus;
 
@@ -161,6 +166,7 @@ class TvCollectionTile extends StatelessWidget {
             posters: posters,
             icon: icon,
             width: TvPosterMetrics.width,
+            shared: shared,
             radius: 0,
           ),
           // White on artwork, over the artwork scrim.
@@ -537,6 +543,7 @@ class _TvCollectionPageState extends State<TvCollectionPage> {
                             ),
                             icon: ReelishIcons.playlist,
                             posters: library.coverArtOf(collection),
+                            shared: collection.shared,
                             onSelect: () =>
                                 _openTarget(CustomTarget(collection.id)),
                           ),

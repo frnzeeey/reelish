@@ -199,6 +199,40 @@ void main() {
     },
   );
 
+  test('sharing with friends follows the collection to other devices, and '
+      'the server making it private (Friends off) reaches them too', () async {
+    late String id;
+    await onDevice('android', (store, _) async {
+      id = (await store.createCollection(name: 'Sci-fi')).id;
+      await store.setShared(id, true);
+    });
+    expect(server.rows['collection:$id']?['visibility'], 'friends');
+    await onDevice('windows', (store, _) async {
+      expect(store.library.collection(id)?.shared, isTrue);
+      await store.setShared(id, false);
+    });
+    expect(server.rows['collection:$id']?['visibility'], 'private');
+    await onDevice('android', (store, _) async {
+      expect(store.library.collection(id)?.shared, isFalse);
+      await store.setShared(id, true);
+    });
+
+    // Friends turned off: the server's own, newer change.
+    server.time += 1000;
+    server.rows['collection:$id'] = {
+      ...server.rows['collection:$id']!..['visibility'] = 'private',
+      'device': 'reelish-server',
+      'seq': 0,
+      'at': server.time,
+      'changedAt': server.time,
+    };
+    await onDevice('windows', (store, _) async {
+      final collection = store.library.collection(id)!;
+      expect(collection.shared, isFalse);
+      expect(collection.name, 'Sci-fi');
+    });
+  });
+
   test('edits made offline on two devices are both kept', () async {
     late String shared;
     await onDevice('android', (store, _) async {

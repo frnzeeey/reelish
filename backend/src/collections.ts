@@ -22,7 +22,7 @@ const idPattern = /^[0-9a-f]{24}$/;
 const titlePattern = /^(movie|series):[1-9]\d{0,9}$/;
 const entryKeyPattern = /^[0-9a-f]{24}\|(movie|series):[1-9]\d{0,9}$/;
 const devicePattern = /^[A-Za-z0-9-]{8,64}$/;
-const artworkPattern = /^https:\/\/image\.tmdb\.org\/t\/p\/(w\d{2,4}|original)\/[A-Za-z0-9_-]{1,64}\.(jpg|jpeg|png|webp)$/;
+export const artworkPattern = /^https:\/\/image\.tmdb\.org\/t\/p\/(w\d{2,4}|original)\/[A-Za-z0-9_-]{1,64}\.(jpg|jpeg|png|webp)$/;
 const yearPattern = /^\d{4}$/;
 
 type Kind = 'folder' | 'collection' | 'entry';
@@ -32,6 +32,12 @@ export interface CollectionChange {
   key: string;
   body: Record<string, string | number>;
   deleted: boolean;
+  /**
+   * Who besides the owner may see a collection; entries and folders are
+   * private. Null: a collection change that did not say (an older app),
+   * which keeps what is stored.
+   */
+  visibility: 'private' | 'friends' | null;
   device: string;
   seq: number;
   at: number;
@@ -76,6 +82,11 @@ export function parseChange(raw: unknown, device: string, now: number): Collecti
   const at = entry.at;
   if (!isCount(at)) throw invalid('at must be a time in milliseconds.');
   const deleted = entry.deleted === true;
+  // Only a collection can be shared, and only "friends" shares it; any other
+  // value is private. An older app sends nothing: the stored value stays.
+  const visibility = deleted || kind !== 'collection'
+    ? 'private'
+    : entry.visibility === undefined ? null : entry.visibility === 'friends' ? 'friends' : 'private';
   const body: Record<string, string | number> = {};
   const put = (field: string, value: string | number | null) => {
     if (value !== null) body[field] = value;
@@ -98,6 +109,7 @@ export function parseChange(raw: unknown, device: string, now: number): Collecti
         put('description', text(entry.description, 300));
         put('folderId', text(entry.folderId, 24, { pattern: idPattern }));
         put('cover', text(entry.cover, 30, { pattern: titlePattern }));
+        if (visibility === 'friends') put('visibility', visibility);
       }
     }
   }
@@ -106,6 +118,7 @@ export function parseChange(raw: unknown, device: string, now: number): Collecti
     key,
     body,
     deleted,
+    visibility,
     device,
     seq,
     // A device clock ahead of the server cannot make a change newer than now.
@@ -115,11 +128,13 @@ export function parseChange(raw: unknown, device: string, now: number): Collecti
 
 // A stored row is replaced only by a newer change (see the migration).
 const upsert = `
-INSERT INTO collection_records (user_id, kind, record_key, body, deleted, device_id, seq, client_at, changed_at)
-VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+INSERT INTO collection_records (user_id, kind, record_key, body, deleted, device_id, seq, client_at, changed_at, visibility)
+VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, COALESCE(?10, 'private'))
 ON CONFLICT (user_id, kind, record_key) DO UPDATE SET
-  body = excluded.body,
+  body = CASE WHEN ?10 IS NULL AND collection_records.visibility = 'friends'
+              THEN json_set(excluded.body, '$.visibility', 'friends') ELSE excluded.body END,
   deleted = excluded.deleted,
+  visibility = COALESCE(?10, collection_records.visibility),
   device_id = excluded.device_id,
   seq = excluded.seq,
   client_at = excluded.client_at,
@@ -153,6 +168,7 @@ export async function pushCollections(env: Env, principal: Principal, request: R
       change.seq,
       change.at,
       now,
+      change.visibility,
     )));
     accepted = results.reduce((sum, result) => sum + (result.meta.changes ?? 0), 0);
   }

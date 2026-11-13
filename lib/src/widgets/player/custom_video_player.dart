@@ -34,6 +34,7 @@ import '../../services/subtitle_addon_service.dart';
 import '../../services/subtitle_loader.dart';
 import '../../services/torrent_source_preparer.dart';
 import '../../theme/design_tokens.dart';
+import '../../social/activity_publisher.dart';
 import '../../watch_party/party_player_sync.dart';
 import 'audio_switch_check.dart';
 import 'audio_track_sheet.dart';
@@ -176,6 +177,10 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
   /// The watch party this title plays in, if any. Null outside a party,
   /// and then nothing below behaves differently.
   PartyPlayerSync? _party;
+
+  /// Friends' "Watching now". Null unless the viewer shares activity and is
+  /// not in a party; it only ever reports, and never waits on the network.
+  ActivitySession? _activity;
 
   /// Controls visibility. A notifier, so showing or hiding controls rebuilds
   /// only the overlay, never the video surface or the rest of the player.
@@ -475,6 +480,14 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
     // A party plays at the room's pace, not the viewer's usual speed: a host
     // at 1.25x would leave everyone behind for as long as the party lasts.
     if (_party != null) _speed = 1;
+    // A party is shared already, so it is not published as well.
+    _activity = _party == null
+        ? ActivityPublisher.instance.sessionFor(
+            widget.item,
+            season: widget.season,
+            episode: widget.episode,
+          )
+        : null;
     _source = widget.source;
     final discovery = widget.discovery;
     if (discovery != null) _listenForSources(discovery);
@@ -857,6 +870,11 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
         unawaited(_refreshAudioTracks(controller));
         _metrics.firstFrame(engine.id.name);
         _advisory.playbackStarted();
+        _activity?.playing(
+          remaining: value.duration > Duration.zero
+              ? value.duration - value.position
+              : null,
+        );
         CrashReporter.instance.setContext(
           CrashContext.playbackState,
           'playing',
@@ -3094,6 +3112,8 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
     final inParty = _party != null;
     _party?.dispose();
     _party = null;
+    _activity?.stopped();
+    _activity = null;
     // Detach first: nothing below may be notified after it is disposed.
     _controller?.removeListener(_tick);
     _stallWatchdog?.dispose();

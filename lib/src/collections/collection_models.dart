@@ -78,12 +78,18 @@ class MediaCollection {
     this.description = '',
     this.folderId,
     this.cover = '',
+    this.shared = false,
     this.deleted = false,
   });
 
   final String id;
   final String name;
   final String description;
+
+  /// Friends may see it (Friends must be on; the server decides who).
+  /// Private unless the owner shares it; a copy saved before sharing
+  /// existed reads as private.
+  final bool shared;
 
   /// The folder it is in; null at the top of the library.
   final String? folderId;
@@ -102,6 +108,7 @@ class MediaCollection {
     String? description,
     String? Function()? folderId,
     String? cover,
+    bool? shared,
     double? order,
     int? updatedAt,
     bool? deleted,
@@ -111,6 +118,7 @@ class MediaCollection {
     description: description ?? this.description,
     folderId: folderId == null ? this.folderId : folderId(),
     cover: cover ?? this.cover,
+    shared: shared ?? this.shared,
     order: order ?? this.order,
     createdAt: createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
@@ -123,6 +131,7 @@ class MediaCollection {
     if (description.isNotEmpty) 'description': description,
     if (folderId != null) 'folderId': folderId,
     if (cover.isNotEmpty) 'cover': cover,
+    if (shared) 'visibility': 'friends',
     'order': order,
     'createdAt': createdAt,
     'updatedAt': updatedAt,
@@ -140,6 +149,7 @@ class MediaCollection {
       description: '${json['description'] ?? ''}',
       folderId: folderId is String && folderId.isNotEmpty ? folderId : null,
       cover: '${json['cover'] ?? ''}',
+      shared: json['visibility'] == 'friends',
       order: _double(json['order']),
       createdAt: _int(json['createdAt']),
       updatedAt: _int(json['updatedAt']),

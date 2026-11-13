@@ -503,4 +503,65 @@ void main() {
       expect(find.text('Watch together'), findsNothing);
     });
   });
+
+  group('Share with friends', () {
+    late List<String> shared;
+    setUp(() => shared = []);
+    void share(BuildContext _, MediaItem item) => shared.add(item.id);
+
+    testWidgets('phone, TV and Windows: Share sends the title on', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        MediaDetailsScreen(
+          item: _movie,
+          tmdb: tmdb,
+          onPlay: (_) {},
+          onPlayEpisode: (_, _, _) {},
+          onShare: share,
+        ),
+      );
+      await tester.tap(find.text('Share'));
+      await _pump(
+        tester,
+        TvMediaDetailsScreen(
+          item: _series,
+          tmdb: tmdb,
+          onPlay: (_) {},
+          onPlayEpisode: (_, _, _) {},
+          onShare: share,
+        ),
+        tv: true,
+      );
+      await tester.tap(find.text('Share'));
+      await _pump(
+        tester,
+        DesktopDetailsScreen(
+          item: _movie,
+          tmdb: tmdb,
+          onPlay: (_, _) {},
+          onPlayEpisode: (_, _, _, _) {},
+          isFavorite: (_) => false,
+          onToggleFavorite: (_) async => true,
+          onShare: share,
+        ),
+      );
+      await tester.tap(find.text('Share'));
+      expect(shared, ['8', '7', '8']);
+    });
+
+    testWidgets('no Share while Friends is off', (tester) async {
+      await _pump(
+        tester,
+        MediaDetailsScreen(
+          item: _movie,
+          tmdb: tmdb,
+          onPlay: (_) {},
+          onPlayEpisode: (_, _, _) {},
+        ),
+      );
+      expect(find.text('Share'), findsNothing);
+    });
+  });
 }

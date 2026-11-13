@@ -330,6 +330,9 @@ class CollectionSync {
               ),
             'folderId': ?record.folderId,
             if (_titlePattern.hasMatch(record.cover)) 'cover': record.cover,
+            // Always said, so the server tells this app's "private" from an
+            // older app that does not know about sharing.
+            'visibility': record.shared ? 'friends' : 'private',
             'order': record.order,
             'createdAt': _toServer(state, record.createdAt),
           },
@@ -448,6 +451,7 @@ class CollectionSync {
         ),
         'folderId': ?text('folderId', 24, _idPattern),
         'cover': ?text('cover', 30, _titlePattern),
+        if (row['visibility'] == 'friends') 'visibility': 'friends',
         'poster': ?text('poster', 300),
         'background': ?text('background', 300),
         'year': ?text('year', 4, _yearPattern),

@@ -21,6 +21,7 @@ class MediaDetailsScreen extends StatefulWidget {
     this.onWatchTogether,
     this.onStartOver,
     this.onCollections,
+    this.onShare,
   });
 
   final MediaItem item;
@@ -30,6 +31,10 @@ class MediaDetailsScreen extends StatefulWidget {
   /// Chooses the collections the title is in. Without it the page offers
   /// no Collections button.
   final void Function(BuildContext context, MediaItem item)? onCollections;
+
+  /// Shares the title with friends. Without it (Friends off) the page
+  /// offers no Share button.
+  final void Function(BuildContext context, MediaItem item)? onShare;
 
   /// Plays the movie from the beginning. Given only for a movie with a
   /// saved position; Play then reads Resume.
@@ -411,6 +416,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                 ],
                 if (widget.onToggleFavorite != null ||
                     widget.onCollections != null ||
+                    widget.onShare != null ||
                     _offersParty(item)) ...[
                   const SizedBox(height: 14),
                   Wrap(
@@ -420,6 +426,8 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                       if (widget.onToggleFavorite != null) _myListButton(),
                       if (widget.onCollections case final collections?)
                         _collectionsButton(() => collections(context, item)),
+                      if (widget.onShare case final share?)
+                        _shareButton(() => share(context, item)),
                       if (_offersParty(item)) _watchTogetherButton(item),
                     ],
                   ),
@@ -479,6 +487,19 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
       'Collections',
       style: TextStyle(fontWeight: FontWeight.w700),
     ),
+  );
+
+  Widget _shareButton(VoidCallback onPressed) => OutlinedButton.icon(
+    style: OutlinedButton.styleFrom(
+      foregroundColor: Colors.white,
+      backgroundColor: Colors.black.withValues(alpha: .28),
+      shape: const StadiumBorder(),
+      side: BorderSide(color: Colors.white.withValues(alpha: .35)),
+      padding: const EdgeInsets.symmetric(horizontal: 19, vertical: 13),
+    ),
+    onPressed: onPressed,
+    icon: const Icon(ReelishIcons.send, size: 19),
+    label: const Text('Share', style: TextStyle(fontWeight: FontWeight.w700)),
   );
 
   Widget _myListButton() => OutlinedButton.icon(

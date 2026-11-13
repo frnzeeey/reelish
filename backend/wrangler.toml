@@ -47,6 +47,16 @@ name = "PARTY_LIMITER"
 namespace_id = "1005"
 simple = { limit = 20, period = 60 }
 
+[[ratelimits]]
+name = "SOCIAL_LIMITER"
+namespace_id = "1006"
+simple = { limit = 60, period = 60 }
+
+[[ratelimits]]
+name = "SOCIAL_LOOKUP_LIMITER"
+namespace_id = "1007"
+simple = { limit = 10, period = 60 }
+
 # Watch party rooms: SQLite-backed Durable Objects, the only kind on the
 # Workers Free plan. Rooms hibernate between messages.
 [[durable_objects.bindings]]
@@ -88,6 +98,8 @@ ratelimits = [
   { name = "TMDB_IP_LIMITER", namespace_id = "2003", simple = { limit = 600, period = 60 } },
   { name = "SYNC_LIMITER", namespace_id = "2004", simple = { limit = 30, period = 60 } },
   { name = "PARTY_LIMITER", namespace_id = "2005", simple = { limit = 20, period = 60 } },
+  { name = "SOCIAL_LIMITER", namespace_id = "2006", simple = { limit = 60, period = 60 } },
+  { name = "SOCIAL_LOOKUP_LIMITER", namespace_id = "2007", simple = { limit = 10, period = 60 } },
 ]
 durable_objects = { bindings = [{ name = "PARTY_ROOMS", class_name = "WatchPartyRoom" }, { name = "TRAKT_EGRESS", class_name = "TraktEgress" }] }
 observability = { enabled = true }
@@ -107,6 +119,8 @@ ratelimits = [
   { name = "TMDB_IP_LIMITER", namespace_id = "3003", simple = { limit = 600, period = 60 } },
   { name = "SYNC_LIMITER", namespace_id = "3004", simple = { limit = 30, period = 60 } },
   { name = "PARTY_LIMITER", namespace_id = "3005", simple = { limit = 20, period = 60 } },
+  { name = "SOCIAL_LIMITER", namespace_id = "3006", simple = { limit = 60, period = 60 } },
+  { name = "SOCIAL_LOOKUP_LIMITER", namespace_id = "3007", simple = { limit = 10, period = 60 } },
 ]
 durable_objects = { bindings = [{ name = "PARTY_ROOMS", class_name = "WatchPartyRoom" }, { name = "TRAKT_EGRESS", class_name = "TraktEgress" }] }
 observability = { enabled = true }

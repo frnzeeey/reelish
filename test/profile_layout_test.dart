@@ -290,7 +290,7 @@ void main() {
         expect(hint.dy, greaterThan(name.dy));
         // Each section's first tile, on one line.
         final theme = tester.getTopLeft(find.text('Avatar frame'));
-        final account = tester.getTopLeft(find.text('Manage account'));
+        final account = tester.getTopLeft(find.text('Friends'));
         expect(theme.dy, account.dy);
         expect(account.dx, greaterThan(theme.dx));
         expect(tester.takeException(), isNull);

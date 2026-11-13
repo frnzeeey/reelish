@@ -37,11 +37,16 @@ class DesktopDetailsScreen extends StatefulWidget {
     this.onWatchTogether,
     this.onStartOver,
     this.onCollections,
+    this.onShare,
   });
 
   /// Chooses the collections the title is in. Without it the page offers
   /// no Collections button.
   final void Function(BuildContext context, MediaItem item)? onCollections;
+
+  /// Shares the title with friends. Without it (Friends off) the page
+  /// offers no Share button.
+  final void Function(BuildContext context, MediaItem item)? onShare;
 
   /// Plays the movie from the beginning. Given only for a movie with a
   /// saved position; Play then reads Resume.
@@ -622,6 +627,32 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
                                   icon: const Icon(ReelishIcons.playlist),
                                   label: const Text(
                                     'Collections',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                              if (widget.onShare case final share?)
+                                OutlinedButton.icon(
+                                  onPressed: () => share(context, _item),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: Colors.white,
+                                    backgroundColor: Colors.white.withValues(
+                                      alpha: .1,
+                                    ),
+                                    side: BorderSide(
+                                      color: Colors.white.withValues(
+                                        alpha: .28,
+                                      ),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 22,
+                                      vertical: 18,
+                                    ),
+                                  ),
+                                  icon: const Icon(ReelishIcons.send),
+                                  label: const Text(
+                                    'Share',
                                     style: TextStyle(
                                       fontWeight: FontWeight.w700,
                                     ),

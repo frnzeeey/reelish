@@ -411,6 +411,197 @@ class AccountApi {
     ];
   }
 
+  /// Friends: the caller's social profile, `{profile: null}` while it is off.
+  Future<Map<String, dynamic>> socialProfile(String accessToken) =>
+      _send('GET', '/social/profile', token: accessToken);
+
+  /// Turns Friends on (with a handle) or changes the profile; fields left
+  /// out keep their value, null clears the name or avatar.
+  Future<Map<String, dynamic>> updateSocialProfile(
+    String accessToken,
+    Map<String, Object?> changes,
+  ) => _send('PUT', '/social/profile', token: accessToken, body: changes);
+
+  Future<Map<String, dynamic>> resetFriendCode(String accessToken) =>
+      _send('POST', '/social/profile/code', token: accessToken, body: const {});
+
+  /// Turns Friends off: the server deletes every social row of the account.
+  Future<void> disableFriends(String accessToken) =>
+      _send('DELETE', '/social/profile', token: accessToken);
+
+  /// Asks to be friends, by `{code}` or `{handle}`: `{status, person}`.
+  Future<Map<String, dynamic>> sendFriendRequest(
+    String accessToken,
+    Map<String, String> target,
+  ) => _send('POST', '/social/requests', token: accessToken, body: target);
+
+  Future<Map<String, dynamic>> acceptFriendRequest(
+    String accessToken,
+    String handle,
+  ) => _send(
+    'POST',
+    '/social/requests/${Uri.encodeComponent(handle)}/accept',
+    token: accessToken,
+    body: const {},
+  );
+
+  Future<void> declineFriendRequest(String accessToken, String handle) => _send(
+    'POST',
+    '/social/requests/${Uri.encodeComponent(handle)}/decline',
+    token: accessToken,
+    body: const {},
+  );
+
+  Future<void> cancelFriendRequest(String accessToken, String handle) => _send(
+    'DELETE',
+    '/social/requests/${Uri.encodeComponent(handle)}',
+    token: accessToken,
+  );
+
+  /// A page of friends; the first page (no [cursor]) also has requests.
+  Future<Map<String, dynamic>> friends(String accessToken, {String? cursor}) =>
+      _send(
+        'GET',
+        cursor == null
+            ? '/social/friends'
+            : '/social/friends?cursor=${Uri.encodeQueryComponent(cursor)}',
+        token: accessToken,
+      );
+
+  Future<Map<String, dynamic>> friend(String accessToken, String handle) =>
+      _send(
+        'GET',
+        '/social/friends/${Uri.encodeComponent(handle)}',
+        token: accessToken,
+      );
+
+  /// A page of one of a friend's shared collections; the first page also
+  /// has `collection`.
+  Future<Map<String, dynamic>> friendCollection(
+    String accessToken,
+    String handle,
+    String id, {
+    String? cursor,
+  }) => _send(
+    'GET',
+    '/social/friends/${Uri.encodeComponent(handle)}/collections/'
+        '${Uri.encodeComponent(id)}'
+        '${cursor == null ? '' : '?cursor=${Uri.encodeQueryComponent(cursor)}'}',
+    token: accessToken,
+  );
+
+  Future<void> removeFriend(String accessToken, String handle) => _send(
+    'DELETE',
+    '/social/friends/${Uri.encodeComponent(handle)}',
+    token: accessToken,
+  );
+
+  Future<void> blockPerson(String accessToken, String handle) => _send(
+    'POST',
+    '/social/blocks',
+    token: accessToken,
+    body: {'handle': handle},
+  );
+
+  Future<Map<String, dynamic>> blockedPeople(String accessToken) =>
+      _send('GET', '/social/blocks', token: accessToken);
+
+  Future<void> unblockPerson(String accessToken, String handle) => _send(
+    'DELETE',
+    '/social/blocks/${Uri.encodeComponent(handle)}',
+    token: accessToken,
+  );
+
+  /// Sends a title to friends: `{sent: [handle], notSent: [handle]}`. The
+  /// same [clientId] on a retry never sends twice.
+  Future<Map<String, dynamic>> sendRecommendation(
+    String accessToken, {
+    required List<String> recipients,
+    required Map<String, Object?> media,
+    required String clientId,
+    String? message,
+  }) => _send(
+    'POST',
+    '/social/recommendations',
+    token: accessToken,
+    body: {
+      'recipients': recipients,
+      'media': media,
+      'clientId': clientId,
+      'message': ?message,
+    },
+  );
+
+  /// A page of titles friends sent; the first also has `unread`.
+  Future<Map<String, dynamic>> recommendations(
+    String accessToken, {
+    String? cursor,
+  }) => _send(
+    'GET',
+    cursor == null
+        ? '/social/recommendations'
+        : '/social/recommendations?cursor=${Uri.encodeQueryComponent(cursor)}',
+    token: accessToken,
+  );
+
+  Future<Map<String, dynamic>> sentRecommendations(String accessToken) =>
+      _send('GET', '/social/recommendations/sent', token: accessToken);
+
+  /// Marks [ids] read, or every one when null.
+  Future<void> markRecommendationsRead(
+    String accessToken, {
+    List<String>? ids,
+  }) => _send(
+    'POST',
+    '/social/recommendations/read',
+    token: accessToken,
+    body: {'ids': ?ids},
+  );
+
+  Future<void> removeRecommendation(String accessToken, String id) => _send(
+    'DELETE',
+    '/social/recommendations/${Uri.encodeComponent(id)}',
+    token: accessToken,
+  );
+
+  /// Watching now: what this account plays, for friends while it shares it.
+  Future<void> publishActivity(
+    String accessToken, {
+    required Map<String, Object?> media,
+    int? season,
+    int? episode,
+    int? remainingMs,
+  }) => _send(
+    'PUT',
+    '/social/activity',
+    token: accessToken,
+    body: {
+      'media': media,
+      'season': ?season,
+      'episode': ?episode,
+      'remainingMs': ?remainingMs,
+    },
+  );
+
+  Future<void> clearActivity(String accessToken) =>
+      _send('DELETE', '/social/activity', token: accessToken);
+
+  /// Friends watching something now: `{watching: [...]}`.
+  Future<Map<String, dynamic>> friendsWatching(String accessToken) =>
+      _send('GET', '/social/activity', token: accessToken);
+
+  Future<void> reportPerson(
+    String accessToken, {
+    required String handle,
+    required String reason,
+    String note = '',
+  }) => _send(
+    'POST',
+    '/social/reports',
+    token: accessToken,
+    body: {'handle': handle, 'reason': reason, 'note': note},
+  );
+
   Future<void> logout(String accessToken) =>
       _send('POST', '/auth/logout', token: accessToken);
 

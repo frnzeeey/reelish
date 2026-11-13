@@ -34,6 +34,7 @@ class TvMediaDetailsScreen extends StatefulWidget {
     this.onRemoveFromHistory,
     this.onStartOver,
     this.onCollections,
+    this.onShare,
   });
 
   final MediaItem item;
@@ -43,6 +44,10 @@ class TvMediaDetailsScreen extends StatefulWidget {
   /// Chooses the collections the title is in. Without it the page offers
   /// no Collections button.
   final void Function(BuildContext context, MediaItem item)? onCollections;
+
+  /// Shares the title with friends. Without it (Friends off) the page
+  /// offers no Share button.
+  final void Function(BuildContext context, MediaItem item)? onShare;
 
   /// Plays the movie from the beginning. Given only for a movie with a
   /// saved position; Play then reads Resume.
@@ -405,6 +410,13 @@ class _TvMediaDetailsScreenState extends State<TvMediaDetailsScreen> {
                 onPressed: () => collections(context, item),
                 icon: const Icon(ReelishIcons.playlist),
                 label: const Text('Collections'),
+              ),
+            if (widget.onShare case final share?)
+              OutlinedButton.icon(
+                style: _actionStyle(filled: false),
+                onPressed: () => share(context, item),
+                icon: const Icon(ReelishIcons.send),
+                label: const Text('Share'),
               ),
             if (widget.onWatchTogether != null &&
                 int.tryParse(widget.item.id) != null)

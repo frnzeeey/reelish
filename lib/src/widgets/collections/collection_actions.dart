@@ -12,11 +12,21 @@ import '../../collections/collection_models.dart';
 import '../../collections/collection_store.dart';
 import '../../models/media_item.dart';
 import '../../platform/device_capabilities.dart';
+import '../../social/social_controller.dart';
 import '../../theme/glass_theme.dart';
 import '../../theme/reelish_icons.dart';
 
 /// What [CollectionActions.manage] can do with a collection.
-enum _CollectionAction { edit, move, cover, earlier, later, delete }
+enum _CollectionAction {
+  edit,
+  move,
+  cover,
+  share,
+  unshare,
+  earlier,
+  later,
+  delete,
+}
 
 /// What [CollectionActions.manageFolder] can do with a folder.
 enum _FolderAction { rename, earlier, later, delete }
@@ -163,14 +173,18 @@ abstract final class CollectionActions {
     );
   }
 
-  /// The collection's menu: edit, move, reorder and delete. [onDeleted]
-  /// runs once it is gone (a page showing it closes).
+  /// The collection's menu: edit, move, cover, sharing with friends,
+  /// reorder and delete. [onDeleted] runs once it is gone (a page showing
+  /// it closes). Sharing is offered while Friends is on ([canShare]
+  /// overrides that); a shared collection can always be made private.
   static Future<void> manage(
     BuildContext context,
     CollectionStore store,
     MediaCollection collection, {
     VoidCallback? onDeleted,
+    bool? canShare,
   }) async {
+    final offerShare = canShare ?? SocialController.instance.enabled;
     final siblings = store.library.collectionsIn(collection.folderId);
     final index = siblings.indexWhere((c) => c.id == collection.id);
     final action = await _choose<_CollectionAction>(
@@ -181,6 +195,15 @@ abstract final class CollectionActions {
         (_CollectionAction.move, ReelishIcons.stack, 'Move to folder', false),
         if (store.library.countOf(collection.id) > 0)
           (_CollectionAction.cover, ReelishIcons.star, 'Choose cover', false),
+        if (collection.shared)
+          (_CollectionAction.unshare, ReelishIcons.lock, 'Make private', false)
+        else if (offerShare)
+          (
+            _CollectionAction.share,
+            ReelishIcons.people,
+            'Share with friends',
+            false,
+          ),
         if (index > 0)
           (_CollectionAction.earlier, ReelishIcons.arrowUp, 'Move up', false),
         if (index >= 0 && index < siblings.length - 1)
@@ -196,6 +219,18 @@ abstract final class CollectionActions {
         await move(context, store, collection);
       case _CollectionAction.cover:
         await chooseCover(context, store, collection);
+      case _CollectionAction.share:
+        await _run(
+          context,
+          () => store.setShared(collection.id, true),
+          done: 'Friends can now see ${collection.name}',
+        );
+      case _CollectionAction.unshare:
+        await _run(
+          context,
+          () => store.setShared(collection.id, false),
+          done: '${collection.name} is private',
+        );
       case _CollectionAction.earlier:
         await _run(context, () => store.reorderCollection(collection.id, -1));
       case _CollectionAction.later:

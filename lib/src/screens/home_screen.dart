@@ -44,6 +44,9 @@ import '../theme/design_tokens.dart';
 import '../theme/glass_theme.dart';
 import '../viewmodels/home_view_model.dart';
 import '../widgets/collections/collection_actions.dart';
+import '../social/recommendations_controller.dart';
+import '../social/social_controller.dart';
+import '../widgets/social/share_dialog.dart';
 import '../widgets/provider_installer_modal.dart';
 import '../widgets/analytics_consent_dialog.dart';
 import '../widgets/crash_report_consent_dialog.dart';
@@ -193,6 +196,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _providerPlugins.addListener(_onPluginChange);
     PartyPlayerLauncher.open = _openPartyTitle;
+    SocialTitles.open = _showDetails;
     _startSpotlightTimer();
     _start();
     unawaited(_loadFavorites());
@@ -550,6 +554,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             fromStart: true,
           )
         : null;
+    // Share appears only while Friends is on (as last known on this device).
+    final share = SocialController.instance.enabled ? _shareWithFriends : null;
     try {
       await Navigator.push<void>(
         context,
@@ -576,6 +582,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   onWatchTogether: _startParty,
                   onStartOver: startOver,
                   onCollections: _chooseCollections,
+                  onShare: share,
                 )
               : DeviceCapabilities.isTv
               ? TvMediaDetailsScreen(
@@ -598,6 +605,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   onWatchTogether: _startParty,
                   onStartOver: startOver,
                   onCollections: _chooseCollections,
+                  onShare: share,
                 )
               : MediaDetailsScreen(
                   item: item,
@@ -615,6 +623,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   onWatchTogether: _startParty,
                   onStartOver: startOver,
                   onCollections: _chooseCollections,
+                  onShare: share,
                 ),
         ),
       );
@@ -666,6 +675,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
     return saved;
   }
+
+  /// A details page's Share button: the title to friends.
+  void _shareWithFriends(BuildContext context, MediaItem item) =>
+      unawaited(shareWithFriends(context, item));
 
   /// A details page's Collections button: which collections the title is
   /// in, changed in place.
@@ -1254,6 +1267,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (PartyPlayerLauncher.open == _openPartyTitle) {
       PartyPlayerLauncher.open = null;
     }
+    if (SocialTitles.open == _showDetails) SocialTitles.open = null;
     _services.dispose();
     for (final timer in _gateTimers.values) {
       timer.cancel();

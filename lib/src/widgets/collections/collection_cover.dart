@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 
 import '../../theme/glass_theme.dart';
+import '../../theme/reelish_icons.dart';
 import '../artwork_image.dart';
 
 class CollectionCover extends StatelessWidget {
@@ -14,12 +15,16 @@ class CollectionCover extends StatelessWidget {
     required this.icon,
     required this.width,
     this.radius = 14,
+    this.shared = false,
   });
 
   final List<String> posters;
   final IconData icon;
   final double width;
   final double radius;
+
+  /// Friends can see it: a small badge in the corner says so.
+  final bool shared;
 
   /// Poster shape: 2:3.
   static double heightFor(double width) => width * 1.5;
@@ -86,7 +91,33 @@ class CollectionCover extends StatelessWidget {
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(radius),
-          child: art,
+          child: !shared
+              ? art
+              : Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    art,
+                    Positioned(
+                      top: 6,
+                      right: 6,
+                      child: Semantics(
+                        label: 'Shared with friends',
+                        child: Container(
+                          padding: const EdgeInsets.all(5),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: GlassTheme.artworkScrim,
+                          ),
+                          child: Icon(
+                            ReelishIcons.people,
+                            size: (width * .12).clamp(12, 18),
+                            color: GlassTheme.onArtwork,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
         ),
       ),
     );

@@ -20,6 +20,7 @@ import '../platform/app_icon.dart';
 import '../platform/device_capabilities.dart';
 import '../services/accent_settings_controller.dart';
 import '../services/storage_service.dart';
+import '../social/social_controller.dart';
 import '../theme/design_tokens.dart';
 import '../theme/glass_theme.dart';
 import '../theme/supporter_themes.dart';
@@ -34,6 +35,8 @@ import 'account_settings_screen.dart';
 import 'app_icon_settings_screen.dart';
 import 'avatar_frames_screen.dart';
 import 'playback_settings_screen.dart';
+import 'social/friends_privacy_screen.dart';
+import 'social/friends_screen.dart';
 import 'supporters_screen.dart';
 
 /// What the library holds, counted from this device's history and My list.
@@ -81,6 +84,7 @@ class ProfileScreen extends StatefulWidget {
     this.badges,
     this.appearance,
     this.frames,
+    this.social,
   });
 
   final StorageService storage;
@@ -103,6 +107,9 @@ class ProfileScreen extends StatefulWidget {
   final AvatarFrames? frames;
   final ProfileController? profile;
 
+  /// Friends; [SocialController.instance] when null.
+  final SocialController? social;
+
   /// The app's look: its theme, when one applies, dresses the identity card,
   /// and Personalize opens its settings. Without it those are left out.
   final AccentSettingsController? appearance;
@@ -120,6 +127,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       widget.profile ?? ProfileController.instance;
   late final AccountBadges _badges = widget.badges ?? AccountBadges.instance;
   late final AvatarFrames _frames = widget.frames ?? AvatarFrames.instance;
+  late final SocialController _social =
+      widget.social ?? SocialController.instance;
 
   /// The entitlement, for the membership tile: the appearance's when given
   /// (the same instance the app uses), else the app's.
@@ -132,6 +141,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     // Both read GET /me, so they share one request.
     unawaited(_badges.refresh());
     unawaited(_frames.refresh());
+    // The saved copy, then the server at most every two minutes, and not at
+    // all while Friends is off: for the waiting-requests dot.
+    unawaited(_social.refreshIfStale());
   }
 
   /// Local reads only: no network request.
@@ -170,6 +182,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _openAppearance(AccentSettingsController appearance) => _open(
     (back) => AppearanceSettingsScreen(controller: appearance, onBack: back),
   );
+
+  void _openFriends() =>
+      _open((back) => FriendsScreen(social: _social, onBack: back));
+
+  void _openFriendsPrivacy() =>
+      _open((back) => FriendsPrivacyScreen(controller: _social, onBack: back));
 
   void _openAppIcon() => _open((back) => AppIconSettingsScreen(onBack: back));
 
@@ -298,6 +316,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _profile,
       _supporters,
       _frames,
+      _social,
       ?widget.appearance,
     ]),
     builder: (context, _) {
@@ -356,6 +375,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
           label: 'ACCOUNT',
           children: [
             SettingsTile(
+              icon: ReelishIcons.people,
+              title: 'Friends',
+              description: 'Friends, requests and recommendations',
+              value: switch (_social.profile) {
+                _? when _social.counts.incoming > 0 =>
+                  _social.counts.incoming == 1
+                      ? '1 request'
+                      : '${_social.counts.incoming} requests',
+                _? when _social.counts.unread > 0 =>
+                  _social.counts.unread == 1
+                      ? '1 new recommendation'
+                      : '${_social.counts.unread} new recommendations',
+                _? => switch (_social.counts.friends) {
+                  0 => 'Add friends',
+                  1 => '1 friend',
+                  final count => '$count friends',
+                },
+                null when _social.known => 'Off',
+                null => null,
+              },
+              trailing: _social.counts.anyNew
+                  ? _NewDot(counts: _social.counts)
+                  : null,
+              showChevron: true,
+              onTap: _openFriends,
+            ),
+            SettingsTile(
+              icon: ReelishIcons.shield,
+              title: 'Friends & privacy',
+              value: _social.profile == null
+                  ? null
+                  : '@${_social.profile!.handle}',
+              description: 'Your handle, friend code and who can find you',
+              onTap: _openFriendsPrivacy,
+            ),
+            SettingsTile(
               icon: ReelishIcons.manageAccounts,
               title: 'Manage account',
               description: 'Display name, photo, Trakt sync and devices',
@@ -403,6 +458,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ],
       );
     },
+  );
+}
+
+/// Something new in Friends (requests or recommendations), beside its row.
+class _NewDot extends StatelessWidget {
+  const _NewDot({required this.counts});
+
+  final SocialCounts counts;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Semantics(
+        label: [
+          if (counts.incoming > 0)
+            counts.incoming == 1
+                ? '1 friend request'
+                : '${counts.incoming} friend requests',
+          if (counts.unread > 0)
+            counts.unread == 1
+                ? '1 new recommendation'
+                : '${counts.unread} new recommendations',
+        ].join(', '),
+        child: Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: GlassTheme.primary,
+          ),
+        ),
+      ),
+      const SizedBox(width: 8),
+      Icon(ReelishIcons.chevronRight, color: GlassTheme.muted, size: 22),
+    ],
   );
 }
 

@@ -263,6 +263,39 @@ class _LegalInformationScreenState extends State<LegalInformationScreen> {
           'Everything is deleted when you delete your account.',
     ),
     (
+      'Friends',
+      'Friends is off until you turn it on in Profile > Friends & privacy. '
+          'Then the Reelish API stores, for your account, the handle you '
+          'choose, a random friend code, and, only if you set them, a name '
+          'and one of the built-in avatars for friends to see, along with '
+          'your Friends privacy settings. It also stores your friendships, '
+          'friend requests waiting for an answer (deleted after 30 days) and '
+          'the people you blocked. When you share a title, the friends you '
+          'choose receive its title, year, TMDB artwork address and your '
+          'note, kept for 180 days or until they remove it; it stays with '
+          'them if you stop being friends, and blocking removes it. A '
+          'collection you share with friends (every collection is private '
+          'until you do) shows them its name, description and titles; '
+          'making it private again, removing a friend, blocking or turning '
+          'Friends off hides it at once. Only if you turn on "Share what '
+          'I\'m watching", the title you are playing (and its season and '
+          'episode) is sent when it starts, for your friends to see; it is '
+          'removed when you stop, expires on its own within hours even if '
+          'the app closes unexpectedly, is never kept as a history, and is '
+          'not sent during a Watch Party. Others '
+          'can find you only by your exact '
+          'friend code, or your exact handle if you allow it, and see only '
+          'your handle and what you chose to share. A report you make about '
+          'someone is kept with bug reports for up to 180 days, with the '
+          'reported account and without your account id. Your Trakt '
+          'username, Trakt picture and any profile photo are never shown to '
+          'other people. Turning Friends off deletes all of this at once; '
+          'your handle is then '
+          'held for 30 days, with nothing else, so nobody else can take it '
+          'and appear to be you, then released. Everything is deleted when '
+          'you delete your account.',
+    ),
+    (
       'Information kept on your device',
       'The app stores your favorites, recently played titles and resume '
           'positions, playback and notification preferences, your profile '

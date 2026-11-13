@@ -325,6 +325,7 @@ class CollectionStore extends ChangeNotifier {
                 description: text('description'),
                 folderId: folderId.isEmpty ? null : folderId,
                 cover: text('cover'),
+                shared: text('visibility') == 'friends',
                 order: number('order'),
                 createdAt: record.createdAt,
                 updatedAt: record.at,
@@ -460,6 +461,13 @@ class CollectionStore extends ChangeNotifier {
       cover: item == null ? '' : '${item.type}:${item.id}',
       updatedAt: now,
     );
+  });
+
+  /// Lets friends see the collection, or makes it private again.
+  Future<void> setShared(String id, bool shared) => _change((now) {
+    final collection = _liveCollection(id);
+    if (collection.shared == shared) return;
+    _collections[id] = collection.copyWith(shared: shared, updatedAt: now);
   });
 
   /// Moves a collection into [folderId], or to the top level for null, at

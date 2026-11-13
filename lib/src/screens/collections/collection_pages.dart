@@ -103,6 +103,7 @@ class CollectionsSection extends StatelessWidget {
           caption: _count(library.countOf(collection.id), 'title'),
           icon: ReelishIcons.playlist,
           posters: library.coverArtOf(collection),
+          shared: collection.shared,
           onTap: () => _open(context, CustomTarget(collection.id)),
           onLongPress: () =>
               CollectionActions.manage(context, store, collection),
@@ -222,12 +223,16 @@ class _Tile extends StatelessWidget {
     required this.posters,
     required this.onTap,
     this.onLongPress,
+    this.shared = false,
   });
 
   final double width;
   final String title, caption;
   final IconData icon;
   final List<String> posters;
+
+  /// Friends can see it; the cover shows a badge.
+  final bool shared;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
 
@@ -248,7 +253,12 @@ class _Tile extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            CollectionCover(posters: posters, icon: icon, width: width),
+            CollectionCover(
+              posters: posters,
+              icon: icon,
+              width: width,
+              shared: shared,
+            ),
             const SizedBox(height: 8),
             Text(
               title,
@@ -732,6 +742,7 @@ class _CollectionPageState extends State<CollectionPage> {
                       caption: _count(library.countOf(collection.id), 'title'),
                       icon: ReelishIcons.playlist,
                       posters: library.coverArtOf(collection),
+                      shared: collection.shared,
                       onTap: () => unawaited(
                         CollectionPage.open(
                           context,

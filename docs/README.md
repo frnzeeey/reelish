@@ -67,6 +67,17 @@ search the generated references below: every file, class and function in
 | [Smart collections](custom-collections/SMART_COLLECTIONS_SPECIFICATION.md) | Recently added, My list, Not started, Finished: sources, rules, edge cases |
 | [Collections tests](custom-collections/CUSTOM_COLLECTIONS_TEST_REPORT.md) | Tests, results, what was not verified |
 | [Collections changelog](custom-collections/IMPLEMENTATION_CHANGELOG.md) | Files created and changed, decisions, limitations |
+| [Friends: audit](friends-activity/CURRENT_ARCHITECTURE_AUDIT.md) | Phase 0: what exists to reuse, sources of truth, what is missing |
+| [Friends: requirements](friends-activity/FEATURE_REQUIREMENTS.md) | Social profile, friends, recommendations, shared collections, now watching, privacy settings |
+| [Friends: architecture](friends-activity/TECHNICAL_ARCHITECTURE.md) | Backend choice, components, request flows, playback and collections integration |
+| [Friends: schema](friends-activity/DATABASE_SCHEMA.md) | D1 tables (migration 0013), indexes, state transitions, retention |
+| [Friends: security and privacy](friends-activity/SECURITY_AND_PRIVACY.md) | Threat model, defaults, revocation, testing approach |
+| [Friends: free-tier costs](friends-activity/FREE_TIER_COST_ANALYSIS.md) | Cloudflare and Firebase limits, per-user estimates, 100–5,000 user scenarios |
+| [Friends: plan](friends-activity/IMPLEMENTATION_PLAN.md) | Phases and the decisions that need approval |
+| [Friends: progress](friends-activity/IMPLEMENTATION_PROGRESS.md) | What each phase changed, deviations, where it is deployed |
+| [Friends: testing report](friends-activity/TESTING_REPORT.md) | Tests per phase, results, what was not verified |
+| [Friends: final audit](friends-activity/FINAL_AUDIT.md) | Security review of every route, fixes, accepted risks, cost against the code as built |
+| [Friends: deployment guide](friends-activity/DEPLOYMENT_GUIDE.md) | Taking Friends to production: migrations, deploy, smoke test, rollback |
 
 ## Playback
 

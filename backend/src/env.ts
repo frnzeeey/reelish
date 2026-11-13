@@ -12,6 +12,10 @@ export interface Env {
   SYNC_LIMITER: RateLimit;
   /** Watch party creates, code lookups and joins, per user and per IP. */
   PARTY_LIMITER: RateLimit;
+  /** Friends routes, per user. */
+  SOCIAL_LIMITER: RateLimit;
+  /** Handle claims, code resets and (later) lookups: answers that could enumerate people. */
+  SOCIAL_LOOKUP_LIMITER: RateLimit;
   /** One watch party room per code (SQLite-backed Durable Objects). */
   PARTY_ROOMS: DurableObjectNamespace<WatchPartyRoom>;
   /** Reaches Trakt from another region when this one is refused. */

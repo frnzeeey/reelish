@@ -100,6 +100,7 @@ class DesktopCollectionsSection extends StatelessWidget {
           caption: _count(library.countOf(collection.id), 'title'),
           icon: ReelishIcons.playlist,
           posters: library.coverArtOf(collection),
+          shared: collection.shared,
           onOpen: () => _open(context, CustomTarget(collection.id)),
           onOptions: () => CollectionActions.manage(context, store, collection),
         ),
@@ -160,12 +161,16 @@ class DesktopCollectionTile extends StatefulWidget {
     required this.posters,
     required this.onOpen,
     this.onOptions,
+    this.shared = false,
     this.width = _tileWidth,
   });
 
   final String title, caption;
   final IconData icon;
   final List<String> posters;
+
+  /// Friends can see it; the cover shows a badge.
+  final bool shared;
   final VoidCallback onOpen;
   final VoidCallback? onOptions;
   final double width;
@@ -211,6 +216,7 @@ class _DesktopCollectionTileState extends State<DesktopCollectionTile> {
                           duration: AppMotion.resolve(context, AppMotion.hover),
                           child: CollectionCover(
                             posters: widget.posters,
+                            shared: widget.shared,
                             icon: widget.icon,
                             width: widget.width,
                           ),
@@ -560,6 +566,7 @@ class _DesktopCollectionPageState extends State<DesktopCollectionPage> {
                       caption: _count(library.countOf(collection.id), 'title'),
                       icon: ReelishIcons.playlist,
                       posters: library.coverArtOf(collection),
+                      shared: collection.shared,
                       onOpen: () => _openTarget(CustomTarget(collection.id)),
                       onOptions: () =>
                           CollectionActions.manage(context, _store, collection),

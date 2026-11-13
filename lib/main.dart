@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'src/account/account_controller.dart';
 import 'src/account/account_history.dart';
 import 'src/account/collection_sync.dart';
+import 'src/social/activity_publisher.dart';
 import 'src/account/progress_sync.dart';
 import 'src/account/supporter_controller.dart';
 import 'src/account/profile_controller.dart';
@@ -197,6 +198,8 @@ class _StartupScreenState extends State<_StartupScreen> {
     // Custom collections too (the store follows the account through
     // AccountHistory, attached above).
     CollectionSync.instance.attach(AccountController.instance);
+    // Friends' "Watching now": clears what a crash left published.
+    ActivityPublisher.instance.attach();
     // The device-local profile follows whichever Trakt account is signed in.
     ProfileController.instance.attach(AccountController.instance);
     // My list and the Trakt watchlist, when the user turned that on.
