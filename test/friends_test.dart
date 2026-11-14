@@ -461,7 +461,10 @@ void main() {
         final add = tester.getTopLeft(find.text('ADD A FRIEND'));
         final list = tester.getTopLeft(find.textContaining('FRIENDS ·'));
         expect(list.dx, greaterThan(add.dx));
-        expect(list.dy, add.dy);
+        // Messages leads the left column, level with the list.
+        final messages = tester.getTopLeft(find.text('MESSAGES'));
+        expect(messages.dx, add.dx);
+        expect(list.dy, messages.dy);
         expect(tester.takeException(), isNull);
       },
       variant: TargetPlatformVariant.only(TargetPlatform.windows),

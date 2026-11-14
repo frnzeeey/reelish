@@ -292,26 +292,59 @@ class AccountApi {
   }
 
   /// The latest aired episode of each series in [series] (TMDB ids), and
-  /// of today's popular series when [popular]; uses a [notificationToken].
+  /// of today's popular series when [popular], and how many messages wait
+  /// for this device (and from whom) when [messages]; uses a
+  /// [notificationToken].
   Future<
-    ({List<Map<String, dynamic>> series, List<Map<String, dynamic>> popular})
+    ({
+      List<Map<String, dynamic>> series,
+      List<Map<String, dynamic>> popular,
+      ({int count, List<String> from})? messages,
+    })
   >
   checkEpisodes(
     String alertToken,
     List<int> series, {
     bool popular = false,
+    bool messages = false,
   }) async {
     final body = await _send(
       'POST',
       '/notifications/episodes',
       token: alertToken,
-      body: {'series': series, 'popular': popular},
+      body: {'series': series, 'popular': popular, 'messages': messages},
     );
     List<Map<String, dynamic>> maps(Object? value) => [
       for (final entry in value is List ? value : const [])
         if (entry is Map) Map<String, dynamic>.from(entry),
     ];
-    return (series: maps(body['series']), popular: maps(body['popular']));
+    final waiting = body['messages'];
+    final count = waiting is Map ? waiting['count'] : null;
+    final from = waiting is Map ? waiting['from'] : null;
+    return (
+      series: maps(body['series']),
+      popular: maps(body['popular']),
+      messages: count is int && count > 0
+          ? (
+              count: count,
+              from: [
+                for (final handle in from is List ? from : const [])
+                  if (handle is String && handle.isNotEmpty) handle,
+              ],
+            )
+          : null,
+    );
+  }
+
+  /// This device's connection to its own message mailbox; null without a
+  /// configured service.
+  Uri? messagesSocket() {
+    final base = baseUrl;
+    if (base == null) return null;
+    return base.replace(
+      scheme: 'wss',
+      path: '${base.path}/api/v1/messages/socket',
+    );
   }
 
   /// Creates a watch party hosted by this account (ending its previous

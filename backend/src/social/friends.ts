@@ -12,6 +12,8 @@ import { reporterHash } from '../support';
 import { codeAlphabet, codeLength, requireProfile, type ProfileRow } from './profiles';
 import { orderedPair, relationship } from './relationship';
 import { sharedCollectionsOf } from './shared-collections';
+import { conversationId } from '../messaging/mailbox';
+import { purgeBetween } from '../messaging/messages';
 
 /** Most friends an account may have. */
 export const maxFriends = 500;
@@ -236,16 +238,21 @@ export async function listFriends(env: Env, principal: Principal, url: URL, requ
   }
   const cursor = cursorText.toLowerCase();
   const { results } = await env.DB.prepare(
-    `SELECT p.handle, p.handle_key, p.display_name, p.avatar_preset, f.created_at
+    `SELECT p.user_id, p.handle, p.handle_key, p.display_name, p.avatar_preset, f.created_at
        FROM friendships f
        JOIN social_profiles p ON p.user_id = CASE WHEN f.user_a = ?1 THEN f.user_b ELSE f.user_a END
       WHERE (f.user_a = ?1 OR f.user_b = ?1) AND p.handle_key > ?2
       ORDER BY p.handle_key LIMIT ?3`,
-  ).bind(me, cursor, friendsPageSize + 1).all<PersonRow>();
+  ).bind(me, cursor, friendsPageSize + 1).all<PersonRow & { user_id: string }>();
   const more = results.length > friendsPageSize;
   const friends = results.slice(0, friendsPageSize);
   const body: Record<string, unknown> = {
-    friends: friends.map(person),
+    // The conversation id lets the app find its local messages with a
+    // friend whose handle has changed; it reveals neither account id.
+    friends: await Promise.all(friends.map(async (row) => ({
+      ...person(row),
+      conversation: await conversationId(me, row.user_id),
+    }))),
     cursor: more ? friends.at(-1)!.handle_key : null,
   };
   if (cursor === '') {
@@ -282,7 +289,11 @@ export async function getFriend(env: Env, principal: Principal, handle: string, 
   const since = await env.DB.prepare(`SELECT created_at FROM friendships WHERE user_a = ? AND user_b = ?`)
     .bind(a, b).first<{ created_at: number }>();
   return json({
-    friend: { ...publicView(other), since: since?.created_at ?? null },
+    friend: {
+      ...publicView(other),
+      since: since?.created_at ?? null,
+      conversation: await conversationId(principal.userId, other.user_id),
+    },
     collections: await sharedCollectionsOf(env, other.user_id),
   }, requestId);
 }
@@ -319,7 +330,8 @@ async function someoneKnown(env: Env, me: string, handle: string): Promise<Profi
 
 /**
  * POST /social/blocks `{handle}`: ends any friendship and requests both ways,
- * removes recommendations both ways, and refuses all contact from then on.
+ * removes recommendations and undelivered messages both ways, and refuses
+ * all contact from then on.
  */
 export async function block(env: Env, principal: Principal, request: Request, requestId: string) {
   const body = await readJsonBody(request);
@@ -340,6 +352,8 @@ export async function block(env: Env, principal: Principal, request: Request, re
       `DELETE FROM recommendations WHERE (sender_id = ?1 AND recipient_id = ?2) OR (sender_id = ?2 AND recipient_id = ?1)`,
     ).bind(me, other.user_id),
   ]);
+  // Messages still waiting either way are not delivered.
+  await purgeBetween(env, me, other.user_id);
   await audit(env, 'social.blocked', { userId: me });
   return json({ ok: true }, requestId);
 }

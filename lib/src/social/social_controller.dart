@@ -105,34 +105,62 @@ class SocialProfile {
   };
 }
 
-/// How many friends the account has, how many requests wait for it and how
-/// many recommendations it has not opened.
+/// How many friends the account has, how many requests wait for it, how
+/// many recommendations it has not opened, and how many messages wait in
+/// its mailbox for this device (messages already here are counted by
+/// `MessagesController`).
 @immutable
 class SocialCounts {
-  const SocialCounts({this.friends = 0, this.incoming = 0, this.unread = 0});
+  const SocialCounts({
+    this.friends = 0,
+    this.incoming = 0,
+    this.unread = 0,
+    this.messages = 0,
+  });
 
   static const zero = SocialCounts();
 
   final int friends;
   final int incoming;
   final int unread;
+  final int messages;
 
-  /// Something waits for the person: a request or an unopened title.
-  bool get anyNew => incoming > 0 || unread > 0;
+  /// Something waits for the person: a request, an unopened title or a
+  /// message.
+  bool get anyNew => incoming > 0 || unread > 0 || messages > 0;
+
+  SocialCounts copyWith({int? messages}) => SocialCounts(
+    friends: friends,
+    incoming: incoming,
+    unread: unread,
+    messages: messages ?? this.messages,
+  );
 
   static SocialCounts? fromJson(Object? value) {
     if (value is! Map) return null;
     final friends = value['friends'];
     final incoming = value['incoming'];
     final unread = value['unread'] ?? 0;
-    if (friends is! int || incoming is! int || unread is! int) return null;
-    return SocialCounts(friends: friends, incoming: incoming, unread: unread);
+    final messages = value['messages'] ?? 0;
+    if (friends is! int ||
+        incoming is! int ||
+        unread is! int ||
+        messages is! int) {
+      return null;
+    }
+    return SocialCounts(
+      friends: friends,
+      incoming: incoming,
+      unread: unread,
+      messages: messages,
+    );
   }
 
   Map<String, int> toJson() => {
     'friends': friends,
     'incoming': incoming,
     'unread': unread,
+    'messages': messages,
   };
 }
 
@@ -215,6 +243,7 @@ class SocialController extends ChangeNotifier {
       friends: (_counts.friends + friends).clamp(0, 1 << 20),
       incoming: (_counts.incoming + incoming).clamp(0, 1 << 20),
       unread: (_counts.unread + unread).clamp(0, 1 << 20),
+      messages: _counts.messages,
     );
     notifyListeners();
   }
@@ -226,7 +255,15 @@ class SocialController extends ChangeNotifier {
       friends: _counts.friends,
       incoming: _counts.incoming,
       unread: unread,
+      messages: _counts.messages,
     );
+    notifyListeners();
+  }
+
+  /// Messages waiting in the mailbox: none once this device has them.
+  void clearWaitingMessages() {
+    if (!_current || _counts.messages == 0) return;
+    _counts = _counts.copyWith(messages: 0);
     notifyListeners();
   }
 

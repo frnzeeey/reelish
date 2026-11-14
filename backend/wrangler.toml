@@ -69,6 +69,12 @@ class_name = "WatchPartyRoom"
 name = "TRAKT_EGRESS"
 class_name = "TraktEgress"
 
+# Private messages: one mailbox per account holding only undelivered
+# messages (src/messaging/mailbox.ts). Sockets hibernate while quiet.
+[[durable_objects.bindings]]
+name = "MAILBOXES"
+class_name = "Mailbox"
+
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["WatchPartyRoom"]
@@ -76,6 +82,10 @@ new_sqlite_classes = ["WatchPartyRoom"]
 [[migrations]]
 tag = "v2"
 new_sqlite_classes = ["TraktEgress"]
+
+[[migrations]]
+tag = "v3"
+new_sqlite_classes = ["Mailbox"]
 
 # Daily at 03:17 UTC: erase security log rows past retention (src/retention.ts).
 [triggers]
@@ -101,7 +111,7 @@ ratelimits = [
   { name = "SOCIAL_LIMITER", namespace_id = "2006", simple = { limit = 60, period = 60 } },
   { name = "SOCIAL_LOOKUP_LIMITER", namespace_id = "2007", simple = { limit = 10, period = 60 } },
 ]
-durable_objects = { bindings = [{ name = "PARTY_ROOMS", class_name = "WatchPartyRoom" }, { name = "TRAKT_EGRESS", class_name = "TraktEgress" }] }
+durable_objects = { bindings = [{ name = "PARTY_ROOMS", class_name = "WatchPartyRoom" }, { name = "TRAKT_EGRESS", class_name = "TraktEgress" }, { name = "MAILBOXES", class_name = "Mailbox" }] }
 observability = { enabled = true }
 triggers = { crons = ["17 3 * * *"] }
 
@@ -122,6 +132,6 @@ ratelimits = [
   { name = "SOCIAL_LIMITER", namespace_id = "3006", simple = { limit = 60, period = 60 } },
   { name = "SOCIAL_LOOKUP_LIMITER", namespace_id = "3007", simple = { limit = 10, period = 60 } },
 ]
-durable_objects = { bindings = [{ name = "PARTY_ROOMS", class_name = "WatchPartyRoom" }, { name = "TRAKT_EGRESS", class_name = "TraktEgress" }] }
+durable_objects = { bindings = [{ name = "PARTY_ROOMS", class_name = "WatchPartyRoom" }, { name = "TRAKT_EGRESS", class_name = "TraktEgress" }, { name = "MAILBOXES", class_name = "Mailbox" }] }
 observability = { enabled = true }
 triggers = { crons = ["17 3 * * *"] }

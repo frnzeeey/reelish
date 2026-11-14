@@ -17,6 +17,7 @@ class EpisodeAlertSettings {
     this.myList = true,
     this.watching = true,
     this.popular = false,
+    this.messages = true,
   });
 
   final bool enabled;
@@ -26,16 +27,21 @@ class EpisodeAlertSettings {
   /// Today's most popular series with a new episode; one summary a day.
   final bool popular;
 
+  /// Messages from friends waiting for this device: who, never what.
+  final bool messages;
+
   EpisodeAlertSettings copyWith({
     bool? enabled,
     bool? myList,
     bool? watching,
     bool? popular,
+    bool? messages,
   }) => EpisodeAlertSettings(
     enabled: enabled ?? this.enabled,
     myList: myList ?? this.myList,
     watching: watching ?? this.watching,
     popular: popular ?? this.popular,
+    messages: messages ?? this.messages,
   );
 }
 
@@ -60,6 +66,9 @@ class NewEpisode {
 abstract class EpisodeNotifier {
   Future<void> showNew(List<NewEpisode> episodes);
   Future<void> showPopular(List<NewEpisode> episodes);
+
+  /// [count] messages wait, the latest from [from] (handles, newest first).
+  Future<void> showMessages(int count, List<String> from);
 }
 
 /// What the alerts remember per Trakt account: settings, the last episode
@@ -116,6 +125,7 @@ class EpisodeAlertStore {
       myList: flag('myList', true),
       watching: flag('watching', true),
       popular: flag('popular', false),
+      messages: flag('messages', true),
     );
   }
 
@@ -124,6 +134,7 @@ class EpisodeAlertStore {
     'myList': s.myList,
     'watching': s.watching,
     'popular': s.popular,
+    'messages': s.messages,
   };
 
   static Future<String?> activeUser() async =>
@@ -181,7 +192,7 @@ abstract final class EpisodeCheck {
         if (item.type == 'series' && id != null && id > 0) followed.add(id);
       }
     }
-    if (followed.isEmpty && !settings.popular) {
+    if (followed.isEmpty && !settings.popular && !settings.messages) {
       await _markChecked(userId, now);
       return const EpisodeCheckResult([], []);
     }
@@ -190,7 +201,17 @@ abstract final class EpisodeCheck {
       alertToken,
       followed.take(maxSeries).toList(),
       popular: settings.popular,
+      messages: settings.messages,
     );
+
+    // Messages: alert once per new arrival, not again for the same ones
+    // while they wait (they leave the count once a Messages screen opens).
+    final waiting = answer.messages;
+    final notified = entry['messagesNotified'];
+    final before = notified is int ? notified : 0;
+    if (settings.messages && waiting != null && waiting.count > before) {
+      await notifier.showMessages(waiting.count, waiting.from);
+    }
 
     final today = _day(now ?? DateTime.now());
     final seenRaw = entry['seen'];
@@ -240,6 +261,7 @@ abstract final class EpisodeCheck {
             entry.key: entry.value,
       };
       if (popular.isNotEmpty) e['popularDay'] = todayText;
+      e['messagesNotified'] = waiting?.count ?? 0;
       e['lastChecked'] = (now ?? DateTime.now()).millisecondsSinceEpoch;
     });
     return EpisodeCheckResult(found, popular);

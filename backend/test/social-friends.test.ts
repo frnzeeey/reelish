@@ -223,7 +223,7 @@ describe('Friends', () => {
     expect((await call(`/api/v1/social/friends/${ben.handle}`, { token: ana.token })).status).toBe(404);
     await friends(ana, ben);
     const response = await call(`/api/v1/social/friends/${ben.handle}`, { token: ana.token });
-    expect(await response.json()).toEqual({ friend: { handle: ben.handle, displayName: 'Ben', avatar: null, since: expect.any(Number) }, collections: [] });
+    expect(await response.json()).toEqual({ friend: { handle: ben.handle, displayName: 'Ben', avatar: null, since: expect.any(Number), conversation: expect.any(String) }, collections: [] });
     expect((await call(`/api/v1/social/friends/${ben.handle}`, { token: eve.token })).status).toBe(404);
   });
 
@@ -271,7 +271,7 @@ describe('Friends', () => {
     await friends(ana, ben);
     await send(cara.token, { code: ana.code });
     const response = await call('/api/v1/social/profile', { token: ana.token });
-    expect(((await response.json()) as { counts: unknown }).counts).toEqual({ friends: 1, incoming: 1, unread: 0 });
+    expect(((await response.json()) as { counts: unknown }).counts).toEqual({ friends: 1, incoming: 1, unread: 0, messages: 0 });
   });
 
   it('never shows an account id or Trakt name', async () => {

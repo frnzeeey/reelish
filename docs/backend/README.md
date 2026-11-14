@@ -172,6 +172,16 @@ Device sign-in errors: `sign_in_denied` (403), `sign_in_expired` (410),
 `invalid_token`, `token_expired`, `invalid_refresh`, `refresh_conflict`,
 `session_revoked`. Limits: `rate_limited` (429, `Retry-After`).
 
+### Messages
+
+`GET /messages/socket` (WebSocket; Friends on): this device's connection
+to its own mailbox, a Durable Object per account holding only
+undelivered messages. Sends, acknowledgements and receipts travel over
+it. `GET /social/profile` counts waiting messages in `counts.messages`;
+`POST /notifications/episodes` with `messages: true` returns
+`{count, from}` (handles, never text). Protocol, delivery rules, security
+and free-tier costs: [docs/messaging](../messaging/README.md).
+
 ### Watch party
 
 A room is a Durable Object named by its 8-digit code (Workers Free plan:

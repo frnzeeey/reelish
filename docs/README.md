@@ -78,6 +78,7 @@ search the generated references below: every file, class and function in
 | [Friends: plan](friends-activity/IMPLEMENTATION_PLAN.md) | Phases and the decisions that need approval |
 | [Friends: progress](friends-activity/IMPLEMENTATION_PROGRESS.md) | What each phase changed, deviations, where it is deployed |
 | [Friends: testing report](friends-activity/TESTING_REPORT.md) | Tests per phase, results, what was not verified |
+| [Private messages](messaging/README.md) | 1:1 messages with friends: mailboxes, delivery and acknowledgement, local storage, security, free-tier quotas and costs, protocol, limitations |
 | [Friends: final audit](friends-activity/FINAL_AUDIT.md) | Security review of every route, fixes, accepted risks, cost against the code as built |
 | [Friends: deployment guide](friends-activity/DEPLOYMENT_GUIDE.md) | Taking Friends to production: migrations, deploy, smoke test, rollback |
 

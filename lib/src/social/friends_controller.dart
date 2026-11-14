@@ -23,6 +23,7 @@ class SocialPerson {
     this.displayName,
     this.avatar,
     this.since,
+    this.conversation,
   });
 
   final String handle;
@@ -34,6 +35,10 @@ class SocialPerson {
   /// When the friendship or request began.
   final DateTime? since;
 
+  /// The private conversation with this friend (the same id on both
+  /// sides, revealing neither account); only friends have one.
+  final String? conversation;
+
   /// The name to show first: their chosen name, else the handle.
   String get label => displayName ?? '@$handle';
 
@@ -44,12 +49,17 @@ class SocialPerson {
     final name = value['displayName'];
     final avatar = value['avatar'];
     final since = value['since'];
+    final conversation = value['conversation'];
     return SocialPerson(
       handle: handle,
       displayName: name is String && name.isNotEmpty ? name : null,
       avatar: avatar is String && avatar.isNotEmpty ? avatar : null,
       since: since is int
           ? DateTime.fromMillisecondsSinceEpoch(since, isUtc: true)
+          : null,
+      conversation:
+          conversation is String && conversationIdPattern.hasMatch(conversation)
+          ? conversation
           : null,
     );
   }
@@ -59,6 +69,7 @@ class SocialPerson {
     'displayName': displayName,
     'avatar': avatar,
     'since': since?.millisecondsSinceEpoch,
+    if (conversation != null) 'conversation': conversation,
   };
 
   static List<SocialPerson> listFrom(Object? value) => value is List
@@ -109,6 +120,9 @@ class SharedCollection {
     );
   }
 }
+
+/// A conversation id as the server makes them; also safe as a file name.
+final conversationIdPattern = RegExp(r'^[A-Za-z0-9_-]{16,64}$');
 
 /// Artwork shown from another person's data: TMDB's image host only.
 final _tmdbArtwork = RegExp(r'^https://image\.tmdb\.org/t/p/');

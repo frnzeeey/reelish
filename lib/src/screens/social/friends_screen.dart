@@ -17,8 +17,11 @@ import '../../theme/glass_theme.dart';
 import '../../theme/reelish_icons.dart';
 import '../../widgets/settings/settings_components.dart';
 import '../../widgets/social/social_widgets.dart';
+import '../../messaging/message_models.dart';
+import '../../messaging/messages_controller.dart';
 import 'friend_collection_screen.dart';
 import 'friends_privacy_screen.dart';
+import 'messages_screen.dart';
 
 /// Opens a page over the current one in a Scaffold, as Profile opens its
 /// pages; [page] gets a Back callback.
@@ -34,6 +37,46 @@ void openSocialPage(
         body: page(() => Navigator.of(context).pop()),
       ),
     ),
+  ),
+);
+
+/// Opens a conversation; its info button opens the friend's page.
+void openChat(
+  BuildContext context,
+  Conversation conversation, {
+  MessagesController? messages,
+  FriendsController? friends,
+}) => openSocialPage(
+  context,
+  (back) => ChatScreen(
+    conversation: conversation,
+    messages: messages,
+    onBack: back,
+    onOpenFriend: () => openSocialPage(
+      context,
+      (back) => FriendScreen(
+        person: conversation.peer,
+        friends: friends,
+        messages: messages,
+        fromChat: true,
+        onBack: back,
+      ),
+    ),
+  ),
+);
+
+/// The conversation list.
+void openMessages(
+  BuildContext context, {
+  MessagesController? messages,
+  FriendsController? friends,
+}) => openSocialPage(
+  context,
+  (back) => MessagesScreen(
+    messages: messages,
+    onBack: back,
+    openChat: (conversation) =>
+        openChat(context, conversation, messages: messages, friends: friends),
   ),
 );
 
@@ -88,6 +131,7 @@ class FriendsScreen extends StatefulWidget {
     this.social,
     this.friends,
     this.recommendations,
+    this.messages,
     this.onBack,
   });
 
@@ -99,6 +143,9 @@ class FriendsScreen extends StatefulWidget {
 
   /// [RecommendationsController.instance] when null.
   final RecommendationsController? recommendations;
+
+  /// [MessagesController.instance] when null.
+  final MessagesController? messages;
   final VoidCallback? onBack;
 
   @override
@@ -112,6 +159,8 @@ class _FriendsScreenState extends State<FriendsScreen> {
       widget.friends ?? FriendsController.instance;
   late final RecommendationsController _recommendations =
       widget.recommendations ?? RecommendationsController.instance;
+  late final MessagesController _messages =
+      widget.messages ?? MessagesController.instance;
 
   /// Reads again on return to the app after a while away; nothing polls.
   late final AppLifecycleListener _lifecycle;
@@ -140,6 +189,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
 
   Future<void> _reload() async {
     _loadedAt = DateTime.now();
+    unawaited(_messages.ensureLoaded());
     await _social.refreshIfStale();
     if (_social.enabled) {
       await Future.wait([_friends.load(), _recommendations.load()]);
@@ -153,6 +203,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
       controller: _social,
       friends: _friends,
       recommendations: _recommendations,
+      messages: _messages,
       onBack: back,
     ),
   );
@@ -165,8 +216,16 @@ class _FriendsScreenState extends State<FriendsScreen> {
 
   void _openFriend(SocialPerson person) => openSocialPage(
     context,
-    (back) => FriendScreen(person: person, friends: _friends, onBack: back),
+    (back) => FriendScreen(
+      person: person,
+      friends: _friends,
+      messages: _messages,
+      onBack: back,
+    ),
   );
+
+  void _openMessages() =>
+      openMessages(context, messages: _messages, friends: _friends);
 
   void _openBlocked() => openSocialPage(
     context,
@@ -204,7 +263,12 @@ class _FriendsScreenState extends State<FriendsScreen> {
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-    listenable: Listenable.merge([_social, _friends, _recommendations]),
+    listenable: Listenable.merge([
+      _social,
+      _friends,
+      _recommendations,
+      _messages,
+    ]),
     builder: (context, _) {
       final profile = _social.profile;
       final List<Widget> body;
@@ -275,12 +339,44 @@ class _FriendsScreenState extends State<FriendsScreen> {
     final friends = _friends.friends;
     final recommended = _recommendations.items;
     final unread = _social.counts.unread;
+    final conversations = _messages.conversations;
+    final unreadMessages = _messages.unread;
+    final waitingMessages = _social.counts.messages;
     final left = <Widget>[
       if (_friends.failed && _friends.loaded)
         const _Note(
           'Reelish could not be reached: this is the list from your last '
           'visit.',
         ),
+      SettingsSection(
+        label: unreadMessages > 0
+            ? 'MESSAGES · $unreadMessages NEW'
+            : 'MESSAGES',
+        children: [
+          for (final conversation in conversations.take(3))
+            ConversationTile(
+              conversation: conversation,
+              onTap: () => openChat(
+                context,
+                conversation,
+                messages: _messages,
+                friends: _friends,
+              ),
+            ),
+          SettingsTile(
+            icon: ReelishIcons.chat,
+            title: conversations.isEmpty ? 'Messages' : 'All messages',
+            description: waitingMessages > 0
+                ? (waitingMessages == 1
+                      ? '1 new message is waiting'
+                      : '$waitingMessages new messages are waiting')
+                : conversations.isEmpty
+                ? 'Private messages with friends. Open a friend to start.'
+                : null,
+            onTap: _openMessages,
+          ),
+        ],
+      ),
       if (_friends.watching.isNotEmpty)
         SettingsSection(
           label: 'WATCHING NOW',
@@ -616,6 +712,8 @@ class FriendScreen extends StatefulWidget {
     super.key,
     required this.person,
     this.friends,
+    this.messages,
+    this.fromChat = false,
     this.onBack,
   });
 
@@ -623,6 +721,12 @@ class FriendScreen extends StatefulWidget {
 
   /// [FriendsController.instance] when null.
   final FriendsController? friends;
+
+  /// [MessagesController.instance] when null.
+  final MessagesController? messages;
+
+  /// Opened from their conversation: Message goes back to it.
+  final bool fromChat;
   final VoidCallback? onBack;
 
   @override
@@ -632,7 +736,21 @@ class FriendScreen extends StatefulWidget {
 class _FriendScreenState extends State<FriendScreen> {
   late final FriendsController _friends =
       widget.friends ?? FriendsController.instance;
+  late final MessagesController _messages =
+      widget.messages ?? MessagesController.instance;
   late SocialPerson _person = widget.person;
+
+  void _message() {
+    if (widget.fromChat) return widget.onBack?.call();
+    if (_person.conversation == null) return;
+    unawaited(_messages.ensureLoaded());
+    openChat(
+      context,
+      _messages.open(_person),
+      messages: _messages,
+      friends: _friends,
+    );
+  }
 
   /// Null while checking; false once the server says they are no longer a
   /// friend (removed or blocked elsewhere).
@@ -702,9 +820,10 @@ class _FriendScreenState extends State<FriendScreen> {
       context,
       title: 'Block @${_person.handle}?',
       message:
-          'You stop being friends, and recommendations between you are '
-          'deleted. They cannot find you, send you requests or see anything '
-          'you share. They are not told.',
+          'You stop being friends, and recommendations and undelivered '
+          'messages between you are deleted. They cannot find you, message '
+          'you, send you requests or see anything you share. They are not '
+          'told.',
       action: 'Block',
       destructive: true,
     );
@@ -790,6 +909,20 @@ class _FriendScreenState extends State<FriendScreen> {
                     description: 'From any title’s page, press Share',
                     showChevron: false,
                   ),
+              ],
+            ),
+          if (_stillFriends != false)
+            SettingsSection(
+              children: [
+                SettingsTile(
+                  icon: ReelishIcons.chat,
+                  title: 'Message',
+                  description: _person.conversation == null
+                      ? 'Connect to Reelish to start a conversation'
+                      : 'A private conversation with ${_person.label}',
+                  enabled: _person.conversation != null || widget.fromChat,
+                  onTap: _message,
+                ),
               ],
             ),
           SettingsSection(

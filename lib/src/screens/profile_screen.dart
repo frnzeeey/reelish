@@ -20,6 +20,7 @@ import '../platform/app_icon.dart';
 import '../platform/device_capabilities.dart';
 import '../services/accent_settings_controller.dart';
 import '../services/storage_service.dart';
+import '../messaging/messages_controller.dart';
 import '../social/social_controller.dart';
 import '../theme/design_tokens.dart';
 import '../theme/glass_theme.dart';
@@ -85,6 +86,7 @@ class ProfileScreen extends StatefulWidget {
     this.appearance,
     this.frames,
     this.social,
+    this.messages,
   });
 
   final StorageService storage;
@@ -110,6 +112,9 @@ class ProfileScreen extends StatefulWidget {
   /// Friends; [SocialController.instance] when null.
   final SocialController? social;
 
+  /// Messages on this device; [MessagesController.instance] when null.
+  final MessagesController? messages;
+
   /// The app's look: its theme, when one applies, dresses the identity card,
   /// and Personalize opens its settings. Without it those are left out.
   final AccentSettingsController? appearance;
@@ -129,6 +134,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   late final AvatarFrames _frames = widget.frames ?? AvatarFrames.instance;
   late final SocialController _social =
       widget.social ?? SocialController.instance;
+  late final MessagesController _messages =
+      widget.messages ?? MessagesController.instance;
+
+  /// Messages not yet read: waiting in the mailbox, or here and unopened.
+  int get _newMessages => _social.counts.messages + _messages.unread;
 
   /// The entitlement, for the membership tile: the appearance's when given
   /// (the same instance the app uses), else the app's.
@@ -144,6 +154,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     // The saved copy, then the server at most every two minutes, and not at
     // all while Friends is off: for the waiting-requests dot.
     unawaited(_social.refreshIfStale());
+    // This device's conversations, from disk, for their unread count.
+    unawaited(_messages.ensureLoaded());
   }
 
   /// Local reads only: no network request.
@@ -183,8 +195,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     (back) => AppearanceSettingsScreen(controller: appearance, onBack: back),
   );
 
-  void _openFriends() =>
-      _open((back) => FriendsScreen(social: _social, onBack: back));
+  void _openFriends() => _open(
+    (back) => FriendsScreen(social: _social, messages: _messages, onBack: back),
+  );
 
   void _openFriendsPrivacy() =>
       _open((back) => FriendsPrivacyScreen(controller: _social, onBack: back));
@@ -317,6 +330,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _supporters,
       _frames,
       _social,
+      _messages,
       ?widget.appearance,
     ]),
     builder: (context, _) {
@@ -379,6 +393,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               title: 'Friends',
               description: 'Friends, requests and recommendations',
               value: switch (_social.profile) {
+                _? when _newMessages > 0 =>
+                  _newMessages == 1
+                      ? '1 new message'
+                      : '$_newMessages new messages',
                 _? when _social.counts.incoming > 0 =>
                   _social.counts.incoming == 1
                       ? '1 request'
@@ -395,8 +413,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 null when _social.known => 'Off',
                 null => null,
               },
-              trailing: _social.counts.anyNew
-                  ? _NewDot(counts: _social.counts)
+              trailing: _social.counts.anyNew || _newMessages > 0
+                  ? _NewDot(counts: _social.counts, messages: _newMessages)
                   : null,
               showChevron: true,
               onTap: _openFriends,
@@ -463,9 +481,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
 /// Something new in Friends (requests or recommendations), beside its row.
 class _NewDot extends StatelessWidget {
-  const _NewDot({required this.counts});
+  const _NewDot({required this.counts, required this.messages});
 
   final SocialCounts counts;
+
+  /// New messages, waiting or on this device.
+  final int messages;
 
   @override
   Widget build(BuildContext context) => Row(
@@ -473,6 +494,8 @@ class _NewDot extends StatelessWidget {
     children: [
       Semantics(
         label: [
+          if (messages > 0)
+            messages == 1 ? '1 new message' : '$messages new messages',
           if (counts.incoming > 0)
             counts.incoming == 1
                 ? '1 friend request'

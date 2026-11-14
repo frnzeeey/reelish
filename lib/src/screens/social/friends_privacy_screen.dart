@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../account/profile_controller.dart';
+import '../../messaging/messages_controller.dart';
 import '../../platform/device_capabilities.dart';
 import '../../social/friends_controller.dart';
 import '../../social/recommendations_controller.dart';
@@ -25,6 +26,7 @@ class FriendsPrivacyScreen extends StatefulWidget {
     this.controller,
     this.friends,
     this.recommendations,
+    this.messages,
     this.onBack,
   });
 
@@ -38,6 +40,10 @@ class FriendsPrivacyScreen extends StatefulWidget {
   /// [RecommendationsController.instance] when null; its saved inbox is
   /// forgotten when Friends is turned off.
   final RecommendationsController? recommendations;
+
+  /// [MessagesController.instance] when null; the messages on this device
+  /// are deleted when Friends is turned off.
+  final MessagesController? messages;
   final VoidCallback? onBack;
 
   @override
@@ -186,9 +192,10 @@ class _FriendsPrivacyScreenState extends State<FriendsPrivacyScreen> {
       title: 'Turn off Friends?',
       message:
           'This deletes your handle, your friends, friend requests, the '
-          'people you blocked and recommendations you received. Shared '
-          'collections become private. Your library is not affected. Your '
-          'handle is kept for you for 30 days.',
+          'people you blocked, recommendations you received and your '
+          'messages, including those on this device. Shared collections '
+          'become private. Your library is not affected. Your handle is kept '
+          'for you for 30 days.',
       action: 'Turn off',
       destructive: true,
     );
@@ -198,6 +205,7 @@ class _FriendsPrivacyScreenState extends State<FriendsPrivacyScreen> {
       await (widget.friends ?? FriendsController.instance).forget();
       await (widget.recommendations ?? RecommendationsController.instance)
           .forget();
+      await (widget.messages ?? MessagesController.instance).forget();
     }
     _show(error ?? 'Friends is off');
   }

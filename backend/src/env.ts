@@ -2,6 +2,7 @@
 
 import type { WatchPartyRoom } from './party-room';
 import type { TraktEgress } from './trakt-egress';
+import type { Mailbox } from './messaging/mailbox';
 
 export interface Env {
   DB: D1Database;
@@ -20,6 +21,8 @@ export interface Env {
   PARTY_ROOMS: DurableObjectNamespace<WatchPartyRoom>;
   /** Reaches Trakt from another region when this one is refused. */
   TRAKT_EGRESS: DurableObjectNamespace<TraktEgress>;
+  /** One private-message mailbox per account (SQLite-backed Durable Objects). */
+  MAILBOXES: DurableObjectNamespace<Mailbox>;
 
   ENVIRONMENT: string;
   TRAKT_API_URL: string;

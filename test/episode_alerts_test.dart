@@ -26,6 +26,12 @@ class _Notifier implements EpisodeNotifier {
   @override
   Future<void> showPopular(List<NewEpisode> episodes) async =>
       popular.add(episodes);
+
+  final messages = <(int, List<String>)>[];
+
+  @override
+  Future<void> showMessages(int count, List<String> from) async =>
+      messages.add((count, from));
 }
 
 /// The API's answer: each series' latest episode, set per test.
@@ -34,6 +40,9 @@ class _FakeApi {
   final popularIds = <int>[];
   final requested = <List<int>>[];
   bool? askedPopular;
+  bool? askedMessages;
+  int waitingMessages = 0;
+  List<String> waitingFrom = const [];
   String token = 'rnt_${'a' * 43}';
 
   Map<String, Object> _series(int id) {
@@ -65,8 +74,11 @@ class _FakeApi {
     final ids = (body['series'] as List).cast<int>();
     requested.add(ids);
     askedPopular = body['popular'] as bool;
+    askedMessages = body['messages'] as bool?;
     return http.Response(
       jsonEncode({
+        if (askedMessages == true && waitingMessages > 0)
+          'messages': {'count': waitingMessages, 'from': waitingFrom},
         'series': [
           for (final id in ids)
             if (latest.containsKey(id)) _series(id),
@@ -150,6 +162,44 @@ void main() {
         expect(notifier.shown, hasLength(1));
       },
     );
+
+    test('alerts once per new message arrival, never with the text', () async {
+      await settings(const EpisodeAlertSettings(enabled: true));
+      // No series followed: messages alone are still checked.
+      fake.waitingMessages = 1;
+      fake.waitingFrom = ['ana'];
+      await check();
+      expect(fake.askedMessages, isTrue);
+      expect(notifier.messages, hasLength(1));
+      expect(notifier.messages.single.$1, 1);
+      expect(notifier.messages.single.$2, ['ana']);
+
+      // Still the same one waiting: no second alert.
+      await check();
+      expect(notifier.messages, hasLength(1));
+
+      // Another arrives.
+      fake.waitingMessages = 2;
+      fake.waitingFrom = ['ben', 'ana'];
+      await check();
+      expect(notifier.messages.last.$1, 2);
+      expect(notifier.messages.last.$2, ['ben', 'ana']);
+
+      // Read in the app (none waiting), then a new one alerts again.
+      fake.waitingMessages = 0;
+      await check();
+      fake.waitingMessages = 1;
+      await check();
+      expect(notifier.messages, hasLength(3));
+
+      // Switched off: not even asked.
+      await settings(
+        const EpisodeAlertSettings(enabled: true, messages: false),
+      );
+      fake.waitingMessages = 5;
+      await check();
+      expect(notifier.messages, hasLength(3));
+    });
 
     test('an episode that aired long ago is noted but not alerted', () async {
       await settings(const EpisodeAlertSettings(enabled: true));

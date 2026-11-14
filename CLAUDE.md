@@ -174,7 +174,8 @@ cd backend && npm run dev                           # local Worker (wrangler dev
 cd backend && npm run migrate:local                 # migrations into the local D1 ("reelish")
 cd backend && npx vitest run test/<name>.test.ts -t "<test name>"   # one backend test
 cd backend && npx wrangler d1 migrations apply reelish-staging --remote --env staging
-cd backend && npx wrangler deploy --env staging     # production only when asked
+cd backend && npm run deploy:staging               # = wrangler deploy --env staging
+# npm run deploy:production exists too: only when the user explicitly asks
 flutter run --dart-define=REELISH_FORCE_TV=true     # TV interface on any device
 flutter test test/<name>_test.dart                  # one test file
 flutter test test/<name>_test.dart --plain-name "<test name>"   # one test
@@ -194,14 +195,20 @@ resolve, so analyze only the app's own directories. Native code lives
 in vendored packages: `packages/video_player_media_kit` (libmpv bridge),
 `packages/flutter_go_torrent_streamer` (Go torrent engine) and
 `third_party/flutter_js` (QuickJS). Releases are built only by CI from a
-version tag (`.github/workflows/`, `docs/releasing.md`).
+version tag (`docs/releasing.md`).
+
+CI (`.github/workflows/`): `backend.yml` runs typecheck, tests and a
+`wrangler deploy --dry-run` on pushes and PRs that touch `backend/`, and
+migrates and deploys only when started by hand for a chosen environment.
+`release.yml` (Android) and `release-windows.yml` run on `v*.*.*` tags:
+analyze, `flutter test`, build, then the obfuscation check. No workflow
+runs the Flutter checks on an ordinary push or PR, so run them locally.
 
 ## Validation expectations
 
 - Run `dart format` on the files you touched only, then
   `flutter analyze lib test integration_test test_driver` (CI fails on
-  warnings and errors — it runs `--no-fatal-infos`; the baseline has 16
-  info-level notes) and
+  warnings and errors, not infos — it runs `--no-fatal-infos`) and
   `flutter test`.
 - Backend changes: `npm run typecheck` and `npm test` in `backend/`. Tests
   run inside the Workers runtime (`@cloudflare/vitest-pool-workers`) with

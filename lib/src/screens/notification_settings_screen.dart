@@ -89,6 +89,16 @@ class NotificationSettingsScreen extends StatelessWidget {
                   enabled: on,
                   onChanged: (value) => alerts.setSources(popular: value),
                 ),
+                SettingsSwitchTile(
+                  icon: ReelishIcons.chat,
+                  title: 'Messages from friends',
+                  description:
+                      'Who sent you a message, never what it says; checked '
+                      'with episodes, so it can take a few hours',
+                  value: settings.messages,
+                  enabled: on,
+                  onChanged: (value) => alerts.setSources(messages: value),
+                ),
               ],
             ),
             if (on)

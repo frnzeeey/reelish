@@ -8,6 +8,7 @@ import type { Env } from '../env';
 import { audit } from '../audit';
 import { ApiError, json, readJsonBody } from '../http';
 import { requireLiveSession, type Principal } from '../sessions';
+import { pendingFor, wipeMailbox } from '../messaging/messages';
 
 /**
  * "Taken" answers one account may get in an hour. Only those reveal anything
@@ -147,7 +148,8 @@ const isUnique = (error: unknown, column: string) =>
  * GET /social/profile: the caller's profile, or null while Friends is off.
  * With a profile, `counts` gives friends, requests waiting for an answer and
  * unread recommendations, for the Profile page's dot, so it needs no second
- * request.
+ * request. `messages` counts messages waiting for this device in its
+ * mailbox (not those already on the device; the app counts those).
  */
 export async function getProfile(env: Env, principal: Principal, requestId: string) {
   await requireLiveSession(env, principal);
@@ -158,7 +160,8 @@ export async function getProfile(env: Env, principal: Principal, requestId: stri
             (SELECT COUNT(*) FROM friend_requests WHERE receiver_id = ?1) AS incoming,
             (SELECT COUNT(*) FROM recommendations WHERE recipient_id = ?1 AND read_at IS NULL) AS unread`,
   ).bind(principal.userId).first<{ friends: number; incoming: number; unread: number }>();
-  return json({ profile: ownView(row), counts }, requestId);
+  const messages = (await pendingFor(env, principal)).count;
+  return json({ profile: ownView(row), counts: { ...counts, messages } }, requestId);
 }
 
 /**
@@ -336,6 +339,8 @@ export async function deleteProfile(env: Env, principal: Principal, requestId: s
   await requireLiveSession(env, principal);
   const existed = (await profileOf(env, principal.userId)) !== null;
   await env.DB.batch(removalStatements(env, principal.userId, Date.now()));
+  // Undelivered messages to this account go too.
+  if (existed) await wipeMailbox(env, principal.userId);
   if (existed) await audit(env, 'social.disabled', { userId: principal.userId, sessionId: principal.sessionId });
   return json({ ok: true }, requestId);
 }

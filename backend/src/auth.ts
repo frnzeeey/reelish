@@ -19,6 +19,7 @@ import { refreshProfileIfStale } from './profile';
 import { frameState } from './frames';
 import { holdHandleOf } from './social/profiles';
 import { forgetReportsAbout } from './social/friends';
+import { wipeMailbox } from './messaging/messages';
 
 const platforms = new Set(['android', 'android_tv', 'windows']);
 const now = () => Math.floor(Date.now() / 1000);
@@ -265,6 +266,7 @@ export async function deleteAccount(env: Env, principal: Principal, requestId: s
   await deleteReportsOf(env, principal.userId);
   await holdHandleOf(env, principal.userId);
   await forgetReportsAbout(env, principal.userId);
+  await wipeMailbox(env, principal.userId);
   await env.DB.prepare(`DELETE FROM users WHERE id = ?`).bind(principal.userId).run();
   await audit(env, 'account.deleted', { userId: principal.userId });
   return json({ ok: true }, requestId);

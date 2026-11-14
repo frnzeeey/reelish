@@ -24,9 +24,11 @@ import * as friends from './social/friends';
 import * as recommendations from './social/recommendations';
 import * as sharedCollections from './social/shared-collections';
 import { pruneSocial } from './social/retention';
+import * as messages from './messaging/messages';
 
 export { WatchPartyRoom } from './party-room';
 export { TraktEgress } from './trakt-egress';
+export { Mailbox } from './messaging/mailbox';
 
 const version = '/api/v1';
 
@@ -227,6 +229,12 @@ async function route(request: Request, env: Env, requestId: string): Promise<Res
     if (recommendationRoute && method === 'DELETE') {
       return recommendations.removeRecommendation(env, principal, recommendationRoute[1], requestId);
     }
+  }
+  if (rest === '/messages/socket' && method === 'GET') {
+    // One connection per device while its Messages screens are open; the
+    // messages themselves travel over it and are limited by the mailbox.
+    await limit(env.SOCIAL_LIMITER, `messages:${principal.userId}`);
+    return messages.connectMessages(env, principal, request);
   }
   if (rest.startsWith('/supporters/')) {
     await limit(env.SYNC_LIMITER, `supporters:${principal.userId}`);

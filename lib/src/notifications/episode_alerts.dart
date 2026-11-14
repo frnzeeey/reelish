@@ -129,6 +129,35 @@ class SystemEpisodeNotifier implements EpisodeNotifier {
     );
   }
 
+  static const _messagesChannel = AndroidNotificationDetails(
+    'messages',
+    'Messages',
+    channelDescription: 'New messages from friends',
+    importance: Importance.defaultImportance,
+    priority: Priority.defaultPriority,
+    icon: 'ic_launcher_monochrome',
+  );
+
+  /// Who wrote, never what: the text is not known until Reelish opens.
+  @override
+  Future<void> showMessages(int count, List<String> from) async {
+    await _init();
+    final names = from.map((handle) => '@$handle').toList();
+    final who = switch (names.length) {
+      0 => 'friends',
+      1 => names.first,
+      _ => '${names.take(names.length - 1).join(', ')} and ${names.last}',
+    };
+    await _plugin.show(
+      id: 3,
+      title: count == 1 ? 'New message' : '$count new messages',
+      body: count == 1
+          ? '$who sent you a message.'
+          : 'From $who. Open Reelish to read them.',
+      notificationDetails: const NotificationDetails(android: _messagesChannel),
+    );
+  }
+
   @override
   Future<void> showPopular(List<NewEpisode> episodes) async {
     await _init();
@@ -309,14 +338,19 @@ class EpisodeAlerts extends ChangeNotifier {
     return true;
   }
 
-  Future<void> setSources({bool? myList, bool? watching, bool? popular}) =>
-      _save(
-        _settings.copyWith(
-          myList: myList,
-          watching: watching,
-          popular: popular,
-        ),
-      );
+  Future<void> setSources({
+    bool? myList,
+    bool? watching,
+    bool? popular,
+    bool? messages,
+  }) => _save(
+    _settings.copyWith(
+      myList: myList,
+      watching: watching,
+      popular: popular,
+      messages: messages,
+    ),
+  );
 
   Future<void> _save(EpisodeAlertSettings value) async {
     final userId = _userId;

@@ -9,6 +9,8 @@ import { ApiError, json, readJsonBody } from './http';
 import { audit, log } from './audit';
 import { requireLiveSession, type Principal } from './sessions';
 import { tmdbRequest } from './tmdb/gateway';
+import { pendingFor } from './messaging/messages';
+import { profileOf } from './social/profiles';
 
 const tokenPrefix = 'rnt_';
 /** Series per check; more than My list plus Continue watching. */
@@ -89,9 +91,10 @@ async function series(env: Env, tmdbId: number): Promise<SeriesState | null> {
 }
 
 /**
- * POST /notifications/episodes `{series: [tmdbId], popular: bool}` with an
- * episode-check token: each series' latest aired episode, plus TMDB's most
- * popular series when asked.
+ * POST /notifications/episodes `{series: [tmdbId], popular: bool, messages: bool}`
+ * with an episode-check token: each series' latest aired episode, plus TMDB's
+ * most popular series when asked, plus how many messages wait for this
+ * device and from whom (up to three handles) when asked.
  */
 export async function checkEpisodes(env: Env, principal: Principal, request: Request, requestId: string) {
   const body = await readJsonBody(request);
@@ -122,8 +125,15 @@ export async function checkEpisodes(env: Env, principal: Principal, request: Req
     states.push(...batch.filter((s): s is SeriesState => s !== null));
   }
   const byId = new Map(states.map((s) => [s.tmdbId, s]));
+  // Messages waiting for this device, folded into the same request so the
+  // background task makes no second one. Counts and handles only, never text.
+  // Only with Friends on: no mailbox is woken (or made) for anyone else.
+  const messages = body.messages === true && (await profileOf(env, principal.userId))
+    ? await pendingFor(env, principal)
+    : undefined;
   return json({
     series: wanted.map((id) => byId.get(id)).filter(Boolean),
     popular: popular.map((id) => byId.get(id)).filter(Boolean),
+    ...(messages ? { messages } : {}),
   }, requestId);
 }
