@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../theme/profile_styles.dart';
 import 'account_controller.dart';
 import 'avatar_image.dart';
 
@@ -84,7 +85,8 @@ class ProfileController extends ChangeNotifier {
   /// [attach]ed at startup.
   static ProfileController instance = ProfileController();
 
-  /// SharedPreferences key: `{userId: {displayName, avatar, preset, photo}}`.
+  /// SharedPreferences key: `{userId: {displayName, avatar, preset, photo,
+  /// style}}`. `style` ([ProfileStyle.toJson]) came later and is optional.
   static const storageKey = 'onfeed.profile.v1';
 
   /// Display names are shown in a few places; long ones would be cut.
@@ -100,6 +102,11 @@ class ProfileController extends ChangeNotifier {
   ProfileAvatar _avatar = const ProfileAvatar.initials();
   String? _photoFile;
   File? _photo;
+  ProfileStyle _style = ProfileStyle.standard;
+
+  /// The profile card's look as saved, whether or not the account may use
+  /// all of it now: show it through [ProfileStyle.allowed].
+  ProfileStyle get style => _style;
 
   /// The name the user chose, or null to show the Trakt username.
   String? get displayName => _displayName;
@@ -129,6 +136,7 @@ class ProfileController extends ChangeNotifier {
     _avatar = const ProfileAvatar.trakt();
     _photoFile = null;
     _photo = null;
+    _style = ProfileStyle.standard;
     if (userId != null) {
       // Saved by this app, but read defensively: a bad entry means defaults.
       try {
@@ -155,6 +163,7 @@ class ProfileController extends ChangeNotifier {
             // it now shows the Trakt picture, or the initial without one.
             _ => const ProfileAvatar.trakt(),
           };
+          _style = ProfileStyle.fromJson(entry['style']);
         }
       } catch (_) {
         // Keep the defaults.
@@ -180,6 +189,20 @@ class ProfileController extends ChangeNotifier {
     _avatar = avatar;
     notifyListeners();
     await _save();
+  }
+
+  /// Saves [style] as the profile card's look, and says whether it did. A
+  /// style with supporter parts is refused unless [perk]
+  /// (`SupporterController.has(SupporterPerk.profileStyles)`), so the check
+  /// is made where the choice is saved, not only by the screen.
+  Future<bool> setStyle(ProfileStyle style, {required bool perk}) async {
+    if (_userId == null) return false;
+    if (style.needsPerk && !perk) return false;
+    if (style == _style) return true;
+    _style = style;
+    notifyListeners();
+    await _save();
+    return true;
   }
 
   /// Makes [bytes] (a picked image, untrusted) the avatar: checked, cut to
@@ -281,6 +304,7 @@ class ProfileController extends ChangeNotifier {
           : _avatar.kind.name,
       if (_avatar.presetId != null) 'preset': _avatar.presetId,
       if (_photoFile != null) 'photo': _photoFile,
+      'style': ?_style.toJson(),
     };
     await (await SharedPreferences.getInstance()).setString(
       storageKey,

@@ -22,6 +22,7 @@ also get the Supporter badge they earned.
 | `host_watch_party` / `hostWatchParty` | `createParty` calls `requirePerk`: 403 `supporter_required` | The create screen shows the room settings or the Supporter prompt |
 | `app_themes` / `appThemes` | Nothing to enforce: a theme is only ever seen by its owner | Settings > Appearance offers the themes; the accent and profile card follow the chosen one |
 | `app_icons` / `appIcons` | Nothing to enforce: the icon is a device setting | Applying a supporter icon asks the server afresh first |
+| `profile_styles` / `profileStyles` | Nothing to enforce: the profile card is only ever seen by its owner | Profile > Profile card: Cinematic backgrounds, effects and a colour of one's own; `ProfileController.setStyle` refuses them without the perk ([profile card](../features/profile-card.md)) |
 | `avatar_frames` / `avatarFrames` | `PUT /me/frame` refuses a frame the account may not wear, and `/me` and Watch Party report a frame only while it may ([avatar frames](frames.md)) | Profile > Avatar frame; the frame follows the account |
 
 ## How the app knows

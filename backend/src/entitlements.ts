@@ -21,7 +21,12 @@ import { ApiError } from './http';
 export type Entitlement = 'free' | 'supporter' | 'founder';
 
 /** Every supporter perk, by the name the app uses too. */
-export type SupporterPerk = 'host_watch_party' | 'app_themes' | 'app_icons' | 'avatar_frames';
+export type SupporterPerk =
+  | 'host_watch_party'
+  | 'app_themes'
+  | 'app_icons'
+  | 'avatar_frames'
+  | 'profile_styles';
 
 /**
  * The Founder's own perks: the Founder Collection's cosmetics (a theme, a
@@ -38,6 +43,7 @@ const refusals: Record<SupporterPerk, string> = {
   app_themes: 'App themes are for Reelish Supporters.',
   app_icons: 'The supporter icons are for Reelish Supporters.',
   avatar_frames: 'Avatar frames are for Reelish Supporters.',
+  profile_styles: 'Cinematic profile cards are for Reelish Supporters.',
 };
 
 /** The account's entitlement, read fresh: a refund or a new secret applies at once. */

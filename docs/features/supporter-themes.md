@@ -54,7 +54,8 @@ screen does not follow the theme; it follows the Founder's account instead
 
 ## The profile's frame
 
-A theme dresses the profile card; the avatar's frame is separate. Under any
+A theme dresses the profile card unless the card has a background of its own
+([profile card](profile-card.md)); the avatar's frame is separate. Under any
 theme, an [avatar frame](avatar-frames.md) the account wears replaces the
 theme's ring around the avatar. The Founder wears the Sovereign frame (champagne
 laurel and crown) by default.

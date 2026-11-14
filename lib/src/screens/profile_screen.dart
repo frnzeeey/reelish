@@ -1,6 +1,7 @@
-// The signed-in person's page, in three parts: who they are (avatar, name,
+// The signed-in person's page, in four parts: who they are (avatar, name,
 // badges, and apart from those their viewing at a glance), how Reelish looks
-// for them (avatar frame, app theme, app icon) and their account. It is not a menu: Library, Settings and
+// for them (profile card, avatar frame, app theme, app icon), their viewing
+// statistics and their account. It is not a menu: Library, Settings and
 // Watch Party are one step away in the main navigation, so they are not listed
 // here again; the counts open the library, since that is where those titles
 // are. Phones stack the parts; TV and Windows put the identity beside the rest.
@@ -24,8 +25,10 @@ import '../messaging/messages_controller.dart';
 import '../social/social_controller.dart';
 import '../theme/design_tokens.dart';
 import '../theme/glass_theme.dart';
+import '../theme/profile_styles.dart';
 import '../theme/supporter_themes.dart';
 import '../widgets/profile_avatar.dart';
+import '../widgets/profile_card_backdrop.dart';
 import '../account/avatar_frames.dart';
 import '../theme/avatar_frames.dart';
 import '../widgets/avatar_frame.dart';
@@ -36,6 +39,8 @@ import 'account_settings_screen.dart';
 import 'app_icon_settings_screen.dart';
 import 'avatar_frames_screen.dart';
 import 'playback_settings_screen.dart';
+import 'profile_stats_screen.dart';
+import 'profile_style_screen.dart';
 import 'social/friends_privacy_screen.dart';
 import 'social/friends_screen.dart';
 import 'supporters_screen.dart';
@@ -214,6 +219,57 @@ class _ProfileScreenState extends State<ProfileScreen> {
     ),
   );
 
+  /// Whether the card's supporter parts show (SupporterPerk.profileStyles).
+  bool get _stylePerk => _supporters.has(SupporterPerk.profileStyles);
+
+  /// The identity card in [style], as the account may show it, read from
+  /// the controllers as it builds: the page's card, and the preview on the
+  /// Profile card page.
+  Widget _identity({
+    required ProfileStyle style,
+    bool wide = false,
+    bool still = false,
+  }) => _IdentityCard(
+    wide: wide,
+    still: still,
+    displayName: _profile.displayName,
+    username: _account.username,
+    account: _account,
+    profile: _profile,
+    badges: _badges,
+    theme: widget.appearance?.theme,
+    frame: AvatarFrameStyle.byId(_frames.equipped),
+    style: style,
+    onChangeAvatar: () => unawaited(_chooseAvatar()),
+    onAddName: _openAccount,
+    onOpenSupporters: _openSupporters,
+    activity: _activity,
+    onOpenLibrary: widget.onOpenLibrary,
+  );
+
+  /// The preview shows every part, so anyone can see a cinematic card
+  /// before deciding; only applying it needs the perk.
+  void _openStyle() => _open(
+    (back) => ProfileStyleScreen(
+      profile: _profile,
+      supporters: _supporters,
+      preview: (style) => ListenableBuilder(
+        listenable: Listenable.merge([
+          _account,
+          _profile,
+          _frames,
+          ?widget.appearance,
+        ]),
+        builder: (context, _) => _identity(style: style, still: true),
+      ),
+      onBack: back,
+    ),
+  );
+
+  void _openStats() => _open(
+    (back) => ProfileStatsScreen(storage: widget.storage, onBack: back),
+  );
+
   void _openSupporters() => unawaited(
     Navigator.of(context).push(
       AppPageRoute<void>(
@@ -344,27 +400,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
         );
       }
       final appearance = widget.appearance;
-      Widget identity({bool wide = false}) => _IdentityCard(
-        wide: wide,
-        displayName: _profile.displayName,
-        username: _account.username,
-        account: _account,
-        profile: _profile,
-        badges: _badges,
-        theme: appearance?.theme,
-        frame: AvatarFrameStyle.byId(_frames.equipped),
-        onChangeAvatar: () => unawaited(_chooseAvatar()),
-        onAddName: _openAccount,
-        onOpenSupporters: _openSupporters,
-        activity: _activity,
-        onOpenLibrary: widget.onOpenLibrary,
-      );
+      final style = _profile.style.allowed(perk: _stylePerk);
+      Widget identity({bool wide = false}) =>
+          _identity(style: style, wide: wide);
       final personalize = <Widget>[
         SettingsTile(
           icon: ReelishIcons.face,
           title: 'Avatar frame',
           value: AvatarFrameStyle.byId(_frames.equipped)?.name ?? 'None',
           onTap: _openFrames,
+        ),
+        SettingsTile(
+          icon: ReelishIcons.badge,
+          title: 'Profile card',
+          value: style.isStandard
+              ? 'Standard'
+              : style.backdropStyle?.name ?? style.palette?.label ?? 'Custom',
+          onTap: _openStyle,
         ),
         if (appearance != null)
           SettingsTile(
@@ -382,9 +434,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onTap: _openAppIcon,
           ),
       ];
+      final viewing = SettingsSection(
+        label: 'YOUR VIEWING',
+        children: [
+          SettingsTile(
+            icon: ReelishIcons.insights,
+            title: 'Viewing statistics',
+            description: 'What you have watched lately. Only you see it',
+            onTap: _openStats,
+          ),
+        ],
+      );
       final sections = [
         if (personalize.isNotEmpty)
           SettingsSection(label: 'PERSONALIZE', children: personalize),
+        viewing,
         SettingsSection(
           label: 'ACCOUNT',
           children: [
@@ -456,6 +520,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   children: [identity(), ...sections],
                 );
               }
+              // Two columns: how Reelish looks with their viewing under it,
+              // and the account beside them.
+              final columns = [
+                sections.sublist(0, sections.length - 1),
+                [sections.last],
+              ];
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -463,9 +533,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      for (final (index, section) in sections.indexed) ...[
+                      for (final (index, column) in columns.indexed) ...[
                         if (index > 0) const SizedBox(width: AppSpace.lg),
-                        Expanded(child: section),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: column,
+                          ),
+                        ),
                       ],
                     ],
                   ),
@@ -574,13 +649,19 @@ class _IdentityCard extends StatelessWidget {
     required this.badges,
     required this.theme,
     this.frame,
+    this.style = ProfileStyle.standard,
     required this.onChangeAvatar,
     required this.onAddName,
     required this.onOpenSupporters,
     required this.activity,
     this.onOpenLibrary,
     this.wide = false,
+    this.still = false,
   });
+
+  /// The preview on the Profile card page: backgrounds change without a
+  /// fade.
+  final bool still;
 
   final String? displayName;
   final String? username;
@@ -593,6 +674,10 @@ class _IdentityCard extends StatelessWidget {
 
   /// The avatar frame the account wears, if any (AvatarFrames).
   final AvatarFrameStyle? frame;
+
+  /// The card's own look, as the account may show it
+  /// ([ProfileStyle.allowed]). Its parts left unset keep the theme's card.
+  final ProfileStyle style;
   final VoidCallback onChangeAvatar;
 
   /// Opens the account page, where the display name is set.
@@ -616,11 +701,40 @@ class _IdentityCard extends StatelessWidget {
 
   bool get _laurel => frame?.ornament == FrameOrnament.laurel;
 
+  /// The card's own colour, when one is chosen; it lights this card only.
+  Color? get _cardColor => style.palette?.primary;
+
   @override
   Widget build(BuildContext context) {
-    final accent = GlassTheme.primary;
+    final cardColor = _cardColor;
+    final accent = cardColor ?? GlassTheme.primary;
     final theme = this.theme;
+    final backdrop = style.backdropStyle;
     final tv = DeviceCapabilities.isTv;
+    final background = backdrop != null
+        ? ProfileCardBackdrop(
+            key: ValueKey('card:${backdrop.id}'),
+            style: backdrop,
+            glow: cardColor,
+          )
+        : theme == null
+        ? DecoratedBox(
+            key: const ValueKey('classic'),
+            // The accent glows from behind the avatar.
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                center: const Alignment(0, -.75),
+                radius: 1.1,
+                colors: [
+                  accent.withValues(alpha: .26),
+                  const Color(0xFF17171E),
+                  const Color(0xFF121218),
+                ],
+                stops: const [0, .5, 1],
+              ),
+            ),
+          )
+        : SupporterThemeBackdrop(key: ValueKey(theme.id), theme: theme);
     // In line with the sections below (the page gives the side margins).
     return Padding(
       padding: const EdgeInsets.only(
@@ -633,40 +747,37 @@ class _IdentityCard extends StatelessWidget {
           color: const Color(0xFF121218),
           borderRadius: BorderRadius.circular(SettingsMetrics.sectionRadius),
           border: Border.all(
-            color: theme == null
+            color: backdrop != null
+                ? (cardColor ?? backdrop.colors.last).withValues(alpha: .28)
+                : theme == null
                 ? Colors.white.withValues(alpha: .08)
                 : theme.glow.withValues(alpha: .32),
           ),
         ),
         child: Stack(
           children: [
-            // One backdrop fades into the next when the theme changes.
+            // One backdrop fades into the next when the theme or the card's
+            // own background changes. The preview changes at once: choices
+            // there can come faster than a fade, and a background chosen
+            // again mid-fade would meet its own outgoing copy.
             Positioned.fill(
-              child: AnimatedSwitcher(
-                duration: AppMotion.resolve(context, AppMotion.emphasized),
-                child: theme == null
-                    ? DecoratedBox(
-                        key: const ValueKey('classic'),
-                        // The accent glows from behind the avatar.
-                        decoration: BoxDecoration(
-                          gradient: RadialGradient(
-                            center: const Alignment(0, -.75),
-                            radius: 1.1,
-                            colors: [
-                              accent.withValues(alpha: .26),
-                              const Color(0xFF17171E),
-                              const Color(0xFF121218),
-                            ],
-                            stops: const [0, .5, 1],
-                          ),
-                        ),
-                      )
-                    : SupporterThemeBackdrop(
-                        key: ValueKey(theme.id),
-                        theme: theme,
+              child: still
+                  ? background
+                  : AnimatedSwitcher(
+                      duration: AppMotion.resolve(
+                        context,
+                        AppMotion.emphasized,
                       ),
-              ),
+                      child: background,
+                    ),
             ),
+            if (style.effect != ProfileEffect.none)
+              Positioned.fill(
+                child: ProfileCardEffect(
+                  effect: style.effect,
+                  color: cardColor ?? theme?.ink ?? accent,
+                ),
+              ),
             _onCard(
               FutureBuilder<ProfileActivity>(
                 future: activity,
@@ -674,8 +785,9 @@ class _IdentityCard extends StatelessWidget {
                   final counts = _Counts(
                     activity: snapshot.data,
                     failed: snapshot.hasError,
-                    // The counts take the theme's light inside its card.
-                    color: theme?.ink ?? accent,
+                    // The counts take the card's colour, else the theme's
+                    // light inside its card.
+                    color: cardColor ?? theme?.ink ?? accent,
                     onOpen: onOpenLibrary,
                   );
                   return wide ? _across(tv, counts) : _stacked(tv, counts);
@@ -711,6 +823,7 @@ class _IdentityCard extends StatelessWidget {
     size: size,
     theme: theme,
     frame: frame,
+    color: _cardColor,
     account: account,
     profile: profile,
     onChange: onChangeAvatar,
@@ -773,7 +886,10 @@ class _IdentityCard extends StatelessWidget {
             TextSpan(
               text: 'Add a display name',
               style: TextStyle(
-                color: theme?.ink ?? Theme.of(context).colorScheme.primary,
+                color:
+                    _cardColor ??
+                    theme?.ink ??
+                    Theme.of(context).colorScheme.primary,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -882,6 +998,7 @@ class _EditableAvatar extends StatelessWidget {
     required this.profile,
     required this.onChange,
     this.frame,
+    this.color,
   });
 
   final double size;
@@ -893,10 +1010,15 @@ class _EditableAvatar extends StatelessWidget {
   /// The avatar frame the account wears, in place of the theme's ring.
   final AvatarFrameStyle? frame;
 
+  /// The card's own colour: an unframed avatar's ring and the button take
+  /// it in place of the theme's.
+  final Color? color;
+
   @override
   Widget build(BuildContext context) {
-    final theme = this.theme;
-    final accent = GlassTheme.primary;
+    final color = this.color;
+    final theme = color == null ? this.theme : null;
+    final accent = color ?? GlassTheme.primary;
     final avatar = MyProfileAvatar(
       size: size,
       account: account,
@@ -923,7 +1045,7 @@ class _EditableAvatar extends StatelessWidget {
     final visual = DeviceCapabilities.isTv ? 38.0 : 30.0;
     final fill = atFoot
         ? FounderRingColors.platinum
-        : theme?.ink ?? GlassTheme.coralBright;
+        : color ?? theme?.ink ?? GlassTheme.coralBright;
     // The tap target is 48 or more around the smaller disc, and the disc is
     // ringed in the card's colour so it reads as cut out of the frame.
     const target = 48.0;
