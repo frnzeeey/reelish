@@ -174,6 +174,7 @@ class _PluginLibraryViewState extends State<PluginLibraryView> {
         plugin: plugin,
         pluginService: widget.pluginService,
         catalog: widget.repository.snapshot?.catalog,
+        pluginLibrary: widget.repository,
       ),
     ),
   );

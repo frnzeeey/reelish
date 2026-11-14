@@ -49,6 +49,12 @@ class ProviderScriptCache {
     }
   }
 
+  /// Stores a copy downloaded outside [get] (an update check), so the next
+  /// lookup uses it instead of downloading the script again.
+  void put(String url, String body) {
+    _entries[url] = (body: body, fetchedAt: _clock());
+  }
+
   void clear() {
     _entries.clear();
   }

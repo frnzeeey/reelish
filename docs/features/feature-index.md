@@ -200,16 +200,24 @@ language and content type, and install one.
 ## Provider repositories
 
 Install repositories from a manifest URL or the library, enable providers,
-approve changed scripts.
-**Logic:** [`provider_plugin_service.dart`](../../lib/src/services/provider_plugin_service.dart);
+approve changed scripts, check for updates, and see each collection's source
+trust and each provider's device compatibility
+([Plugin Manager](plugin-manager.md)).
+**Logic:** [`provider_plugin_service.dart`](../../lib/src/services/provider_plugin_service.dart),
+[`plugin_compatibility.dart`](../../lib/src/services/plugin_compatibility.dart),
+[`plugin_trust.dart`](../../lib/src/services/plugin_trust.dart);
 see [provider integration](../playback/provider-integration.md).
 **UI:** [`plugins_screen.dart`](../../lib/src/screens/plugins_screen.dart),
 [`desktop_plugins_page.dart`](../../lib/src/desktop/desktop_plugins_page.dart),
+[`plugin_collection_screen.dart`](../../lib/src/screens/plugin_collection_screen.dart),
+[`installed_provider_screen.dart`](../../lib/src/screens/installed_provider_screen.dart),
+[`plugin_transparency.dart`](../../lib/src/widgets/plugin_manager/plugin_transparency.dart),
 [`provider_installer_modal.dart`](../../lib/src/widgets/provider_installer_modal.dart).
 **Data:** `onfeed.nuvio.plugin.repositories`, `onfeed.nuvio.plugin.enabled`,
-`onfeed.plugin.scriptHashes.v1`, `onfeed.plugin.knownScripts.v1`, cached
-manifests file.
-**Tests:** `provider_repository_state_test`, `desktop_settings_plugins_test`.
+`onfeed.plugin.scriptHashes.v1`, `onfeed.plugin.knownScripts.v1`,
+`onfeed.plugin.scriptVersions.v1`, cached manifests file.
+**Tests:** `plugin_manager_test`, `provider_repository_state_test`,
+`desktop_settings_plugins_test`.
 
 ## Search
 

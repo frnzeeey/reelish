@@ -77,10 +77,25 @@ class StorageService {
 
   /// SHA-256 of each provider script the viewer has allowed to run, by
   /// script URL.
-  Future<Map<String, String>> providerScriptHashes() async {
-    final raw = (await SharedPreferences.getInstance()).getString(
-      _providerScriptHashesKey,
-    );
+  Future<Map<String, String>> providerScriptHashes() =>
+      _stringMap(_providerScriptHashesKey);
+
+  static const _providerScriptVersionsKey = 'onfeed.plugin.scriptVersions.v1';
+
+  /// The version its manifest listed when each approved provider script was
+  /// allowed, by script URL. Display only; [providerScriptHashes] decides
+  /// what runs.
+  Future<Map<String, String>> providerScriptVersions() =>
+      _stringMap(_providerScriptVersionsKey);
+
+  Future<void> saveProviderScriptVersions(Map<String, String> versions) async =>
+      (await SharedPreferences.getInstance()).setString(
+        _providerScriptVersionsKey,
+        jsonEncode(versions),
+      );
+
+  Future<Map<String, String>> _stringMap(String key) async {
+    final raw = (await SharedPreferences.getInstance()).getString(key);
     if (raw == null) return {};
     try {
       final decoded = jsonDecode(raw);

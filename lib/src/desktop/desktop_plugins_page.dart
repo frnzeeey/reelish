@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 import '../theme/reelish_icons.dart';
 
 import '../models/provider_plugin.dart';
+import '../screens/plugin_collection_screen.dart';
 import '../screens/plugin_library_screen.dart';
 import '../services/plugin_library_repository.dart';
 import '../services/provider_plugin_service.dart';
 import '../theme/design_tokens.dart';
 import '../theme/glass_theme.dart';
+import '../widgets/plugin_manager/plugin_transparency.dart';
 import '../widgets/provider_installer_modal.dart';
 import 'desktop_widgets.dart';
 
@@ -271,6 +273,7 @@ class _DesktopPluginsPageState extends State<DesktopPluginsPage> {
                         key: ValueKey(repository.url),
                         repository: repository,
                         service: pluginService,
+                        library: widget.pluginLibrary,
                         // A single repository opens with its providers.
                         initiallyExpanded: repositories.length == 1,
                       ),
@@ -609,11 +612,13 @@ class _RepositoryCard extends StatefulWidget {
     super.key,
     required this.repository,
     required this.service,
+    this.library,
     this.initiallyExpanded = false,
   });
 
   final ProviderRepository repository;
   final ProviderPluginService service;
+  final PluginLibraryRepository? library;
   final bool initiallyExpanded;
 
   @override
@@ -734,6 +739,32 @@ class _RepositoryCardState extends State<_RepositoryCard> {
                         ),
                       ),
                       const SizedBox(width: 10),
+                      if (widget.service.pendingScriptUpdates.containsKey(
+                        repository.url,
+                      ))
+                        Padding(
+                          padding: const EdgeInsets.only(right: 4),
+                          child: Tooltip(
+                            message: 'New provider code to review',
+                            child: Icon(
+                              ReelishIcons.systemUpdate,
+                              color: GlassTheme.warning,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                      IconButton(
+                        tooltip: 'Manage collection',
+                        onPressed: () => unawaited(
+                          PluginCollectionScreen.open(
+                            context,
+                            repositoryUrl: repository.url,
+                            pluginService: widget.service,
+                            pluginLibrary: widget.library,
+                          ),
+                        ),
+                        icon: const Icon(ReelishIcons.tune, size: 20),
+                      ),
                       IconButton(
                         tooltip: 'Remove collection',
                         onPressed: () => unawaited(_confirmRemove()),
@@ -778,11 +809,15 @@ class _RepositoryCardState extends State<_RepositoryCard> {
                             padding: const EdgeInsets.all(12),
                             child: _ProviderGrid(
                               plugins: repository.plugins,
+                              // Asks first before switching on a provider
+                              // its author disables on Windows.
                               onChanged: (plugin, enabled) => unawaited(
-                                widget.service.setPluginEnabled(
-                                  repository,
-                                  plugin,
-                                  enabled,
+                                setProviderEnabled(
+                                  context,
+                                  service: widget.service,
+                                  repository: repository,
+                                  plugin: plugin,
+                                  enabled: enabled,
                                 ),
                               ),
                             ),

@@ -11,12 +11,14 @@ class PluginSearchBar extends StatelessWidget {
     required this.onChanged,
     required this.onClear,
     this.focusNode,
+    this.hintText = 'Search plugins, authors or sources…',
   });
 
   final TextEditingController controller;
   final FocusNode? focusNode;
   final ValueChanged<String> onChanged;
   final VoidCallback onClear;
+  final String hintText;
 
   @override
   Widget build(BuildContext context) => TextField(
@@ -30,7 +32,7 @@ class PluginSearchBar extends StatelessWidget {
       fontWeight: FontWeight.w600,
     ),
     decoration: InputDecoration(
-      hintText: 'Search plugins, authors or sources…',
+      hintText: hintText,
       hintStyle: TextStyle(
         color: GlassTheme.muted,
         fontWeight: FontWeight.w500,

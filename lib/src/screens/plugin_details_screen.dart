@@ -5,10 +5,15 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../models/plugin_catalog.dart';
 import '../platform/device_capabilities.dart';
+import '../services/plugin_compatibility.dart';
 import '../services/plugin_library_query.dart';
+import '../services/plugin_library_repository.dart';
+import '../services/plugin_trust.dart';
 import '../services/provider_plugin_service.dart';
 import '../theme/design_tokens.dart';
 import '../theme/glass_theme.dart';
+import '../widgets/plugin_manager/plugin_transparency.dart';
+import 'plugin_collection_screen.dart';
 import '../widgets/plugin_library/copy_manifest_button.dart';
 import '../widgets/plugin_library/plugin_badges.dart';
 import '../widgets/plugin_library/plugin_formatting.dart';
@@ -23,11 +28,26 @@ class PluginDetailsScreen extends StatelessWidget {
     required this.plugin,
     required this.pluginService,
     this.catalog,
+    this.pluginLibrary,
+    this.device,
   });
 
   final ReelishPlugin plugin;
   final ProviderPluginService pluginService;
   final PluginCatalog? catalog;
+
+  /// Passed on to the collection page once the repository is installed.
+  final PluginLibraryRepository? pluginLibrary;
+
+  /// Overrides the detected interface in tests.
+  final ReelishDevice? device;
+
+  ReelishDevice get _device => device ?? ReelishDevice.current;
+
+  /// Shown from the catalog itself: every entry here is listed, and only
+  /// the catalog's own flag makes it verified.
+  PluginSourceTrust get _trust =>
+      plugin.verified ? PluginSourceTrust.verified : PluginSourceTrust.listed;
 
   static const _maxContentWidth = 760.0;
 
@@ -127,6 +147,34 @@ class PluginDetailsScreen extends StatelessWidget {
                         ],
                       ),
                     ),
+                    ListenableBuilder(
+                      listenable: pluginService,
+                      // Only once it is loaded: a repository that failed
+                      // to load has nothing to manage yet.
+                      builder: (context, _) =>
+                          plugin.manifestUrl != null &&
+                              pluginService.repositories.any(
+                                (repo) =>
+                                    repo.url == plugin.manifestUrl.toString(),
+                              )
+                          ? Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: TextButton.icon(
+                                onPressed: () => PluginCollectionScreen.open(
+                                  context,
+                                  repositoryUrl: plugin.manifestUrl.toString(),
+                                  pluginService: pluginService,
+                                  pluginLibrary: pluginLibrary,
+                                ),
+                                style: TextButton.styleFrom(
+                                  minimumSize: const Size(0, 44),
+                                ),
+                                icon: const Icon(ReelishIcons.tune, size: 18),
+                                label: const Text('Manage providers'),
+                              ),
+                            )
+                          : const SizedBox.shrink(),
+                    ),
                     if (!plugin.available) ...[
                       const SizedBox(height: 12),
                       const _Note(
@@ -172,12 +220,7 @@ class PluginDetailsScreen extends StatelessWidget {
                               ? 'Unavailable'
                               : '${formatPluginDate(plugin.lastUpdated!)} (${relativePluginDate(plugin.lastUpdated!)})',
                         ),
-                        (
-                          'Verification',
-                          plugin.verified
-                              ? 'Verified'
-                              : 'Not verified, community provider',
-                        ),
+                        ('Source', _trust.label),
                         if (catalog?.sourceName case final source?)
                           ('Listed in', source),
                       ],
@@ -197,8 +240,17 @@ class PluginDetailsScreen extends StatelessWidget {
                         ),
                       ),
                     ],
+                    const _Heading('Source and trust'),
+                    PluginSourceCard(
+                      trust: _trust,
+                      manifestUrl: plugin.manifestUrl?.toString() ?? '',
+                    ),
+                    const _Heading('On this device'),
+                    _CompatibilityCard(plugin: plugin, device: _device),
                     const _Heading('Manifest'),
                     _ManifestBox(plugin: plugin),
+                    const SizedBox(height: 14),
+                    const ProviderCapabilitiesCard(),
                     const SizedBox(height: 14),
                     const PluginSafetyNotice(),
                     _Heading(
@@ -509,6 +561,36 @@ class _ManifestBox extends StatelessWidget {
             ),
         ],
       ),
+    );
+  }
+}
+
+/// Whether this repository's sources can be used here, from the catalog's
+/// scraper data; "checked after install" when the catalog has none.
+class _CompatibilityCard extends StatelessWidget {
+  const _CompatibilityCard({required this.plugin, required this.device});
+
+  final ReelishPlugin plugin;
+  final ReelishDevice device;
+
+  @override
+  Widget build(BuildContext context) {
+    final compatibility = PluginCompatibility.ofCatalog(plugin, device);
+    final (icon, color) = PluginCompatibilityChip.styleOf(compatibility.level);
+    return PluginInfoCard(
+      icon: icon,
+      color: color,
+      title: compatibility.level == PluginCompatibilityLevel.unknown
+          ? 'Compatibility checked after install'
+          : '${compatibility.level.label} on ${device.label}',
+      children: [
+        if (compatibility.reasons.isEmpty)
+          const PluginInfoText(
+            'None of its sources declares a problem with this device.',
+          )
+        else
+          for (final reason in compatibility.reasons) PluginInfoText(reason),
+      ],
     );
   }
 }

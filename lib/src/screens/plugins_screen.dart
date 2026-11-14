@@ -6,7 +6,9 @@ import '../services/plugin_library_repository.dart';
 import '../services/provider_plugin_service.dart';
 import '../theme/design_tokens.dart';
 import '../theme/glass_theme.dart';
+import '../widgets/plugin_manager/plugin_transparency.dart';
 import '../widgets/provider_installer_modal.dart';
+import 'plugin_collection_screen.dart';
 import 'plugin_library_screen.dart';
 
 class PluginsScreen extends StatelessWidget {
@@ -78,6 +80,7 @@ class PluginsScreen extends StatelessWidget {
                     key: ValueKey(repository.url),
                     repository: repository,
                     service: pluginService,
+                    library: pluginLibrary,
                   ),
                 ),
             ],
@@ -521,10 +524,12 @@ class _RepositoryCard extends StatefulWidget {
     super.key,
     required this.repository,
     required this.service,
+    required this.library,
   });
 
   final ProviderRepository repository;
   final ProviderPluginService service;
+  final PluginLibraryRepository library;
 
   @override
   State<_RepositoryCard> createState() => _RepositoryCardState();
@@ -618,6 +623,27 @@ class _RepositoryCardState extends State<_RepositoryCard> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   IconButton(
+                    tooltip:
+                        widget.service.pendingScriptUpdates.containsKey(
+                          repository.url,
+                        )
+                        ? 'Manage collection (new code to review)'
+                        : 'Manage collection',
+                    onPressed: () => PluginCollectionScreen.open(
+                      context,
+                      repositoryUrl: repository.url,
+                      pluginService: widget.service,
+                      pluginLibrary: widget.library,
+                    ),
+                    icon: Badge(
+                      isLabelVisible: widget.service.pendingScriptUpdates
+                          .containsKey(repository.url),
+                      backgroundColor: GlassTheme.warning,
+                      smallSize: 8,
+                      child: const Icon(ReelishIcons.tune, size: 20),
+                    ),
+                  ),
+                  IconButton(
                     tooltip: 'Remove collection',
                     onPressed: _confirmRemove,
                     icon: const Icon(ReelishIcons.trash, size: 20),
@@ -647,10 +673,14 @@ class _RepositoryCardState extends State<_RepositoryCard> {
                   )
                     _ProviderTile(
                       plugin: repository.plugins[index],
-                      onChanged: (enabled) => widget.service.setPluginEnabled(
-                        repository,
-                        repository.plugins[index],
-                        enabled,
+                      // Asks first before switching on a provider its
+                      // author disables on this device.
+                      onChanged: (enabled) => setProviderEnabled(
+                        context,
+                        service: widget.service,
+                        repository: repository,
+                        plugin: repository.plugins[index],
+                        enabled: enabled,
                       ),
                       showDivider: index < repository.plugins.length - 1,
                     ),

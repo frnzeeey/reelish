@@ -35,7 +35,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/desktop/desktop_details_screen.dart`](#libsrcdesktopdesktop_details_screendart) | Windows | 1439 | A movie or series on Windows, full-bleed over the whole window: the backdrop with the title, details and actions, then cast and related titles. |
 | [`lib/src/desktop/desktop_hero.dart`](#libsrcdesktopdesktop_herodart) | Windows | 1238 | The featured titles at the top of desktop Home: one full-bleed backdrop with the title, synopsis and actions on its left, and every Spotlight title in a rail along its foot, the one shown first and widest. |
 | [`lib/src/desktop/desktop_pages.dart`](#libsrcdesktopdesktop_pagesdart) | Windows | 1184 | The Windows Home, Movies/Series catalog, Search and My library pages shown inside `DesktopShell`. |
-| [`lib/src/desktop/desktop_plugins_page.dart`](#libsrcdesktopdesktop_plugins_pagedart) | Windows | 953 | Plugins on Windows: the installed repositories and their providers at a desktop width, with the same actions as the phone and TV screen (add from the library or a manifest URL, refresh, switch providers on and off, remove, allow changed provider code) through the same `ProviderPluginService`, so what is installed and enabled is shared. |
+| [`lib/src/desktop/desktop_plugins_page.dart`](#libsrcdesktopdesktop_plugins_pagedart) | Windows | 988 | Plugins on Windows: the installed repositories and their providers at a desktop width, with the same actions as the phone and TV screen (add from the library or a manifest URL, refresh, switch providers on and off, remove, allow changed provider code) through the same `ProviderPluginService`, so what is installed and enabled is shared. |
 | [`lib/src/desktop/desktop_provider_search.dart`](#libsrcdesktopdesktop_provider_searchdart) | Windows | 253 | "Searching providers…" over the Windows interface while a play request from Home looks for a stream: a frosted card on the dimmed page, with what is being looked for and a way to stop. |
 | [`lib/src/desktop/desktop_settings_page.dart`](#libsrcdesktopdesktop_settings_pagedart) | Windows | 430 | Settings on Windows: the categories of the phone and TV Settings list on the left, the chosen one beside them, so a change and its effect are on screen together. |
 | [`lib/src/desktop/desktop_shell.dart`](#libsrcdesktopdesktop_shelldart) | Windows | 1387 | The Windows interface's frame: a compact icon rail on the left and the selected page beside it. |
@@ -69,8 +69,8 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/models/media_item.dart`](#libsrcmodelsmedia_itemdart) | Shared | 201 | A movie or series as Reelish passes it around: TMDB ids and artwork, catalog metadata, and the resume position and length saved with watch history; JSON for storage. |
 | [`lib/src/models/playable_source.dart`](#libsrcmodelsplayable_sourcedart) | Shared | 18 | Fully prepared input for an engine. |
 | [`lib/src/models/playback_settings.dart`](#libsrcmodelsplayback_settingsdart) | Shared | 327 | The viewer's playback preferences (sources, providers, P2P, subtitles, gestures and more) with defaults and JSON for storage. |
-| [`lib/src/models/plugin_catalog.dart`](#libsrcmodelsplugin_catalogdart) | Shared | 242 | The community plugin catalog shown in the Plugin Library. |
-| [`lib/src/models/provider_plugin.dart`](#libsrcmodelsprovider_plugindart) | Shared | 63 | A provider plugin and the repository (manifest) it was installed from. |
+| [`lib/src/models/plugin_catalog.dart`](#libsrcmodelsplugin_catalogdart) | Shared | 257 | The community plugin catalog shown in the Plugin Library. |
+| [`lib/src/models/provider_plugin.dart`](#libsrcmodelsprovider_plugindart) | Shared | 166 | One provider (scraper) listed in an installed repository's manifest. |
 | [`lib/src/models/resume_summary.dart`](#libsrcmodelsresume_summarydart) | Shared | 95 | What a Continue Watching card shows for a watch-history entry: real progress, never an estimate. |
 | [`lib/src/models/stream_source.dart`](#libsrcmodelsstream_sourcedart) | Shared | 278 | A playable source returned by a provider, with its headers, quality and subtitle tracks. |
 | [`lib/src/models/stream_type.dart`](#libsrcmodelsstream_typedart) | Shared | 44 | Stream kinds (HLS, DASH, progressive, torrent, local) and detection from a URL. |
@@ -97,15 +97,17 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/screens/genre_onboarding_screen.dart`](#libsrcscreensgenre_onboarding_screendart) | Shared | 327 | The genre step: "What do you love watching?". |
 | [`lib/src/screens/help_support_screen.dart`](#libsrcscreenshelp_support_screendart) | Shared | 782 | Help & Support in Settings: answers (FAQ, troubleshooting), a bug report and feedback form that sends to the Reelish API, and links to app information. |
 | [`lib/src/screens/home_screen.dart`](#libsrcscreenshome_screendart) | Shared | 3188 | Home and the app's orchestration: phone tabs, and the TV and Windows shells; owns the catalog wiring, the play flow (`_openItem`: providers, source choice, player) and details navigation. |
+| [`lib/src/screens/installed_provider_screen.dart`](#libsrcscreensinstalled_provider_screendart) | Shared | 417 | Details of one installed provider: what its manifest declares, whether it can work on this device and why, its running and listed versions, its last failure, what any provider can do, and its on/off switch. |
 | [`lib/src/screens/legal_information_screen.dart`](#libsrcscreenslegal_information_screendart) | Shared | 551 | Shows the privacy policy, terms of use and third-party notices. |
 | [`lib/src/screens/library_screen.dart`](#libsrcscreenslibrary_screendart) | Shared | 629 | The phone library tab: continue watching, My list and watch history from local storage. |
 | [`lib/src/screens/media_details_screen.dart`](#libsrcscreensmedia_details_screendart) | Shared | 940 | The phone details page for a movie or series, with seasons, episodes and playback. |
 | [`lib/src/screens/notification_settings_screen.dart`](#libsrcscreensnotification_settings_screendart) | Shared | 130 | Settings → Notifications: new-episode alerts for series on My list, series being watched, and popular series. |
 | [`lib/src/screens/playback_settings_screen.dart`](#libsrcscreensplayback_settings_screendart) | Shared | 1793 | Settings, Appearance and Playback settings screens for phone and TV; Windows reuses their sub-pages. |
 | [`lib/src/screens/player_screen.dart`](#libsrcscreensplayer_screendart) | Shared | 89 | The route that hosts `CustomVideoPlayer` for one title and source. |
-| [`lib/src/screens/plugin_details_screen.dart`](#libsrcscreensplugin_details_screendart) | Shared | 544 | A plugin-library repository's details page, from which it can be installed. |
-| [`lib/src/screens/plugin_library_screen.dart`](#libsrcscreensplugin_library_screendart) | Shared | 766 | Browse the community provider catalog and hand a manifest to the existing installer: the library as its own page, opened from Plugins on phone and TV. |
-| [`lib/src/screens/plugins_screen.dart`](#libsrcscreensplugins_screendart) | Shared | 919 | The phone and TV Plugins page: installed repositories, enabling providers, script updates and the plugin library. |
+| [`lib/src/screens/plugin_collection_screen.dart`](#libsrcscreensplugin_collection_screendart) | Shared | 808 | Manage one installed provider repository ("collection"): where it comes from and how far it is trusted, code waiting for review with its version change, an update check, and every provider it lists with its device compatibility and switch. |
+| [`lib/src/screens/plugin_details_screen.dart`](#libsrcscreensplugin_details_screendart) | Shared | 626 | A plugin-library repository's details page, from which it can be installed. |
+| [`lib/src/screens/plugin_library_screen.dart`](#libsrcscreensplugin_library_screendart) | Shared | 767 | Browse the community provider catalog and hand a manifest to the existing installer: the library as its own page, opened from Plugins on phone and TV. |
+| [`lib/src/screens/plugins_screen.dart`](#libsrcscreensplugins_screendart) | Shared | 949 | The phone and TV Plugins page: installed repositories, enabling providers, script updates and the plugin library. |
 | [`lib/src/screens/profile_screen.dart`](#libsrcscreensprofile_screendart) | Shared | 1445 | The signed-in person's page, in three parts: who they are (avatar, name, badges, and apart from those their viewing at a glance), how Reelish looks for them (avatar frame, app theme, app icon) and their account. |
 | [`lib/src/screens/recommendation_settings_screen.dart`](#libsrcscreensrecommendation_settings_screendart) | Shared | 181 | Settings → Recommendations: personalised rows on or off, the genres the viewer likes, titles hidden from recommendations, and a reset. |
 | [`lib/src/screens/sign_in_screen.dart`](#libsrcscreenssign_in_screendart) | Shared | 805 | Trakt sign-in, shown before Home whenever no session is stored. |
@@ -140,17 +142,19 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/services/playback_settings_controller.dart`](#libsrcservicesplayback_settings_controllerdart) | Shared | 43 | Loads, holds and saves the playback settings. |
 | [`lib/src/services/playback_source_policy.dart`](#libsrcservicesplayback_source_policydart) | Shared | 11 | Applies provider and torrent playback preferences to a returned source. |
 | [`lib/src/services/player_engine.dart`](#libsrcservicesplayer_enginedart) | Shared | 274 | Common controller boundary. |
+| [`lib/src/services/plugin_compatibility.dart`](#libsrcservicesplugin_compatibilitydart) | Shared | 176 | Whether an installed provider can work on this device, judged only from what its manifest declares and what Reelish's runtime does. |
 | [`lib/src/services/plugin_library_query.dart`](#libsrcservicesplugin_library_querydart) | Shared | 308 | The search, filters and sort chosen in the Plugin Library. |
 | [`lib/src/services/plugin_library_repository.dart`](#libsrcservicesplugin_library_repositorydart) | Shared | 167 | Holds the Plugin Library catalog for the UI. |
 | [`lib/src/services/plugin_library_service.dart`](#libsrcservicesplugin_library_servicedart) | Shared | 161 | Reads the catalog from the network, the on-device cache and the app bundle. |
+| [`lib/src/services/plugin_trust.dart`](#libsrcservicesplugin_trustdart) | Shared | 113 | Where an installed provider repository comes from and how much Reelish knows about it. |
 | [`lib/src/services/provider_execution_scheduler.dart`](#libsrcservicesprovider_execution_schedulerdart) | Shared | 47 | Bounds parallel provider work separately from native QuickJS heap use. |
 | [`lib/src/services/provider_fetch_bridge.dart`](#libsrcservicesprovider_fetch_bridgedart) | Shared | 1205 | Supplies provider scripts with fetch and XMLHttpRequest backed by Dart's HTTP client. |
 | [`lib/src/services/provider_node_compat.dart`](#libsrcservicesprovider_node_compatdart) | Shared | 222 | Node-style globals and modules that community provider scripts expect, written in JavaScript on top of the sandbox's own fetch bridge. |
-| [`lib/src/services/provider_plugin_service.dart`](#libsrcservicesprovider_plugin_servicedart) | Shared | 913 | Provider repositories and plugins: install, update, enable, script caching and approval, and stream discovery for a title. |
+| [`lib/src/services/provider_plugin_service.dart`](#libsrcservicesprovider_plugin_servicedart) | Shared | 1099 | Provider repositories and plugins: install, update, enable, script caching and approval, and stream discovery for a title. |
 | [`lib/src/services/provider_runner.dart`](#libsrcservicesprovider_runnerdart) | Shared | 281 | Runs provider scripts on a background isolate. |
-| [`lib/src/services/provider_script_cache.dart`](#libsrcservicesprovider_script_cachedart) | Shared | 55 | In-memory cache of provider scripts for this app session. |
+| [`lib/src/services/provider_script_cache.dart`](#libsrcservicesprovider_script_cachedart) | Shared | 61 | In-memory cache of provider scripts for this app session. |
 | [`lib/src/services/source_preparer.dart`](#libsrcservicessource_preparerdart) | Shared | 70 | Validates a source, its headers and its destination before an engine opens it. |
-| [`lib/src/services/storage_service.dart`](#libsrcservicesstorage_servicedart) | Shared | 1095 | Local storage on SharedPreferences: watch history and per-episode progress, My list, provider repositories, cached manifests, settings and remembered subtitles. |
+| [`lib/src/services/storage_service.dart`](#libsrcservicesstorage_servicedart) | Shared | 1110 | Local storage on SharedPreferences: watch history and per-episode progress, My list, provider repositories, cached manifests, settings and remembered subtitles. |
 | [`lib/src/services/stream_discovery.dart`](#libsrcservicesstream_discoverydart) | Shared | 105 | Owns one progressive provider lookup and its results for one playback request. |
 | [`lib/src/services/stream_normalizer.dart`](#libsrcservicesstream_normalizerdart) | Shared | 32 | Converts provider-specific JSON shapes into Reelish's canonical source. |
 | [`lib/src/services/stream_validator.dart`](#libsrcservicesstream_validatordart) | Shared | 23 | Cheap source checks before native player open. |
@@ -230,9 +234,10 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/widgets/plugin_library/plugin_library_notices.dart`](#libsrcwidgetsplugin_libraryplugin_library_noticesdart) | Shared | 232 | Plugin-library notices: the safety note, the offline banner, message states and the manual-install prompt. |
 | [`lib/src/widgets/plugin_library/plugin_logo.dart`](#libsrcwidgetsplugin_libraryplugin_logodart) | Shared | 118 | A provider's icon, or a monogram tile when the catalog has none or the image fails. |
 | [`lib/src/widgets/plugin_library/plugin_scraper_tile.dart`](#libsrcwidgetsplugin_libraryplugin_scraper_tiledart) | Shared | 121 | One source in a provider's details, as its manifest describes it. |
-| [`lib/src/widgets/plugin_library/plugin_search_bar.dart`](#libsrcwidgetsplugin_libraryplugin_search_bardart) | Shared | 60 | The plugin library's search field. |
+| [`lib/src/widgets/plugin_library/plugin_search_bar.dart`](#libsrcwidgetsplugin_libraryplugin_search_bardart) | Shared | 62 | The plugin library's search field. |
 | [`lib/src/widgets/plugin_library/plugin_skeleton.dart`](#libsrcwidgetsplugin_libraryplugin_skeletondart) | Shared | 147 | Shimmer placeholders shown while the plugin catalog loads. |
 | [`lib/src/widgets/plugin_library/plugin_stats.dart`](#libsrcwidgetsplugin_libraryplugin_statsdart) | Shared | 58 | Provider, source and language totals computed from the catalog, and when it was updated, as one quiet line under the library's title. |
+| [`lib/src/widgets/plugin_manager/plugin_transparency.dart`](#libsrcwidgetsplugin_managerplugin_transparencydart) | Shared | 603 | Shared Plugin Manager pieces for phone, TV and Windows: source trust, device compatibility, what any provider can do in Reelish, the guarded "switch on" action and the page frame the manager's pages use. |
 | [`lib/src/widgets/poster_image.dart`](#libsrcwidgetsposter_imagedart) | Shared | 47 | The poster placeholder tile and the fade-in used when a poster image arrives. |
 | [`lib/src/widgets/profile_avatar.dart`](#libsrcwidgetsprofile_avatardart) | Shared | 193 | The user's avatar as chosen in their profile: their Trakt picture, their photo, a preset, or the first letter of their name on the accent. |
 | [`lib/src/widgets/profile_avatar_picker.dart`](#libsrcwidgetsprofile_avatar_pickerdart) | Shared | 168 | The avatar choices for the signed-in profile, shared by the account screen and the profile page's avatar sheet. |
@@ -681,7 +686,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/desktop/desktop_plugins_page.dart
 
-**Source:** [`lib/src/desktop/desktop_plugins_page.dart`](../../lib/src/desktop/desktop_plugins_page.dart) · **Platform:** Windows · **Lines:** 953
+**Source:** [`lib/src/desktop/desktop_plugins_page.dart`](../../lib/src/desktop/desktop_plugins_page.dart) · **Platform:** Windows · **Lines:** 988
 
 **Purpose:** Plugins on Windows: the installed repositories and their providers at a desktop width, with the same actions as the phone and TV screen (add from the library or a manifest URL, refresh, switch providers on and off, remove, allow changed provider code) through the same `ProviderPluginService`, so what is installed and enabled is shared.
 
@@ -689,7 +694,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Top-level functions:** `_confirmRemoveFailed`
 
-**Imports (project):** `src/desktop/desktop_widgets.dart`, `src/models/provider_plugin.dart`, `src/screens/plugin_library_screen.dart`, `src/services/plugin_library_repository.dart`, `src/services/provider_plugin_service.dart`, `src/theme/design_tokens.dart`, `src/theme/glass_theme.dart`, `src/theme/reelish_icons.dart`, `src/widgets/provider_installer_modal.dart`
+**Imports (project):** `src/desktop/desktop_widgets.dart`, `src/models/provider_plugin.dart`, `src/screens/plugin_collection_screen.dart`, `src/screens/plugin_library_screen.dart`, `src/services/plugin_library_repository.dart`, `src/services/provider_plugin_service.dart`, `src/theme/design_tokens.dart`, `src/theme/glass_theme.dart`, `src/theme/reelish_icons.dart`, `src/widgets/plugin_manager/plugin_transparency.dart`, `src/widgets/provider_installer_modal.dart`
 
 **Packages:** `flutter`
 
@@ -1205,7 +1210,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/models/plugin_catalog.dart
 
-**Source:** [`lib/src/models/plugin_catalog.dart`](../../lib/src/models/plugin_catalog.dart) · **Platform:** Shared · **Lines:** 242
+**Source:** [`lib/src/models/plugin_catalog.dart`](../../lib/src/models/plugin_catalog.dart) · **Platform:** Shared · **Lines:** 257
 
 **Purpose:** The community plugin catalog shown in the Plugin Library.
 
@@ -1215,23 +1220,25 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Imports (project):** none
 
-**Imported by:** `src/screens/plugin_details_screen.dart`, `src/screens/plugin_library_screen.dart`, `src/services/plugin_library_query.dart`, `src/services/plugin_library_repository.dart`, `src/services/plugin_library_service.dart`, `src/widgets/plugin_library/plugin_badges.dart`, `src/widgets/plugin_library/plugin_card.dart`, `src/widgets/plugin_library/plugin_install_button.dart`, `src/widgets/plugin_library/plugin_scraper_tile.dart`
+**Imported by:** `src/screens/plugin_collection_screen.dart`, `src/screens/plugin_details_screen.dart`, `src/screens/plugin_library_screen.dart`, `src/services/plugin_compatibility.dart`, `src/services/plugin_library_query.dart`, `src/services/plugin_library_repository.dart`, `src/services/plugin_library_service.dart`, `src/services/plugin_trust.dart`, `src/widgets/plugin_library/plugin_badges.dart`, `src/widgets/plugin_library/plugin_card.dart`, `src/widgets/plugin_library/plugin_install_button.dart`, `src/widgets/plugin_library/plugin_scraper_tile.dart`
 
-**Tests importing it:** `test/plugin_library_test.dart`
+**Tests importing it:** `test/plugin_library_test.dart`, `test/plugin_manager_test.dart`
 
 ## lib/src/models/provider_plugin.dart
 
-**Source:** [`lib/src/models/provider_plugin.dart`](../../lib/src/models/provider_plugin.dart) · **Platform:** Shared · **Lines:** 63
+**Source:** [`lib/src/models/provider_plugin.dart`](../../lib/src/models/provider_plugin.dart) · **Platform:** Shared · **Lines:** 166
 
-**Purpose:** A provider plugin and the repository (manifest) it was installed from.
+**Purpose:** One provider (scraper) listed in an installed repository's manifest.
 
 **Declares:** `ProviderPlugin` (Model), `ProviderRepository` (Model)
 
+**Top-level functions:** `_httpsUri`
+
 **Imports (project):** none
 
-**Imported by:** `src/desktop/desktop_plugins_page.dart`, `src/screens/plugins_screen.dart`, `src/services/provider_plugin_service.dart`
+**Imported by:** `src/desktop/desktop_plugins_page.dart`, `src/screens/installed_provider_screen.dart`, `src/screens/plugin_collection_screen.dart`, `src/screens/plugins_screen.dart`, `src/services/plugin_compatibility.dart`, `src/services/provider_plugin_service.dart`, `src/widgets/plugin_manager/plugin_transparency.dart`
 
-**Tests importing it:** `test/desktop_settings_plugins_test.dart`, `test/plugin_library_test.dart`, `test/provider_repository_state_test.dart`
+**Tests importing it:** `test/desktop_settings_plugins_test.dart`, `test/plugin_library_test.dart`, `test/plugin_manager_test.dart`, `test/provider_repository_state_test.dart`
 
 ## lib/src/models/resume_summary.dart
 
@@ -1345,7 +1352,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Packages:** `flutter`
 
-**Imported by:** `src/desktop/desktop_collections.dart`, `src/desktop/desktop_settings_page.dart`, `src/screens/app_icon_settings_screen.dart`, `src/screens/app_information_screens.dart`, `src/screens/avatar_frames_screen.dart`, `src/screens/collections/collection_pages.dart`, `src/screens/help_support_screen.dart`, `src/screens/home_screen.dart`, `src/screens/playback_settings_screen.dart`, `src/screens/plugin_library_screen.dart`, `src/screens/profile_screen.dart`, `src/screens/social/friends_screen.dart`, `src/screens/tv/tv_collections.dart`, `src/screens/watch_party/create_party_screen.dart`, `src/screens/watch_party/join_party_screen.dart`
+**Imported by:** `src/desktop/desktop_collections.dart`, `src/desktop/desktop_settings_page.dart`, `src/screens/app_icon_settings_screen.dart`, `src/screens/app_information_screens.dart`, `src/screens/avatar_frames_screen.dart`, `src/screens/collections/collection_pages.dart`, `src/screens/help_support_screen.dart`, `src/screens/home_screen.dart`, `src/screens/installed_provider_screen.dart`, `src/screens/playback_settings_screen.dart`, `src/screens/plugin_collection_screen.dart`, `src/screens/plugin_library_screen.dart`, `src/screens/profile_screen.dart`, `src/screens/social/friends_screen.dart`, `src/screens/tv/tv_collections.dart`, `src/screens/watch_party/create_party_screen.dart`, `src/screens/watch_party/join_party_screen.dart`
 
 **Tests importing it:** `test/app_transitions_test.dart`
 
@@ -1443,7 +1450,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Packages:** `flutter`
 
-**Imported by:** `main.dart`, `src/account/account_controller.dart`, `src/notifications/episode_alerts.dart`, `src/platform/app_icon.dart`, `src/platform/desktop_gamepad.dart`, `src/platform/desktop_window.dart`, `src/screens/account_settings_screen.dart`, `src/screens/avatar_frames_screen.dart`, `src/screens/first_run_consent_screen.dart`, `src/screens/genre_onboarding_screen.dart`, `src/screens/home_screen.dart`, `src/screens/legal_information_screen.dart`, `src/screens/player_screen.dart`, `src/screens/plugin_details_screen.dart`, `src/screens/plugin_library_screen.dart`, `src/screens/profile_screen.dart`, `src/screens/sign_in_screen.dart`, `src/screens/social/friend_collection_screen.dart`, `src/screens/social/friends_privacy_screen.dart`, `src/screens/social/friends_screen.dart`, `src/screens/social/messages_screen.dart`, `src/screens/supporters_screen.dart`, `src/screens/watch_party/create_party_screen.dart`, `src/screens/watch_party/join_party_screen.dart`, `src/screens/watch_party/waiting_room_screen.dart`, `src/support/support_service.dart`, `src/widgets/app_update_flow.dart`, `src/widgets/collections/collection_actions.dart`, `src/widgets/player/custom_video_player.dart`, `src/widgets/player/episode_panel.dart`, `src/widgets/player/paused_overlay.dart`, `src/widgets/player/player_controls.dart`, `src/widgets/player/player_progress_bar.dart`, `src/widgets/player/player_settings_sheet.dart`, `src/widgets/player/player_sheet.dart`, `src/widgets/plugin_library/plugin_filter_bar.dart`, `src/widgets/profile_avatar_picker.dart`, `src/widgets/provider_installer_modal.dart`, `src/widgets/social/share_dialog.dart`, `src/widgets/social/social_widgets.dart`, `src/widgets/supporter_theme_picker.dart`, `src/widgets/tv/tv_focus.dart`
+**Imported by:** `main.dart`, `src/account/account_controller.dart`, `src/notifications/episode_alerts.dart`, `src/platform/app_icon.dart`, `src/platform/desktop_gamepad.dart`, `src/platform/desktop_window.dart`, `src/screens/account_settings_screen.dart`, `src/screens/avatar_frames_screen.dart`, `src/screens/first_run_consent_screen.dart`, `src/screens/genre_onboarding_screen.dart`, `src/screens/home_screen.dart`, `src/screens/installed_provider_screen.dart`, `src/screens/legal_information_screen.dart`, `src/screens/player_screen.dart`, `src/screens/plugin_collection_screen.dart`, `src/screens/plugin_details_screen.dart`, `src/screens/plugin_library_screen.dart`, `src/screens/profile_screen.dart`, `src/screens/sign_in_screen.dart`, `src/screens/social/friend_collection_screen.dart`, `src/screens/social/friends_privacy_screen.dart`, `src/screens/social/friends_screen.dart`, `src/screens/social/messages_screen.dart`, `src/screens/supporters_screen.dart`, `src/screens/watch_party/create_party_screen.dart`, `src/screens/watch_party/join_party_screen.dart`, `src/screens/watch_party/waiting_room_screen.dart`, `src/services/plugin_compatibility.dart`, `src/support/support_service.dart`, `src/widgets/app_update_flow.dart`, `src/widgets/collections/collection_actions.dart`, `src/widgets/player/custom_video_player.dart`, `src/widgets/player/episode_panel.dart`, `src/widgets/player/paused_overlay.dart`, `src/widgets/player/player_controls.dart`, `src/widgets/player/player_progress_bar.dart`, `src/widgets/player/player_settings_sheet.dart`, `src/widgets/player/player_sheet.dart`, `src/widgets/plugin_library/plugin_filter_bar.dart`, `src/widgets/plugin_manager/plugin_transparency.dart`, `src/widgets/profile_avatar_picker.dart`, `src/widgets/provider_installer_modal.dart`, `src/widgets/social/share_dialog.dart`, `src/widgets/social/social_widgets.dart`, `src/widgets/supporter_theme_picker.dart`, `src/widgets/tv/tv_focus.dart`
 
 **Tests importing it:** `integration_test/windows_player_ui_test.dart`, `integration_test/windows_torrent_test.dart`, `test/account_test.dart`, `test/audio_tracks_test.dart`, `test/discovery_rows_ui_test.dart`, `test/friends_polish_test.dart`, `test/friends_privacy_test.dart`, `test/friends_test.dart`, `test/genre_onboarding_test.dart`, `test/github_update_check_test.dart`, `test/help_support_test.dart`, `test/intro_skip_player_test.dart`, `test/messages_screen_test.dart`, `test/paused_overlay_test.dart`, `test/player_session_test.dart`, `test/plugin_library_test.dart`, `test/profile_layout_test.dart`, `test/profile_test.dart`, `test/recommendations_test.dart`, `test/shared_collections_test.dart`, `test/supporter_themes_test.dart`, `test/supporters_test.dart`, `test/tv_home_test.dart`, `test/tv_support_test.dart`, `test/ux_journeys_test.dart`, `test/watch_party_test.dart`
 
@@ -1643,6 +1650,22 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Tests importing it:** `integration_test/ui_perf_test.dart`, `test/desktop_home_top_ten_test.dart`, `test/home_startup_budget_test.dart`, `test/tmdb_scalability_test.dart`, `test/tv_home_test.dart`, `test/ux_journeys_test.dart`
 
+## lib/src/screens/installed_provider_screen.dart
+
+**Source:** [`lib/src/screens/installed_provider_screen.dart`](../../lib/src/screens/installed_provider_screen.dart) · **Platform:** Shared · **Lines:** 417 · **Branches on:** isTv
+
+**Purpose:** Details of one installed provider: what its manifest declares, whether it can work on this device and why, its running and listed versions, its last failure, what any provider can do, and its on/off switch.
+
+**Declares:** `_Advanced` (Widget), `_Body` (Widget), `_Hero` (Widget), `InstalledProviderScreen` (Widget), `_SwitchRow` (Widget)
+
+**Imports (project):** `src/models/provider_plugin.dart`, `src/navigation/app_transitions.dart`, `src/platform/device_capabilities.dart`, `src/screens/plugin_collection_screen.dart`, `src/services/plugin_compatibility.dart`, `src/services/plugin_library_query.dart`, `src/services/plugin_library_repository.dart`, `src/services/provider_plugin_service.dart`, `src/theme/design_tokens.dart`, `src/theme/glass_theme.dart`, `src/theme/reelish_icons.dart`, `src/widgets/plugin_library/plugin_logo.dart`, `src/widgets/plugin_manager/plugin_transparency.dart`
+
+**Packages:** `flutter`
+
+**Imported by:** `src/screens/plugin_collection_screen.dart`
+
+**Tests importing it:** `test/plugin_manager_test.dart`
+
 ## lib/src/screens/legal_information_screen.dart
 
 **Source:** [`lib/src/screens/legal_information_screen.dart`](../../lib/src/screens/legal_information_screen.dart) · **Platform:** Shared · **Lines:** 551 · **Branches on:** isTv
@@ -1739,15 +1762,31 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Tests importing it:** `integration_test/player_long_session_test.dart`, `integration_test/windows_player_ui_test.dart`, `integration_test/windows_soak_test.dart`, `integration_test/windows_torrent_test.dart`, `test/intro_skip_player_test.dart`, `test/player_session_test.dart`
 
+## lib/src/screens/plugin_collection_screen.dart
+
+**Source:** [`lib/src/screens/plugin_collection_screen.dart`](../../lib/src/screens/plugin_collection_screen.dart) · **Platform:** Shared · **Lines:** 808 · **Branches on:** isTv
+
+**Purpose:** Manage one installed provider repository ("collection"): where it comes from and how far it is trusted, code waiting for review with its version change, an update check, and every provider it lists with its device compatibility and switch.
+
+**Declares:** `_Hero` (Widget), `_PendingReview` (Widget), `PluginCollectionScreen` (Widget), `_PluginCollectionScreenState` (Widget state), `_ProviderFilter` (Enum), `_ProviderRow` (Widget)
+
+**Imports (project):** `src/models/plugin_catalog.dart`, `src/models/provider_plugin.dart`, `src/navigation/app_transitions.dart`, `src/platform/device_capabilities.dart`, `src/screens/installed_provider_screen.dart`, `src/services/plugin_compatibility.dart`, `src/services/plugin_library_repository.dart`, `src/services/plugin_trust.dart`, `src/services/provider_plugin_service.dart`, `src/theme/design_tokens.dart`, `src/theme/glass_theme.dart`, `src/theme/reelish_icons.dart`, `src/widgets/plugin_library/copy_manifest_button.dart`, `src/widgets/plugin_library/plugin_logo.dart`, `src/widgets/plugin_library/plugin_search_bar.dart`, `src/widgets/plugin_manager/plugin_transparency.dart`, `src/widgets/tv/tv_focus.dart`
+
+**Packages:** `flutter`
+
+**Imported by:** `src/desktop/desktop_plugins_page.dart`, `src/screens/installed_provider_screen.dart`, `src/screens/plugin_details_screen.dart`, `src/screens/plugins_screen.dart`
+
+**Tests importing it:** `test/plugin_manager_test.dart`
+
 ## lib/src/screens/plugin_details_screen.dart
 
-**Source:** [`lib/src/screens/plugin_details_screen.dart`](../../lib/src/screens/plugin_details_screen.dart) · **Platform:** Shared · **Lines:** 544 · **Branches on:** isDesktop
+**Source:** [`lib/src/screens/plugin_details_screen.dart`](../../lib/src/screens/plugin_details_screen.dart) · **Platform:** Shared · **Lines:** 626 · **Branches on:** isDesktop
 
 **Purpose:** A plugin-library repository's details page, from which it can be installed.
 
-**Declares:** `_Heading` (Widget), `_Hero` (Widget), `_InfoTable` (Widget), `_ManifestBox` (Widget), `_Note` (Widget), `PluginDetailsScreen` (Widget)
+**Declares:** `_CompatibilityCard` (Widget), `_Heading` (Widget), `_Hero` (Widget), `_InfoTable` (Widget), `_ManifestBox` (Widget), `_Note` (Widget), `PluginDetailsScreen` (Widget)
 
-**Imports (project):** `src/models/plugin_catalog.dart`, `src/platform/device_capabilities.dart`, `src/services/plugin_library_query.dart`, `src/services/provider_plugin_service.dart`, `src/theme/design_tokens.dart`, `src/theme/glass_theme.dart`, `src/theme/reelish_icons.dart`, `src/widgets/plugin_library/copy_manifest_button.dart`, `src/widgets/plugin_library/plugin_badges.dart`, `src/widgets/plugin_library/plugin_formatting.dart`, `src/widgets/plugin_library/plugin_install_button.dart`, `src/widgets/plugin_library/plugin_library_notices.dart`, `src/widgets/plugin_library/plugin_logo.dart`, `src/widgets/plugin_library/plugin_scraper_tile.dart`
+**Imports (project):** `src/models/plugin_catalog.dart`, `src/platform/device_capabilities.dart`, `src/screens/plugin_collection_screen.dart`, `src/services/plugin_compatibility.dart`, `src/services/plugin_library_query.dart`, `src/services/plugin_library_repository.dart`, `src/services/plugin_trust.dart`, `src/services/provider_plugin_service.dart`, `src/theme/design_tokens.dart`, `src/theme/glass_theme.dart`, `src/theme/reelish_icons.dart`, `src/widgets/plugin_library/copy_manifest_button.dart`, `src/widgets/plugin_library/plugin_badges.dart`, `src/widgets/plugin_library/plugin_formatting.dart`, `src/widgets/plugin_library/plugin_install_button.dart`, `src/widgets/plugin_library/plugin_library_notices.dart`, `src/widgets/plugin_library/plugin_logo.dart`, `src/widgets/plugin_library/plugin_scraper_tile.dart`, `src/widgets/plugin_manager/plugin_transparency.dart`
 
 **Packages:** `flutter`, `url_launcher`
 
@@ -1757,7 +1796,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/screens/plugin_library_screen.dart
 
-**Source:** [`lib/src/screens/plugin_library_screen.dart`](../../lib/src/screens/plugin_library_screen.dart) · **Platform:** Shared · **Lines:** 766 · **Branches on:** isTv
+**Source:** [`lib/src/screens/plugin_library_screen.dart`](../../lib/src/screens/plugin_library_screen.dart) · **Platform:** Shared · **Lines:** 767 · **Branches on:** isTv
 
 **Purpose:** Browse the community provider catalog and hand a manifest to the existing installer: the library as its own page, opened from Plugins on phone and TV.
 
@@ -1773,7 +1812,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/screens/plugins_screen.dart
 
-**Source:** [`lib/src/screens/plugins_screen.dart`](../../lib/src/screens/plugins_screen.dart) · **Platform:** Shared · **Lines:** 919
+**Source:** [`lib/src/screens/plugins_screen.dart`](../../lib/src/screens/plugins_screen.dart) · **Platform:** Shared · **Lines:** 949
 
 **Purpose:** The phone and TV Plugins page: installed repositories, enabling providers, script updates and the plugin library.
 
@@ -1781,7 +1820,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Top-level functions:** `_confirmRemoveFailed`
 
-**Imports (project):** `src/models/provider_plugin.dart`, `src/screens/plugin_library_screen.dart`, `src/services/plugin_library_repository.dart`, `src/services/provider_plugin_service.dart`, `src/theme/design_tokens.dart`, `src/theme/glass_theme.dart`, `src/theme/reelish_icons.dart`, `src/widgets/provider_installer_modal.dart`
+**Imports (project):** `src/models/provider_plugin.dart`, `src/screens/plugin_collection_screen.dart`, `src/screens/plugin_library_screen.dart`, `src/services/plugin_library_repository.dart`, `src/services/provider_plugin_service.dart`, `src/theme/design_tokens.dart`, `src/theme/glass_theme.dart`, `src/theme/reelish_icons.dart`, `src/widgets/plugin_manager/plugin_transparency.dart`, `src/widgets/provider_installer_modal.dart`
 
 **Packages:** `flutter`
 
@@ -2223,7 +2262,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Imported by:** `src/services/plugin_library_service.dart`, `src/services/provider_fetch_bridge.dart`, `src/services/provider_plugin_service.dart`, `src/services/source_preparer.dart`, `src/services/subtitle_addon_service.dart`, `src/services/subtitle_loader.dart`, `src/services/tmdb_service.dart`, `src/services/torrent_source_preparer.dart`, `src/widgets/player/custom_video_player.dart`
 
-**Tests importing it:** `integration_test/ui_perf_test.dart`, `test/account_test.dart`, `test/app_reliability_test.dart`, `test/content_advisory_test.dart`, `test/desktop_home_top_ten_test.dart`, `test/discovery_rows_ui_test.dart`, `test/home_startup_budget_test.dart`, `test/network_destination_validator_test.dart`, `test/playback_pipeline_test.dart`, `test/playback_reliability_test.dart`, `test/provider_fetch_bridge_test.dart`, `test/provider_repository_state_test.dart`, `test/subtitles_test.dart`, `test/tmdb_catalog_service_test.dart`, `test/tmdb_logo_test.dart`, `test/tmdb_scalability_test.dart`, `test/tv_home_test.dart`, `test/ux_journeys_test.dart`
+**Tests importing it:** `integration_test/ui_perf_test.dart`, `test/account_test.dart`, `test/app_reliability_test.dart`, `test/content_advisory_test.dart`, `test/desktop_home_top_ten_test.dart`, `test/discovery_rows_ui_test.dart`, `test/home_startup_budget_test.dart`, `test/network_destination_validator_test.dart`, `test/playback_pipeline_test.dart`, `test/playback_reliability_test.dart`, `test/plugin_manager_test.dart`, `test/provider_fetch_bridge_test.dart`, `test/provider_repository_state_test.dart`, `test/subtitles_test.dart`, `test/tmdb_catalog_service_test.dart`, `test/tmdb_logo_test.dart`, `test/tmdb_scalability_test.dart`, `test/tv_home_test.dart`, `test/ux_journeys_test.dart`
 
 ## lib/src/services/paged_feed_controller.dart
 
@@ -2335,6 +2374,20 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Tests importing it:** `integration_test/audio_track_switch_test.dart`, `integration_test/libmpv_playback_test.dart`, `integration_test/media3_audio_track_test.dart`, `integration_test/player_long_session_test.dart`, `integration_test/windows_playback_test.dart`, `test/playback_pipeline_test.dart`, `test/playback_reliability_test.dart`
 
+## lib/src/services/plugin_compatibility.dart
+
+**Source:** [`lib/src/services/plugin_compatibility.dart`](../../lib/src/services/plugin_compatibility.dart) · **Platform:** Shared · **Lines:** 176 · **Branches on:** isTv, isDesktop
+
+**Purpose:** Whether an installed provider can work on this device, judged only from what its manifest declares and what Reelish's runtime does.
+
+**Declares:** `PluginCompatibility` (Service type), `PluginCompatibilityLevel` (Enum), `ReelishDevice` (Enum)
+
+**Imports (project):** `src/models/plugin_catalog.dart`, `src/models/provider_plugin.dart`, `src/platform/device_capabilities.dart`
+
+**Imported by:** `src/screens/installed_provider_screen.dart`, `src/screens/plugin_collection_screen.dart`, `src/screens/plugin_details_screen.dart`, `src/services/provider_plugin_service.dart`, `src/widgets/plugin_manager/plugin_transparency.dart`
+
+**Tests importing it:** `test/plugin_manager_test.dart`
+
 ## lib/src/services/plugin_library_query.dart
 
 **Source:** [`lib/src/services/plugin_library_query.dart`](../../lib/src/services/plugin_library_query.dart) · **Platform:** Shared · **Lines:** 308
@@ -2347,7 +2400,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Imports (project):** `src/models/plugin_catalog.dart`
 
-**Imported by:** `src/screens/plugin_details_screen.dart`, `src/screens/plugin_library_screen.dart`, `src/services/plugin_library_repository.dart`, `src/widgets/plugin_library/plugin_card.dart`, `src/widgets/plugin_library/plugin_filter_bar.dart`, `src/widgets/plugin_library/plugin_scraper_tile.dart`, `src/widgets/plugin_library/plugin_stats.dart`
+**Imported by:** `src/screens/installed_provider_screen.dart`, `src/screens/plugin_details_screen.dart`, `src/screens/plugin_library_screen.dart`, `src/services/plugin_library_repository.dart`, `src/widgets/plugin_library/plugin_card.dart`, `src/widgets/plugin_library/plugin_filter_bar.dart`, `src/widgets/plugin_library/plugin_scraper_tile.dart`, `src/widgets/plugin_library/plugin_stats.dart`
 
 **Tests importing it:** `test/plugin_library_test.dart`
 
@@ -2363,9 +2416,9 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Packages:** `flutter`
 
-**Imported by:** `src/app/app_services.dart`, `src/desktop/desktop_plugins_page.dart`, `src/screens/home_screen.dart`, `src/screens/plugin_library_screen.dart`, `src/screens/plugins_screen.dart`
+**Imported by:** `src/app/app_services.dart`, `src/desktop/desktop_plugins_page.dart`, `src/screens/home_screen.dart`, `src/screens/installed_provider_screen.dart`, `src/screens/plugin_collection_screen.dart`, `src/screens/plugin_details_screen.dart`, `src/screens/plugin_library_screen.dart`, `src/screens/plugins_screen.dart`
 
-**Tests importing it:** `test/desktop_settings_plugins_test.dart`, `test/plugin_library_test.dart`
+**Tests importing it:** `test/desktop_settings_plugins_test.dart`, `test/plugin_library_test.dart`, `test/plugin_manager_test.dart`
 
 ## lib/src/services/plugin_library_service.dart
 
@@ -2381,7 +2434,21 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Imported by:** `src/screens/plugin_library_screen.dart`, `src/services/plugin_library_repository.dart`
 
-**Tests importing it:** `test/plugin_library_test.dart`
+**Tests importing it:** `test/plugin_library_test.dart`, `test/plugin_manager_test.dart`
+
+## lib/src/services/plugin_trust.dart
+
+**Source:** [`lib/src/services/plugin_trust.dart`](../../lib/src/services/plugin_trust.dart) · **Platform:** Shared · **Lines:** 113
+
+**Purpose:** Where an installed provider repository comes from and how much Reelish knows about it.
+
+**Declares:** `PluginHost` (Service type), `PluginSourceTrust` (Enum)
+
+**Imports (project):** `src/models/plugin_catalog.dart`
+
+**Imported by:** `src/screens/plugin_collection_screen.dart`, `src/screens/plugin_details_screen.dart`, `src/widgets/plugin_manager/plugin_transparency.dart`
+
+**Tests importing it:** `test/plugin_manager_test.dart`
 
 ## lib/src/services/provider_execution_scheduler.dart
 
@@ -2427,19 +2494,19 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/services/provider_plugin_service.dart
 
-**Source:** [`lib/src/services/provider_plugin_service.dart`](../../lib/src/services/provider_plugin_service.dart) · **Platform:** Shared · **Lines:** 913 · **Branches on:** TargetPlatform.android, TorrentSupport
+**Source:** [`lib/src/services/provider_plugin_service.dart`](../../lib/src/services/provider_plugin_service.dart) · **Platform:** Shared · **Lines:** 1099 · **Branches on:** TargetPlatform.android, TorrentSupport
 
 **Purpose:** Provider repositories and plugins: install, update, enable, script caching and approval, and stream discovery for a title.
 
 **Declares:** `ProviderPluginService` (Notifier / controller)
 
-**Imports (project):** `src/analytics/analytics_events.dart`, `src/analytics/analytics_service.dart`, `src/models/media_item.dart`, `src/models/provider_plugin.dart`, `src/models/stream_source.dart`, `src/services/network_target_policy.dart`, `src/services/provider_execution_scheduler.dart`, `src/services/provider_runner.dart`, `src/services/provider_script_cache.dart`, `src/services/storage_service.dart`, `src/services/stream_discovery.dart`, `src/services/stream_normalizer.dart`, `src/services/stream_validator.dart`, `src/services/torrent_source_preparer.dart`
+**Imports (project):** `src/analytics/analytics_events.dart`, `src/analytics/analytics_service.dart`, `src/models/media_item.dart`, `src/models/provider_plugin.dart`, `src/models/stream_source.dart`, `src/services/network_target_policy.dart`, `src/services/plugin_compatibility.dart`, `src/services/provider_execution_scheduler.dart`, `src/services/provider_runner.dart`, `src/services/provider_script_cache.dart`, `src/services/storage_service.dart`, `src/services/stream_discovery.dart`, `src/services/stream_normalizer.dart`, `src/services/stream_validator.dart`, `src/services/torrent_source_preparer.dart`
 
 **Packages:** `crypto`, `flutter`, `http`
 
-**Imported by:** `src/app/app_services.dart`, `src/desktop/desktop_plugins_page.dart`, `src/screens/home_screen.dart`, `src/screens/plugin_details_screen.dart`, `src/screens/plugin_library_screen.dart`, `src/screens/plugins_screen.dart`, `src/widgets/plugin_library/plugin_install_button.dart`, `src/widgets/provider_installer_modal.dart`
+**Imported by:** `src/app/app_services.dart`, `src/desktop/desktop_plugins_page.dart`, `src/screens/home_screen.dart`, `src/screens/installed_provider_screen.dart`, `src/screens/plugin_collection_screen.dart`, `src/screens/plugin_details_screen.dart`, `src/screens/plugin_library_screen.dart`, `src/screens/plugins_screen.dart`, `src/widgets/plugin_library/plugin_install_button.dart`, `src/widgets/plugin_manager/plugin_transparency.dart`, `src/widgets/provider_installer_modal.dart`
 
-**Tests importing it:** `test/desktop_settings_plugins_test.dart`, `test/plugin_library_test.dart`, `test/provider_compat/provider_compat_test.dart`, `test/provider_repository_state_test.dart`
+**Tests importing it:** `test/desktop_settings_plugins_test.dart`, `test/plugin_library_test.dart`, `test/plugin_manager_test.dart`, `test/provider_compat/provider_compat_test.dart`, `test/provider_repository_state_test.dart`
 
 ## lib/src/services/provider_runner.dart
 
@@ -2459,7 +2526,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/services/provider_script_cache.dart
 
-**Source:** [`lib/src/services/provider_script_cache.dart`](../../lib/src/services/provider_script_cache.dart) · **Platform:** Shared · **Lines:** 55
+**Source:** [`lib/src/services/provider_script_cache.dart`](../../lib/src/services/provider_script_cache.dart) · **Platform:** Shared · **Lines:** 61
 
 **Purpose:** In-memory cache of provider scripts for this app session.
 
@@ -2487,7 +2554,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/services/storage_service.dart
 
-**Source:** [`lib/src/services/storage_service.dart`](../../lib/src/services/storage_service.dart) · **Platform:** Shared · **Lines:** 1095 · **Branches on:** Platform.isWindows, Platform.isAndroid, TargetPlatform.windows
+**Source:** [`lib/src/services/storage_service.dart`](../../lib/src/services/storage_service.dart) · **Platform:** Shared · **Lines:** 1110 · **Branches on:** Platform.isWindows, Platform.isAndroid, TargetPlatform.windows
 
 **Purpose:** Local storage on SharedPreferences: watch history and per-episode progress, My list, provider repositories, cached manifests, settings and remembered subtitles.
 
@@ -2499,7 +2566,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Imported by:** `src/account/account_history.dart`, `src/account/collection_sync.dart`, `src/account/progress_sync.dart`, `src/account/watchlist_sync.dart`, `src/app/app_services.dart`, `src/collections/collection_store.dart`, `src/desktop/desktop_collections.dart`, `src/desktop/desktop_pages.dart`, `src/discovery/discovery_controller.dart`, `src/notifications/episode_alerts.dart`, `src/notifications/episode_check.dart`, `src/screens/collections/collection_pages.dart`, `src/screens/home_screen.dart`, `src/screens/library_screen.dart`, `src/screens/player_screen.dart`, `src/screens/profile_screen.dart`, `src/screens/tv/tv_collections.dart`, `src/screens/tv/tv_pages.dart`, `src/services/accent_settings_controller.dart`, `src/services/github_update_service.dart`, `src/services/playback_settings_controller.dart`, `src/services/provider_plugin_service.dart`, `src/services/subtitle_addon_service.dart`, `src/services/torrent_source_preparer.dart`, `src/services/windows_update_controller.dart`, `src/viewmodels/home_view_model.dart`, `src/viewmodels/library_view_model.dart`, `src/widgets/player/custom_video_player.dart`
 
-**Tests importing it:** `integration_test/player_long_session_test.dart`, `integration_test/windows_player_ui_test.dart`, `integration_test/windows_soak_test.dart`, `integration_test/windows_torrent_test.dart`, `test/account_badges_test.dart`, `test/app_reliability_test.dart`, `test/avatar_frame_test.dart`, `test/collection_sync_test.dart`, `test/continue_watching_test.dart`, `test/custom_collections_test.dart`, `test/desktop_home_top_ten_test.dart`, `test/desktop_remove_favorites_test.dart`, `test/discovery_controller_test.dart`, `test/discovery_preferences_test.dart`, `test/discovery_rows_ui_test.dart`, `test/episode_alerts_test.dart`, `test/episode_selection_test.dart`, `test/friends_polish_test.dart`, `test/genre_onboarding_test.dart`, `test/home_startup_budget_test.dart`, `test/home_view_model_test.dart`, `test/intelligent_continue_watching_test.dart`, `test/intro_skip_player_test.dart`, `test/playback_settings_test.dart`, `test/player_session_test.dart`, `test/profile_layout_test.dart`, `test/profile_screen_test.dart`, `test/progress_sync_test.dart`, `test/provider_repository_state_test.dart`, `test/search_library_screens_test.dart`, `test/search_library_view_models_test.dart`, `test/subtitles_test.dart`, `test/supporter_themes_test.dart`, `test/ux_journeys_test.dart`, `test/watchlist_sync_test.dart`, `test/windows_torrent_support_test.dart`, `test/windows_update_test.dart`
+**Tests importing it:** `integration_test/player_long_session_test.dart`, `integration_test/windows_player_ui_test.dart`, `integration_test/windows_soak_test.dart`, `integration_test/windows_torrent_test.dart`, `test/account_badges_test.dart`, `test/app_reliability_test.dart`, `test/avatar_frame_test.dart`, `test/collection_sync_test.dart`, `test/continue_watching_test.dart`, `test/custom_collections_test.dart`, `test/desktop_home_top_ten_test.dart`, `test/desktop_remove_favorites_test.dart`, `test/discovery_controller_test.dart`, `test/discovery_preferences_test.dart`, `test/discovery_rows_ui_test.dart`, `test/episode_alerts_test.dart`, `test/episode_selection_test.dart`, `test/friends_polish_test.dart`, `test/genre_onboarding_test.dart`, `test/home_startup_budget_test.dart`, `test/home_view_model_test.dart`, `test/intelligent_continue_watching_test.dart`, `test/intro_skip_player_test.dart`, `test/playback_settings_test.dart`, `test/player_session_test.dart`, `test/plugin_manager_test.dart`, `test/profile_layout_test.dart`, `test/profile_screen_test.dart`, `test/progress_sync_test.dart`, `test/provider_repository_state_test.dart`, `test/search_library_screens_test.dart`, `test/search_library_view_models_test.dart`, `test/subtitles_test.dart`, `test/supporter_themes_test.dart`, `test/ux_journeys_test.dart`, `test/watchlist_sync_test.dart`, `test/windows_torrent_support_test.dart`, `test/windows_update_test.dart`
 
 ## lib/src/services/stream_discovery.dart
 
@@ -2801,7 +2868,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Packages:** `flutter`
 
-**Imported by:** `src/desktop/desktop_collections.dart`, `src/desktop/desktop_plugins_page.dart`, `src/desktop/desktop_settings_page.dart`, `src/desktop/desktop_widgets.dart`, `src/screens/account_settings_screen.dart`, `src/screens/app_icon_settings_screen.dart`, `src/screens/avatar_frames_screen.dart`, `src/screens/collections/collection_pages.dart`, `src/screens/genre_onboarding_screen.dart`, `src/screens/home_screen.dart`, `src/screens/library_screen.dart`, `src/screens/playback_settings_screen.dart`, `src/screens/plugin_details_screen.dart`, `src/screens/plugin_library_screen.dart`, `src/screens/plugins_screen.dart`, `src/screens/profile_screen.dart`, `src/screens/sign_in_screen.dart`, `src/screens/social/friend_collection_screen.dart`, `src/screens/social/friends_privacy_screen.dart`, `src/screens/social/friends_screen.dart`, `src/screens/social/messages_screen.dart`, `src/screens/subtitle_addons_screen.dart`, `src/screens/supporters_screen.dart`, `src/screens/tv/tv_details_screen.dart`, `src/screens/watch_party/create_party_screen.dart`, `src/screens/watch_party/join_party_screen.dart`, `src/screens/watch_party/party_desktop.dart`, `src/screens/watch_party/party_widgets.dart`, `src/screens/watch_party/waiting_room_screen.dart`, `src/theme/glass_theme.dart`, `src/theme/supporter_themes.dart`, `src/widgets/account_badges.dart`, `src/widgets/discovery_prompt_card.dart`, `src/widgets/media_card.dart`, `src/widgets/player/content_advisory_overlay.dart`, `src/widgets/player/custom_video_player.dart`, `src/widgets/player/party_badge.dart`, `src/widgets/player/player_settings_sheet.dart`, `src/widgets/player/player_volume_control.dart`, `src/widgets/player/skip_segment_button.dart`, `src/widgets/plugin_library/copy_manifest_button.dart`, `src/widgets/plugin_library/plugin_badges.dart`, `src/widgets/plugin_library/plugin_card.dart`, `src/widgets/plugin_library/plugin_filter_bar.dart`, `src/widgets/plugin_library/plugin_install_button.dart`, `src/widgets/plugin_library/plugin_library_notices.dart`, `src/widgets/plugin_library/plugin_logo.dart`, `src/widgets/plugin_library/plugin_scraper_tile.dart`, `src/widgets/plugin_library/plugin_search_bar.dart`, `src/widgets/plugin_library/plugin_skeleton.dart`, `src/widgets/plugin_library/plugin_stats.dart`, `src/widgets/profile_avatar_picker.dart`, `src/widgets/recommendation_feedback_sheet.dart`, `src/widgets/settings/developer_credit.dart`, `src/widgets/settings/settings_components.dart`, `src/widgets/settings/tmdb_attribution.dart`, `src/widgets/social/share_dialog.dart`, `src/widgets/social/social_widgets.dart`, `src/widgets/supporter_theme_picker.dart`
+**Imported by:** `src/desktop/desktop_collections.dart`, `src/desktop/desktop_plugins_page.dart`, `src/desktop/desktop_settings_page.dart`, `src/desktop/desktop_widgets.dart`, `src/screens/account_settings_screen.dart`, `src/screens/app_icon_settings_screen.dart`, `src/screens/avatar_frames_screen.dart`, `src/screens/collections/collection_pages.dart`, `src/screens/genre_onboarding_screen.dart`, `src/screens/home_screen.dart`, `src/screens/installed_provider_screen.dart`, `src/screens/library_screen.dart`, `src/screens/playback_settings_screen.dart`, `src/screens/plugin_collection_screen.dart`, `src/screens/plugin_details_screen.dart`, `src/screens/plugin_library_screen.dart`, `src/screens/plugins_screen.dart`, `src/screens/profile_screen.dart`, `src/screens/sign_in_screen.dart`, `src/screens/social/friend_collection_screen.dart`, `src/screens/social/friends_privacy_screen.dart`, `src/screens/social/friends_screen.dart`, `src/screens/social/messages_screen.dart`, `src/screens/subtitle_addons_screen.dart`, `src/screens/supporters_screen.dart`, `src/screens/tv/tv_details_screen.dart`, `src/screens/watch_party/create_party_screen.dart`, `src/screens/watch_party/join_party_screen.dart`, `src/screens/watch_party/party_desktop.dart`, `src/screens/watch_party/party_widgets.dart`, `src/screens/watch_party/waiting_room_screen.dart`, `src/theme/glass_theme.dart`, `src/theme/supporter_themes.dart`, `src/widgets/account_badges.dart`, `src/widgets/discovery_prompt_card.dart`, `src/widgets/media_card.dart`, `src/widgets/player/content_advisory_overlay.dart`, `src/widgets/player/custom_video_player.dart`, `src/widgets/player/party_badge.dart`, `src/widgets/player/player_settings_sheet.dart`, `src/widgets/player/player_volume_control.dart`, `src/widgets/player/skip_segment_button.dart`, `src/widgets/plugin_library/copy_manifest_button.dart`, `src/widgets/plugin_library/plugin_badges.dart`, `src/widgets/plugin_library/plugin_card.dart`, `src/widgets/plugin_library/plugin_filter_bar.dart`, `src/widgets/plugin_library/plugin_install_button.dart`, `src/widgets/plugin_library/plugin_library_notices.dart`, `src/widgets/plugin_library/plugin_logo.dart`, `src/widgets/plugin_library/plugin_scraper_tile.dart`, `src/widgets/plugin_library/plugin_search_bar.dart`, `src/widgets/plugin_library/plugin_skeleton.dart`, `src/widgets/plugin_library/plugin_stats.dart`, `src/widgets/plugin_manager/plugin_transparency.dart`, `src/widgets/profile_avatar_picker.dart`, `src/widgets/recommendation_feedback_sheet.dart`, `src/widgets/settings/developer_credit.dart`, `src/widgets/settings/settings_components.dart`, `src/widgets/settings/tmdb_attribution.dart`, `src/widgets/social/share_dialog.dart`, `src/widgets/social/social_widgets.dart`, `src/widgets/supporter_theme_picker.dart`
 
 **Tests importing it:** `test/content_advisory_test.dart`
 
@@ -2817,9 +2884,9 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Packages:** `flutter`
 
-**Imported by:** `icon_gallery.dart`, `main.dart`, `src/desktop/desktop_collections.dart`, `src/desktop/desktop_details_screen.dart`, `src/desktop/desktop_hero.dart`, `src/desktop/desktop_pages.dart`, `src/desktop/desktop_plugins_page.dart`, `src/desktop/desktop_provider_search.dart`, `src/desktop/desktop_settings_page.dart`, `src/desktop/desktop_shell.dart`, `src/desktop/desktop_top_ten.dart`, `src/desktop/desktop_update_dialogs.dart`, `src/desktop/desktop_update_section.dart`, `src/desktop/desktop_widgets.dart`, `src/screens/account_settings_screen.dart`, `src/screens/app_icon_settings_screen.dart`, `src/screens/app_information_screens.dart`, `src/screens/avatar_frames_screen.dart`, `src/screens/collections/collection_pages.dart`, `src/screens/credits_screen.dart`, `src/screens/first_run_consent_screen.dart`, `src/screens/genre_onboarding_screen.dart`, `src/screens/help_support_screen.dart`, `src/screens/home_screen.dart`, `src/screens/library_screen.dart`, `src/screens/media_details_screen.dart`, `src/screens/playback_settings_screen.dart`, `src/screens/player_screen.dart`, `src/screens/plugin_details_screen.dart`, `src/screens/plugin_library_screen.dart`, `src/screens/plugins_screen.dart`, `src/screens/profile_screen.dart`, `src/screens/recommendation_settings_screen.dart`, `src/screens/sign_in_screen.dart`, `src/screens/social/friend_collection_screen.dart`, `src/screens/social/friends_privacy_screen.dart`, `src/screens/social/friends_screen.dart`, `src/screens/social/messages_screen.dart`, `src/screens/splash_screen.dart`, `src/screens/subtitle_addons_screen.dart`, `src/screens/supporters_screen.dart`, `src/screens/tv/tv_browse.dart`, `src/screens/tv/tv_collections.dart`, `src/screens/tv/tv_details_screen.dart`, `src/screens/tv/tv_home_shell.dart`, `src/screens/tv/tv_pages.dart`, `src/screens/watch_party/create_party_screen.dart`, `src/screens/watch_party/join_party_screen.dart`, `src/screens/watch_party/party_desktop.dart`, `src/screens/watch_party/party_widgets.dart`, `src/screens/watch_party/waiting_room_screen.dart`, `src/services/accent_settings_controller.dart`, `src/theme/supporter_themes.dart`, `src/widgets/ambient_backdrop.dart`, `src/widgets/brand_logo.dart`, `src/widgets/category_chip.dart`, `src/widgets/collections/collection_actions.dart`, `src/widgets/collections/collection_cover.dart`, `src/widgets/discovery_prompt_card.dart`, `src/widgets/glass_button.dart`, `src/widgets/liquid_glass.dart`, `src/widgets/media_card.dart`, `src/widgets/player/content_advisory_overlay.dart`, `src/widgets/player/episode_panel.dart`, `src/widgets/player/party_badge.dart`, `src/widgets/player/paused_overlay.dart`, `src/widgets/player/player_controls.dart`, `src/widgets/player/player_progress_bar.dart`, `src/widgets/player/player_settings_sheet.dart`, `src/widgets/player/player_sheet.dart`, `src/widgets/player/player_volume_control.dart`, `src/widgets/player/skip_segment_button.dart`, `src/widgets/player/subtitle_picker_sheet.dart`, `src/widgets/plugin_library/copy_manifest_button.dart`, `src/widgets/plugin_library/plugin_badges.dart`, `src/widgets/plugin_library/plugin_card.dart`, `src/widgets/plugin_library/plugin_filter_bar.dart`, `src/widgets/plugin_library/plugin_install_button.dart`, `src/widgets/plugin_library/plugin_library_notices.dart`, `src/widgets/plugin_library/plugin_logo.dart`, `src/widgets/plugin_library/plugin_scraper_tile.dart`, `src/widgets/plugin_library/plugin_search_bar.dart`, `src/widgets/plugin_library/plugin_skeleton.dart`, `src/widgets/plugin_library/plugin_stats.dart`, `src/widgets/poster_image.dart`, `src/widgets/profile_avatar.dart`, `src/widgets/profile_avatar_picker.dart`, `src/widgets/provider_installer_modal.dart`, `src/widgets/provider_search_dialog.dart`, `src/widgets/recommendation_feedback_sheet.dart`, `src/widgets/settings/developer_credit.dart`, `src/widgets/settings/settings_components.dart`, `src/widgets/settings/tmdb_attribution.dart`, `src/widgets/social/share_dialog.dart`, `src/widgets/social/social_widgets.dart`, `src/widgets/soft_glass_dock.dart`, `src/widgets/supporter_theme_picker.dart`, `src/widgets/tv/tv_focus.dart`, `src/widgets/tv/tv_poster_card.dart`, `src/widgets/update_dialog.dart`
+**Imported by:** `icon_gallery.dart`, `main.dart`, `src/desktop/desktop_collections.dart`, `src/desktop/desktop_details_screen.dart`, `src/desktop/desktop_hero.dart`, `src/desktop/desktop_pages.dart`, `src/desktop/desktop_plugins_page.dart`, `src/desktop/desktop_provider_search.dart`, `src/desktop/desktop_settings_page.dart`, `src/desktop/desktop_shell.dart`, `src/desktop/desktop_top_ten.dart`, `src/desktop/desktop_update_dialogs.dart`, `src/desktop/desktop_update_section.dart`, `src/desktop/desktop_widgets.dart`, `src/screens/account_settings_screen.dart`, `src/screens/app_icon_settings_screen.dart`, `src/screens/app_information_screens.dart`, `src/screens/avatar_frames_screen.dart`, `src/screens/collections/collection_pages.dart`, `src/screens/credits_screen.dart`, `src/screens/first_run_consent_screen.dart`, `src/screens/genre_onboarding_screen.dart`, `src/screens/help_support_screen.dart`, `src/screens/home_screen.dart`, `src/screens/installed_provider_screen.dart`, `src/screens/library_screen.dart`, `src/screens/media_details_screen.dart`, `src/screens/playback_settings_screen.dart`, `src/screens/player_screen.dart`, `src/screens/plugin_collection_screen.dart`, `src/screens/plugin_details_screen.dart`, `src/screens/plugin_library_screen.dart`, `src/screens/plugins_screen.dart`, `src/screens/profile_screen.dart`, `src/screens/recommendation_settings_screen.dart`, `src/screens/sign_in_screen.dart`, `src/screens/social/friend_collection_screen.dart`, `src/screens/social/friends_privacy_screen.dart`, `src/screens/social/friends_screen.dart`, `src/screens/social/messages_screen.dart`, `src/screens/splash_screen.dart`, `src/screens/subtitle_addons_screen.dart`, `src/screens/supporters_screen.dart`, `src/screens/tv/tv_browse.dart`, `src/screens/tv/tv_collections.dart`, `src/screens/tv/tv_details_screen.dart`, `src/screens/tv/tv_home_shell.dart`, `src/screens/tv/tv_pages.dart`, `src/screens/watch_party/create_party_screen.dart`, `src/screens/watch_party/join_party_screen.dart`, `src/screens/watch_party/party_desktop.dart`, `src/screens/watch_party/party_widgets.dart`, `src/screens/watch_party/waiting_room_screen.dart`, `src/services/accent_settings_controller.dart`, `src/theme/supporter_themes.dart`, `src/widgets/ambient_backdrop.dart`, `src/widgets/brand_logo.dart`, `src/widgets/category_chip.dart`, `src/widgets/collections/collection_actions.dart`, `src/widgets/collections/collection_cover.dart`, `src/widgets/discovery_prompt_card.dart`, `src/widgets/glass_button.dart`, `src/widgets/liquid_glass.dart`, `src/widgets/media_card.dart`, `src/widgets/player/content_advisory_overlay.dart`, `src/widgets/player/episode_panel.dart`, `src/widgets/player/party_badge.dart`, `src/widgets/player/paused_overlay.dart`, `src/widgets/player/player_controls.dart`, `src/widgets/player/player_progress_bar.dart`, `src/widgets/player/player_settings_sheet.dart`, `src/widgets/player/player_sheet.dart`, `src/widgets/player/player_volume_control.dart`, `src/widgets/player/skip_segment_button.dart`, `src/widgets/player/subtitle_picker_sheet.dart`, `src/widgets/plugin_library/copy_manifest_button.dart`, `src/widgets/plugin_library/plugin_badges.dart`, `src/widgets/plugin_library/plugin_card.dart`, `src/widgets/plugin_library/plugin_filter_bar.dart`, `src/widgets/plugin_library/plugin_install_button.dart`, `src/widgets/plugin_library/plugin_library_notices.dart`, `src/widgets/plugin_library/plugin_logo.dart`, `src/widgets/plugin_library/plugin_scraper_tile.dart`, `src/widgets/plugin_library/plugin_search_bar.dart`, `src/widgets/plugin_library/plugin_skeleton.dart`, `src/widgets/plugin_library/plugin_stats.dart`, `src/widgets/plugin_manager/plugin_transparency.dart`, `src/widgets/poster_image.dart`, `src/widgets/profile_avatar.dart`, `src/widgets/profile_avatar_picker.dart`, `src/widgets/provider_installer_modal.dart`, `src/widgets/provider_search_dialog.dart`, `src/widgets/recommendation_feedback_sheet.dart`, `src/widgets/settings/developer_credit.dart`, `src/widgets/settings/settings_components.dart`, `src/widgets/settings/tmdb_attribution.dart`, `src/widgets/social/share_dialog.dart`, `src/widgets/social/social_widgets.dart`, `src/widgets/soft_glass_dock.dart`, `src/widgets/supporter_theme_picker.dart`, `src/widgets/tv/tv_focus.dart`, `src/widgets/tv/tv_poster_card.dart`, `src/widgets/update_dialog.dart`
 
-**Tests importing it:** `integration_test/ui_perf_test.dart`, `integration_test/windows_player_ui_test.dart`, `integration_test/windows_soak_test.dart`, `integration_test/windows_torrent_test.dart`, `test/accent_palette_test.dart`, `test/account_badges_test.dart`, `test/account_test.dart`, `test/analytics_test.dart`, `test/app_icon_test.dart`, `test/avatar_frame_test.dart`, `test/brand_assets_test.dart`, `test/content_advisory_test.dart`, `test/crash_reporter_test.dart`, `test/desktop_gamepad_test.dart`, `test/desktop_redesign_test.dart`, `test/desktop_remove_favorites_test.dart`, `test/desktop_settings_plugins_test.dart`, `test/desktop_top_ten_test.dart`, `test/desktop_ui_test.dart`, `test/details_screens_test.dart`, `test/entitlements_test.dart`, `test/episode_alerts_test.dart`, `test/friends_polish_test.dart`, `test/genre_onboarding_test.dart`, `test/glass_button_test.dart`, `test/help_support_test.dart`, `test/player_settings_sheet_test.dart`, `test/plugin_library_test.dart`, `test/profile_layout_test.dart`, `test/profile_screen_test.dart`, `test/profile_test.dart`, `test/search_library_screens_test.dart`, `test/settings_ui_test.dart`, `test/soft_glass_dock_test.dart`, `test/supporter_themes_test.dart`, `test/supporters_test.dart`, `test/trakt_profile_sync_test.dart`, `test/tv_home_test.dart`, `test/tv_layout_test.dart`, `test/tv_meta_line_test.dart`, `test/tv_support_test.dart`, `test/ux_journeys_test.dart`, `test/watch_party_test.dart`
+**Tests importing it:** `integration_test/ui_perf_test.dart`, `integration_test/windows_player_ui_test.dart`, `integration_test/windows_soak_test.dart`, `integration_test/windows_torrent_test.dart`, `test/accent_palette_test.dart`, `test/account_badges_test.dart`, `test/account_test.dart`, `test/analytics_test.dart`, `test/app_icon_test.dart`, `test/avatar_frame_test.dart`, `test/brand_assets_test.dart`, `test/content_advisory_test.dart`, `test/crash_reporter_test.dart`, `test/desktop_gamepad_test.dart`, `test/desktop_redesign_test.dart`, `test/desktop_remove_favorites_test.dart`, `test/desktop_settings_plugins_test.dart`, `test/desktop_top_ten_test.dart`, `test/desktop_ui_test.dart`, `test/details_screens_test.dart`, `test/entitlements_test.dart`, `test/episode_alerts_test.dart`, `test/friends_polish_test.dart`, `test/genre_onboarding_test.dart`, `test/glass_button_test.dart`, `test/help_support_test.dart`, `test/player_settings_sheet_test.dart`, `test/plugin_library_test.dart`, `test/plugin_manager_test.dart`, `test/profile_layout_test.dart`, `test/profile_screen_test.dart`, `test/profile_test.dart`, `test/search_library_screens_test.dart`, `test/settings_ui_test.dart`, `test/soft_glass_dock_test.dart`, `test/supporter_themes_test.dart`, `test/supporters_test.dart`, `test/trakt_profile_sync_test.dart`, `test/tv_home_test.dart`, `test/tv_layout_test.dart`, `test/tv_meta_line_test.dart`, `test/tv_support_test.dart`, `test/ux_journeys_test.dart`, `test/watch_party_test.dart`
 
 ## lib/src/theme/reelish_icons.dart
 
@@ -2833,7 +2900,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Packages:** `flutter`
 
-**Imported by:** `icon_gallery.dart`, `src/desktop/desktop_collections.dart`, `src/desktop/desktop_details_screen.dart`, `src/desktop/desktop_hero.dart`, `src/desktop/desktop_pages.dart`, `src/desktop/desktop_plugins_page.dart`, `src/desktop/desktop_provider_search.dart`, `src/desktop/desktop_settings_page.dart`, `src/desktop/desktop_shell.dart`, `src/desktop/desktop_top_ten.dart`, `src/desktop/desktop_update_dialogs.dart`, `src/desktop/desktop_update_section.dart`, `src/desktop/desktop_widgets.dart`, `src/navigation/app_destination.dart`, `src/screens/account_settings_screen.dart`, `src/screens/app_icon_settings_screen.dart`, `src/screens/app_information_screens.dart`, `src/screens/avatar_frames_screen.dart`, `src/screens/collections/collection_pages.dart`, `src/screens/credits_screen.dart`, `src/screens/first_run_consent_screen.dart`, `src/screens/genre_onboarding_screen.dart`, `src/screens/help_support_screen.dart`, `src/screens/home_screen.dart`, `src/screens/legal_information_screen.dart`, `src/screens/library_screen.dart`, `src/screens/media_details_screen.dart`, `src/screens/notification_settings_screen.dart`, `src/screens/playback_settings_screen.dart`, `src/screens/plugin_details_screen.dart`, `src/screens/plugin_library_screen.dart`, `src/screens/plugins_screen.dart`, `src/screens/profile_screen.dart`, `src/screens/recommendation_settings_screen.dart`, `src/screens/sign_in_screen.dart`, `src/screens/social/friend_collection_screen.dart`, `src/screens/social/friends_privacy_screen.dart`, `src/screens/social/friends_screen.dart`, `src/screens/social/messages_screen.dart`, `src/screens/subtitle_addons_screen.dart`, `src/screens/supporters_screen.dart`, `src/screens/tv/tv_browse.dart`, `src/screens/tv/tv_collections.dart`, `src/screens/tv/tv_details_screen.dart`, `src/screens/tv/tv_home_shell.dart`, `src/screens/tv/tv_pages.dart`, `src/screens/watch_party/create_party_screen.dart`, `src/screens/watch_party/join_party_screen.dart`, `src/screens/watch_party/party_desktop.dart`, `src/screens/watch_party/party_widgets.dart`, `src/screens/watch_party/waiting_room_screen.dart`, `src/widgets/account_badges.dart`, `src/widgets/analytics_consent_dialog.dart`, `src/widgets/app_update_flow.dart`, `src/widgets/collections/collection_actions.dart`, `src/widgets/collections/collection_cover.dart`, `src/widgets/crash_report_consent_dialog.dart`, `src/widgets/discovery_prompt_card.dart`, `src/widgets/media_card.dart`, `src/widgets/player/audio_track_sheet.dart`, `src/widgets/player/episode_panel.dart`, `src/widgets/player/party_badge.dart`, `src/widgets/player/paused_overlay.dart`, `src/widgets/player/player_controls.dart`, `src/widgets/player/player_lock_overlay.dart`, `src/widgets/player/player_settings_sheet.dart`, `src/widgets/player/player_sheet.dart`, `src/widgets/player/player_volume_control.dart`, `src/widgets/player/skip_segment_button.dart`, `src/widgets/player/stream_selector_sheet.dart`, `src/widgets/player/subtitle_picker_sheet.dart`, `src/widgets/player/subtitle_position_panel.dart`, `src/widgets/plugin_library/copy_manifest_button.dart`, `src/widgets/plugin_library/plugin_badges.dart`, `src/widgets/plugin_library/plugin_card.dart`, `src/widgets/plugin_library/plugin_filter_bar.dart`, `src/widgets/plugin_library/plugin_install_button.dart`, `src/widgets/plugin_library/plugin_library_notices.dart`, `src/widgets/plugin_library/plugin_logo.dart`, `src/widgets/plugin_library/plugin_search_bar.dart`, `src/widgets/poster_image.dart`, `src/widgets/profile_avatar_picker.dart`, `src/widgets/provider_installer_modal.dart`, `src/widgets/recommendation_feedback_sheet.dart`, `src/widgets/settings/settings_components.dart`, `src/widgets/social/social_widgets.dart`, `src/widgets/soft_glass_dock.dart`, `src/widgets/supporter_theme_picker.dart`, `src/widgets/tv/tv_focus.dart`, `src/widgets/tv/tv_poster_card.dart`, `src/widgets/update_dialog.dart`
+**Imported by:** `icon_gallery.dart`, `src/desktop/desktop_collections.dart`, `src/desktop/desktop_details_screen.dart`, `src/desktop/desktop_hero.dart`, `src/desktop/desktop_pages.dart`, `src/desktop/desktop_plugins_page.dart`, `src/desktop/desktop_provider_search.dart`, `src/desktop/desktop_settings_page.dart`, `src/desktop/desktop_shell.dart`, `src/desktop/desktop_top_ten.dart`, `src/desktop/desktop_update_dialogs.dart`, `src/desktop/desktop_update_section.dart`, `src/desktop/desktop_widgets.dart`, `src/navigation/app_destination.dart`, `src/screens/account_settings_screen.dart`, `src/screens/app_icon_settings_screen.dart`, `src/screens/app_information_screens.dart`, `src/screens/avatar_frames_screen.dart`, `src/screens/collections/collection_pages.dart`, `src/screens/credits_screen.dart`, `src/screens/first_run_consent_screen.dart`, `src/screens/genre_onboarding_screen.dart`, `src/screens/help_support_screen.dart`, `src/screens/home_screen.dart`, `src/screens/installed_provider_screen.dart`, `src/screens/legal_information_screen.dart`, `src/screens/library_screen.dart`, `src/screens/media_details_screen.dart`, `src/screens/notification_settings_screen.dart`, `src/screens/playback_settings_screen.dart`, `src/screens/plugin_collection_screen.dart`, `src/screens/plugin_details_screen.dart`, `src/screens/plugin_library_screen.dart`, `src/screens/plugins_screen.dart`, `src/screens/profile_screen.dart`, `src/screens/recommendation_settings_screen.dart`, `src/screens/sign_in_screen.dart`, `src/screens/social/friend_collection_screen.dart`, `src/screens/social/friends_privacy_screen.dart`, `src/screens/social/friends_screen.dart`, `src/screens/social/messages_screen.dart`, `src/screens/subtitle_addons_screen.dart`, `src/screens/supporters_screen.dart`, `src/screens/tv/tv_browse.dart`, `src/screens/tv/tv_collections.dart`, `src/screens/tv/tv_details_screen.dart`, `src/screens/tv/tv_home_shell.dart`, `src/screens/tv/tv_pages.dart`, `src/screens/watch_party/create_party_screen.dart`, `src/screens/watch_party/join_party_screen.dart`, `src/screens/watch_party/party_desktop.dart`, `src/screens/watch_party/party_widgets.dart`, `src/screens/watch_party/waiting_room_screen.dart`, `src/widgets/account_badges.dart`, `src/widgets/analytics_consent_dialog.dart`, `src/widgets/app_update_flow.dart`, `src/widgets/collections/collection_actions.dart`, `src/widgets/collections/collection_cover.dart`, `src/widgets/crash_report_consent_dialog.dart`, `src/widgets/discovery_prompt_card.dart`, `src/widgets/media_card.dart`, `src/widgets/player/audio_track_sheet.dart`, `src/widgets/player/episode_panel.dart`, `src/widgets/player/party_badge.dart`, `src/widgets/player/paused_overlay.dart`, `src/widgets/player/player_controls.dart`, `src/widgets/player/player_lock_overlay.dart`, `src/widgets/player/player_settings_sheet.dart`, `src/widgets/player/player_sheet.dart`, `src/widgets/player/player_volume_control.dart`, `src/widgets/player/skip_segment_button.dart`, `src/widgets/player/stream_selector_sheet.dart`, `src/widgets/player/subtitle_picker_sheet.dart`, `src/widgets/player/subtitle_position_panel.dart`, `src/widgets/plugin_library/copy_manifest_button.dart`, `src/widgets/plugin_library/plugin_badges.dart`, `src/widgets/plugin_library/plugin_card.dart`, `src/widgets/plugin_library/plugin_filter_bar.dart`, `src/widgets/plugin_library/plugin_install_button.dart`, `src/widgets/plugin_library/plugin_library_notices.dart`, `src/widgets/plugin_library/plugin_logo.dart`, `src/widgets/plugin_library/plugin_search_bar.dart`, `src/widgets/plugin_manager/plugin_transparency.dart`, `src/widgets/poster_image.dart`, `src/widgets/profile_avatar_picker.dart`, `src/widgets/provider_installer_modal.dart`, `src/widgets/recommendation_feedback_sheet.dart`, `src/widgets/settings/settings_components.dart`, `src/widgets/social/social_widgets.dart`, `src/widgets/soft_glass_dock.dart`, `src/widgets/supporter_theme_picker.dart`, `src/widgets/tv/tv_focus.dart`, `src/widgets/tv/tv_poster_card.dart`, `src/widgets/update_dialog.dart`
 
 **Tests importing it:** `test/desktop_redesign_test.dart`, `test/desktop_settings_plugins_test.dart`, `test/desktop_ui_test.dart`, `test/details_screens_test.dart`, `test/media_card_test.dart`, `test/messages_screen_test.dart`, `test/player_ui_test.dart`, `test/reelish_icons_test.dart`, `test/shared_collections_test.dart`, `test/tv_meta_line_test.dart`
 
@@ -3643,7 +3710,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Packages:** `flutter`
 
-**Imported by:** `src/screens/plugin_details_screen.dart`
+**Imported by:** `src/screens/plugin_collection_screen.dart`, `src/screens/plugin_details_screen.dart`
 
 **Tests importing it:** none directly (it may be covered through the files that import it)
 
@@ -3755,7 +3822,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Packages:** `flutter`
 
-**Imported by:** `src/screens/plugin_details_screen.dart`, `src/widgets/plugin_library/plugin_card.dart`, `src/widgets/plugin_library/plugin_scraper_tile.dart`
+**Imported by:** `src/screens/installed_provider_screen.dart`, `src/screens/plugin_collection_screen.dart`, `src/screens/plugin_details_screen.dart`, `src/widgets/plugin_library/plugin_card.dart`, `src/widgets/plugin_library/plugin_scraper_tile.dart`
 
 **Tests importing it:** `test/plugin_library_test.dart`
 
@@ -3777,7 +3844,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/widgets/plugin_library/plugin_search_bar.dart
 
-**Source:** [`lib/src/widgets/plugin_library/plugin_search_bar.dart`](../../lib/src/widgets/plugin_library/plugin_search_bar.dart) · **Platform:** Shared · **Lines:** 60
+**Source:** [`lib/src/widgets/plugin_library/plugin_search_bar.dart`](../../lib/src/widgets/plugin_library/plugin_search_bar.dart) · **Platform:** Shared · **Lines:** 62
 
 **Purpose:** The plugin library's search field.
 
@@ -3787,7 +3854,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Packages:** `flutter`
 
-**Imported by:** `src/screens/plugin_library_screen.dart`
+**Imported by:** `src/screens/plugin_collection_screen.dart`, `src/screens/plugin_library_screen.dart`
 
 **Tests importing it:** none directly (it may be covered through the files that import it)
 
@@ -3820,6 +3887,24 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 **Packages:** `flutter`
 
 **Imported by:** `src/screens/plugin_library_screen.dart`
+
+**Tests importing it:** none directly (it may be covered through the files that import it)
+
+## lib/src/widgets/plugin_manager/plugin_transparency.dart
+
+**Source:** [`lib/src/widgets/plugin_manager/plugin_transparency.dart`](../../lib/src/widgets/plugin_manager/plugin_transparency.dart) · **Platform:** Shared · **Lines:** 603 · **Branches on:** isDesktop
+
+**Purpose:** Shared Plugin Manager pieces for phone, TV and Windows: source trust, device compatibility, what any provider can do in Reelish, the guarded "switch on" action and the page frame the manager's pages use.
+
+**Declares:** `_CapabilityHeading` (Widget), `_CapabilityLine` (Widget), `PluginCompatibilityChip` (Widget), `PluginExpandableSurface` (Widget), `PluginFactsTable` (Widget), `PluginInfoCard` (Widget), `PluginInfoText` (Widget), `PluginManagerPage` (Widget), `PluginSectionHeading` (Widget), `PluginSourceCard` (Widget), `PluginStatusChip` (Widget), `PluginTrustBadge` (Widget), `ProviderCapabilitiesCard` (Widget)
+
+**Top-level functions:** `describeContentTypes`, `setProviderEnabled`
+
+**Imports (project):** `src/models/provider_plugin.dart`, `src/platform/device_capabilities.dart`, `src/services/plugin_compatibility.dart`, `src/services/plugin_trust.dart`, `src/services/provider_plugin_service.dart`, `src/theme/design_tokens.dart`, `src/theme/glass_theme.dart`, `src/theme/reelish_icons.dart`
+
+**Packages:** `flutter`
+
+**Imported by:** `src/desktop/desktop_plugins_page.dart`, `src/screens/installed_provider_screen.dart`, `src/screens/plugin_collection_screen.dart`, `src/screens/plugin_details_screen.dart`, `src/screens/plugins_screen.dart`
 
 **Tests importing it:** none directly (it may be covered through the files that import it)
 
@@ -4071,7 +4156,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Packages:** `flutter`
 
-**Imported by:** `main.dart`, `src/screens/account_settings_screen.dart`, `src/screens/avatar_frames_screen.dart`, `src/screens/home_screen.dart`, `src/screens/legal_information_screen.dart`, `src/screens/playback_settings_screen.dart`, `src/screens/plugin_library_screen.dart`, `src/screens/social/friends_privacy_screen.dart`, `src/screens/social/messages_screen.dart`, `src/screens/tv/tv_browse.dart`, `src/screens/tv/tv_collections.dart`, `src/screens/tv/tv_details_screen.dart`, `src/screens/tv/tv_home_shell.dart`, `src/screens/tv/tv_pages.dart`, `src/screens/watch_party/join_party_screen.dart`, `src/widgets/player/subtitle_position_panel.dart`, `src/widgets/provider_installer_modal.dart`, `src/widgets/settings/settings_components.dart`, `src/widgets/social/social_widgets.dart`, `src/widgets/supporter_theme_picker.dart`, `src/widgets/tv/tv_poster_card.dart`
+**Imported by:** `main.dart`, `src/screens/account_settings_screen.dart`, `src/screens/avatar_frames_screen.dart`, `src/screens/home_screen.dart`, `src/screens/legal_information_screen.dart`, `src/screens/playback_settings_screen.dart`, `src/screens/plugin_collection_screen.dart`, `src/screens/plugin_library_screen.dart`, `src/screens/social/friends_privacy_screen.dart`, `src/screens/social/messages_screen.dart`, `src/screens/tv/tv_browse.dart`, `src/screens/tv/tv_collections.dart`, `src/screens/tv/tv_details_screen.dart`, `src/screens/tv/tv_home_shell.dart`, `src/screens/tv/tv_pages.dart`, `src/screens/watch_party/join_party_screen.dart`, `src/widgets/player/subtitle_position_panel.dart`, `src/widgets/provider_installer_modal.dart`, `src/widgets/settings/settings_components.dart`, `src/widgets/social/social_widgets.dart`, `src/widgets/supporter_theme_picker.dart`, `src/widgets/tv/tv_poster_card.dart`
 
 **Tests importing it:** `test/details_screens_test.dart`, `test/messages_screen_test.dart`, `test/plugin_library_test.dart`, `test/search_library_screens_test.dart`, `test/tv_layout_test.dart`, `test/tv_support_test.dart`, `test/ux_journeys_test.dart`, `test/watch_party_test.dart`
 

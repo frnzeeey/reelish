@@ -37,6 +37,7 @@ search the generated references below: every file, class and function in
 |---|---|
 | [Feature index](features/feature-index.md) | Every feature mapped to its code, data and tests |
 | [Caching](features/caching.md) | TMDB response and artwork caches: policies, decision, measurements |
+| [Plugin Manager](features/plugin-manager.md) | Provider audit, collection and provider pages, compatibility, source trust, update check, security |
 | [Usage statistics](features/analytics.md) | Opt-in Firebase Analytics on Android: events, privacy, setup, DebugView, cost |
 | [Account badges](backend/badges.md) | Founder and Supporter: where each comes from, and why neither is a permission |
 | [Entitlements](backend/entitlements.md) | Free, Supporter and Founder: one rule for every supporter perk, and how to add one |

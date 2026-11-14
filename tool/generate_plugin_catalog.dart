@@ -9,6 +9,10 @@
 // asks GitHub/Codeberg when each manifest last changed. Nothing is invented:
 // a value the source does not provide is written as null or omitted.
 //
+// `verified` is never set by this script: the catalog maintainer sets it by
+// hand, per manifest URL, after confirming who publishes that repository
+// (docs/features/plugin-manager.md). Values already in the file are kept.
+//
 // Commit the regenerated file; the app downloads it from the repository's
 // main branch on refresh and bundles it as the offline fallback.
 import 'dart:async';
@@ -40,6 +44,7 @@ Future<void> main() async {
   }
   if (repoKey == null) throw const FormatException('Repo column not found');
 
+  final verifiedUrls = await _verifiedManifestUrls();
   final usedIds = <String>{};
   final providers = <Map<String, Object?>>[];
   for (final row in rows.skip(1)) {
@@ -70,7 +75,7 @@ Future<void> main() async {
       'manifestVersion': manifest is Map ? _string(manifest['version']) : null,
       'description': null,
       'iconUrl': null,
-      'verified': false,
+      'verified': verifiedUrls.contains(manifestUrl),
       'featured': false,
       'available': manifest is Map && manifest['scrapers'] is List,
       'lastUpdated': repo == null ? null : await _lastUpdated(repo),
@@ -274,6 +279,9 @@ List<Map<String, Object?>> _scrapers(Object? raw) => [
           'supportedTypes': _strings(entry['supportedTypes']),
           'contentLanguage': _strings(entry['contentLanguage']),
           'formats': _strings(entry['formats']),
+          'version': ?_string(entry['version']),
+          'disabledPlatforms': _strings(entry['disabledPlatforms']),
+          if (entry['hasSettings'] == true) 'hasSettings': true,
         },
 ];
 
@@ -310,4 +318,20 @@ Future<Object?> _getJson(Uri uri) async {
     throw HttpException('HTTP ${response.statusCode}', uri: uri);
   }
   return jsonDecode(body);
+}
+
+/// Manifest URLs the current catalog marks verified, so regenerating keeps
+/// the maintainer's decisions.
+Future<Set<String>> _verifiedManifestUrls() async {
+  try {
+    final current = jsonDecode(await File(_output).readAsString());
+    return {
+      if (current is Map && current['providers'] is List)
+        for (final entry in current['providers'] as List)
+          if (entry is Map && entry['verified'] == true)
+            if (entry['manifestUrl'] case final String url) url,
+    };
+  } catch (_) {
+    return {};
+  }
 }

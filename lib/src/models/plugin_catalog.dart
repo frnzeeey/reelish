@@ -170,6 +170,9 @@ class PluginScraper {
     this.supportedTypes = const [],
     this.contentLanguages = const [],
     this.formats = const [],
+    this.version,
+    this.disabledPlatforms,
+    this.hasSettings = false,
   });
 
   final String id;
@@ -179,6 +182,13 @@ class PluginScraper {
   final List<String> supportedTypes;
   final List<String> contentLanguages;
   final List<String> formats;
+  final String? version;
+
+  /// Platforms its author disables. Null when the catalog does not say
+  /// (catalogs generated before the field existed), which is not the same
+  /// as none.
+  final List<String>? disabledPlatforms;
+  final bool hasSettings;
 
   /// [supportedTypes] normalized to `movie`, `tv` and `anime`.
   Set<String> get contentTypes => {
@@ -203,6 +213,11 @@ class PluginScraper {
       supportedTypes: List.unmodifiable(_texts(json['supportedTypes'])),
       contentLanguages: List.unmodifiable(_texts(json['contentLanguage'])),
       formats: List.unmodifiable(_texts(json['formats'])),
+      version: _text(json['version']),
+      disabledPlatforms: json['disabledPlatforms'] is List
+          ? List.unmodifiable(_texts(json['disabledPlatforms']))
+          : null,
+      hasSettings: json['hasSettings'] == true,
     );
   }
 }

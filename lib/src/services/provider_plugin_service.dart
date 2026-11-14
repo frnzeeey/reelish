@@ -10,6 +10,7 @@ import '../models/media_item.dart';
 import '../models/provider_plugin.dart';
 import '../models/stream_source.dart';
 import 'network_target_policy.dart';
+import 'plugin_compatibility.dart';
 import 'storage_service.dart';
 import 'stream_discovery.dart';
 import 'stream_normalizer.dart';
@@ -31,12 +32,14 @@ class ProviderPluginService extends ChangeNotifier {
     Future<ProviderRepository> Function(String url)? manifestReader,
     @visibleForTesting Future<String> Function(Uri url)? scriptReader,
     @visibleForTesting this.httpClient,
+    @visibleForTesting ReelishDevice Function()? device,
   }) : _storage = storage ?? StorageService(),
        _scheduler = scheduler ?? ProviderExecutionScheduler(),
        _networkDestinations =
            networkDestinations ?? NetworkDestinationValidator(),
        _manifestReader = manifestReader,
-       _scriptReader = scriptReader;
+       _scriptReader = scriptReader,
+       _device = device ?? (() => ReelishDevice.current);
 
   final StorageService _storage;
   final ProviderExecutionScheduler _scheduler;
@@ -44,6 +47,14 @@ class ProviderPluginService extends ChangeNotifier {
   final NetworkDestinationValidator _networkDestinations;
   final Future<ProviderRepository> Function(String url)? _manifestReader;
   final Future<String> Function(Uri url)? _scriptReader;
+
+  /// The interface Reelish runs as, for providers whose author disables it.
+  final ReelishDevice Function() _device;
+
+  /// The version each approved script's manifest listed when it was
+  /// allowed, by script URL. Display only.
+  Map<String, String> _approvedVersions = {};
+  Future<void>? _approvedVersionsLoaded;
 
   /// Replaces the socket client in tests; destinations are still validated.
   @visibleForTesting
@@ -123,6 +134,11 @@ class ProviderPluginService extends ChangeNotifier {
   Future<void> _load() async {
     // Assigned before the manifests load, so a toggle made meanwhile is kept.
     _enabledOverrides = await _storage.providerEnabledOverrides();
+    try {
+      await _ensureApprovedVersions();
+    } catch (_) {
+      // Versions are only shown; unreadable ones are left out.
+    }
     final urls = await _storage.providerRepositoryUrls();
     final loaded = await Future.wait(
       urls.map((url) async {
@@ -218,6 +234,9 @@ class ProviderPluginService extends ChangeNotifier {
       _approvedScripts.removeWhere((key, _) => belongs(key));
       await _storage.saveProviderScriptHashes(_approvedScripts);
     }
+    await _recordVersions({
+      for (final script in _approvedVersions.keys.where(belongs)) script: null,
+    });
     try {
       await _storage.saveProviderManifest(url, null);
     } catch (_) {
@@ -238,10 +257,8 @@ class ProviderPluginService extends ChangeNotifier {
   ) async {
     final key = '${repository.url}|${plugin.id}';
     _enabledOverrides[key] = enabled;
-    final updated = ProviderRepository(
-      url: repository.url,
-      name: repository.name,
-      plugins: repository.plugins
+    final updated = repository.withPlugins(
+      repository.plugins
           .map(
             (entry) => entry.id == plugin.id
                 ? entry.copyWith(enabled: enabled)
@@ -257,20 +274,171 @@ class ProviderPluginService extends ChangeNotifier {
     notifyListeners();
   }
 
-  ProviderRepository _applyOverrides(ProviderRepository repository) =>
-      ProviderRepository(
-        url: repository.url,
-        name: repository.name,
-        plugins: repository.plugins
-            .map(
-              (plugin) => plugin.copyWith(
-                enabled:
-                    _enabledOverrides['${repository.url}|${plugin.id}'] ??
-                    plugin.enabled,
-              ),
-            )
-            .toList(),
+  /// The viewer's choice wins. Without one, a provider whose author disables
+  /// this device starts switched off, so it is never searched by accident.
+  ProviderRepository _applyOverrides(ProviderRepository repository) {
+    final device = _device();
+    return repository.withPlugins(
+      repository.plugins
+          .map(
+            (plugin) => plugin.copyWith(
+              enabled:
+                  _enabledOverrides['${repository.url}|${plugin.id}'] ??
+                  (plugin.enabled &&
+                      !PluginCompatibility.of(plugin, device).blockedOnDevice),
+            ),
+          )
+          .toList(),
+    );
+  }
+
+  /// Whether the viewer switched [plugin] on or off themselves.
+  bool hasEnabledChoice(ProviderRepository repository, ProviderPlugin plugin) =>
+      _enabledOverrides.containsKey('${repository.url}|${plugin.id}');
+
+  /// The address [plugin]'s script is downloaded from.
+  static String scriptUrlFor(
+    ProviderRepository repository,
+    ProviderPlugin plugin,
+  ) => Uri.parse(repository.url).resolve(plugin.filename).toString();
+
+  /// Whether [plugin]'s code was added or changed and waits for approval.
+  bool isAwaitingReview(ProviderRepository repository, ProviderPlugin plugin) =>
+      pendingScriptUpdates[repository.url]?.containsKey(
+        scriptUrlFor(repository, plugin),
+      ) ??
+      false;
+
+  /// Why [plugin]'s last search failed this session, or null.
+  String? lastErrorFor(ProviderRepository repository, ProviderPlugin plugin) =>
+      errors['${plugin.name} (${repository.name})'];
+
+  /// The version its manifest listed when [plugin]'s running code was
+  /// allowed, or null when unknown (allowed before versions were recorded).
+  String? approvedVersionFor(
+    ProviderRepository repository,
+    ProviderPlugin plugin,
+  ) => _approvedVersions[scriptUrlFor(repository, plugin)];
+
+  /// Whether some version of [plugin]'s code has been allowed to run. False
+  /// for a provider that has not run yet, or one a manifest update added.
+  bool hasApprovedCode(ProviderRepository repository, ProviderPlugin plugin) =>
+      _approvedScripts.containsKey(scriptUrlFor(repository, plugin));
+
+  Future<void> _ensureApprovedVersions() =>
+      _approvedVersionsLoaded ??= _storage.providerScriptVersions().then(
+        (versions) => _approvedVersions = {...versions, ..._approvedVersions},
+        onError: (Object error) {
+          _approvedVersionsLoaded = null;
+          throw error;
+        },
       );
+
+  /// Records (or, for a null version, forgets) the version of each script
+  /// just allowed. A storage failure only costs the display.
+  Future<void> _recordVersions(Map<String, String?> versions) async {
+    if (versions.isEmpty) return;
+    try {
+      await _ensureApprovedVersions();
+      for (final MapEntry(:key, :value) in versions.entries) {
+        if (value == null) {
+          _approvedVersions.remove(key);
+        } else {
+          _approvedVersions[key] = value;
+        }
+      }
+      await _storage.saveProviderScriptVersions(_approvedVersions);
+    } catch (_) {}
+  }
+
+  String? _manifestVersionOf(String repositoryUrl, String scriptUrl) {
+    final repository = repositories
+        .where((repo) => repo.url == repositoryUrl)
+        .firstOrNull;
+    if (repository == null) return null;
+    for (final plugin in repository.plugins) {
+      if (scriptUrlFor(repository, plugin) == scriptUrl) return plugin.version;
+    }
+    return null;
+  }
+
+  /// Re-reads [repositoryUrl]'s manifest and downloads the script of every
+  /// provider that is switched on, without running any of them. Added or
+  /// changed code then waits in [pendingScriptUpdates] for the viewer's
+  /// review before the next search instead of during it. Throws when the
+  /// manifest cannot be read.
+  Future<({int checked, int awaitingReview, int failed})> checkForUpdates(
+    String repositoryUrl,
+  ) async {
+    final fetched = await _readRepository(repositoryUrl);
+    final repository = await _serialized(() async {
+      final index = repositories.indexWhere(
+        (repo) => repo.url == repositoryUrl,
+      );
+      if (index < 0) return null; // Removed while the manifest loaded.
+      final applied = _applyOverrides(fetched);
+      repositories[index] = applied;
+      failedRepositoryUrls.remove(repositoryUrl);
+      errors.remove(repositoryUrl);
+      return applied;
+    });
+    if (repository == null) {
+      return (checked: 0, awaitingReview: 0, failed: 0);
+    }
+    await Future.wait([_ensureApprovedScripts(), _ensureKnownScripts()]);
+    final queue = repository.plugins.where((plugin) => plugin.enabled).toList();
+    final scripts = {
+      for (final plugin in queue) scriptUrlFor(repository, plugin),
+    };
+    // Decided again below from the code downloaded now.
+    pendingScriptUpdates[repositoryUrl]?.removeWhere(
+      (script, _) => scripts.contains(script),
+    );
+    var checked = 0, failed = 0;
+    Future<void> worker() async {
+      while (queue.isNotEmpty) {
+        final plugin = queue.removeLast();
+        final url = scriptUrlFor(repository, plugin);
+        try {
+          final code = await _downloadScript(Uri.parse(url));
+          _scripts.put(url, code);
+          await _scriptApproved(repository, url, code, version: plugin.version);
+          checked++;
+        } catch (_) {
+          failed++;
+        }
+      }
+    }
+
+    await Future.wait(List.generate(queue.length.clamp(0, 4), (_) => worker()));
+    if (pendingScriptUpdates[repositoryUrl]?.isEmpty ?? false) {
+      pendingScriptUpdates.remove(repositoryUrl);
+    }
+    notifyListeners();
+    return (
+      checked: checked,
+      awaitingReview: pendingScriptUpdates[repositoryUrl]?.length ?? 0,
+      failed: failed,
+    );
+  }
+
+  /// Downloads a provider script for [checkForUpdates]. The same request a
+  /// stream lookup makes; lookups keep their own copy of this code so the
+  /// playback path is unchanged.
+  Future<String> _downloadScript(Uri codeUrl) async {
+    final read = _scriptReader;
+    if (read != null) return read(codeUrl);
+    final response = await _secureGet(
+      codeUrl,
+      timeout: const Duration(seconds: 20),
+    );
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(
+        'Provider script request failed (${response.statusCode}).',
+      );
+    }
+    return response.body;
+  }
 
   /// A failed read is not kept, so the next lookup tries storage again
   /// instead of failing every lookup for the rest of the session.
@@ -294,8 +462,7 @@ class ProviderPluginService extends ChangeNotifier {
 
   /// The script URL of every provider [repository] lists.
   static Set<String> _scriptUrls(ProviderRepository repository) => {
-    for (final plugin in repository.plugins)
-      Uri.parse(repository.url).resolve(plugin.filename).toString(),
+    for (final plugin in repository.plugins) scriptUrlFor(repository, plugin),
   };
 
   /// Lets the changed or added provider scripts of [repositoryUrl] run from
@@ -310,6 +477,11 @@ class ProviderPluginService extends ChangeNotifier {
     notifyListeners();
     await _storage.saveProviderScriptHashes(_approvedScripts);
     await _storage.saveProviderKnownScripts(_knownScripts);
+    // The manifest on hand is the one that listed the new code.
+    await _recordVersions({
+      for (final script in pending.keys)
+        script: _manifestVersionOf(repositoryUrl, script),
+    });
   }
 
   /// Uninstalls a saved repository whose manifest did not load.
@@ -413,6 +585,7 @@ class ProviderPluginService extends ChangeNotifier {
           ? repositoryName!
           : (name.length > 1 ? name[name.length - 2] : 'Provider repository'),
       entries,
+      version: decoded is Map ? decoded['version'] : null,
     );
   }
 
@@ -602,7 +775,12 @@ class ProviderPluginService extends ChangeNotifier {
             return codeResponse.body;
           });
           if (stopStartingProviders || (isCancelled?.call() ?? false)) return;
-          if (!await _scriptApproved(repo, codeUrl.toString(), providerCode)) {
+          if (!await _scriptApproved(
+            repo,
+            codeUrl.toString(),
+            providerCode,
+            version: plugin.version,
+          )) {
             pausedForReview++;
             continue;
           }
@@ -763,16 +941,24 @@ class ProviderPluginService extends ChangeNotifier {
   Future<bool> _scriptApproved(
     ProviderRepository repo,
     String scriptUrl,
-    String code,
-  ) async {
+    String code, {
+    String? version,
+  }) async {
     await Future.wait([_ensureApprovedScripts(), _ensureKnownScripts()]);
     final hash = sha256.convert(utf8.encode(code)).toString();
     final approved = _approvedScripts[scriptUrl];
-    if (approved == hash) return true;
+    if (approved == hash) {
+      // Code allowed before versions were recorded gets one now.
+      if (version != null && !_approvedVersions.containsKey(scriptUrl)) {
+        unawaited(_recordVersions({scriptUrl: version}));
+      }
+      return true;
+    }
     final known = _knownScripts[repo.url];
     if (approved == null && (known == null || known.contains(scriptUrl))) {
       _approvedScripts[scriptUrl] = hash;
       await _storage.saveProviderScriptHashes(_approvedScripts);
+      await _recordVersions({scriptUrl: version});
       return true;
     }
     (pendingScriptUpdates[repo.url] ??= {})[scriptUrl] = hash;

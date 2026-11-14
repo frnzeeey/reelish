@@ -580,7 +580,12 @@ void main() {
       expect(find.text('Install plugin'), findsOneWidget);
       expect(find.text('Remove'), findsNothing);
       expect(find.text('Manifest'), findsOneWidget);
-      expect(find.text('Not verified, community provider'), findsOneWidget);
+      // Listed in the catalog is a source, not an endorsement.
+      expect(find.text('Listed in the catalog'), findsWidgets);
+      expect(
+        find.textContaining('Nobody has verified its publisher'),
+        findsOneWidget,
+      );
       await tester.scrollUntilVisible(
         find.text('One'),
         300,
