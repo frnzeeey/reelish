@@ -110,7 +110,9 @@ class _Stats extends StatelessWidget {
       ),
       _Tile(
         value: '${stats.moviesInProgress + stats.episodesInProgress}',
-        label: 'In progress',
+        // Not "In progress": the profile and the library count titles in
+        // Continue watching by that name; this counts movies and episodes.
+        label: 'Started, not finished',
         detail:
             '${stats.moviesInProgress} '
             '${stats.moviesInProgress == 1 ? 'movie' : 'movies'}, '

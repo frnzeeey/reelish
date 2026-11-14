@@ -9,6 +9,7 @@ import 'package:onfeed/src/account/account_api.dart';
 import 'package:onfeed/src/account/account_controller.dart';
 import 'package:onfeed/src/account/profile_controller.dart';
 import 'package:onfeed/src/account/session_store.dart';
+import 'package:onfeed/src/models/episode_progress.dart';
 import 'package:onfeed/src/models/media_item.dart';
 import 'package:onfeed/src/screens/account_settings_screen.dart';
 import 'package:onfeed/src/screens/profile_screen.dart';
@@ -105,6 +106,66 @@ void main() {
     expect(activity.watched, 4);
     expect(activity.inProgress, 2, reason: 'C and E; D is at its end');
     expect(activity.isEmpty, isFalse);
+  });
+
+  test('in progress is what Continue watching offers, as the library and '
+      'Viewing statistics count it', () {
+    const minute = 60000;
+    const finishedEpisode = EpisodeProgress(
+      positionMs: 39 * minute,
+      durationMs: 40 * minute,
+    );
+    // One title at a time, so no two cases can cancel out.
+    int inProgress(MediaItem item, [SeriesProgress? series]) =>
+        ProfileActivity.from(
+          favorites: const [],
+          history: [item],
+          series: {'series:${item.id}': ?series},
+        ).inProgress;
+
+    // 92%: finished, as the player and the statistics see it.
+    expect(
+      inProgress(
+        const MediaItem(
+          id: '1',
+          type: 'movie',
+          name: 'Nearly',
+          resumeMs: 92 * minute,
+          durationMs: 100 * minute,
+        ),
+      ),
+      0,
+    );
+    // A series whose last episode is finished: in progress only while
+    // there is a next one to go on with, whatever its own position says.
+    const show = MediaItem(
+      id: '2',
+      type: 'series',
+      name: 'Show',
+      resumeMs: 39 * minute,
+      durationMs: 40 * minute,
+    );
+    expect(
+      inProgress(
+        show,
+        const SeriesProgress(
+          episodes: {'1:1': finishedEpisode},
+          last: (season: 1, episode: 1),
+          next: (season: 1, episode: 2),
+        ),
+      ),
+      1,
+    );
+    expect(
+      inProgress(
+        show,
+        const SeriesProgress(
+          episodes: {'1:1': finishedEpisode},
+          last: (season: 1, episode: 1),
+        ),
+      ),
+      0,
+    );
   });
 
   testWidgets('shows who is signed in and their activity from this device', (

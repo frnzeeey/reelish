@@ -71,7 +71,7 @@ graph LR
   screens["screens"] -->|8| discovery["discovery"]
   screens["screens"] -->|1| intro_skip["intro_skip"]
   screens["screens"] -->|1| messaging["messaging"]
-  screens["screens"] -->|27| models["models"]
+  screens["screens"] -->|29| models["models"]
   screens["screens"] -->|11| navigation["navigation"]
   screens["screens"] -->|2| notifications["notifications"]
   screens["screens"] -->|20| platform["platform"]
@@ -247,7 +247,7 @@ graph LR
 | `navigation` | `theme` (1) |
 | `notifications` | `account` (4), `analytics` (2), `platform` (1), `services` (2) |
 | `platform` | `account` (3), `analytics` (2), `widgets` (1) |
-| `screens` | `account` (28), `analytics` (3), `app` (1), `collections` (1), `desktop` (7), `diagnostics` (3), `discovery` (8), `intro_skip` (1), `messaging` (1), `models` (27), `navigation` (11), `notifications` (2), `platform` (20), `screens/collections` (1), `screens/search` (2), `screens/social` (2), `screens/tv` (3), `screens/watch_party` (4), `search` (2), `services` (45), `social` (3), `support` (3), `theme` (76), `viewmodels` (3), `watch_party` (3), `widgets` (43), `widgets/collections` (1), `widgets/player` (4), `widgets/plugin_library` (18), `widgets/plugin_manager` (4), `widgets/settings` (19), `widgets/social` (1), `widgets/tv` (8) |
+| `screens` | `account` (28), `analytics` (3), `app` (1), `collections` (1), `desktop` (7), `diagnostics` (3), `discovery` (8), `intro_skip` (1), `messaging` (1), `models` (29), `navigation` (11), `notifications` (2), `platform` (20), `screens/collections` (1), `screens/search` (2), `screens/social` (2), `screens/tv` (3), `screens/watch_party` (4), `search` (2), `services` (45), `social` (3), `support` (3), `theme` (76), `viewmodels` (3), `watch_party` (3), `widgets` (43), `widgets/collections` (1), `widgets/player` (4), `widgets/plugin_library` (18), `widgets/plugin_manager` (4), `widgets/settings` (19), `widgets/social` (1), `widgets/tv` (8) |
 | `screens/collections` | `collections` (3), `models` (1), `navigation` (1), `services` (1), `theme` (3), `viewmodels` (1), `widgets` (1), `widgets/collections` (2) |
 | `screens/search` | `discovery` (2), `models` (5), `navigation` (1), `platform` (3), `search` (9), `theme` (17), `widgets` (3), `widgets/tv` (2) |
 | `screens/social` | `account` (3), `messaging` (5), `models` (1), `navigation` (1), `platform` (4), `social` (9), `theme` (12), `widgets` (1), `widgets/collections` (1), `widgets/settings` (4), `widgets/social` (2), `widgets/tv` (2) |
@@ -284,7 +284,7 @@ The files imported by the most other `lib/` files. A change to one of these reac
 | [`lib/src/services/storage_service.dart`](../../lib/src/services/storage_service.dart) | 29 | 40 |
 | [`lib/src/account/account_controller.dart`](../../lib/src/account/account_controller.dart) | 28 | 29 |
 | [`lib/src/widgets/settings/settings_components.dart`](../../lib/src/widgets/settings/settings_components.dart) | 26 | 2 |
-| [`lib/src/widgets/tv/tv_focus.dart`](../../lib/src/widgets/tv/tv_focus.dart) | 26 | 7 |
+| [`lib/src/widgets/tv/tv_focus.dart`](../../lib/src/widgets/tv/tv_focus.dart) | 26 | 8 |
 | [`lib/src/account/account_api.dart`](../../lib/src/account/account_api.dart) | 21 | 28 |
 | [`lib/src/widgets/artwork_image.dart`](../../lib/src/widgets/artwork_image.dart) | 20 | 5 |
 | [`lib/src/models/stream_source.dart`](../../lib/src/models/stream_source.dart) | 19 | 21 |
@@ -295,10 +295,10 @@ The files imported by the most other `lib/` files. A change to one of these reac
 | [`lib/src/analytics/analytics_service.dart`](../../lib/src/analytics/analytics_service.dart) | 13 | 5 |
 | [`lib/src/widgets/glass_button.dart`](../../lib/src/widgets/glass_button.dart) | 13 | 1 |
 | [`lib/src/account/supporter_controller.dart`](../../lib/src/account/supporter_controller.dart) | 12 | 9 |
+| [`lib/src/models/episode_progress.dart`](../../lib/src/models/episode_progress.dart) | 12 | 13 |
 | [`lib/src/models/plugin_catalog.dart`](../../lib/src/models/plugin_catalog.dart) | 12 | 2 |
 | [`lib/src/desktop/desktop_widgets.dart`](../../lib/src/desktop/desktop_widgets.dart) | 11 | 6 |
 | [`lib/src/discovery/tmdb_genres.dart`](../../lib/src/discovery/tmdb_genres.dart) | 11 | 3 |
-| [`lib/src/models/episode_progress.dart`](../../lib/src/models/episode_progress.dart) | 11 | 12 |
 | [`lib/src/services/provider_plugin_service.dart`](../../lib/src/services/provider_plugin_service.dart) | 11 | 5 |
 | [`lib/src/services/tmdb_service.dart`](../../lib/src/services/tmdb_service.dart) | 11 | 18 |
 

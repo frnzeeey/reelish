@@ -22,6 +22,7 @@ import 'package:onfeed/src/theme/glass_theme.dart';
 import 'package:onfeed/src/theme/profile_styles.dart';
 import 'package:onfeed/src/theme/supporter_themes.dart';
 import 'package:onfeed/src/widgets/profile_card_backdrop.dart';
+import 'package:onfeed/src/widgets/tv/tv_focus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 int _now() => DateTime.now().millisecondsSinceEpoch ~/ 1000;
@@ -462,6 +463,80 @@ void main() {
     expect(profile.style.backdrop, 'midnight');
     expect(find.textContaining('On TV the card stays still'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  group('TV focus', () {
+    setUp(() {
+      DeviceCapabilities.debugOverride = const DeviceCapabilities(
+        isTelevision: true,
+        hasTouchscreen: false,
+      );
+    });
+    tearDown(
+      () => DeviceCapabilities.debugOverride = const DeviceCapabilities(),
+    );
+
+    /// Whether the focused node sits inside the tile labelled [label].
+    bool focusedOn(WidgetTester tester, String label) {
+      final focused = FocusManager.instance.primaryFocus?.context;
+      final tile = focused?.findAncestorWidgetOfExactType<TvFocusable>();
+      return tile?.semanticLabel?.startsWith('$label background') ?? false;
+    }
+
+    /// Presses the button labelled [label] with the remote.
+    Future<void> press(WidgetTester tester, String label) async {
+      final button = find.text(label);
+      await tester.ensureVisible(button);
+      Focus.of(tester.element(button)).requestFocus();
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.select);
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 20)),
+      );
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump(const Duration(milliseconds: 400));
+    }
+
+    testWidgets('the page opens on the current background', (tester) async {
+      await _show(
+        tester,
+        entitlement: 'supporter',
+        style: const ProfileStyle(backdrop: 'tide').toJson(),
+      );
+      await _openStylePage(tester);
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(focusedOn(tester, 'Tide'), isTrue);
+    });
+
+    testWidgets('Apply, Discard and Standard card leave focus on the '
+        'background now chosen', (tester) async {
+      final profile = await _show(tester, entitlement: 'supporter');
+      await _openStylePage(tester);
+      await _choose(tester, 'Pine');
+      await press(tester, 'Apply');
+      expect(profile.style.backdrop, 'pine');
+      expect(find.text('Apply'), findsNothing);
+      expect(focusedOn(tester, 'Pine'), isTrue);
+
+      // With the remote: the snack bar from Apply covers the foot of the
+      // screen, where a tap would land.
+      final moss = find.descendant(
+        of: find.byType(ProfileStyleScreen),
+        matching: find.text('Moss'),
+      );
+      await tester.ensureVisible(moss);
+      Focus.of(tester.element(moss)).requestFocus();
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.select);
+      await tester.pump(const Duration(milliseconds: 400));
+      await press(tester, 'Discard changes');
+      expect(focusedOn(tester, 'Pine'), isTrue);
+
+      await press(tester, 'Standard card');
+      expect(find.text('Standard card'), findsNothing);
+      expect(focusedOn(tester, 'Standard'), isTrue);
+      expect(tester.takeException(), isNull);
+    });
   });
 
   testWidgets('Viewing statistics opens from the profile', (tester) async {

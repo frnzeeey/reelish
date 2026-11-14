@@ -40,7 +40,9 @@ choosing no background keeps the theme's backdrop.
 ### Draft and apply
 
 Choices are a draft. Apply saves; Discard, Standard card, or leaving the page
-keep the card as it was. Everyone can preview every part. When the draft
+keep the card as it was. Those buttons come and go with the draft, so with a
+remote or keyboard in use, pressing one moves focus to the background now
+selected rather than losing it. On TV the page opens on the current background. Everyone can preview every part. When the draft
 includes a supporter part and the account lacks the perk, Apply becomes "Become
 a Supporter".
 
@@ -119,6 +121,15 @@ not a lifetime, and says so.
 Not available, so not shown: actors and directors, lifetime totals, measured
 watch time. A finished movie started again counts as in progress until it is
 finished again, since only the latest position is kept.
+
+### Words shared with the profile card
+
+The profile card's counts are the library's: **Watched** is the watch history
+and **In progress** what Continue watching offers (`ResumeSummary.continues`:
+a movie short of 90%, a series with an episode to go on with), as the Windows
+library header counts them. The statistics page uses the same 90% for
+finished, and calls its own count of started movies and episodes "Started,
+not finished", so the two never show different numbers under one name.
 
 ### Privacy
 

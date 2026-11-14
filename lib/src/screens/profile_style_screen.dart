@@ -53,12 +53,51 @@ class _ProfileStyleScreenState extends State<ProfileStyleScreen> {
 
   void _set(ProfileStyle style) => setState(() => _draft = style);
 
+  /// One node per background tile (null is Standard), kept for the page's
+  /// life: a node handed from tile to tile would drop the focus of the tile
+  /// the remote is on.
+  final _tileNodes = <String?, FocusNode>{};
+
+  FocusNode _tileNode(String? id) => _tileNodes[id] ??= FocusNode(
+    debugLabel: 'background ${id ?? 'standard'}',
+  );
+
+  /// The action buttons come and go with the draft, so the one just pressed
+  /// can vanish under the remote. With a remote or keyboard in use, focus
+  /// moves to the background now selected instead of being lost.
+  void _refocus() {
+    if (FocusManager.instance.highlightMode != FocusHighlightMode.traditional) {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final node = _tileNodes[_draft.backdrop];
+      if (mounted && node != null && node.context != null) {
+        node.requestFocus();
+      }
+    });
+  }
+
+  /// [action] from an action button, then focus kept on the page.
+  void _act(VoidCallback action) {
+    action();
+    _refocus();
+  }
+
+  @override
+  void dispose() {
+    for (final node in _tileNodes.values) {
+      node.dispose();
+    }
+    super.dispose();
+  }
+
   Future<void> _apply() async {
     final messenger = ScaffoldMessenger.maybeOf(context);
     setState(() => _saving = true);
     final applied = await widget.profile.setStyle(_draft, perk: _perk);
     if (!mounted) return;
     setState(() => _saving = false);
+    _refocus();
     messenger
       ?..hideCurrentSnackBar()
       ..showSnackBar(
@@ -113,8 +152,8 @@ class _ProfileStyleScreenState extends State<ProfileStyleScreen> {
             perk: perk,
             saving: _saving,
             onApply: _apply,
-            onDiscard: () => _set(saved),
-            onRestoreDefault: () => _set(ProfileStyle.standard),
+            onDiscard: () => _act(() => _set(saved)),
+            onRestoreDefault: () => _act(() => _set(ProfileStyle.standard)),
             onSupport: _openSupporters,
           ),
           for (final collection in ProfileBackdropCollection.values)
@@ -138,6 +177,7 @@ class _ProfileStyleScreenState extends State<ProfileStyleScreen> {
                     glow: draftColor,
                     perk: perk,
                     onSelect: (id) => _set(_draft.withBackdrop(id)),
+                    focusNode: _tileNode,
                   ),
                 ),
               ],
@@ -296,6 +336,7 @@ class _BackdropGrid extends StatelessWidget {
     required this.glow,
     required this.perk,
     required this.onSelect,
+    required this.focusNode,
   });
 
   final List<ProfileBackdropStyle?> styles;
@@ -303,6 +344,9 @@ class _BackdropGrid extends StatelessWidget {
   final Color? glow;
   final bool perk;
   final ValueChanged<String?> onSelect;
+
+  /// Each tile's own focus node, by background id.
+  final FocusNode Function(String? id) focusNode;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
@@ -327,6 +371,7 @@ class _BackdropGrid extends StatelessWidget {
               selected: style?.id == selected,
               locked: (style?.forSupporters ?? false) && !perk,
               onSelect: () => onSelect(style?.id),
+              focusNode: focusNode(style?.id),
             ),
         ],
       );
@@ -342,6 +387,7 @@ class _BackdropTile extends StatelessWidget {
     required this.selected,
     required this.locked,
     required this.onSelect,
+    required this.focusNode,
   });
 
   /// Null: the standard card.
@@ -351,6 +397,7 @@ class _BackdropTile extends StatelessWidget {
   final bool selected;
   final bool locked;
   final VoidCallback onSelect;
+  final FocusNode focusNode;
 
   @override
   Widget build(BuildContext context) {
@@ -359,6 +406,11 @@ class _BackdropTile extends StatelessWidget {
     final name = style?.name ?? 'Standard';
     return TvFocusable(
       onSelect: onSelect,
+      focusNode: focusNode,
+      // The remote starts on the card's current background.
+      autofocus: DeviceCapabilities.isTv && selected,
+      // Focus moved here from a button may be off screen.
+      scrollAlignment: DeviceCapabilities.usesTvLayout ? .3 : null,
       borderRadius: AppRadius.lg,
       focusScale: 1.04,
       semanticLabel: [

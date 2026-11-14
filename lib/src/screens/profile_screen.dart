@@ -15,7 +15,9 @@ import '../account/account_controller.dart';
 import '../account/profile_controller.dart';
 import '../account/account_badges.dart';
 import '../account/supporter_controller.dart';
+import '../models/episode_progress.dart';
 import '../models/media_item.dart';
+import '../models/resume_summary.dart';
 import '../navigation/app_transitions.dart';
 import '../platform/app_icon.dart';
 import '../platform/device_capabilities.dart';
@@ -45,7 +47,9 @@ import 'social/friends_privacy_screen.dart';
 import 'social/friends_screen.dart';
 import 'supporters_screen.dart';
 
-/// What the library holds, counted from this device's history and My list.
+/// What the library holds, counted from this device's history and My list,
+/// as the library itself counts it: Watched is the watch history, In
+/// progress what Continue watching offers.
 @immutable
 class ProfileActivity {
   const ProfileActivity({
@@ -54,19 +58,23 @@ class ProfileActivity {
     required this.inProgress,
   });
 
-  /// Counts [history] and [favorites]: a title is in progress when it has a
-  /// saved position short of its end.
+  /// Counts [history] and [favorites]. A title is in progress by the rule
+  /// Continue watching and the library use ([ResumeSummary.continues]): a
+  /// movie short of 90% of its length, a series with an episode to go on
+  /// with ([series], per-episode progress by `series:<id>`).
   factory ProfileActivity.from({
     required List<MediaItem> history,
     required List<MediaItem> favorites,
+    Map<String, SeriesProgress> series = const {},
   }) => ProfileActivity(
     myList: favorites.length,
     watched: history.length,
     inProgress: history
         .where(
-          (item) =>
-              item.resumeMs > 0 &&
-              (item.durationMs <= 0 || item.resumeMs < item.durationMs * .95),
+          (item) => ResumeSummary.continues(
+            item,
+            series: item.type == 'series' ? series['series:${item.id}'] : null,
+          ),
         )
         .length,
   );
@@ -165,11 +173,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   /// Local reads only: no network request.
   Future<ProfileActivity> _load() async {
-    final results = await Future.wait([
+    final (history, favorites, series) = await (
       widget.storage.history(),
       widget.storage.favorites(),
-    ]);
-    return ProfileActivity.from(history: results[0], favorites: results[1]);
+      widget.storage.allSeriesProgress(),
+    ).wait;
+    return ProfileActivity.from(
+      history: history,
+      favorites: favorites,
+      series: series,
+    );
   }
 
   @override

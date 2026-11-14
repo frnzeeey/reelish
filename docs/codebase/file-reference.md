@@ -109,9 +109,9 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/screens/plugin_details_screen.dart`](#libsrcscreensplugin_details_screendart) | Shared | 626 | A plugin-library repository's details page, from which it can be installed. |
 | [`lib/src/screens/plugin_library_screen.dart`](#libsrcscreensplugin_library_screendart) | Shared | 767 | Browse the community provider catalog and hand a manifest to the existing installer: the library as its own page, opened from Plugins on phone and TV. |
 | [`lib/src/screens/plugins_screen.dart`](#libsrcscreensplugins_screendart) | Shared | 949 | The phone and TV Plugins page: installed repositories, enabling providers, script updates and the plugin library. |
-| [`lib/src/screens/profile_screen.dart`](#libsrcscreensprofile_screendart) | Shared | 1567 | The signed-in person's page, in four parts: who they are (avatar, name, badges, and apart from those their viewing at a glance), how Reelish looks for them (profile card, avatar frame, app theme, app icon), their viewing statistics and their account. |
-| [`lib/src/screens/profile_stats_screen.dart`](#libsrcscreensprofile_stats_screendart) | Shared | 459 | Profile > Viewing statistics: what the viewer has watched recently, counted from this account's history and episode progress on this device (ViewingStats). |
-| [`lib/src/screens/profile_style_screen.dart`](#libsrcscreensprofile_style_screendart) | Shared | 651 | Profile > Profile card: the card's background, colour and animated accent (lib/src/theme/profile_styles.dart), with a live preview of the real card. |
+| [`lib/src/screens/profile_screen.dart`](#libsrcscreensprofile_screendart) | Shared | 1580 | The signed-in person's page, in four parts: who they are (avatar, name, badges, and apart from those their viewing at a glance), how Reelish looks for them (profile card, avatar frame, app theme, app icon), their viewing statistics and their account. |
+| [`lib/src/screens/profile_stats_screen.dart`](#libsrcscreensprofile_stats_screendart) | Shared | 461 | Profile > Viewing statistics: what the viewer has watched recently, counted from this account's history and episode progress on this device (ViewingStats). |
+| [`lib/src/screens/profile_style_screen.dart`](#libsrcscreensprofile_style_screendart) | Shared | 703 | Profile > Profile card: the card's background, colour and animated accent (lib/src/theme/profile_styles.dart), with a live preview of the real card. |
 | [`lib/src/screens/recommendation_settings_screen.dart`](#libsrcscreensrecommendation_settings_screendart) | Shared | 181 | Settings → Recommendations: personalised rows on or off, the genres the viewer likes, titles hidden from recommendations, and a reset. |
 | [`lib/src/screens/search/search_cards.dart`](#libsrcscreenssearchsearch_cardsdart) | Shared | 325 | Universal Search's result cards, one layout per kind: posters for movies and series, round portraits for people, artwork for collections, and a wider card for the top result. |
 | [`lib/src/screens/search/search_detail_screens.dart`](#libsrcscreenssearchsearch_detail_screensdart) | Shared | 397 | The pages behind a person and a movie collection found in Universal Search. |
@@ -1161,9 +1161,9 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Imports (project):** none
 
-**Imported by:** `src/account/progress_sync.dart`, `src/collections/smart_collections.dart`, `src/desktop/desktop_details_screen.dart`, `src/models/resume_summary.dart`, `src/models/viewing_stats.dart`, `src/screens/home_screen.dart`, `src/services/storage_service.dart`, `src/viewmodels/home_view_model.dart`, `src/viewmodels/library_view_model.dart`, `src/widgets/player/custom_video_player.dart`, `src/widgets/player/episode_panel.dart`
+**Imported by:** `src/account/progress_sync.dart`, `src/collections/smart_collections.dart`, `src/desktop/desktop_details_screen.dart`, `src/models/resume_summary.dart`, `src/models/viewing_stats.dart`, `src/screens/home_screen.dart`, `src/screens/profile_screen.dart`, `src/services/storage_service.dart`, `src/viewmodels/home_view_model.dart`, `src/viewmodels/library_view_model.dart`, `src/widgets/player/custom_video_player.dart`, `src/widgets/player/episode_panel.dart`
 
-**Tests importing it:** `test/continue_watching_test.dart`, `test/custom_collections_test.dart`, `test/desktop_redesign_test.dart`, `test/desktop_remove_favorites_test.dart`, `test/discovery_controller_test.dart`, `test/discovery_preferences_test.dart`, `test/episode_selection_test.dart`, `test/home_view_model_test.dart`, `test/intelligent_continue_watching_test.dart`, `test/search_library_screens_test.dart`, `test/search_library_view_models_test.dart`, `test/viewing_stats_test.dart`
+**Tests importing it:** `test/continue_watching_test.dart`, `test/custom_collections_test.dart`, `test/desktop_redesign_test.dart`, `test/desktop_remove_favorites_test.dart`, `test/discovery_controller_test.dart`, `test/discovery_preferences_test.dart`, `test/episode_selection_test.dart`, `test/home_view_model_test.dart`, `test/intelligent_continue_watching_test.dart`, `test/profile_screen_test.dart`, `test/search_library_screens_test.dart`, `test/search_library_view_models_test.dart`, `test/viewing_stats_test.dart`
 
 ## lib/src/models/media_details.dart
 
@@ -1267,7 +1267,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Imports (project):** `src/models/episode_progress.dart`, `src/models/media_item.dart`
 
-**Imported by:** `src/collections/smart_collections.dart`, `src/desktop/desktop_shell.dart`, `src/screens/home_screen.dart`, `src/screens/library_screen.dart`, `src/viewmodels/home_view_model.dart`, `src/viewmodels/library_view_model.dart`
+**Imported by:** `src/collections/smart_collections.dart`, `src/desktop/desktop_shell.dart`, `src/screens/home_screen.dart`, `src/screens/library_screen.dart`, `src/screens/profile_screen.dart`, `src/viewmodels/home_view_model.dart`, `src/viewmodels/library_view_model.dart`
 
 **Tests importing it:** `test/continue_watching_test.dart`, `test/desktop_ui_test.dart`, `test/intelligent_continue_watching_test.dart`, `test/progress_sync_test.dart`
 
@@ -1861,13 +1861,13 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/screens/profile_screen.dart
 
-**Source:** [`lib/src/screens/profile_screen.dart`](../../lib/src/screens/profile_screen.dart) · **Platform:** Shared · **Lines:** 1567 · **Branches on:** isTv, usesTvLayout
+**Source:** [`lib/src/screens/profile_screen.dart`](../../lib/src/screens/profile_screen.dart) · **Platform:** Shared · **Lines:** 1580 · **Branches on:** isTv, usesTvLayout
 
 **Purpose:** The signed-in person's page, in four parts: who they are (avatar, name, badges, and apart from those their viewing at a glance), how Reelish looks for them (profile card, avatar frame, app theme, app icon), their viewing statistics and their account.
 
 **Declares:** `_Counts` (Class), `_CountsBeside` (Widget), `_CountsFoot` (Widget), `_CountsNote` (Widget), `_EditableAvatar` (Widget), `_IdentityCard` (Widget), `_NewDot` (Widget), `ProfileActivity` (Class), `_ProfileName` (Widget), `ProfileScreen` (Widget), `_ProfileScreenState` (Widget state), `_Sheet` (Widget), `_SignedOut` (Widget), `_SignOutTile` (Widget), `_Stat` (Widget), `_StatState` (Widget state), `_TraktBadge` (Widget)
 
-**Imports (project):** `src/account/account_badges.dart`, `src/account/account_controller.dart`, `src/account/avatar_frames.dart`, `src/account/profile_controller.dart`, `src/account/supporter_controller.dart`, `src/messaging/messages_controller.dart`, `src/models/media_item.dart`, `src/navigation/app_transitions.dart`, `src/platform/app_icon.dart`, `src/platform/device_capabilities.dart`, `src/screens/account_settings_screen.dart`, `src/screens/app_icon_settings_screen.dart`, `src/screens/avatar_frames_screen.dart`, `src/screens/playback_settings_screen.dart`, `src/screens/profile_stats_screen.dart`, `src/screens/profile_style_screen.dart`, `src/screens/social/friends_privacy_screen.dart`, `src/screens/social/friends_screen.dart`, `src/screens/supporters_screen.dart`, `src/services/accent_settings_controller.dart`, `src/services/storage_service.dart`, `src/social/social_controller.dart`, `src/theme/avatar_frames.dart`, `src/theme/design_tokens.dart`, `src/theme/glass_theme.dart`, `src/theme/profile_styles.dart`, `src/theme/reelish_icons.dart`, `src/theme/supporter_themes.dart`, `src/widgets/account_badges.dart`, `src/widgets/avatar_frame.dart`, `src/widgets/profile_avatar.dart`, `src/widgets/profile_avatar_picker.dart`, `src/widgets/profile_card_backdrop.dart`, `src/widgets/settings/settings_components.dart`
+**Imports (project):** `src/account/account_badges.dart`, `src/account/account_controller.dart`, `src/account/avatar_frames.dart`, `src/account/profile_controller.dart`, `src/account/supporter_controller.dart`, `src/messaging/messages_controller.dart`, `src/models/episode_progress.dart`, `src/models/media_item.dart`, `src/models/resume_summary.dart`, `src/navigation/app_transitions.dart`, `src/platform/app_icon.dart`, `src/platform/device_capabilities.dart`, `src/screens/account_settings_screen.dart`, `src/screens/app_icon_settings_screen.dart`, `src/screens/avatar_frames_screen.dart`, `src/screens/playback_settings_screen.dart`, `src/screens/profile_stats_screen.dart`, `src/screens/profile_style_screen.dart`, `src/screens/social/friends_privacy_screen.dart`, `src/screens/social/friends_screen.dart`, `src/screens/supporters_screen.dart`, `src/services/accent_settings_controller.dart`, `src/services/storage_service.dart`, `src/social/social_controller.dart`, `src/theme/avatar_frames.dart`, `src/theme/design_tokens.dart`, `src/theme/glass_theme.dart`, `src/theme/profile_styles.dart`, `src/theme/reelish_icons.dart`, `src/theme/supporter_themes.dart`, `src/widgets/account_badges.dart`, `src/widgets/avatar_frame.dart`, `src/widgets/profile_avatar.dart`, `src/widgets/profile_avatar_picker.dart`, `src/widgets/profile_card_backdrop.dart`, `src/widgets/settings/settings_components.dart`
 
 **Packages:** `flutter`
 
@@ -1877,7 +1877,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/screens/profile_stats_screen.dart
 
-**Source:** [`lib/src/screens/profile_stats_screen.dart`](../../lib/src/screens/profile_stats_screen.dart) · **Platform:** Shared · **Lines:** 459 · **Branches on:** isTv, usesTvLayout
+**Source:** [`lib/src/screens/profile_stats_screen.dart`](../../lib/src/screens/profile_stats_screen.dart) · **Platform:** Shared · **Lines:** 461 · **Branches on:** isTv, usesTvLayout
 
 **Purpose:** Profile > Viewing statistics: what the viewer has watched recently, counted from this account's history and episode progress on this device (ViewingStats).
 
@@ -1893,7 +1893,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/screens/profile_style_screen.dart
 
-**Source:** [`lib/src/screens/profile_style_screen.dart`](../../lib/src/screens/profile_style_screen.dart) · **Platform:** Shared · **Lines:** 651 · **Branches on:** isTv, usesTvLayout
+**Source:** [`lib/src/screens/profile_style_screen.dart`](../../lib/src/screens/profile_style_screen.dart) · **Platform:** Shared · **Lines:** 703 · **Branches on:** isTv, usesTvLayout
 
 **Purpose:** Profile > Profile card: the card's background, colour and animated accent (lib/src/theme/profile_styles.dart), with a live preview of the real card.
 
@@ -4429,7 +4429,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Imported by:** `main.dart`, `src/screens/account_settings_screen.dart`, `src/screens/avatar_frames_screen.dart`, `src/screens/home_screen.dart`, `src/screens/legal_information_screen.dart`, `src/screens/playback_settings_screen.dart`, `src/screens/plugin_collection_screen.dart`, `src/screens/plugin_library_screen.dart`, `src/screens/profile_style_screen.dart`, `src/screens/search/search_cards.dart`, `src/screens/search/universal_search_view.dart`, `src/screens/social/friends_privacy_screen.dart`, `src/screens/social/messages_screen.dart`, `src/screens/tv/tv_browse.dart`, `src/screens/tv/tv_collections.dart`, `src/screens/tv/tv_details_screen.dart`, `src/screens/tv/tv_home_shell.dart`, `src/screens/tv/tv_pages.dart`, `src/screens/watch_party/join_party_screen.dart`, `src/widgets/player/subtitle_position_panel.dart`, `src/widgets/provider_installer_modal.dart`, `src/widgets/settings/settings_components.dart`, `src/widgets/social/social_widgets.dart`, `src/widgets/supporter_theme_picker.dart`, `src/widgets/tv/tv_poster_card.dart`, `src/widgets/watch_party/party_chat_panel.dart`
 
-**Tests importing it:** `test/details_screens_test.dart`, `test/messages_screen_test.dart`, `test/plugin_library_test.dart`, `test/tv_layout_test.dart`, `test/tv_support_test.dart`, `test/ux_journeys_test.dart`, `test/watch_party_test.dart`
+**Tests importing it:** `test/details_screens_test.dart`, `test/messages_screen_test.dart`, `test/plugin_library_test.dart`, `test/profile_customization_test.dart`, `test/tv_layout_test.dart`, `test/tv_support_test.dart`, `test/ux_journeys_test.dart`, `test/watch_party_test.dart`
 
 ## lib/src/widgets/tv/tv_poster_card.dart
 
