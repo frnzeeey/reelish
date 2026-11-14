@@ -360,3 +360,101 @@ String? partyCodeFrom(String text) {
 /// "1234 5678": easier to read out and type.
 String formatPartyCode(String code) =>
     code.length == 8 ? '${code.substring(0, 4)} ${code.substring(4)}' : code;
+
+/// The code in an invitation link (`reelish://party/12345678`, or the web
+/// page `…/api/v1/join/12345678` it is shared as); null for anything else.
+String? partyCodeFromLink(Uri uri) {
+  final segments = uri.pathSegments.where((s) => s.isNotEmpty).toList();
+  final String? candidate;
+  if (uri.scheme == 'reelish') {
+    // reelish://party/12345678: "party" is the host.
+    candidate = uri.host == 'party' && segments.length == 1
+        ? segments.single
+        : null;
+  } else if (uri.scheme == 'https') {
+    final at = segments.indexOf('join');
+    candidate = at >= 0 && at == segments.length - 2 ? segments.last : null;
+  } else {
+    candidate = null;
+  }
+  return candidate != null && RegExp(r'^\d{8}$').hasMatch(candidate)
+      ? candidate
+      : null;
+}
+
+/// The quick reactions a room relays, by the id the room knows them by.
+const partyReactions = <String, String>{
+  'laugh': '😂',
+  'love': '❤️',
+  'wow': '😮',
+  'sad': '😢',
+  'fire': '🔥',
+  'clap': '👏',
+};
+
+/// Someone's quick reaction, shown for a moment and never kept.
+class PartyReaction {
+  const PartyReaction({required this.pid, required this.emoji, this.name});
+
+  /// Null when the room sent something unknown.
+  static PartyReaction? fromJson(Object? json, String? Function(String) name) {
+    if (json is! Map) return null;
+    final pid = json['pid'];
+    final emoji = json['emoji'];
+    if (pid is! String || emoji is! String) return null;
+    if (!partyReactions.containsKey(emoji)) return null;
+    return PartyReaction(pid: pid, emoji: emoji, name: name(pid));
+  }
+
+  final String pid;
+
+  /// The reaction's id (a key of [partyReactions]).
+  final String emoji;
+
+  /// Who sent it, when they are still in the room.
+  final String? name;
+
+  String get glyph => partyReactions[emoji] ?? '';
+}
+
+/// One chat line as the room relayed it. The author is the room's record of
+/// who sent it, never something the sender could claim.
+class PartyChatMessage {
+  const PartyChatMessage({
+    required this.pid,
+    required this.name,
+    required this.text,
+    required this.at,
+    required this.mine,
+    this.id,
+  });
+
+  static PartyChatMessage? fromJson(Object? json, {required String? you}) {
+    if (json is! Map) return null;
+    final pid = json['pid'];
+    final text = json['text'];
+    if (pid is! String || text is! String || text.trim().isEmpty) return null;
+    return PartyChatMessage(
+      pid: pid,
+      name: _string(json['name'], 'Viewer'),
+      // The room caps lines at 300; a longer one is cut, not trusted.
+      text: _capRunes(text, 300),
+      at: DateTime.fromMillisecondsSinceEpoch(_int(json['at'])),
+      mine: pid == you,
+      id: json['id'] is String ? json['id'] as String : null,
+    );
+  }
+
+  final String pid;
+  final String name;
+  final String text;
+
+  /// Room time it was relayed.
+  final DateTime at;
+  final bool mine;
+  final String? id;
+}
+
+String _capRunes(String text, int max) => text.runes.length <= max
+    ? text
+    : String.fromCharCodes(text.runes.take(max));

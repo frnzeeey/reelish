@@ -215,14 +215,35 @@ posterPath?}` (season and episode for series). Participants are named by
 | `heartbeat` | host | `seq`, `positionMs`, `at` (while playing) |
 | `start`, `content`, `settings`, `kick`, `transfer`, `end` | host | `content`; `guestControl`, `waitForAll`, `capacity`; `pid` |
 | `leave` | anyone | (a leaving host hands over at once) |
+| `react` | anyone | `emoji`: `laugh`, `love`, `wow`, `sad`, `fire`, `clap` (4 at once, then 1 a second; more are dropped silently) |
+| `chat` | anyone | `text` (cleaned, ≤ 300 characters), `id` (the sender's, echoed back); 5 at once, then 1 every 2 s, more answer `error chat_rate_limited` |
 
-The room sends `welcome {you, room, serverTime}`, `room {room}`, `state
-{playback}`, `participants {participants, hostConnected}`, `time`, `error
-{code}`, `removed` and `ended {reason}`. `playback` is `{status, positionMs,
-rate, at, seq, by}`: the position was true at server time `at`, and `seq`
-grows with every change. Close codes: 4000 ended, 4001 replaced by another
-connection of the same account, 4003 removed, 4004 not found, 4029 too
-many messages.
+The room sends `welcome {you, room, serverTime, features}`, `room {room}`,
+`state {playback}`, `participants {participants, hostConnected}`, `time`,
+`reaction {pid, emoji}` (to everyone but the sender), `chat {pid, name, text,
+at, id?}` (to everyone, the sender included), `error {code}`, `removed` and
+`ended {reason}`. `features` lists `reactions` and `chat`; an app sends
+neither to a room that does not list it. Reactions and chat are relayed and
+never stored: the author's `pid` and `name` come from the socket, not the
+message, and someone who joins later sees no earlier lines. `playback` is
+`{status, positionMs, rate, at, seq, by}`: the position was true at server
+time `at`, and `seq` grows with every change. Close codes: 4000 ended, 4001
+replaced by another connection of the same account, 4003 removed, 4004 not
+found, 4008 stopped answering pings, 4029 too many messages.
+
+Presence: apps send a text `ping` every 25 seconds, which Cloudflare answers
+(`pong`) without waking the room. While anyone is connected the room's alarm
+runs every 2 minutes, and a join or a code check sweeps too: a socket whose
+last ping is more than 2 minutes old is closed (4008) and treated as gone, so
+it frees its place, and a vanished host starts the 60-second host grace
+instead of staying in charge with nobody hearing from it. Sockets that never
+pinged (apps from before this) are left to Cloudflare.
+
+`GET /api/v1/join/{code}` is the page an invitation link opens. It needs no
+session, never asks the room (so it reveals nothing about which codes are in
+use and costs no room request), shows the code, and links to
+`reelish://party/{code}`, which the app turns into Join a party with the code
+filled in (`PartyLinks`): joining still asks.
 
 Clients follow the room in `PartyPlayerSync`, with the arithmetic in
 `playback_sync.dart`. The room's timeline gives the expected position
@@ -248,7 +269,17 @@ action is kept and sent on reconnecting. A player opens at the room's position
 at that moment and does not start if the room is paused. Parties always play
 at 1x, whatever the viewer's default speed. `[PartySync]` lines in debug and
 profile logs summarize seeks, holds, drift, reconnects and delivery time. A
-playing room silent for 35 seconds counts as a dead socket and reconnects.
+playing room silent for 35 seconds counts as a dead socket and reconnects
+(a `pong` does not count: it comes from Cloudflare, not the room).
+
+Viewer actions reach the room at most once every 800 ms
+(`WatchPartyController.control`): the first at once, the last of any that
+follow when the interval ends, moved on by the time that passed if playback
+kept running. A held seek key on Windows or TV repeats many times a second;
+sent one by one, each was a storage write and a seek on every guest, and the
+flood limit closed the host's socket. Until the room answers an action with a
+timeline of this device's own (or 3 seconds pass, for one it refused), the
+player applies no older timeline over it and the host sends no heartbeat.
 
 ### TMDB gateway
 

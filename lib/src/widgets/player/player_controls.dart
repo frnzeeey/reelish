@@ -61,6 +61,7 @@ class PlayerControlsOverlay extends StatelessWidget {
     this.volume,
     this.onVolumeChanged,
     this.onToggleMute,
+    this.partyAction,
   });
 
   final VideoPlayerController controller;
@@ -122,6 +123,10 @@ class PlayerControlsOverlay extends StatelessWidget {
   final void Function(double value, {required bool commit})? onVolumeChanged;
   final VoidCallback? onToggleMute;
 
+  /// In a watch party only: the button for reactions and chat, first among
+  /// the top bar's actions. Null (outside a party) shows nothing.
+  final Widget? partyAction;
+
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
@@ -159,6 +164,7 @@ class PlayerControlsOverlay extends StatelessWidget {
                     onSubtitles: onSubtitles,
                     onSettings: onSettings,
                     onLock: onLock,
+                    partyAction: partyAction,
                   ),
                 ),
                 Center(
@@ -282,6 +288,7 @@ class _TopBar extends StatelessWidget {
     required this.onSettings,
     this.pauseScreen,
     this.onLock,
+    this.partyAction,
   });
 
   final String title;
@@ -292,6 +299,7 @@ class _TopBar extends StatelessWidget {
   final VoidCallback onSubtitles;
   final VoidCallback onSettings;
   final VoidCallback? onLock;
+  final Widget? partyAction;
 
   @override
   Widget build(BuildContext context) => Row(
@@ -345,6 +353,7 @@ class _TopBar extends StatelessWidget {
       // The session's actions, as one glass group.
       PlayerActionCluster(
         children: [
+          ?partyAction,
           if (onLock != null)
             PlayerIconButton(
               icon: ReelishIcons.lock,

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { runDurableObjectAlarm, runInDurableObject } from 'cloudflare:test';
 import { call, signIn, testEnv } from './helpers';
 import { newCode } from '../src/watch-party';
-import { closeCodes, emptyGraceMs, hostGraceMs, participantId, type WatchPartyRoom } from '../src/party-room';
+import { closeCodes, emptyGraceMs, hostGraceMs, participantId, presenceCheckMs, staleSocketMs, type WatchPartyRoom } from '../src/party-room';
 
 type ErrorBody = { error: { code: string } };
 const codeOf = async (response: Response) => ((await response.json()) as ErrorBody).error.code;
@@ -423,6 +423,130 @@ describe('Watch party rooms', () => {
     const response = await create(session.accessToken, { content: movie });
     expect(response.status).toBe(401);
     expect(await codeOf(response)).toBe('session_revoked');
+  });
+
+  it('tells the app what it supports beyond playback', async () => {
+    const { code, token } = await host();
+    const client = await connect(token, code);
+    expect(client.messages[0].features).toEqual(['reactions', 'chat']);
+  });
+
+  it('relays reactions to the others, drops a flood quietly and rejects unknown ones', async () => {
+    const { code, token } = await host();
+    const hostClient = await connect(token, code);
+    const guest = await connect((await signIn()).session.accessToken, code);
+    const hostPid = (hostClient.messages[0].you as { pid: string }).pid;
+
+    hostClient.send({ t: 'react', emoji: 'laugh' });
+    const reaction = await guest.next('reaction');
+    expect(reaction).toEqual({ t: 'reaction', pid: hostPid, emoji: 'laugh' });
+
+    // A burst of 4, then one a second: the rest never reach anyone, and
+    // the sender is neither answered nor disconnected.
+    for (let i = 0; i < 10; i++) hostClient.send({ t: 'react', emoji: 'fire' });
+    hostClient.send({ t: 'status', state: 'ready' });
+    await guest.next('participants', (m) =>
+      (m.participants as { status: string }[]).some((p) => p.status === 'ready'));
+    // The first plus what is left of the burst (one more if a second passed).
+    const relayed = guest.messages.filter((m) => m.t === 'reaction').length;
+    expect(relayed).toBeGreaterThanOrEqual(4);
+    expect(relayed).toBeLessThanOrEqual(5);
+    expect(hostClient.messages.filter((m) => m.t === 'reaction')).toHaveLength(0);
+    expect(hostClient.messages.filter((m) => m.t === 'error')).toHaveLength(0);
+    expect(hostClient.closed).toBeNull();
+
+    guest.send({ t: 'react', emoji: '<script>' });
+    expect((await guest.next('error')).code).toBe('invalid_message');
+  });
+
+  it('relays chat to everyone under the sender\'s own name, cleaned and capped', async () => {
+    const { code, token } = await host();
+    const hostClient = await connect(token, code);
+    const guest = await connect((await signIn()).session.accessToken, code);
+    const guestPid = (guest.messages[0].you as { pid: string }).pid;
+    guest.send({ t: 'hello', name: 'Sam', avatar: null });
+    await hostClient.next('participants', (m) =>
+      (m.participants as { name: string }[]).some((p) => p.name === 'Sam'));
+
+    // Claiming another participant's id or name changes nothing.
+    guest.send({ t: 'chat', id: 'm-1', text: '  hi‮  there\n', pid: 'host', name: 'Host' });
+    const line = await hostClient.next('chat');
+    expect(line).toMatchObject({ t: 'chat', id: 'm-1', pid: guestPid, name: 'Sam', text: 'hi there' });
+    expect(typeof line.at).toBe('number');
+    // The sender hears it too: its receipt, in the room's order.
+    expect((await guest.next('chat')).id).toBe('m-1');
+
+    guest.send({ t: 'chat', text: 'x'.repeat(500) });
+    const long = await hostClient.next('chat', (m) => m.id === undefined);
+    expect((long.text as string).length).toBe(300);
+
+    guest.send({ t: 'chat', text: '   ' });
+    expect((await guest.next('error')).code).toBe('invalid_message');
+  });
+
+  it('refuses chat beyond its budget without closing the socket', async () => {
+    const { code, token } = await host();
+    const client = await connect(token, code);
+    for (let i = 0; i < 8; i++) client.send({ t: 'chat', text: `line ${i}` });
+    expect((await client.next('error')).code).toBe('chat_rate_limited');
+    expect(client.messages.filter((m) => m.t === 'chat').length).toBeLessThanOrEqual(5);
+    expect(client.closed).toBeNull();
+  });
+
+  it('a host whose connection vanished without closing is found and handed over', async () => {
+    const { code, token, account } = await host();
+    const hostClient = await connect(token, code);
+    const guest = await connect((await signIn()).session.accessToken, code);
+    const guestPid = (guest.messages[0].you as { pid: string }).pid;
+    // The host's pings stopped long ago; the guest's are recent.
+    await runInDurableObject(stub(code), async (instance: WatchPartyRoom) => {
+      const ctx = (instance as unknown as { ctx: DurableObjectState }).ctx;
+      ctx.getWebSocketAutoResponseTimestamp = (ws: WebSocket) => {
+        const a = ws.deserializeAttachment() as { userId: string };
+        return a.userId === account.user.id ? new Date(Date.now() - staleSocketMs - 1000) : new Date();
+      };
+    });
+    await runDurableObjectAlarm(stub(code));
+    expect((await hostClient.waitClosed()).code).toBe(closeCodes.stale);
+    await guest.next('participants', (m) => m.hostConnected === false);
+    expect(guest.closed).toBeNull();
+
+    // After the grace, the guest hosts.
+    await runInDurableObject(stub(code), async (instance: WatchPartyRoom, state) => {
+      const room = (await state.storage.get<{ hostLeftAt: number }>('room'))!;
+      await state.storage.put('room', { ...room, hostLeftAt: Date.now() - hostGraceMs - 1 });
+      (instance as unknown as { room: undefined }).room = undefined;
+    });
+    await runDurableObjectAlarm(stub(code));
+    await guest.next('room', (m) => (m.room as { host: { pid: string } }).host.pid === guestPid);
+  });
+
+  it('checks presence while anyone is connected, not only at the end of the room', async () => {
+    const { code, token } = await host();
+    await connect(token, code);
+    await runInDurableObject(stub(code), async (_: WatchPartyRoom, state) => {
+      const alarm = await state.storage.getAlarm();
+      expect(alarm).not.toBeNull();
+      expect(alarm! - Date.now()).toBeLessThanOrEqual(presenceCheckMs + 1000);
+    });
+  });
+
+  it('serves a fixed invitation page that never asks the room', async () => {
+    const response = await call('/api/v1/join/12345678');
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Type')).toContain('text/html');
+    expect(response.headers.get('Content-Security-Policy')).toContain("default-src 'none'");
+    const html = await response.text();
+    expect(html).toContain('href="reelish://party/12345678"');
+    expect(html).toContain('1234 5678');
+    // No room was created or woken for it.
+    await runInDurableObject(stub('12345678'), async (_: WatchPartyRoom, state) => {
+      expect(await state.storage.get('room')).toBeUndefined();
+    });
+
+    const bad = await call('/api/v1/join/%3Cscript%3E');
+    expect(bad.status).toBe(404);
+    expect(await bad.text()).not.toContain('<script>');
   });
 
   it('request logs never carry the party code', async () => {

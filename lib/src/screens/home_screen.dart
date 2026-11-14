@@ -80,6 +80,7 @@ import 'profile_screen.dart';
 import 'watch_party/create_party_screen.dart';
 import 'watch_party/join_party_screen.dart';
 import 'watch_party/party_launcher.dart';
+import '../watch_party/party_links.dart';
 import '../watch_party/party_models.dart';
 import '../widgets/brand_logo.dart';
 import '../widgets/avatar_frame.dart';
@@ -292,6 +293,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _providerPlugins.addListener(_onPluginChange);
     PartyPlayerLauncher.open = _openPartyTitle;
     SocialTitles.open = _showDetails;
+    // Watch party invitations: Home exists only once someone is signed in.
+    PartyLinks.pending.addListener(_openPartyLink);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _openPartyLink());
+    unawaited(PartyLinks.start());
     _startSpotlightTimer();
     _start();
     unawaited(_loadFavorites());
@@ -1280,6 +1285,23 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (open == true && mounted) onOpenPlugins();
   }
 
+  /// An invitation link: Join a party with its code filled in. The room is
+  /// looked up and the viewer still chooses to join.
+  void _openPartyLink() {
+    if (!mounted || PartyLinks.pending.value == null) return;
+    final code = PartyLinks.take();
+    if (code == null) return;
+    unawaited(
+      Navigator.push(
+        context,
+        AppPageRoute<void>(
+          context: context,
+          builder: (_) => JoinPartyScreen(initialCode: code),
+        ),
+      ),
+    );
+  }
+
   void _openJoinParty() => unawaited(
     Navigator.push(
       context,
@@ -1374,6 +1396,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       PartyPlayerLauncher.open = null;
     }
     if (SocialTitles.open == _showDetails) SocialTitles.open = null;
+    PartyLinks.pending.removeListener(_openPartyLink);
     _services.dispose();
     for (final timer in _gateTimers.values) {
       timer.cancel();

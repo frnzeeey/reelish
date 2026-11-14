@@ -77,6 +77,26 @@ bool FlutterWindow::OnCreate() {
         }
       });
 
+  links_channel_ =
+      std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
+          flutter_controller_->engine()->messenger(), "reelish/links",
+          &flutter::StandardMethodCodec::GetInstance());
+  links_channel_->SetMethodCallHandler(
+      [this](const flutter::MethodCall<flutter::EncodableValue>& call,
+             std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>>
+                 result) {
+        if (call.method_name() == "initialLink") {
+          if (launch_link_.empty()) {
+            result->Success();
+          } else {
+            result->Success(flutter::EncodableValue(launch_link_));
+            launch_link_.clear();
+          }
+        } else {
+          result->NotImplemented();
+        }
+      });
+
   app_update_channel_ = std::make_unique<AppUpdateChannel>(
       flutter_controller_->engine()->messenger(), GetHandle());
   gamepad_channel_ = std::make_unique<GamepadChannel>(
@@ -100,6 +120,7 @@ bool FlutterWindow::OnCreate() {
 void FlutterWindow::OnDestroy() {
   // Placement is saved on WM_CLOSE: by now the window handle is gone.
   window_channel_ = nullptr;
+  links_channel_ = nullptr;
   app_update_channel_ = nullptr;
   gamepad_channel_ = nullptr;
   if (flutter_controller_) {
@@ -204,6 +225,23 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
     case WM_CLOSE:
       SavePlacement();
       break;
+    case WM_COPYDATA: {
+      // An invitation opened while Reelish was already running (main.cpp).
+      const auto* data = reinterpret_cast<const COPYDATASTRUCT*>(lparam);
+      if (data == nullptr || data->dwData != kPartyLinkMessage) break;
+      if (data->lpData != nullptr && data->cbData > 0 &&
+          data->cbData <= kMaxPartyLinkLength && links_channel_) {
+        std::string link(static_cast<const char*>(data->lpData),
+                         data->cbData);
+        if (IsPartyLink(link)) {
+          if (::IsIconic(hwnd)) ::ShowWindow(hwnd, SW_RESTORE);
+          ::SetForegroundWindow(hwnd);
+          links_channel_->InvokeMethod(
+              "link", std::make_unique<flutter::EncodableValue>(link));
+        }
+      }
+      return TRUE;
+    }
     case WM_GETMINMAXINFO: {
       const double scale = FlutterDesktopGetDpiForHWND(hwnd) / 96.0;
       auto* info = reinterpret_cast<MINMAXINFO*>(lparam);

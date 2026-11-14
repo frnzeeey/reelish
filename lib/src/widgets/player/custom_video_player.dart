@@ -45,6 +45,7 @@ import 'content_advisory_overlay.dart';
 import 'episode_panel.dart';
 import 'external_cue_clock.dart';
 import 'gesture_touch_layer.dart';
+import 'party_activity.dart';
 import 'party_badge.dart';
 import 'paused_overlay.dart';
 import 'player_controls.dart';
@@ -1834,6 +1835,13 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
   }
 
   /// Keeps controls up while a sheet is open; playback continues behind it.
+  /// Watch party only: reactions and chat in a player sheet.
+  Future<void> _openPartySocial() async {
+    final party = _party?.party;
+    if (party == null) return;
+    await _withSheet(() => PartySocialSheet.show(context, party));
+  }
+
   Future<T> _withSheet<T>(Future<T> Function() open) async {
     _sheetsOpen++;
     _hide?.cancel();
@@ -3717,6 +3725,12 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
                       ? () => unawaited(_openEpisodes())
                       : null,
                   onSettings: _settings,
+                  partyAction: _party == null
+                      ? null
+                      : PartyChatButton(
+                          party: _party!.party,
+                          onPressed: _openPartySocial,
+                        ),
                   // TV: no rotation and no screen lock. Picture in picture
                   // only where the device supports it (never on desktop).
                   onPip: !DeviceCapabilities.current.supportsPictureInPicture
@@ -3883,6 +3897,14 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
                     sync: _party!,
                     controlsVisible: _controlsVisible,
                   ),
+                ),
+              ),
+            // 9. Others' reactions and new chat lines; never takes taps.
+            if (_party != null)
+              Positioned.fill(
+                child: PartyActivityLayer(
+                  party: _party!.party,
+                  topInset: MediaQuery.paddingOf(context).top + 110,
                 ),
               ),
           ],

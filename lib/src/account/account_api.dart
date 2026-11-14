@@ -373,6 +373,14 @@ class AccountApi {
       _send('GET', '/party/$code', token: accessToken);
 
   /// The room's WebSocket address (wss://), or null without a service.
+  /// The invitation page for [code]: a fixed page on the Reelish API that
+  /// opens the app (`reelish://party/{code}`) and shows the code.
+  Uri? partyInvite(String code) {
+    final base = baseUrl;
+    if (base == null) return null;
+    return base.replace(path: '${base.path}/api/v1/join/$code');
+  }
+
   Uri? partySocket(String code) {
     final base = baseUrl;
     if (base == null) return null;

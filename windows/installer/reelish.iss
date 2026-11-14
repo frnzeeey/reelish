@@ -84,6 +84,14 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 [Files]
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
+[Registry]
+; Watch party invitations (reelish://party/12345678) open Reelish, which only
+; fills in the code: joining still asks. Removed on uninstall.
+Root: HKA; Subkey: "Software\Classes\reelish"; ValueType: string; ValueName: ""; ValueData: "URL:Reelish watch party"; Flags: uninsdeletekey
+Root: HKA; Subkey: "Software\Classes\reelish"; ValueType: string; ValueName: "URL Protocol"; ValueData: ""
+Root: HKA; Subkey: "Software\Classes\reelish\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: """{app}\Reelish.exe"",0"
+Root: HKA; Subkey: "Software\Classes\reelish\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\Reelish.exe"" ""%1"""
+
 [Icons]
 Name: "{autoprograms}\Reelish"; Filename: "{app}\Reelish.exe"
 Name: "{autodesktop}\Reelish"; Filename: "{app}\Reelish.exe"; Tasks: desktopicon

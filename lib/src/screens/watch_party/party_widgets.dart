@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../../theme/reelish_icons.dart';
 
 import '../../account/account_api.dart';
+import '../../account/backend_config.dart';
 import '../../account/profile_controller.dart';
 import '../../models/tv_season.dart';
 import '../../theme/design_tokens.dart';
@@ -244,6 +245,17 @@ class PartyCodeBlock extends StatelessWidget {
   /// The title, for the invitation text.
   final String title;
 
+  /// The message to share: the link opens Reelish where it is installed
+  /// (the page shows the code too); the code works everywhere, TVs included.
+  String _invitation() {
+    final link = AccountApi(baseUrl: BackendConfig.apiUrl).partyInvite(code);
+    final typed = 'open Join a party and enter ${formatPartyCode(code)}';
+    return link == null
+        ? 'Watch $title with me on Reelish. Open Join a party and enter '
+              '${formatPartyCode(code)}.'
+        : 'Watch $title with me on Reelish: $link\nOr $typed.';
+  }
+
   Future<void> _copy(BuildContext context, String text, String done) async {
     await Clipboard.setData(ClipboardData(text: text));
     if (!context.mounted) return;
@@ -303,8 +315,7 @@ class PartyCodeBlock extends StatelessWidget {
             OutlinedButton.icon(
               onPressed: () => _copy(
                 context,
-                'Watch $title with me on Reelish. Open Join a party and '
-                    'enter ${formatPartyCode(code)}.',
+                _invitation(),
                 'Invitation copied. Paste it in a message.',
               ),
               icon: const Icon(ReelishIcons.mailSend),

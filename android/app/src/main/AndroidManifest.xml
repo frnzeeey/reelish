@@ -122,6 +122,15 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- Watch party invitations: reelish://party/12345678, opened from
+                 the invitation page. The app only fills in the code; joining
+                 still asks (PartyLinks, JoinPartyScreen). -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="reelish" android:host="party"/>
+            </intent-filter>
         </activity>
         <!-- Launcher entries, one per app icon preset; exactly one is enabled
              (AppIconSwitcher.kt). The default keeps the component name of

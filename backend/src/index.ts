@@ -38,7 +38,7 @@ const version = '/api/v1';
  */
 export function maskPath(path: string): string {
   return path
-    .replace(/^(\/api\/v1\/party\/)[^/]+/, '$1:code')
+    .replace(/^(\/api\/v1\/(?:party|join)\/)[^/]+/, '$1:code')
     .replace(/^(\/api\/v1\/social\/(?:friends|requests|blocks)\/)[^/]+/, '$1:handle')
     .replace(/^(\/api\/v1\/social\/friends\/:handle\/collections\/)[^/]+/, '$1:id')
     .replace(/^(\/api\/v1\/social\/recommendations\/)(?!sent$|read$)[^/]+$/, '$1:id');
@@ -114,6 +114,12 @@ async function route(request: Request, env: Env, requestId: string): Promise<Res
     // Buy Me a Coffee's signed notifications; no session involved.
     await limit(env.AUTH_LIMITER, `bmc:${ip}`);
     return supporters.buyMeACoffeeWebhook(env, request, requestId);
+  }
+  const join = /^\/join\/([^/]+)$/.exec(rest);
+  if (join && method === 'GET') {
+    // A watch party invitation: a fixed page that never asks the room.
+    await limit(env.PARTY_LIMITER, `invite-ip:${ip}`);
+    return party.invitePage(join[1]);
   }
   if (post('/auth/refresh')) {
     await limit(env.AUTH_LIMITER, `refresh:${ip}`);

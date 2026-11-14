@@ -137,6 +137,24 @@ class ReelishActivity : FlutterActivity() {
         }
     }
 
+    /** Watch party invitation links (reelish://party/…), for Dart's PartyLinks. */
+    private var linkChannel: MethodChannel? = null
+    private var launchLink: String? = null
+
+    /** The invitation in [intent], or null; Dart checks the code itself. */
+    private fun partyLink(intent: Intent?): String? {
+        val data = intent?.data ?: return null
+        if (intent.action != Intent.ACTION_VIEW) return null
+        if (data.scheme != "reelish" || data.host != "party") return null
+        return data.toString().takeIf { it.length <= 64 }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        partyLink(intent)?.let { linkChannel?.invokeMethod("link", it) }
+    }
+
     override fun onDestroy() {
         pipReceiver?.let { unregisterReceiver(it) }
         pipReceiver = null
@@ -162,6 +180,19 @@ class ReelishActivity : FlutterActivity() {
                 registerReceiver(receiver, filter)
             }
             pipReceiver = receiver
+        }
+        // The link the app was opened with is handed over once.
+        launchLink = partyLink(intent)
+        val links = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "reelish/links")
+        linkChannel = links
+        links.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "initialLink" -> {
+                    result.success(launchLink)
+                    launchLink = null
+                }
+                else -> result.notImplemented()
+            }
         }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, deviceChannelName).setMethodCallHandler { call, result ->
             when (call.method) {

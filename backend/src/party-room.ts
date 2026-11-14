@@ -5,7 +5,8 @@
 //
 // Storage is written only when something changes (create, join, a play,
 // pause, seek or episode, a settings or host change); host heartbeats stay
-// in memory unless the host has drifted from the stored timeline.
+// in memory unless the host has drifted from the stored timeline. Reactions
+// and chat are relayed and never stored.
 
 import { DurableObject } from 'cloudflare:workers';
 import type { Env } from './env';
@@ -86,6 +87,11 @@ interface Attachment {
   refilledAt: number;
   strikes: number;
   timeChecks: number;
+  /** Reaction and chat budgets; missing on sockets from before them. */
+  reactTokens?: number;
+  reactAt?: number;
+  chatTokens?: number;
+  chatAt?: number;
 }
 
 export interface CreateRoom {
@@ -123,6 +129,26 @@ const bucketSize = 20;
 const refillPerMs = 2 / 1000;
 const maxStrikes = 5;
 const maxTimeChecks = 8;
+/**
+ * Apps send a text `ping` every 25 seconds, answered by the runtime without
+ * waking the room. A socket whose last one is older than this has gone (a
+ * network that died without closing), and is closed so it neither keeps a
+ * place nor keeps a vanished host in charge. Sockets that never pinged
+ * (older apps) are left to the runtime.
+ */
+export const staleSocketMs = 2 * 60 * 1000;
+/** While anyone is connected, the room looks for gone sockets this often. */
+export const presenceCheckMs = 2 * 60 * 1000;
+/** Reactions: a burst of 4, then one a second; more are dropped. */
+const reactBurst = 4;
+const reactPerMs = 1 / 1000;
+/** Chat: a burst of 5, then one every 2 seconds; more are refused. */
+const chatBurst = 5;
+const chatPerMs = 1 / 2000;
+export const maxChatChars = 300;
+export const reactions = new Set(['laugh', 'love', 'wow', 'sad', 'fire', 'clap']);
+/** What this room supports beyond playback; apps offer only these. */
+const features = ['reactions', 'chat'];
 
 /** Close codes the app understands. */
 export const closeCodes = {
@@ -130,6 +156,8 @@ export const closeCodes = {
   replaced: 4001,
   removed: 4003,
   notFound: 4004,
+  /** Stopped answering pings; the app reconnects if it is still there. */
+  stale: 4008,
   full: 4009,
   rateLimited: 4029,
 } as const;
@@ -236,7 +264,10 @@ export class WatchPartyRoom extends DurableObject<Env> {
   }
 
   async check(userId: string): Promise<JoinCheck> {
-    return this.verdict(await this.load(), userId);
+    const room = await this.load();
+    // A gone socket must not hold the place this join needs.
+    if (room) await this.sweep(room);
+    return this.verdict(room, userId);
   }
 
   private verdict(room: RoomRecord | null, userId: string): JoinCheck {
@@ -261,6 +292,7 @@ export class WatchPartyRoom extends DurableObject<Env> {
       return new Response('Expected a WebSocket.', { status: 426 });
     }
     const loaded = await this.load();
+    if (loaded) await this.sweep(loaded);
     const pid = loaded ? await participantId(loaded.code, userId) : '';
     // Nothing is awaited from the check until the socket is accepted with
     // its identity, so simultaneous joins cannot overfill the room and no
@@ -305,7 +337,13 @@ export class WatchPartyRoom extends DurableObject<Env> {
       await this.save(room);
       await this.schedule(room);
     }
-    this.send(server, { t: 'welcome', you: { pid: attachment.pid }, room: this.snapshot(room), serverTime: now });
+    this.send(server, {
+      t: 'welcome',
+      you: { pid: attachment.pid },
+      room: this.snapshot(room),
+      serverTime: now,
+      features,
+    });
     this.broadcastParticipants(room);
     return new Response(null, { status: 101, webSocket: pair[0] });
   }
@@ -347,6 +385,10 @@ export class WatchPartyRoom extends DurableObject<Env> {
         return this.onHeartbeat(room, msg);
       case 'leave':
         return this.onLeave(ws, attachment, room);
+      case 'react':
+        return this.onReact(ws, attachment, msg);
+      case 'chat':
+        return this.onChat(ws, attachment, msg);
     }
     if (!isHost) return this.reject(ws, 'not_allowed');
     switch (msg.t) {
@@ -381,6 +423,7 @@ export class WatchPartyRoom extends DurableObject<Env> {
     if (!room) return;
     const now = Date.now();
     if (now >= room.expiresAt) return this.end('expired');
+    await this.sweep(room);
     const connected = this.connected();
     if (connected.length === 0) {
       const since = room.emptySince ?? now;
@@ -466,6 +509,53 @@ export class WatchPartyRoom extends DurableObject<Env> {
     this.broadcast({ t: 'state', playback: room.playback, serverTime: Date.now() });
   }
 
+  /** A quick emoji for everyone else; relayed, never stored. */
+  private onReact(ws: WebSocket, a: Attachment, msg: Record<string, unknown>) {
+    if (typeof msg.emoji !== 'string' || !reactions.has(msg.emoji)) {
+      return this.strike(ws, a, 'invalid_message');
+    }
+    const now = Date.now();
+    a.reactTokens = Math.min(reactBurst, (a.reactTokens ?? reactBurst) + (now - (a.reactAt ?? now)) * reactPerMs);
+    a.reactAt = now;
+    // Over the budget: dropped quietly. A flood is not worth a reply.
+    if (a.reactTokens < 1) return ws.serializeAttachment(a);
+    a.reactTokens -= 1;
+    ws.serializeAttachment(a);
+    this.broadcast({ t: 'reaction', pid: a.pid, emoji: msg.emoji }, ws);
+  }
+
+  /**
+   * A chat line for everyone, the sender included (that is its delivery
+   * receipt, and gives every app the room's order). Its author is the
+   * socket's own participant; nothing the client sends can name another.
+   * Relayed, never stored: someone who joins later does not see it.
+   */
+  private onChat(ws: WebSocket, a: Attachment, msg: Record<string, unknown>) {
+    const text = typeof msg.text === 'string'
+      ? msg.text.replace(invisible, '').replace(/\s+/g, ' ').trim()
+      : '';
+    if (!text) return this.strike(ws, a, 'invalid_message');
+    const now = Date.now();
+    a.chatTokens = Math.min(chatBurst, (a.chatTokens ?? chatBurst) + (now - (a.chatAt ?? now)) * chatPerMs);
+    a.chatAt = now;
+    if (a.chatTokens < 1) {
+      ws.serializeAttachment(a);
+      return this.reject(ws, 'chat_rate_limited');
+    }
+    a.chatTokens -= 1;
+    ws.serializeAttachment(a);
+    const id = typeof msg.id === 'string' && /^[A-Za-z0-9-]{1,24}$/.test(msg.id) ? msg.id : null;
+    this.broadcast({
+      t: 'chat',
+      pid: a.pid,
+      name: a.name,
+      text: [...text].slice(0, maxChatChars).join(''),
+      at: now,
+      // The sender's own id for the line, so its app can match the echo.
+      ...(id ? { id } : {}),
+    });
+  }
+
   private async onStart(a: Attachment, room: RoomRecord) {
     room.phase = 'watching';
     room.playback = { status: 'paused', positionMs: 0, rate: 1, at: Date.now(), seq: room.playback.seq + 1, by: a.pid };
@@ -542,8 +632,8 @@ export class WatchPartyRoom extends DurableObject<Env> {
   }
 
   /** After a socket closed: host grace, empty-room timer, the new list. */
-  private async departed(ws: WebSocket) {
-    const room = await this.load();
+  private async departed(ws: WebSocket, loaded?: RoomRecord) {
+    const room = loaded ?? await this.load();
     const gone = ws.deserializeAttachment() as Attachment | null;
     if (!room || !gone) return;
     const connected = this.connected(ws);
@@ -570,7 +660,30 @@ export class WatchPartyRoom extends DurableObject<Env> {
       next = Math.min(next, room.emptySince + (room.everJoined ? emptyGraceMs : unjoinedGraceMs));
     }
     if (room.hostLeftAt !== null) next = Math.min(next, room.hostLeftAt + hostGraceMs);
+    // Someone is here: check now and then that they still are.
+    if (this.connected().length > 0) next = Math.min(next, Date.now() + presenceCheckMs);
     await this.ctx.storage.setAlarm(Math.max(next, Date.now() + 1000));
+  }
+
+  /**
+   * Closes sockets whose pings stopped (see [staleSocketMs]) and treats them
+   * as departed: a vanished host starts the host grace, an emptied room its
+   * empty timer. A closed socket's own close event may never come.
+   */
+  private async sweep(room: RoomRecord): Promise<void> {
+    const now = Date.now();
+    const gone: WebSocket[] = [];
+    for (const socket of this.ctx.getWebSockets()) {
+      if (socket.readyState !== WebSocket.OPEN) continue;
+      const last = this.ctx.getWebSocketAutoResponseTimestamp(socket);
+      if (last && now - last.getTime() > staleSocketMs) {
+        this.closeQuietly(socket, closeCodes.stale, 'Stopped responding.');
+        gone.push(socket);
+      }
+    }
+    if (gone.length === 0) return;
+    log('info', 'party.stale_sockets', { count: gone.length });
+    for (const socket of gone) await this.departed(socket, room);
   }
 
   private async end(reason: 'host' | 'expired' | 'empty' | 'replaced') {

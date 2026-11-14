@@ -12,6 +12,7 @@ import '../../watch_party/party_models.dart';
 import '../../watch_party/watch_party_controller.dart';
 import '../../widgets/account_badges.dart';
 import '../../widgets/settings/settings_components.dart';
+import '../../widgets/watch_party/party_chat_panel.dart';
 import 'party_desktop.dart';
 import 'party_launcher.dart';
 import 'party_widgets.dart';
@@ -214,6 +215,24 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
     ],
   );
 
+  /// Reactions and chat, when the room relays them.
+  Widget? _chat({required bool tv}) {
+    if (!_party.supportsChat && !_party.supportsReactions) return null;
+    return SettingsSection(
+      label: 'REACTIONS AND CHAT',
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(AppSpace.md),
+          child: PartyChatPanel(
+            party: _party,
+            colors: PartyChatColors.page(),
+            messagesHeight: tv ? 180 : 220,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _roomSettings(PartyRoom room) => SettingsSection(
     label: 'ROOM',
     children: [
@@ -256,6 +275,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                 children: [PartyContentCard(content: room.content)],
               ),
               _people(room),
+              ?_chat(tv: DeviceCapabilities.isTv),
               if (_party.isHost) ...[
                 _roomSettings(room),
                 SettingsSection(children: [_EndPartyTile(onTap: _end)]),
@@ -294,6 +314,16 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
                         padding: const EdgeInsets.all(AppSpace.xs),
                         child: PartyContentCard(content: room.content),
                       ),
+                      if (_party.supportsChat || _party.supportsReactions) ...[
+                        const SizedBox(height: AppSpace.md),
+                        PartyDesktopCard(
+                          padding: const EdgeInsets.all(AppSpace.md),
+                          child: PartyChatPanel(
+                            party: _party,
+                            colors: PartyChatColors.page(),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),

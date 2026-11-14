@@ -25,7 +25,12 @@ class JoinPartyScreen extends StatefulWidget {
     this.preview = previewWatchParty,
     this.open,
     this.start = _startParty,
+    this.initialCode,
   });
+
+  /// From an invitation link: filled in and looked up at once; joining
+  /// still waits for the viewer.
+  final String? initialCode;
 
   /// Looks a code up (replaced in tests).
   final Future<PartyPreview> Function(String code) preview;
@@ -51,6 +56,18 @@ class _JoinPartyScreenState extends State<JoinPartyScreen> {
   bool _looking = false;
   bool _joining = false;
   String? _lookedUp;
+
+  @override
+  void initState() {
+    super.initState();
+    final code = partyCodeFrom(widget.initialCode ?? '');
+    if (code != null) {
+      _field.text = code;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _lookUp(code);
+      });
+    }
+  }
 
   @override
   void dispose() {
