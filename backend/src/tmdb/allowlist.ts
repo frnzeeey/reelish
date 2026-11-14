@@ -22,6 +22,7 @@ const date = pattern(/^\d{4}-\d{2}-\d{2}$/);
 const number = pattern(/^\d{1,5}(\.\d{1,2})?$/);
 const idList = pattern(/^\d{1,6}([|,]\d{1,6}){0,20}$/);
 const language = pattern(/^[a-z]{2}(-[A-Z]{2})?$/);
+const year = pattern(/^(18|19|20|21)\d{2}$/);
 const query: Validator = (value) =>
   value.trim().length > 0 && value.length <= 200 && !/[\u0000-\u001f\u007f]/.test(value);
 
@@ -89,6 +90,28 @@ const routes: Route[] = [
   { path: new RegExp(`^/movie/${id}/release_dates$`), params: {}, cache: 'metadata' },
   { path: new RegExp(`^/tv/${id}/content_ratings$`), params: {}, cache: 'metadata' },
   { path: /^\/search\/multi$/, params: { query, page }, cache: 'search', required: ['query'] },
+  // Universal Search (lib/src/search/): one category at a time, its pages,
+  // and the single-year filter TMDB's search accepts.
+  {
+    path: /^\/search\/movie$/,
+    params: { query, page, primary_release_year: year },
+    cache: 'search',
+    required: ['query'],
+  },
+  {
+    path: /^\/search\/tv$/,
+    params: { query, page, first_air_date_year: year },
+    cache: 'search',
+    required: ['query'],
+  },
+  { path: /^\/search\/(person|collection)$/, params: { query, page }, cache: 'search', required: ['query'] },
+  // A person's page and a movie collection's page.
+  {
+    path: new RegExp(`^/person/${id}$`),
+    params: { append_to_response: oneOf('combined_credits') },
+    cache: 'metadata',
+  },
+  { path: new RegExp(`^/collection/${id}$`), params: {}, cache: 'metadata' },
   {
     path: /^\/find\/tt\d{5,10}$/,
     params: { external_source: oneOf('imdb_id') },

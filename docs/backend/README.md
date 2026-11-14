@@ -298,6 +298,11 @@ gateway accepts exactly these requests (paths relative to TMDB v3):
 | `/{movie,tv}/{id}/images` | `include_image_language` | 24 h |
 | `/tv/{id}/season/{n}` | — | 24 h |
 | `/search/multi` | `query` (required), `page` | 3 min |
+| `/search/movie` | `query` (required), `page`, `primary_release_year` | 3 min |
+| `/search/tv` | `query` (required), `page`, `first_air_date_year` | 3 min |
+| `/search/{person,collection}` | `query` (required), `page` | 3 min |
+| `/person/{id}` | `append_to_response=combined_credits` | 24 h |
+| `/collection/{id}` | — | 24 h |
 | `/find/{imdb id}` | `external_source=imdb_id` | 7 days |
 
 `language` is accepted everywhere. Any other path, parameter, repeated

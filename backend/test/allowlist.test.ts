@@ -39,13 +39,36 @@ describe('TMDB allowlist', () => {
     refused('/movie/550/release_dates', 'page=2');
     ok('/search/multi', 'query=the%20bear&page=2');
     ok('/find/tt0944947', 'external_source=imdb_id');
+    // Universal Search.
+    ok('/search/movie', 'query=dune&page=2&primary_release_year=2021');
+    ok('/search/tv', 'query=the%20bear&first_air_date_year=2022');
+    ok('/search/person', 'query=greta%20gerwig&page=3');
+    ok('/search/collection', 'query=star%20wars');
+    ok('/person/287', 'append_to_response=combined_credits');
+    ok('/person/287');
+    ok('/collection/10');
+  });
+
+  it('keeps Universal Search to its own parameters', () => {
+    refused('/search/movie', 'query=dune&year=21');
+    refused('/search/movie', 'query=dune&primary_release_year=1700');
+    refused('/search/movie', 'query=dune&include_adult=true');
+    refused('/search/tv', 'query=x&primary_release_year=2021');
+    refused('/search/person', 'query=x&primary_release_year=2021');
+    refused('/search/collection', 'page=2');
+    refused('/search/keyword', 'query=x');
+    refused('/person/287', 'append_to_response=images,tagged_images');
+    refused('/person/287/images');
+    refused('/person/abc');
+    refused('/collection/10', 'page=2');
+    refused('/collection/10/images');
   });
 
   it('refuses unlisted routes', () => {
     refused('/account');
     refused('/authentication/token/new');
     refused('/movie/550/account_states');
-    refused('/person/287');
+    refused('/person/287/movie_credits');
     refused('/movie/abc');
     refused('/movie/0');
     refused('/list/1');

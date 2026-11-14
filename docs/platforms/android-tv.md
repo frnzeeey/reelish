@@ -21,7 +21,7 @@ To try the TV interface on a phone or a regular emulator:
 | Concern | Location |
 |---|---|
 | Shell and rail | [`tv_home_shell.dart`](../../lib/src/screens/tv/tv_home_shell.dart) (`TvHomeShell`, `TvDestination` from [`app_destination.dart`](../../lib/src/navigation/app_destination.dart)) |
-| Pages | [`tv_pages.dart`](../../lib/src/screens/tv/tv_pages.dart): `TvHomePage`, `TvCatalogPage`, `TvSearchPage`, `TvLibraryPage` |
+| Pages | [`tv_pages.dart`](../../lib/src/screens/tv/tv_pages.dart): `TvHomePage`, `TvCatalogPage`, `TvLibraryPage` (Search: `UniversalSearchView`) |
 | Browsing blocks | [`tv_browse.dart`](../../lib/src/screens/tv/tv_browse.dart): `TvBrowseFrame`, `TvMediaRow`, `TvMediaGrid`, `TvFeaturedController` |
 | Details | [`tv_details_screen.dart`](../../lib/src/screens/tv/tv_details_screen.dart) |
 | Focus and remote | [`tv_focus.dart`](../../lib/src/widgets/tv/tv_focus.dart): `TvFocusable`, `TvSafeArea`, `TvPopupFocusObserver`, `TvKeyScroll`, `TvTextEntryDialog`; [`tv_poster_card.dart`](../../lib/src/widgets/tv/tv_poster_card.dart) |

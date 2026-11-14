@@ -118,7 +118,6 @@ class, function and file is in the generated references:
 
 | Component | Type | File location | Responsibility | Platform |
 |---|---|---|---|---|
-| `SearchViewModel` | View model | [`lib/src/viewmodels/search_view_model.dart`](../../lib/src/viewmodels/search_view_model.dart) | Debounced TMDB search for TV and Windows | Android TV, Windows |
 | `SettingsScreen` | Widget | [`lib/src/screens/playback_settings_screen.dart`](../../lib/src/screens/playback_settings_screen.dart) | Phone and TV settings; sub-pages reused on Windows | Shared |
 | `SoftGlassDock` | Widget | [`lib/src/widgets/soft_glass_dock.dart`](../../lib/src/widgets/soft_glass_dock.dart) | Phone and tablet bottom navigation | Android |
 | `SourcePreparer` | Service | [`lib/src/services/source_preparer.dart`](../../lib/src/services/source_preparer.dart) | Validates a source before an engine opens it | Shared |
@@ -141,6 +140,14 @@ class, function and file is in the generated references:
 | `TvFocusable` | Widget | [`lib/src/widgets/tv/tv_focus.dart`](../../lib/src/widgets/tv/tv_focus.dart) | Focusable target with a visible ring | Android TV |
 | `TvHomeShell` | Widget | [`lib/src/screens/tv/tv_home_shell.dart`](../../lib/src/screens/tv/tv_home_shell.dart) | The TV frame: rail and retained pages | Android TV |
 | `TvMediaDetailsScreen` | Widget | [`lib/src/screens/tv/tv_details_screen.dart`](../../lib/src/screens/tv/tv_details_screen.dart) | TV details page | Android TV |
+
+## U
+
+| Component | Type | File location | Responsibility | Platform |
+|---|---|---|---|---|
+| `UniversalSearchController` | Controller | [`lib/src/search/universal_search_controller.dart`](../../lib/src/search/universal_search_controller.dart) | Search for titles, people and collections: debounce, ranking, filters, paging | Shared |
+| `UniversalSearchView` | Widget | [`lib/src/screens/search/universal_search_view.dart`](../../lib/src/screens/search/universal_search_view.dart) | The search page on TV and Windows, full screen on phones | Shared |
+| `PlaybackAvailability` | Service | [`lib/src/search/playback_availability.dart`](../../lib/src/search/playback_availability.dart) | Provider sources for a search result, without playing | Shared |
 
 ## W
 

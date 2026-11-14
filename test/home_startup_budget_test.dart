@@ -3,6 +3,8 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:onfeed/src/screens/search/search_cards.dart';
+import 'package:onfeed/src/screens/search/universal_search_screen.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:onfeed/src/models/app_update.dart';
@@ -16,7 +18,6 @@ import 'package:onfeed/src/services/storage_service.dart';
 import 'package:onfeed/src/services/tmdb_response_cache.dart';
 import 'package:onfeed/src/services/tmdb_service.dart';
 import 'package:onfeed/src/widgets/media_card.dart';
-import 'package:onfeed/src/widgets/poster_image.dart';
 import 'package:onfeed/src/widgets/soft_glass_dock.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -294,40 +295,27 @@ void main() {
     await disposeHome(tester);
   });
 
-  testWidgets('search results fill the screen in columns', (tester) async {
+  testWidgets('Search opens Universal Search, results by kind, and a '
+      'result opens its details page', (tester) async {
     await pumpHome(tester);
     await settle(tester, rounds: 40);
     await tester.tap(find.byTooltip('Search'));
     await settle(tester, rounds: 5);
+    expect(find.byType(UniversalSearchScreen), findsOneWidget);
     await tester.enterText(find.byType(TextField), 'movie');
     await settle(tester, rounds: 40);
-    expect(find.text('Search results'), findsOneWidget);
     expect(urls.where((u) => u.path.endsWith('/search/multi')), isNotEmpty);
-
-    final cards = find.byType(MediaCard);
-    final first = tester.getRect(cards.at(0));
-    final second = tester.getRect(cards.at(1));
-    final third = tester.getRect(cards.at(2));
-    // Two side by side on a 430-wide phone, filling it between the
-    // 18-pixel margins, and the third starts the next line.
-    expect(second.top, first.top);
-    expect(first.left, closeTo(18, .5));
-    expect(second.right, closeTo(430 - 18, .5));
-    expect(third.left, closeTo(18, .5));
-    expect(third.top, greaterThan(first.bottom));
-    // Widened, the artwork keeps the 2:3 poster shape (the caption below it
-    // keeps its height).
+    expect(find.text('Movies'), findsWidgets);
+    final cards = find.byType(SearchTitleCard);
+    expect(cards, findsWidgets);
+    // Posters keep the 2:3 shape.
     final art = tester.getSize(
-      find.descendant(
-        of: cards.at(0),
-        matching: find.byType(PosterPlaceholder),
-      ),
+      find.descendant(of: cards.first, matching: find.byType(AspectRatio)),
     );
-    expect(art.width, closeTo(first.width, .5));
     expect(art.height / art.width, closeTo(1.5, .01));
 
     // A result still opens its details page.
-    await tester.tap(cards.at(0));
+    await tester.tap(cards.first);
     await settle(tester, rounds: 20);
     expect(find.byType(MediaDetailsScreen), findsOneWidget);
     await disposeHome(tester);

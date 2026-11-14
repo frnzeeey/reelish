@@ -75,7 +75,7 @@ centered and works in landscape.
 | Navigation | `SoftGlassDock` (Home, Plugins, Library, Settings) | `TvHomeShell` rail: Home, Movies, Series, Search, My library, Plugins, Settings |
 | Home | `HomeScreen._home()` | `TvHomePage`: browse hero + rows |
 | Movies / Series | category chips | `TvCatalogPage`: paging grid |
-| Search | header field | `TvSearchPage`: TV keyboard, paging grid |
+| Search | header field | `UniversalSearchView`: TV keyboard, results by kind, remote focus |
 | Library | `LibraryScreen` | `TvLibraryPage`: Continue watching, My list, Watch history |
 | Details | `MediaDetailsScreen` | `TvMediaDetailsScreen` |
 | Plugins, Settings | full width | the same screens, limited to a readable width (`TvReadableWidth`, and inside `SettingsPage`) |

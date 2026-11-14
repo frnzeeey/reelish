@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:onfeed/src/screens/search/search_cards.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:onfeed/src/account/account_api.dart';
@@ -287,14 +288,14 @@ void main() {
       await disposeHome(tester);
     });
 
-    testWidgets('searching from a chip shows the results', (tester) async {
+    testWidgets('searching shows the results by kind', (tester) async {
       await pumpHome(tester);
       await tester.tap(find.byTooltip('Search'));
       await settle(tester, rounds: 5);
       await tester.enterText(find.byType(TextField), 'movie');
       await tester.pump(const Duration(milliseconds: 500));
       await settle(tester, rounds: 20);
-      expect(find.text('Search results'), findsOneWidget);
+      expect(find.byType(SearchTitleCard), findsWidgets);
       await disposeHome(tester);
     });
   });

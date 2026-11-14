@@ -724,6 +724,84 @@ class TmdbService {
     return _trendingItems(data['results']);
   }
 
+  /// Universal Search (lib/src/search/): TMDB's raw answers, parsed there.
+  /// All go through the same cache and request queue as everything else.
+
+  /// `/search/multi` as TMDB sent it: movies, series and people mixed, in
+  /// TMDB's order of relevance.
+  Future<Map<String, dynamic>> searchMultiJson(String query, {int page = 1}) =>
+      _get(
+        '/search/multi',
+        params: {'query': query.trim(), if (page > 1) 'page': '$page'},
+        ttl: TmdbCacheTtl.search,
+      );
+
+  /// One category's search: [kind] is `movie`, `tv`, `person` or
+  /// `collection`. [year] narrows movies and series to a release (or first
+  /// air) year, the only filter TMDB's search accepts.
+  Future<Map<String, dynamic>> searchCategoryJson(
+    String kind,
+    String query, {
+    int page = 1,
+    int? year,
+  }) {
+    if (!const {'movie', 'tv', 'person', 'collection'}.contains(kind)) {
+      throw ArgumentError.value(kind, 'kind');
+    }
+    final yearParam = switch (kind) {
+      'movie' => 'primary_release_year',
+      'tv' => 'first_air_date_year',
+      _ => null,
+    };
+    return _get(
+      '/search/$kind',
+      params: {
+        'query': query.trim(),
+        if (page > 1) 'page': '$page',
+        if (yearParam != null && year != null) yearParam: '$year',
+      },
+      ttl: TmdbCacheTtl.search,
+    );
+  }
+
+  /// Browsing by filters with no words: `/discover/movie` or `/discover/tv`
+  /// with [params] (genres, dates, rating), most popular first.
+  Future<Map<String, dynamic>> discoverJson(
+    String type,
+    Map<String, String> params, {
+    int page = 1,
+  }) {
+    if (type != 'movie' && type != 'tv') {
+      throw ArgumentError.value(type, 'type');
+    }
+    return _get(
+      '/discover/$type',
+      params: {
+        ...params,
+        'sort_by': 'popularity.desc',
+        if (page > 1) 'page': '$page',
+      },
+      ttl: TmdbCacheTtl.catalog,
+    );
+  }
+
+  /// A person with everything they appeared in or worked on.
+  Future<Map<String, dynamic>> personJson(int id) => _get(
+    '/person/$id',
+    params: const {'append_to_response': 'combined_credits'},
+    ttl: TmdbCacheTtl.metadata,
+  );
+
+  /// A movie collection (a franchise) and its films.
+  Future<Map<String, dynamic>> collectionJson(int id) =>
+      _get('/collection/$id', ttl: TmdbCacheTtl.metadata);
+
+  /// The movies and series in a TMDB `results` (or credits) list, as the
+  /// catalog parses them: bad records skipped, each title once. [type]
+  /// (`movie` or `tv`) is used for entries without a `media_type`.
+  static List<MediaItem> titlesFrom(Object? results, {String? type}) =>
+      _mediaItems(results, type);
+
   Future<MediaItem> resolveIds(
     MediaItem item, {
     bool forceRefresh = false,

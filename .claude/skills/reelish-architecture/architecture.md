@@ -9,7 +9,7 @@ relative to the repository root.
 |---|---|---|
 | Entry | `lib/main.dart` | `ReelishApp`, startup screen, first-run consent |
 | Services container | `lib/src/app/app_services.dart` | `AppServices`, owned by Home; tests pass their own `tmdb`/`storage` |
-| ViewModels | `lib/src/viewmodels/` | `ChangeNotifier`s shared by all three UIs: `HomeViewModel`, `DetailsViewModel`, `LibraryViewModel`, `SearchViewModel`; `TvCatalog` (`home_catalog.dart`) is Home's data handed to TV and Windows pages |
+| ViewModels | `lib/src/viewmodels/` | `ChangeNotifier`s shared by all three UIs: `HomeViewModel`, `DetailsViewModel`, `LibraryViewModel`; `TvCatalog` (`home_catalog.dart`) is Home's data handed to TV and Windows pages |
 | Services | `lib/src/services/` | TMDB, storage, providers, playback, updates, settings |
 | Models | `lib/src/models/` | `MediaItem`, `StreamSource`, `PlayableSource`, `EpisodeProgress`/`SeriesProgress`, `ProviderPlugin`/`ProviderRepository`, … |
 | Phone UI | `lib/src/screens/`, `lib/src/widgets/` | `HomeScreen` tabs + `SoftGlassDock` |

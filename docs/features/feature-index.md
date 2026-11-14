@@ -19,7 +19,7 @@ state and data live, and which tests cover it. Tests are in
 | [Player controls](#player-controls) | `PlayerControlsOverlay` | `PlayerProgressBar`, `ReelishPausedOverlay`, `PlayerLockOverlay`, `GestureTouchLayer` |
 | [Plugin Library](#plugin-library) | `PluginLibraryScreen`, `PluginLibraryRepository` | `PluginLibraryService`, `PluginLibraryQuery`, `lib/src/widgets/plugin_library/` |
 | [Provider repositories](#provider-repositories) | `ProviderPluginService` | `PluginsScreen`, `DesktopPluginsPage`, `ProviderInstallerModal` |
-| [Search](#search) | `SearchViewModel`, `HomeScreen._loadSearch` | `TvSearchPage`, `DesktopSearchPage`, `TmdbService` |
+| [Search](#search) | `UniversalSearchController`, `PlaybackAvailability` | `UniversalSearchView`, `TmdbService`, `ProviderPluginService.streams` |
 | [Settings](#settings) | `SettingsScreen`, `DesktopSettingsPage` | `PlaybackSettingsController`, `AccentSettingsController`, `SubtitleAddonsScreen` |
 | [Source selection](#source-selection) | `StreamDiscovery`, `StreamSelectorSheet` | `PlaybackSettings` (automatic selection, reuse last link), `isPlaybackSourceAllowed` |
 | [Spotlight](#spotlight) | `DesktopHero` (Windows), `HomeScreen._featured` (phone), `TvBrowseFrame` (TV) | `TmdbService.spotlight`, `MediaDiscoveryRanking` |
@@ -221,11 +221,16 @@ see [provider integration](../playback/provider-integration.md).
 
 ## Search
 
-TMDB title search.
-**Phone:** inline on Home (`HomeScreen._searchChanged`, `_loadSearch`).
-**TV and Windows:** [`search_view_model.dart`](../../lib/src/viewmodels/search_view_model.dart)
-in `TvSearchPage` and `DesktopSearchPage` (Ctrl+F on Windows).
-**Tests:** `search_library_screens_test`, `search_library_view_models_test`.
+Universal Search: movies, series, people and movie collections, with genre,
+year and TMDB rating filters, and provider sources for the best match.
+[`universal_search_controller.dart`](../../lib/src/search/universal_search_controller.dart),
+[`playback_availability.dart`](../../lib/src/search/playback_availability.dart),
+[`universal_search_view.dart`](../../lib/src/screens/search/universal_search_view.dart).
+**Phone:** `UniversalSearchScreen` from Home's Search button. **TV and
+Windows:** the Search page (Ctrl+F on Windows).
+**Data:** `onfeed.search.recent.v1` (recent searches, this device).
+**Docs:** [Universal Search](universal-search.md).
+**Tests:** `universal_search_test`, `universal_search_screens_test`.
 
 ## Settings
 

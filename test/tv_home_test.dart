@@ -12,6 +12,7 @@ import 'package:onfeed/src/screens/home_screen.dart';
 import 'package:onfeed/src/screens/tv/tv_details_screen.dart';
 import 'package:onfeed/src/screens/tv/tv_home_shell.dart';
 import 'package:onfeed/src/screens/tv/tv_pages.dart';
+import 'package:onfeed/src/screens/search/universal_search_view.dart';
 import 'package:onfeed/src/services/accent_settings_controller.dart';
 import 'package:onfeed/src/services/media_catalog_rules.dart';
 import 'package:onfeed/src/services/network_target_policy.dart';
@@ -247,8 +248,14 @@ void main() {
     await press(tester, LogicalKeyboardKey.arrowDown);
     expect(focused(), 'Rail Search');
     await press(tester, LogicalKeyboardKey.arrowRight);
-    expect(find.text('Search movies and series'), findsOneWidget);
-    expect(find.text('Find your next favorite'), findsOneWidget);
+    expect(find.text('Movies, series, people, collections'), findsOneWidget);
+    expect(find.text('Browse by genre'), findsOneWidget);
+    // Right from the rail lands in Universal Search, on its field.
+    expect(
+      FocusManager.instance.primaryFocus?.context
+          ?.findAncestorWidgetOfExactType<UniversalSearchView>(),
+      isNotNull,
+    );
     expect(tester.takeException(), isNull);
 
     await disposeHome(tester);

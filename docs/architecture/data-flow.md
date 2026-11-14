@@ -113,11 +113,13 @@ call back into `HomeScreen` to play.
 
 ## Search
 
-The phone Home searches inline (`HomeScreen._loadSearch`). TV and Windows
-use `SearchViewModel`
-([`search_view_model.dart`](../../lib/src/viewmodels/search_view_model.dart)):
-it debounces typing, loads page 1 then more on demand, and drops a stale
-answer for an older query.
+All three interfaces use Universal Search
+([`universal_search_controller.dart`](../../lib/src/search/universal_search_controller.dart)):
+it debounces typing, asks `TmdbService` for titles, people and collections,
+ranks, filters and pages them, and drops a stale answer for an older query.
+Provider sources for the best match come separately from
+`PlaybackAvailability`, through `ProviderPluginService.streams`. See
+[Universal Search](../features/universal-search.md).
 
 ## Providers and the plugin library
 

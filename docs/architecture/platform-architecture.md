@@ -46,7 +46,7 @@ graph TD
 | Navigation | Dock tabs (`SoftGlassDock`) | `TvHomeShell` rail, D-pad | `DesktopShell` hover rail; mouse, keyboard, controller |
 | Details | `MediaDetailsScreen` | `TvMediaDetailsScreen` | `DesktopDetailsScreen` |
 | Library | `LibraryScreen` | `TvLibraryPage` | `DesktopLibraryPage`, plus Continue watching in the sidebar |
-| Search | inline on Home | `TvSearchPage` | `DesktopSearchPage` (Ctrl+F) |
+| Search | `UniversalSearchScreen` from the header | `UniversalSearchView` | `UniversalSearchView` (Ctrl+F) |
 | Plugins | `PluginsScreen` | `PluginsScreen` | `DesktopPluginsPage` |
 | Settings | `SettingsScreen` | `SettingsScreen` | `DesktopSettingsPage` (reuses the sub-pages) |
 | Player engine | Media3, libmpv fallback | Media3, libmpv fallback | libmpv only |

@@ -69,7 +69,11 @@ import '../widgets/provider_search_dialog.dart';
 import '../widgets/tv/tv_focus.dart';
 import 'tv/tv_details_screen.dart';
 import 'tv/tv_home_shell.dart';
+import 'search/universal_search_screen.dart';
+import 'search/universal_search_view.dart';
 import 'tv/tv_pages.dart';
+import '../search/playback_availability.dart';
+import '../search/universal_search_controller.dart';
 import 'genre_onboarding_screen.dart';
 import 'plugins_screen.dart';
 import 'library_screen.dart';
@@ -87,7 +91,6 @@ import '../widgets/avatar_frame.dart';
 import '../widgets/profile_avatar.dart';
 import '../widgets/artwork_image.dart';
 import '../widgets/ambient_backdrop.dart';
-import '../widgets/glass_button.dart';
 
 /// One independently loaded single-request list (Trending, search). Its
 /// fields change only inside the home screen's setState. The catalog rows
@@ -126,8 +129,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   PlaybackSettingsController get _playbackSettings =>
       _services.playbackSettings;
   TmdbService get _tmdb => _services.tmdb;
-  final _search = TextEditingController();
-  final _searchFocus = FocusNode();
+
+  /// Universal Search, kept for Home's lifetime so a search survives
+  /// switching pages; made on first use.
+  UniversalSearchController? _universalSearchController;
+  PlaybackAvailability? _playbackAvailability;
   final _spotlightController = PageController();
   final _homeScrollController = ScrollController();
   final ValueNotifier<int> _spotlightPageValue = ValueNotifier(0);
@@ -153,16 +159,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   /// Kept apart from the catalog rows so Trending never leaks into them.
   final _trending = _HomeFeed();
-
-  /// Results for the current query; leaving search shows the other feeds
-  /// unchanged.
-  final _searchFeed = _HomeFeed();
   List<MediaItem> _spotlightItems = [];
   bool _resolvingStreams = false;
 
   /// What the Windows search panel names, and how it stops the search.
   ({String title, int? season, int? episode, VoidCallback cancel})? _resolving;
-  bool _searchVisible = false;
   String _category = 'For you';
   int _tab = 0;
 
@@ -257,7 +258,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  Timer? _debounce;
   Timer? _spotlightTimer;
 
   /// The page the TV navigation rail shows. TV only; mobile uses [_tab].
@@ -345,10 +345,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _spotlightTimer = Timer.periodic(const Duration(seconds: 6), (_) {
       if (!mounted ||
           MediaQuery.disableAnimationsOf(context) ||
-          _searchVisible ||
           _tab != 0 ||
           _category != 'For you' ||
-          _search.text.trim().isNotEmpty ||
           _spotlightItems.length < 2 ||
           !_spotlightController.hasClients ||
           (_homeScrollController.hasClients &&
@@ -481,17 +479,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   bool get _catalogSettled => _homeModel.catalogSettled;
 
-  /// The list the current view shows while searching or on Trending. The
-  /// catalog tabs show their rows instead.
-  _HomeFeed get _activeFeed =>
-      _search.text.trim().isNotEmpty ? _searchFeed : _trending;
+  /// The list Trending shows. The catalog tabs show their rows instead.
+  _HomeFeed get _activeFeed => _trending;
 
-  bool get _showsCatalog =>
-      _search.text.trim().isEmpty && _category != 'Trending';
+  bool get _showsCatalog => _category != 'Trending';
 
   Future<void> _reloadActiveFeed({bool forceRefresh = false}) async {
-    final query = _search.text.trim();
-    if (query.isNotEmpty) return _loadSearch(query, forceRefresh: forceRefresh);
     if (_category == 'Trending') {
       return _loadTrending(forceRefresh: forceRefresh);
     }
@@ -567,34 +560,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     ),
   );
 
-  /// A failed search clears its results, so an earlier query's titles never
-  /// appear under a new query.
-  Future<void> _loadSearch(String query, {bool forceRefresh = false}) async {
-    await _loadFeed(
-      _searchFeed,
-      (onRevalidated) => _tmdb.search(
-        query,
-        forceRefresh: forceRefresh,
-        onRevalidated: onRevalidated,
-      ),
-      clearOnError: true,
-    );
-    // Only the outcome of a settled search, never what was typed. A refresh
-    // of the same results is not another search.
-    if (forceRefresh || !mounted || _search.text.trim() != query) return;
-    final results = _searchFeed.items.length;
-    AnalyticsService.instance.log(
-      AnalyticsEvent.search(
-        _searchFeed.error != null
-            ? SearchOutcome.failed
-            : results == 0
-            ? SearchOutcome.noResults
-            : SearchOutcome.results,
-        results: results,
-      ),
-    );
-  }
-
   /// Pull-to-refresh: reloads the visible list, and on For you also
   /// refreshes the deferred rows that have already been requested. Each
   /// refreshed row restarts at page 1. Top 10 waits for the catalog so its
@@ -632,13 +597,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       return 'The catalog is busy right now. Wait a moment and retry.';
     }
     return 'Could not load titles. Check your connection and retry.';
-  }
-
-  void _closeSearch() {
-    _searchFocus.unfocus();
-    _search.clear();
-    setState(() => _searchVisible = false);
-    _searchChanged('');
   }
 
   Future<void> _showDetails(MediaItem item) async {
@@ -801,28 +759,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (items.isEmpty) return;
     PerfTimeline.markOnce('HOME_CONTENT_VISIBLE');
     PerfTimeline.end('SEARCH_TYPED', 'RESULTS_VISIBLE', finish: true);
-  }
-
-  void _searchChanged(String value) {
-    final query = value.trim();
-    if (query.isNotEmpty) PerfTimeline.begin('SEARCH_TYPED');
-    _debounce?.cancel();
-    if (query.isEmpty) {
-      // Search never replaced the catalog or Trending, so leaving it only
-      // drops the results and any pending search response.
-      _searchFeed.request++;
-      if (!mounted) return;
-      setState(() {
-        _searchFeed.items = const [];
-        _searchFeed.loading = false;
-        _searchFeed.error = null;
-      });
-      return;
-    }
-    _debounce = Timer(
-      const Duration(milliseconds: 450),
-      () => _loadSearch(query),
-    );
   }
 
   /// Set while a play request is resolving, so a double tap cannot start a
@@ -1312,6 +1248,46 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     ),
   );
 
+  /// Universal Search, shared by the three interfaces (made on first use).
+  UniversalSearchController get _universalSearch =>
+      _universalSearchController ??= UniversalSearchController(
+        catalog: TmdbSearchCatalog(_tmdb),
+        readSetting: _storage.readSetting,
+        saveSetting: _storage.saveSetting,
+      )..start();
+
+  /// Whether the viewer's providers list sources for a search result: the
+  /// same provider lookup Play uses, with the same playback settings, so a
+  /// source shown is one Play could be offered. It never starts playback.
+  PlaybackAvailability get _sourceAvailability =>
+      _playbackAvailability ??= PlaybackAvailability(
+        lookup: (item, {required isCancelled, required onSource}) {
+          final playback = _playbackSettings.value;
+          return _providerPlugins.streams(
+            item,
+            allowedPluginIds: playback.allowedProviderIds,
+            allowTorrents: playback.p2pStreaming && TorrentSupport.available,
+            isCancelled: isCancelled,
+            onSource: onSource,
+          );
+        },
+      );
+
+  /// Phone: Universal Search over Home. TV and Windows show it as a page.
+  void _openSearch() => unawaited(
+    Navigator.push(
+      context,
+      AppPageRoute<void>(
+        context: context,
+        builder: (_) => UniversalSearchScreen(
+          search: _universalSearch,
+          availability: _sourceAvailability,
+          onOpenTitle: (item) => unawaited(_showDetails(item)),
+        ),
+      ),
+    ),
+  );
+
   Future<void> _openPlaybackSettings(
     List<({String id, String name, String repository})> plugins,
   ) async {
@@ -1384,13 +1360,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void dispose() {
     ProgressSync.revision.removeListener(_onProgressSynced);
     WidgetsBinding.instance.removeObserver(this);
-    _debounce?.cancel();
     _spotlightTimer?.cancel();
     _spotlightController.dispose();
     _homeScrollController.dispose();
     _spotlightPageValue.dispose();
-    _search.dispose();
-    _searchFocus.dispose();
+    _universalSearchController?.dispose();
+    _playbackAvailability?.dispose();
     _providerPlugins.removeListener(_onPluginChange);
     if (PartyPlayerLauncher.open == _openPartyTitle) {
       PartyPlayerLauncher.open = null;
@@ -1822,137 +1797,79 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             child: SlideTransition(position: position, child: child),
           );
         },
-        child: _searchVisible
-            ? Row(
-                key: const ValueKey('header-search'),
-                children: [
-                  Expanded(
-                    child: ValueListenableBuilder<TextEditingValue>(
-                      valueListenable: _search,
-                      // Smoked glass, as the buttons: the fill is
-                      // translucent so the finish under it shows.
-                      builder: (context, value, _) => GlassFinish(
-                        radius: 15,
-                        light: .7,
-                        child: TextField(
-                          controller: _search,
-                          focusNode: _searchFocus,
-                          onChanged: _searchChanged,
-                          decoration: InputDecoration(
-                            fillColor: GlassButtonStyle.smokedGlass.withValues(
-                              alpha: .55,
-                            ),
-                            prefixIcon: const Icon(ReelishIcons.search),
-                            hintText: 'Find your next favorite',
-                            suffixIcon: value.text.isEmpty
-                                ? null
-                                : IconButton(
-                                    tooltip: 'Clear search',
-                                    onPressed: () {
-                                      _search.clear();
-                                      _searchChanged('');
-                                    },
-                                    icon: const Icon(ReelishIcons.close),
-                                  ),
-                          ),
-                        ),
-                      ),
-                    ),
+        child: Row(
+          key: const ValueKey('brand-header'),
+          children: [
+            // Over the Spotlight the icon stands alone, leaving the
+            // artwork room; it is still read out as Reelish.
+            if (spotlight) ...[
+              Semantics(label: 'Reelish', image: true, child: _brandMark()),
+              const Spacer(),
+            ] else ...[
+              _brandMark(),
+              const SizedBox(width: 10),
+              // Letters about a third of the icon's height, so neither
+              // outweighs the other. On a narrow phone the wordmark
+              // shrinks, so the buttons beside it keep their full size.
+              const Expanded(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: ReelishWordmark(height: 16, lifted: true),
                   ),
-                  const SizedBox(width: 6),
-                  IconButton(
-                    tooltip: 'Close search',
-                    onPressed: _closeSearch,
-                    icon: const Icon(ReelishIcons.close),
-                  ),
-                ],
-              )
-            : Row(
-                key: const ValueKey('brand-header'),
-                children: [
-                  // Over the Spotlight the icon stands alone, leaving the
-                  // artwork room; it is still read out as Reelish.
-                  if (spotlight) ...[
-                    Semantics(
-                      label: 'Reelish',
-                      image: true,
-                      child: _brandMark(),
-                    ),
-                    const Spacer(),
-                  ] else ...[
-                    _brandMark(),
-                    const SizedBox(width: 10),
-                    // Letters about a third of the icon's height, so neither
-                    // outweighs the other. On a narrow phone the wordmark
-                    // shrinks, so the buttons beside it keep their full size.
-                    const Expanded(
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: ReelishWordmark(height: 16, lifted: true),
-                        ),
-                      ),
-                    ),
-                  ],
-                  IconButton(
-                    tooltip: 'Join a watch party',
-                    onPressed: () => Navigator.push(
-                      context,
-                      AppPageRoute<void>(
-                        context: context,
-                        builder: (_) => const JoinPartyScreen(),
-                      ),
-                    ),
-                    style: IconButton.styleFrom(
-                      backgroundColor: Colors.black.withValues(alpha: .38),
-                      foregroundColor: Colors.white,
-                      side: BorderSide(
-                        color: Colors.white.withValues(alpha: .14),
-                      ),
-                    ),
-                    icon: const Icon(ReelishIcons.people),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    tooltip: 'Search',
-                    onPressed: () {
-                      setState(() => _searchVisible = true);
-                      _searchFocus.requestFocus();
-                    },
-                    // Dark glass like the details back button, so it stays
-                    // visible over bright artwork.
-                    style: IconButton.styleFrom(
-                      backgroundColor: Colors.black.withValues(alpha: .38),
-                      foregroundColor: Colors.white,
-                      side: BorderSide(
-                        color: Colors.white.withValues(alpha: .14),
-                      ),
-                    ),
-                    icon: const Icon(ReelishIcons.search),
-                  ),
-                  const SizedBox(width: 8),
-                  // The profile at the top right, where streaming apps keep
-                  // it; the dock stays for the main places.
-                  IconButton(
-                    tooltip: 'Profile',
-                    onPressed: () => _openProfile(context),
-                    padding: const EdgeInsets.all(4),
-                    icon: Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: .22),
-                        ),
-                      ),
-                      padding: const EdgeInsets.all(2),
-                      child: const AvatarFrameRim(
-                        child: MyProfileAvatar(size: 36),
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
+            ],
+            IconButton(
+              tooltip: 'Join a watch party',
+              onPressed: () => Navigator.push(
+                context,
+                AppPageRoute<void>(
+                  context: context,
+                  builder: (_) => const JoinPartyScreen(),
+                ),
+              ),
+              style: IconButton.styleFrom(
+                backgroundColor: Colors.black.withValues(alpha: .38),
+                foregroundColor: Colors.white,
+                side: BorderSide(color: Colors.white.withValues(alpha: .14)),
+              ),
+              icon: const Icon(ReelishIcons.people),
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              tooltip: 'Search',
+              onPressed: _openSearch,
+              // Dark glass like the details back button, so it stays
+              // visible over bright artwork.
+              style: IconButton.styleFrom(
+                backgroundColor: Colors.black.withValues(alpha: .38),
+                foregroundColor: Colors.white,
+                side: BorderSide(color: Colors.white.withValues(alpha: .14)),
+              ),
+              icon: const Icon(ReelishIcons.search),
+            ),
+            const SizedBox(width: 8),
+            // The profile at the top right, where streaming apps keep
+            // it; the dock stays for the main places.
+            IconButton(
+              tooltip: 'Profile',
+              onPressed: () => _openProfile(context),
+              padding: const EdgeInsets.all(4),
+              icon: Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: .22),
+                  ),
+                ),
+                padding: const EdgeInsets.all(2),
+                child: const AvatarFrameRim(child: MyProfileAvatar(size: 36)),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1998,8 +1915,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Widget _home() {
-    final isSearch = _search.text.trim().isNotEmpty;
-    final searchActive = _searchVisible || isSearch;
     final sectionCollapseDuration = MediaQuery.disableAnimationsOf(context)
         ? Duration.zero
         : const Duration(milliseconds: 220);
@@ -2007,7 +1922,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final continueWatching = _continueWatching;
     final catalogHasItems =
         _movies.state.items.isNotEmpty || _series.state.items.isNotEmpty;
-    final showHero = !searchActive && _category == 'For you' && catalogHasItems;
+    final showHero = _category == 'For you' && catalogHasItems;
 
     // The spinner, error and empty message for the whole view. On the
     // catalog tabs they appear only while none of the tab's rows has
@@ -2059,7 +1974,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           // Top 10 leads For you, right under the Spotlight, as on Windows.
           // It still loads only once New movies and Series (its seeds)
           // have, holding its place with placeholders until then.
-          if (_category == 'For you' && !isSearch)
+          if (_category == 'For you')
             _deferredSectionGate(
               enabled: _catalogSettled,
               feed: _top10,
@@ -2075,7 +1990,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               duration: sectionCollapseDuration,
               curve: Curves.easeInOutCubic,
               alignment: Alignment.topCenter,
-              child: !searchActive && continueWatching.isNotEmpty
+              child: continueWatching.isNotEmpty
                   ? _section('Continue watching', continueWatching)
                   : const SizedBox.shrink(),
             ),
@@ -2190,16 +2105,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      feedError ??
-                          (isSearch
-                              ? 'No results matching ${_search.text.trim()}'
-                              : 'Nothing to show just yet'),
+                      feedError ?? 'Nothing to show just yet',
                       style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
                     const SizedBox(height: 5),
                     Text(
                       feedError == null
-                          ? 'Try another search or refresh your picks.'
+                          ? 'Refresh your picks, or search for a title.'
                           : 'Titles you saved or started are still on this device.',
                       textAlign: TextAlign.center,
                       style: TextStyle(color: GlassTheme.muted),
@@ -2217,7 +2129,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ),
             ),
           // Personalised rows lead the catalog rows; none on a cold start.
-          if (_category == 'For you' && !isSearch)
+          if (_category == 'For you')
             SliverList.list(
               children: [
                 if (_showGenrePrompt)
@@ -2240,7 +2152,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   ),
               ],
             ),
-          if (_category == 'For you' && !isSearch)
+          if (_category == 'For you')
             _deferredSectionGate(
               enabled: _catalogSettled,
               feed: _releases,
@@ -2250,26 +2162,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 reserveSpace: _catalogSettled,
               ),
             ),
-          if (_category == 'For you' && !isSearch) _trendingRow(),
-          if ((_category == 'Movies' && isSearch || _category == 'Trending') &&
-              _shown.isNotEmpty)
-            ..._resultGrid(
-              _category == 'Trending' ? 'Trending now' : 'Movies',
-              _shown,
-            ),
-          if (_category == 'Movies' && !isSearch)
+          if (_category == 'For you') _trendingRow(),
+          if (_category == 'Trending' && _shown.isNotEmpty)
+            ..._resultGrid('Trending now', _shown),
+          if (_category == 'Movies')
             _pagedGrid('New movies', _movies, showPlaceholder: rowPlaceholders),
-          if (_category == 'Series' && isSearch && _shown.isNotEmpty)
-            ..._resultGrid('Series', _shown),
-          if (_category == 'Series' && !isSearch)
+          if (_category == 'Series')
             _pagedGrid(
               'Series worth the queue',
               _series,
               showPlaceholder: rowPlaceholders,
             ),
-          if (_category == 'For you' && isSearch && _shown.isNotEmpty)
-            ..._resultGrid('Search results', _shown),
-          if (_category == 'For you' && !isSearch)
+          if (_category == 'For you')
             SliverToBoxAdapter(
               child: _pagedRow(
                 'New movies',
@@ -2277,7 +2181,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 showPlaceholder: rowPlaceholders,
               ),
             ),
-          if (_category == 'For you' && !isSearch)
+          if (_category == 'For you')
             SliverToBoxAdapter(
               child: _pagedRow(
                 'Series worth the queue',
@@ -2890,10 +2794,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               onOpen: _showDetails,
               isFavorite: catalog.isFavorite,
             ),
-            TvDestination.search => TvSearchPage(
-              tmdb: _tmdb,
-              onOpen: _showDetails,
-              isFavorite: catalog.isFavorite,
+            TvDestination.search => UniversalSearchView(
+              search: _universalSearch,
+              availability: _sourceAvailability,
+              onOpenTitle: (item) => unawaited(_showDetails(item)),
+              // The rail keeps focus; Right moves into the search field.
+              autofocus: false,
             ),
             TvDestination.library => TvLibraryPage(
               storage: _storage,
@@ -3016,13 +2922,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               isFavorite: catalog.isFavorite,
               onToggleFavorite: _toggleFavorite,
             ),
-            TvDestination.search => DesktopSearchPage(
-              tmdb: _tmdb,
-              onOpen: _showDetails,
-              isFavorite: catalog.isFavorite,
-              onToggleFavorite: _toggleFavorite,
-              storage: _storage,
-              suggestions: catalog.spotlight,
+            TvDestination.search => UniversalSearchView(
+              search: _universalSearch,
+              availability: _sourceAvailability,
+              onOpenTitle: (item) => unawaited(_showDetails(item)),
             ),
             TvDestination.library => DesktopLibraryPage(
               storage: _storage,
@@ -3148,17 +3051,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ),
       ),
     ];
-    final searching = _searchVisible || _search.text.trim().isNotEmpty;
     return PopScope(
-      // Back leaves another tab for Home, closes a search and returns from
-      // Movies, Series or Trending to For you before it leaves the app.
-      canPop: _tab == 0 && !searching && _category == 'For you',
+      // Back leaves another tab for Home and returns from Movies, Series or
+      // Trending to For you before it leaves the app.
+      canPop: _tab == 0 && _category == 'For you',
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
         if (_tab != 0) {
           _selectTab(0);
-        } else if (searching) {
-          _closeSearch();
         } else {
           setState(() => _category = 'For you');
           _scrollHomeToTop();

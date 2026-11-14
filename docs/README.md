@@ -37,6 +37,7 @@ search the generated references below: every file, class and function in
 |---|---|
 | [Feature index](features/feature-index.md) | Every feature mapped to its code, data and tests |
 | [Caching](features/caching.md) | TMDB response and artwork caches: policies, decision, measurements |
+| [Universal Search](features/universal-search.md) | Movies, series, people and collections in one search: requests, ranking, filters, provider sources, cost |
 | [Watch Party](features/watch-party.md) | Reliability audit, how actions reach the room, presence and reconnection, reactions, chat, invitation links, cost |
 | [Plugin Manager](features/plugin-manager.md) | Provider audit, collection and provider pages, compatibility, source trust, update check, security |
 | [Usage statistics](features/analytics.md) | Opt-in Firebase Analytics on Android: events, privacy, setup, DebugView, cost |

@@ -56,7 +56,7 @@ graph TD
 | Entry | [`lib/main.dart`](../../lib/main.dart) | `main`, `ReelishApp`, the startup gate |
 | Services container | [`lib/src/app/app_services.dart`](../../lib/src/app/app_services.dart) | `AppServices`: `TmdbService`, `StorageService`, `ProviderPluginService`, `PluginLibraryRepository`, `PlaybackSettingsController` |
 | Orchestration | [`lib/src/screens/home_screen.dart`](../../lib/src/screens/home_screen.dart) | `HomeScreen`: builds the phone tabs or the TV/Windows shell, owns the play flow and details navigation |
-| View models | [`lib/src/viewmodels/`](../../lib/src/viewmodels) | `HomeViewModel`, `DetailsViewModel`, `LibraryViewModel`, `SearchViewModel`; `TvCatalog` hands Home's data to TV and Windows pages |
+| View models | [`lib/src/viewmodels/`](../../lib/src/viewmodels) | `HomeViewModel`, `DetailsViewModel`, `LibraryViewModel`; `TvCatalog` hands Home's data to TV and Windows pages |
 | Services | [`lib/src/services/`](../../lib/src/services) | TMDB, storage, providers, playback pipeline, subtitles, updates, settings |
 | Models | [`lib/src/models/`](../../lib/src/models) | `MediaItem`, `StreamSource`, `PlayableSource`, `EpisodeProgress`, `ProviderPlugin`, … |
 | Phone UI | [`lib/src/screens/`](../../lib/src/screens), [`lib/src/widgets/`](../../lib/src/widgets) | Tabs, details, library, plugins, settings, dock |
@@ -165,7 +165,7 @@ graph LR
   SS --> HVM
   SS --> LVM[LibraryViewModel]
   TS --> DVM[DetailsViewModel]
-  TS --> SVM[SearchViewModel]
+  TS --> USC[UniversalSearchController]
   HVM -- notifyListeners --> HS[HomeScreen setState]
   HS --> Pages["Phone / TV / Windows pages"]
   PPS[ProviderPluginService] -- notifyListeners --> HS

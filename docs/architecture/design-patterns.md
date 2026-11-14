@@ -10,7 +10,7 @@ codebase: view models exist for the data each screen shows, while
 | Services container | `AppServices` ([`app_services.dart`](../../lib/src/app/app_services.dart)) | One place builds the long-lived services; tests pass their own `TmdbService` and `StorageService` |
 | `ChangeNotifier` view models | [`lib/src/viewmodels/`](../../lib/src/viewmodels) | Screen data shared by the phone, TV and Windows layouts; no UI types inside |
 | One controller per list | `PagedFeedController` ([`paged_feed_controller.dart`](../../lib/src/services/paged_feed_controller.dart)) | Each row loads, fails and pages on its own |
-| Generation numbers | `PagedFeedController`, `HomeViewModel` reads, `CustomVideoPlayer._initializationGeneration`, `SearchViewModel` | A late answer to an older request is dropped instead of overwriting a newer one |
+| Generation numbers | `PagedFeedController`, `HomeViewModel` reads, `CustomVideoPlayer._initializationGeneration`, `UniversalSearchController` | A late answer to an older request is dropped instead of overwriting a newer one |
 | Request de-duplication | `ProviderPluginService.discoverStreams` (one `StreamDiscovery` per request key), `ProviderScriptCache`, `GitHubUpdateService.checkForUpdate`, TMDB in-flight sharing | Concurrent callers share one network request |
 | Serialised writes | `StorageService._serialized` | Read-modify-write of the history list never interleaves |
 | Bounded concurrency | `ProviderExecutionScheduler` (4 workers, 2 runtimes), TMDB limiter (4 requests), `ProviderFetchBridge` (4 requests per run) | Many providers or rows cannot exhaust memory or sockets |

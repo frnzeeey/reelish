@@ -11,7 +11,7 @@ the architecture to the code.
 |---|---|
 | Shell | [`desktop_shell.dart`](../../lib/src/desktop/desktop_shell.dart): `DesktopShell`, the hover-open glass sidebar, Continue watching (`DesktopResumeShelf`), Ctrl+F |
 | Home | [`desktop_pages.dart`](../../lib/src/desktop/desktop_pages.dart) (`DesktopHomePage`), [`desktop_hero.dart`](../../lib/src/desktop/desktop_hero.dart) (Spotlight and its rail), [`desktop_top_ten.dart`](../../lib/src/desktop/desktop_top_ten.dart) |
-| Catalog, Search, Library | [`desktop_pages.dart`](../../lib/src/desktop/desktop_pages.dart): `DesktopCatalogPage`, `DesktopSearchPage`, `DesktopLibraryPage` |
+| Catalog, Search, Library | [`desktop_pages.dart`](../../lib/src/desktop/desktop_pages.dart): `DesktopCatalogPage`, `DesktopLibraryPage` (Search: `UniversalSearchView`) |
 | Details | [`desktop_details_screen.dart`](../../lib/src/desktop/desktop_details_screen.dart) (episode panel from 1180 px wide) |
 | Settings, Plugins | [`desktop_settings_page.dart`](../../lib/src/desktop/desktop_settings_page.dart), [`desktop_plugins_page.dart`](../../lib/src/desktop/desktop_plugins_page.dart), [`desktop_update_section.dart`](../../lib/src/desktop/desktop_update_section.dart) |
 | Provider search panel | [`desktop_provider_search.dart`](../../lib/src/desktop/desktop_provider_search.dart) |

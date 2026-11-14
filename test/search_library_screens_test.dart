@@ -1,5 +1,3 @@
-import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -10,39 +8,15 @@ import 'package:onfeed/src/models/media_item.dart';
 import 'package:onfeed/src/screens/library_screen.dart';
 import 'package:onfeed/src/screens/tv/tv_pages.dart';
 import 'package:onfeed/src/services/storage_service.dart';
-import 'package:onfeed/src/services/tmdb_service.dart';
 import 'package:onfeed/src/theme/glass_theme.dart';
 import 'package:onfeed/src/widgets/media_card.dart';
-import 'package:onfeed/src/widgets/tv/tv_focus.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-/// Search and library pages as users see them, written against public
+/// Library pages as users see them, written against public
 /// constructors only, so they describe the pages before and after their
 /// state moved into shared ViewModels.
 
 MediaItem _movie(String id) =>
     MediaItem(id: id, type: 'movie', name: 'Movie $id', year: '2020');
-
-class _FakeTmdb extends TmdbService {
-  final requests = <String>[];
-
-  /// Gates an answer until the test completes it.
-  final gates = <String, Completer<void>>{};
-  final failing = <String>{};
-
-  @override
-  Future<List<MediaItem>> search(
-    String query, {
-    bool forceRefresh = false,
-    void Function(List<MediaItem>)? onRevalidated,
-    int page = 1,
-  }) async {
-    requests.add('$query#$page');
-    await gates['$query#$page']?.future;
-    if (failing.contains(query)) throw Exception('offline');
-    return [for (var i = 0; i < 20; i++) _movie('$query-$page-$i')];
-  }
-}
 
 class _FakeStorage extends StorageService {
   int reads = 0;
@@ -120,105 +94,6 @@ Future<void> _pump(WidgetTester tester, Widget page, {bool tv = false}) async {
 }
 
 void main() {
-  late _FakeTmdb tmdb;
-  setUp(() => tmdb = _FakeTmdb());
-
-  // Each layout types through its own field.
-  final layouts = <String, (Widget Function(TmdbService), Duration, bool)>{
-    'TV': (
-      (tmdb) =>
-          TvSearchPage(tmdb: tmdb, onOpen: (_) {}, isFavorite: (_) => false),
-      const Duration(milliseconds: 450),
-      true,
-    ),
-    'Windows': (
-      (tmdb) => DesktopSearchPage(
-        tmdb: tmdb,
-        onOpen: (_) {},
-        isFavorite: (_) => false,
-      ),
-      const Duration(milliseconds: 400),
-      false,
-    ),
-  };
-
-  for (final MapEntry(key: name, value: (build, debounce, tv))
-      in layouts.entries) {
-    Future<void> type(WidgetTester tester, String text) async {
-      if (tv) {
-        tester.widget<TvTextField>(find.byType(TvTextField)).onChanged(text);
-      } else {
-        await tester.enterText(find.byType(TextField), text);
-      }
-      await tester.pump();
-    }
-
-    group('$name search', () {
-      testWidgets('waits ${debounce.inMilliseconds} ms after typing stops', (
-        tester,
-      ) async {
-        await _pump(tester, build(tmdb), tv: tv);
-        await type(tester, 'du');
-        await tester.pump(debounce - const Duration(milliseconds: 50));
-        await type(tester, 'dune ');
-        await tester.pump(debounce - const Duration(milliseconds: 1));
-        expect(tmdb.requests, isEmpty);
-        await tester.pump(const Duration(milliseconds: 1));
-        await tester.pumpAndSettle();
-        // Only the last text, trimmed.
-        expect(tmdb.requests, ['dune#1']);
-        expect(find.text('Movie dune-1-0'), findsWidgets);
-      });
-
-      testWidgets('an older answer never replaces a newer one', (tester) async {
-        tmdb.gates['slow#1'] = Completer();
-        await _pump(tester, build(tmdb), tv: tv);
-        await type(tester, 'slow');
-        await tester.pump(debounce);
-        await type(tester, 'fast');
-        await tester.pump(debounce);
-        await tester.pumpAndSettle();
-        tmdb.gates['slow#1']!.complete();
-        await tester.pumpAndSettle();
-        expect(find.text('Movie fast-1-0'), findsWidgets);
-        expect(find.text('Movie slow-1-0'), findsNothing);
-      });
-
-      testWidgets('a failure says so and offers Retry', (tester) async {
-        tmdb.failing.add('down');
-        await _pump(tester, build(tmdb), tv: tv);
-        await type(tester, 'down');
-        await tester.pump(debounce);
-        await tester.pumpAndSettle();
-        expect(
-          find.text('Search failed. Check your connection and try again.'),
-          findsOneWidget,
-        );
-        tmdb.failing.clear();
-        await tester.tap(find.text(tv ? 'Retry' : 'Try again'));
-        await tester.pumpAndSettle();
-        expect(find.text('Movie down-1-0'), findsWidgets);
-      });
-    });
-  }
-
-  testWidgets('Windows search loads each next page near the end, once', (
-    tester,
-  ) async {
-    await _pump(tester, layouts['Windows']!.$1(tmdb));
-    await tester.enterText(find.byType(TextField), 'many');
-    await tester.pump(const Duration(milliseconds: 400));
-    await tester.pumpAndSettle();
-    await tester.drag(find.byType(CustomScrollView), const Offset(0, -3000));
-    await tester.pumpAndSettle();
-    // Pages in order, each requested once.
-    expect(tmdb.requests.take(2), ['many#1', 'many#2']);
-    expect(tmdb.requests.toSet(), hasLength(tmdb.requests.length));
-    expect(tmdb.requests, [
-      for (var i = 1; i <= tmdb.requests.length; i++) 'many#$i',
-    ]);
-  });
-
   group('library pages', () {
     final pages = <String, (Widget Function(StorageService, int), bool)>{
       'phone': (
@@ -349,72 +224,5 @@ void main() {
         expect(storage.reads, 2);
       });
     }
-  });
-
-  group('Windows search start page', () {
-    setUp(() => SharedPreferences.setMockInitialValues({}));
-
-    Widget page() => DesktopSearchPage(
-      tmdb: tmdb,
-      onOpen: (_) {},
-      isFavorite: (_) => false,
-      storage: StorageService(),
-      suggestions: [_movie('popular')],
-    );
-
-    testWidgets('offers popular titles before anything is typed', (
-      tester,
-    ) async {
-      await _pump(tester, page());
-      await tester.pumpAndSettle();
-      expect(find.text('Popular right now'), findsOneWidget);
-      expect(find.text('Movie popular'), findsOneWidget);
-      expect(find.text('Recent searches'), findsNothing);
-      expect(find.text('Ctrl+F'), findsOneWidget);
-    });
-
-    testWidgets('remembers searches that found something, newest first, '
-        'and searches again from a chip', (tester) async {
-      await _pump(tester, page());
-      await tester.enterText(find.byType(TextField), 'dune');
-      await tester.testTextInput.receiveAction(TextInputAction.search);
-      await tester.pumpAndSettle();
-      expect(find.text('Results for “dune”'), findsOneWidget);
-      await tester.enterText(find.byType(TextField), 'alien');
-      await tester.testTextInput.receiveAction(TextInputAction.search);
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byTooltip('Clear'));
-      await tester.pumpAndSettle();
-      expect(find.text('Recent searches'), findsOneWidget);
-      final saved = (await SharedPreferences.getInstance()).getString(
-        DesktopSearchPage.recentSearchesKey,
-      );
-      expect(jsonDecode(saved!), ['alien', 'dune']);
-
-      tmdb.requests.clear();
-      await tester.tap(find.text('dune'));
-      await tester.pumpAndSettle();
-      expect(tmdb.requests, ['dune#1']);
-      expect(find.text('Movie dune-1-0'), findsWidgets);
-    });
-
-    testWidgets('Clear forgets recent searches on this device', (tester) async {
-      SharedPreferences.setMockInitialValues({
-        DesktopSearchPage.recentSearchesKey: jsonEncode(['dune']),
-      });
-      await _pump(tester, page());
-      await tester.pumpAndSettle();
-      expect(find.text('dune'), findsOneWidget);
-      await tester.tap(find.widgetWithText(TextButton, 'Clear'));
-      await tester.pumpAndSettle();
-      expect(find.text('Recent searches'), findsNothing);
-      expect(
-        (await SharedPreferences.getInstance()).getString(
-          DesktopSearchPage.recentSearchesKey,
-        ),
-        '[]',
-      );
-    });
   });
 }
