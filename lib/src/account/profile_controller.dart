@@ -194,10 +194,17 @@ class ProfileController extends ChangeNotifier {
   /// Saves [style] as the profile card's look, and says whether it did. A
   /// style with supporter parts is refused unless [perk]
   /// (`SupporterController.has(SupporterPerk.profileStyles)`), so the check
-  /// is made where the choice is saved, not only by the screen.
-  Future<bool> setStyle(ProfileStyle style, {required bool perk}) async {
+  /// is made where the choice is saved, not only by the screen. The
+  /// Sovereign Edition card is refused unless [founder]
+  /// (`SupporterController.hasFounderPerk(FounderPerk.founderProfileCard)`).
+  Future<bool> setStyle(
+    ProfileStyle style, {
+    required bool perk,
+    bool founder = false,
+  }) async {
     if (_userId == null) return false;
     if (style.needsPerk && !perk) return false;
+    if (style.needsFounderPerk && !founder) return false;
     if (style == _style) return true;
     _style = style;
     notifyListeners();

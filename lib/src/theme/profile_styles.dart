@@ -5,8 +5,9 @@
 // drawn in code (lib/src/widgets/profile_card_backdrop.dart), so there are no
 // assets to download or cache. Essentials and Gradients are for everyone;
 // Cinematic, the effects and a colour of one's own are the supporter perk
-// SupporterPerk.profileStyles. New backgrounds are new entries here; never
-// rename an id, as the choice is saved by it.
+// SupporterPerk.profileStyles. Sovereign Edition is the Founder's own card
+// (FounderPerk.founderProfileCard), which no donation unlocks. New backgrounds
+// are new entries here; never rename an id, as the choice is saved by it.
 import 'package:flutter/material.dart';
 
 import 'glass_theme.dart';
@@ -15,13 +16,43 @@ import 'glass_theme.dart';
 enum ProfileBackdropCollection {
   essentials('Essentials'),
   gradients('Gradients'),
-  cinematic('Cinematic');
+  cinematic('Cinematic'),
+
+  /// The Founder's own card. Shown only to the Founder: it cannot be
+  /// unlocked, so it is never offered locked.
+  sovereign('Sovereign Edition');
 
   const ProfileBackdropCollection(this.label);
   final String label;
 
   /// Cinematic backgrounds are a supporter perk; the rest are for everyone.
   bool get forSupporters => this == cinematic;
+
+  /// The Founder Collection's card (FounderPerk.founderProfileCard).
+  bool get forFounder => this == sovereign;
+}
+
+/// Sovereign Edition's Golden Wine: deep wine under champagne gold. Fixed in
+/// every theme, like a badge's colours, so the card means one thing.
+abstract final class SovereignColors {
+  /// The card's base, the darkest colour: a warm near-black.
+  static const charcoal = Color(0xFF171317);
+
+  /// Between the base and the wine, so the blend never bands.
+  static const ink = Color(0xFF2A1220);
+  static const wine = Color(0xFF5A263B);
+  static const royalWine = Color(0xFF722F45);
+  static const champagne = Color(0xFFD4AF70);
+  static const antique = Color(0xFFB89555);
+  static const highlight = Color(0xFFE8D4A5);
+
+  /// Champagne gold lit from the upper left, as the Sovereign Crest is.
+  static const metal = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [highlight, champagne, antique, champagne],
+    stops: [0, .4, .75, 1],
+  );
 }
 
 /// How a background is drawn.
@@ -49,6 +80,10 @@ enum ProfilePattern {
 
   /// Large soft blots of colour, like mist.
   mesh,
+
+  /// Sovereign Edition: wine on charcoal, a champagne hairline frame and a
+  /// faint engraved laurel seal.
+  sovereign,
 }
 
 /// One profile card background. [colors] starts with the base, the darkest
@@ -74,6 +109,7 @@ class ProfileBackdropStyle {
 
   Color get base => colors.first;
   bool get forSupporters => collection.forSupporters;
+  bool get forFounder => collection.forFounder;
 
   static const all = <ProfileBackdropStyle>[
     ProfileBackdropStyle(
@@ -193,6 +229,19 @@ class ProfileBackdropStyle {
         Color(0xFF2F6BFF),
       ],
     ),
+    ProfileBackdropStyle(
+      id: 'sovereign',
+      name: 'Sovereign Edition',
+      description: 'Golden laurel on deep wine',
+      collection: ProfileBackdropCollection.sovereign,
+      pattern: ProfilePattern.sovereign,
+      colors: [
+        SovereignColors.charcoal,
+        SovereignColors.wine,
+        SovereignColors.royalWine,
+        SovereignColors.champagne,
+      ],
+    ),
   ];
 
   static ProfileBackdropStyle? byId(String? id) {
@@ -261,15 +310,26 @@ class ProfileStyle {
       hasCustomColor ||
       effect != ProfileEffect.none;
 
-  /// What shows for an account with or without the perk: without it, the
-  /// supporter parts fall back to the standard card and the free parts stay.
+  /// The Founder's Sovereign Edition card, which needs
+  /// FounderPerk.founderProfileCard whatever else the account has.
+  bool get needsFounderPerk => backdropStyle?.forFounder ?? false;
+
+  /// What shows for an account with or without the perks: without [perk],
+  /// the supporter parts fall back to the standard card and the free parts
+  /// stay; without [founder], so does Sovereign Edition. [founder] defaults
+  /// to false, so a caller that forgets it never shows the Founder's card.
   /// The saved choice is untouched, so it returns if the perk does.
-  ProfileStyle allowed({required bool perk}) => perk
-      ? this
-      : ProfileStyle(
-          backdrop: (backdropStyle?.forSupporters ?? true) ? null : backdrop,
-          color: hasCustomColor ? null : color,
-        );
+  ProfileStyle allowed({required bool perk, bool founder = false}) {
+    final style = backdropStyle;
+    final showBackdrop =
+        style != null &&
+        (style.forFounder ? founder : !style.forSupporters || perk);
+    return ProfileStyle(
+      backdrop: showBackdrop ? backdrop : null,
+      color: hasCustomColor && !perk ? null : color,
+      effect: perk ? effect : ProfileEffect.none,
+    );
+  }
 
   ProfileStyle withBackdrop(String? id) =>
       ProfileStyle(backdrop: id, color: color, effect: effect);

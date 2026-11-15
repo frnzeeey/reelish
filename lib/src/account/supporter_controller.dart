@@ -47,7 +47,17 @@ enum SupporterPerk {
 /// backend/src/entitlements.ts, and check [SupporterController.hasFounderPerk].
 /// Nothing names the Founder's account: the server decides the entitlement
 /// from its own secret.
-enum FounderPerk { founderThemes, founderIcons, founderFrames, founderSplash }
+enum FounderPerk {
+  founderThemes,
+  founderIcons,
+  founderFrames,
+  founderSplash,
+
+  /// The Sovereign Edition profile card (lib/src/theme/profile_styles.dart).
+  /// Only its owner sees the card, so, like [founderThemes], there is
+  /// nothing for the server to enforce; applying it asks the server afresh.
+  founderProfileCard,
+}
 
 /// The account's status, as the server reported it.
 @immutable

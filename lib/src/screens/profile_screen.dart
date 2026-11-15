@@ -37,6 +37,7 @@ import '../widgets/avatar_frame.dart';
 import '../widgets/profile_avatar_picker.dart';
 import '../widgets/settings/settings_components.dart';
 import '../widgets/account_badges.dart';
+import '../widgets/sovereign_laurel.dart';
 import 'account_settings_screen.dart';
 import 'app_icon_settings_screen.dart';
 import 'avatar_frames_screen.dart';
@@ -235,6 +236,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   /// Whether the card's supporter parts show (SupporterPerk.profileStyles).
   bool get _stylePerk => _supporters.has(SupporterPerk.profileStyles);
 
+  /// Whether the Sovereign Edition card shows: the Founder's own
+  /// (FounderPerk.founderProfileCard), never a supporter's.
+  bool get _sovereignPerk =>
+      _supporters.hasFounderPerk(FounderPerk.founderProfileCard);
+
   /// The identity card in [style], as the account may show it, read from
   /// the controllers as it builds: the page's card, and the preview on the
   /// Profile card page.
@@ -413,7 +419,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         );
       }
       final appearance = widget.appearance;
-      final style = _profile.style.allowed(perk: _stylePerk);
+      final style = _profile.style.allowed(
+        perk: _stylePerk,
+        founder: _sovereignPerk,
+      );
       Widget identity({bool wide = false}) =>
           _identity(style: style, wide: wide);
       final personalize = <Widget>[
@@ -714,8 +723,14 @@ class _IdentityCard extends StatelessWidget {
 
   bool get _laurel => frame?.ornament == FrameOrnament.laurel;
 
-  /// The card's own colour, when one is chosen; it lights this card only.
-  Color? get _cardColor => style.palette?.primary;
+  /// The Founder's Sovereign Edition card. [style] has already been through
+  /// [ProfileStyle.allowed], so this is only ever true for the Founder.
+  bool get _sovereign => style.backdropStyle?.forFounder ?? false;
+
+  /// The card's own colour: the one chosen, else Sovereign Edition's
+  /// champagne; it lights this card only.
+  Color? get _cardColor =>
+      style.palette?.primary ?? (_sovereign ? SovereignColors.champagne : null);
 
   @override
   Widget build(BuildContext context) {
@@ -728,7 +743,8 @@ class _IdentityCard extends StatelessWidget {
         ? ProfileCardBackdrop(
             key: ValueKey('card:${backdrop.id}'),
             style: backdrop,
-            glow: cardColor,
+            // Only a chosen colour glows; Sovereign Edition keeps its wine.
+            glow: style.palette?.primary,
           )
         : theme == null
         ? DecoratedBox(
@@ -760,7 +776,9 @@ class _IdentityCard extends StatelessWidget {
           color: const Color(0xFF121218),
           borderRadius: BorderRadius.circular(SettingsMetrics.sectionRadius),
           border: Border.all(
-            color: backdrop != null
+            color: _sovereign
+                ? SovereignColors.champagne.withValues(alpha: .5)
+                : backdrop != null
                 ? (cardColor ?? backdrop.colors.last).withValues(alpha: .28)
                 : theme == null
                 ? Colors.white.withValues(alpha: .08)
@@ -867,7 +885,7 @@ class _IdentityCard extends StatelessWidget {
           alignStart: start,
           founder: badges.has(AccountBadge.founder),
           supporter: badges.has(AccountBadge.supporter),
-          sovereign: theme?.collection == ThemeCollection.founder,
+          sovereign: _sovereign || theme?.collection == ThemeCollection.founder,
           onOpenSupporters: onOpenSupporters,
         ),
       ),
@@ -936,15 +954,22 @@ class _IdentityCard extends StatelessWidget {
         child: LayoutBuilder(
           builder: (context, constraints) {
             final compact = constraints.maxWidth < 250;
+            final size = tv
+                ? 120.0
+                : compact
+                ? 84.0
+                : 100.0;
             return Column(
               children: [
-                _avatar(
-                  tv
-                      ? 120.0
-                      : compact
-                      ? 84.0
-                      : 100.0,
-                ),
+                if (_sovereign) ...[
+                  SovereignEditionMark(tv: tv),
+                  // The Sovereign frame's crown rises above the avatar
+                  // without taking room, so it is given room here.
+                  SizedBox(
+                    height: _laurel ? size * .22 + AppSpace.sm : AppSpace.md,
+                  ),
+                ],
+                _avatar(size),
                 // The edit button sits below the Founder's frame.
                 SizedBox(height: _laurel ? AppSpace.md + 14 : AppSpace.md),
                 _identity(tv, compact: compact, start: false),
@@ -962,7 +987,11 @@ class _IdentityCard extends StatelessWidget {
       final beside = !tv && constraints.maxWidth >= _countsBesideWidth;
       final note = counts.note;
       final identity = Padding(
-        padding: const EdgeInsets.all(AppSpace.xl),
+        // Sovereign Edition's hairline frame is inset from the edge; the
+        // avatar frame's laurel and crown stay inside it.
+        padding: EdgeInsets.all(
+          _sovereign ? AppSpace.xl + AppSpace.md : AppSpace.xl,
+        ),
         child: Row(
           children: [
             _avatar(tv ? 120 : 112),
@@ -972,6 +1001,10 @@ class _IdentityCard extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (_sovereign) ...[
+                    SovereignEditionMark(tv: tv),
+                    const SizedBox(height: AppSpace.sm),
+                  ],
                   _identity(tv, compact: false, start: true, large: true),
                   // An empty or unreadable library: its line sits with the
                   // name, not in a column of its own.

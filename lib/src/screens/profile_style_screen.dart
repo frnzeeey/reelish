@@ -4,7 +4,9 @@
 // card as it was. Everyone can preview everything. Essentials, Gradients and
 // the preset colours apply for every account; Cinematic backgrounds, effects
 // and a colour of one's own need SupporterPerk.profileStyles, which
-// ProfileController.setStyle checks again when saving. Each choice is a
+// ProfileController.setStyle checks again when saving. Sovereign Edition, the
+// Founder's own card (FounderPerk.founderProfileCard), is offered only to the
+// Founder and applies only after a fresh answer from the server. Each choice is a
 // TvFocusable or a Material control, so touch, remote, mouse, keyboard and
 // game controller all work.
 import 'dart:async';
@@ -51,6 +53,9 @@ class _ProfileStyleScreenState extends State<ProfileStyleScreen> {
 
   bool get _perk => widget.supporters.has(SupporterPerk.profileStyles);
 
+  bool get _founder =>
+      widget.supporters.hasFounderPerk(FounderPerk.founderProfileCard);
+
   void _set(ProfileStyle style) => setState(() => _draft = style);
 
   /// One node per background tile (null is Standard), kept for the page's
@@ -94,7 +99,17 @@ class _ProfileStyleScreenState extends State<ProfileStyleScreen> {
   Future<void> _apply() async {
     final messenger = ScaffoldMessenger.maybeOf(context);
     setState(() => _saving = true);
-    final applied = await widget.profile.setStyle(_draft, perk: _perk);
+    final draft = _draft;
+    // Like a Founder theme, the Founder's card waits for a fresh answer from
+    // the server: neither a saved status nor an offline device applies it.
+    var unchecked = false;
+    if (draft.needsFounderPerk) {
+      await widget.supporters.refresh();
+      unchecked = widget.supporters.failed;
+    }
+    final applied =
+        !unchecked &&
+        await widget.profile.setStyle(draft, perk: _perk, founder: _founder);
     if (!mounted) return;
     setState(() => _saving = false);
     _refocus();
@@ -105,11 +120,45 @@ class _ProfileStyleScreenState extends State<ProfileStyleScreen> {
           content: Text(
             applied
                 ? 'Your profile card is updated.'
+                : unchecked
+                ? 'Your Founder status could not be checked. Check your '
+                      'connection and try again.'
+                : draft.needsFounderPerk
+                ? 'Sovereign Edition is the Founder\'s own card.'
                 : 'Cinematic cards are for Reelish Supporters.',
           ),
         ),
       );
   }
+
+  /// One collection's backgrounds as a section of tiles.
+  Widget _section(
+    ProfileBackdropCollection collection, {
+    String? label,
+    String? description,
+    required bool perk,
+  }) => SettingsSection(
+    label: label ?? collection.label.toUpperCase(),
+    description: description,
+    children: [
+      Padding(
+        padding: const EdgeInsets.all(14),
+        child: _BackdropGrid(
+          styles: [
+            // The card as it has always been, first.
+            if (collection == ProfileBackdropCollection.essentials) null,
+            for (final style in ProfileBackdropStyle.all)
+              if (style.collection == collection) style,
+          ],
+          selected: _draft.backdrop,
+          glow: _draft.palette?.primary,
+          perk: perk,
+          onSelect: (id) => _set(_draft.withBackdrop(id)),
+          focusNode: _tileNode,
+        ),
+      ),
+    ],
+  );
 
   Future<void> _openSupporters() async {
     await Navigator.of(context).push(
@@ -126,8 +175,8 @@ class _ProfileStyleScreenState extends State<ProfileStyleScreen> {
     listenable: Listenable.merge([widget.profile, widget.supporters]),
     builder: (context, _) {
       final perk = _perk;
+      final founder = _founder;
       final saved = widget.profile.style;
-      final draftColor = _draft.palette?.primary;
       return SettingsPage(
         title: 'Profile card',
         subtitle:
@@ -150,38 +199,33 @@ class _ProfileStyleScreenState extends State<ProfileStyleScreen> {
             draft: _draft,
             saved: saved,
             perk: perk,
+            founder: founder,
             saving: _saving,
             onApply: _apply,
             onDiscard: () => _act(() => _set(saved)),
             onRestoreDefault: () => _act(() => _set(ProfileStyle.standard)),
             onSupport: _openSupporters,
           ),
-          for (final collection in ProfileBackdropCollection.values)
-            SettingsSection(
-              label: collection.label.toUpperCase(),
-              description: collection.forSupporters && !perk
-                  ? 'For Reelish Supporters. Preview any of them here.'
-                  : null,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: _BackdropGrid(
-                    styles: [
-                      // The card as it has always been, first.
-                      if (collection == ProfileBackdropCollection.essentials)
-                        null,
-                      for (final style in ProfileBackdropStyle.all)
-                        if (style.collection == collection) style,
-                    ],
-                    selected: _draft.backdrop,
-                    glow: draftColor,
-                    perk: perk,
-                    onSelect: (id) => _set(_draft.withBackdrop(id)),
-                    focusNode: _tileNode,
-                  ),
-                ),
-              ],
+          // The Founder's own card, first. Only the Founder sees this
+          // section: it cannot be unlocked, so it is never shown locked.
+          if (founder)
+            _section(
+              ProfileBackdropCollection.sovereign,
+              label: 'FOUNDER COLLECTION',
+              description:
+                  'Yours alone, as the creator of Reelish: golden laurel on '
+                  'deep wine. Your colour and effect still apply.',
+              perk: perk,
             ),
+          for (final collection in ProfileBackdropCollection.values)
+            if (!collection.forFounder)
+              _section(
+                collection,
+                description: collection.forSupporters && !perk
+                    ? 'For Reelish Supporters. Preview any of them here.'
+                    : null,
+                perk: perk,
+              ),
           SettingsSection(
             label: 'PROFILE COLOUR',
             description:
@@ -239,6 +283,7 @@ class _Actions extends StatelessWidget {
     required this.draft,
     required this.saved,
     required this.perk,
+    required this.founder,
     required this.saving,
     required this.onApply,
     required this.onDiscard,
@@ -249,6 +294,9 @@ class _Actions extends StatelessWidget {
   final ProfileStyle draft;
   final ProfileStyle saved;
   final bool perk;
+
+  /// FounderPerk.founderProfileCard: Sovereign Edition.
+  final bool founder;
   final bool saving;
   final VoidCallback onApply;
   final VoidCallback onDiscard;
@@ -259,12 +307,20 @@ class _Actions extends StatelessWidget {
   Widget build(BuildContext context) {
     final changed = draft != saved;
     final locked = draft.needsPerk && !perk;
+    // Only reachable from a saved Sovereign card on an account that is no
+    // longer the Founder's: the section is never offered to anyone else.
+    final founderLocked = draft.needsFounderPerk && !founder;
     final String caption;
     if (!changed) {
-      caption = saved.needsPerk && !perk
+      caption = saved.needsFounderPerk && !founder
+          ? 'Sovereign Edition is the Founder\'s own card, so the standard '
+                'look shows in its place.'
+          : saved.needsPerk && !perk
           ? 'Parts of your card are for Reelish Supporters, so the standard '
                 'look shows in their place.'
           : 'This is your card.';
+    } else if (founderLocked) {
+      caption = 'Sovereign Edition is the Founder\'s own card.';
     } else if (locked) {
       caption =
           'Cinematic backgrounds, effects and a colour of your own are for '
@@ -293,7 +349,9 @@ class _Actions extends StatelessWidget {
             spacing: AppSpace.sm,
             runSpacing: AppSpace.xs,
             children: [
-              if (changed && locked)
+              if (changed && founderLocked)
+                const SizedBox.shrink()
+              else if (changed && locked)
                 FilledButton.icon(
                   onPressed: onSupport,
                   icon: const Icon(ReelishIcons.supporter, size: 18),

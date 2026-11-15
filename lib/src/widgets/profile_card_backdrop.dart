@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 
 import '../platform/device_capabilities.dart';
 import '../theme/profile_styles.dart';
+import 'sovereign_laurel.dart';
 
 /// [style] filling its box. [glow], the card's colour, lights it softly from
 /// behind the avatar so a chosen colour shows on any background.
@@ -193,6 +194,8 @@ class _BackdropPainter extends CustomPainter {
           longest * .6,
           colors[3].withValues(alpha: .18),
         );
+      case ProfilePattern.sovereign:
+        _sovereign(canvas, rect, longest);
     }
     final glow = this.glow;
     if (glow != null) {
@@ -204,6 +207,89 @@ class _BackdropPainter extends CustomPainter {
         glow.withValues(alpha: .18),
       );
     }
+  }
+
+  /// Sovereign Edition: deep wine rising from charcoal, a soft royal-wine
+  /// light behind the avatar, the engraved laurel seal to the right, a
+  /// champagne light along the top and a champagne hairline frame inset from
+  /// the edge, like a membership card's border. Restraint is the point: the
+  /// gold is in fine lines, never in fills.
+  static void _sovereign(Canvas canvas, Rect rect, double longest) {
+    final size = rect.size;
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.bottomLeft,
+          end: Alignment.topRight,
+          colors: [
+            SovereignColors.charcoal,
+            SovereignColors.ink,
+            SovereignColors.wine,
+          ],
+          stops: [.2, .62, 1],
+        ).createShader(rect),
+    );
+    _light(
+      canvas,
+      rect,
+      const Alignment(-.1, -1.1),
+      longest * .7,
+      SovereignColors.royalWine.withValues(alpha: .4),
+    );
+    // Deeper at the foot, where the counts sit.
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            SovereignColors.charcoal.withValues(alpha: 0),
+            SovereignColors.charcoal.withValues(alpha: .55),
+          ],
+          stops: const [.55, 1],
+        ).createShader(rect),
+    );
+    final shortest = math.min(size.width, size.height);
+    paintSovereignSeal(
+      canvas,
+      Offset(size.width - shortest * .2, size.height * .56),
+      shortest * .44,
+    );
+    // The champagne light along the top edge.
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, size.width, math.max(1.0, shortest * .006)),
+      Paint()
+        ..shader = LinearGradient(
+          colors: [
+            SovereignColors.highlight.withValues(alpha: 0),
+            SovereignColors.highlight.withValues(alpha: .7),
+            SovereignColors.highlight.withValues(alpha: 0),
+          ],
+        ).createShader(rect),
+    );
+    // The hairline frame, inset from the card's edge.
+    final inset = (shortest * .045).clamp(5.0, 12.0);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        rect.deflate(inset),
+        Radius.circular(math.max(4, 16 - inset)),
+      ),
+      Paint()
+        ..isAntiAlias = true
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = .8
+        ..shader = LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            SovereignColors.highlight.withValues(alpha: .42),
+            SovereignColors.antique.withValues(alpha: .18),
+            SovereignColors.champagne.withValues(alpha: .34),
+          ],
+        ).createShader(rect),
+    );
   }
 
   @override

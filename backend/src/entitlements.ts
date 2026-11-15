@@ -30,13 +30,19 @@ export type SupporterPerk =
 
 /**
  * The Founder's own perks: the Founder Collection's cosmetics (a theme, a
- * launcher icon and the Founder avatar frame), which no donation unlocks. The
- * theme and icon are only ever seen by their owner, so there is nothing to
+ * launcher icon, the Founder avatar frame, the launch screen and the Sovereign
+ * Edition profile card), which no donation unlocks. The theme, icon, splash and
+ * profile card are only ever seen by their owner, so there is nothing to
  * enforce; the app reads the entitlement from /supporters/me. The frame is seen
  * by others, so frames.ts enforces it. Named here so both sides list the same
  * perks.
  */
-export type FounderPerk = 'founder_themes' | 'founder_icons' | 'founder_frames' | 'founder_splash';
+export type FounderPerk =
+  | 'founder_themes'
+  | 'founder_icons'
+  | 'founder_frames'
+  | 'founder_splash'
+  | 'founder_profile_card';
 
 const refusals: Record<SupporterPerk, string> = {
   host_watch_party: 'Hosting a Watch Party is for Reelish Supporters.',

@@ -16,6 +16,7 @@ it, and the app theme, the accent across the app and the player are untouched.
 | | Essentials: Graphite, Midnight, Aubergine, Pine (solid) | Everyone |
 | | Gradients: Dusk, Tide, Cinder, Moss | Everyone |
 | | Cinematic: Spotlight, Neon Noir, Starlight, Projector, Film Reel, Northern Mist | Supporters and the Founder |
+| | Founder Collection: Sovereign Edition ([below](#sovereign-edition)) | The Founder only |
 | Colour | Standard (the theme's light, else the app accent) or any of the app's accent presets | Everyone |
 | | A colour of one's own (hue and vividness) | Supporters and the Founder |
 | Effect | None | Everyone |
@@ -67,6 +68,43 @@ data can at most change one person's own screen.
 Free accounts can already set the app-wide accent to any colour (Settings >
 Appearance), and a Standard card follows that accent. That behaviour is
 unchanged.
+
+### Sovereign Edition
+
+The Founder's own card, in the Founder Collection with the Sovereign Edition
+theme, the Sovereign Crest icon and the Sovereign frame. Its signature is the
+golden laurel; the gold is in fine lines, never in fills.
+
+- **Look:** Golden Wine (`SovereignColors` in `profile_styles.dart`): deep wine
+  rising from a warm charcoal, a soft royal-wine light behind the avatar, a
+  champagne light along the top edge, a champagne hairline frame inset from the
+  card's edge, and a faint engraved laurel seal to the right. Above the name,
+  "SOVEREIGN EDITION" between two laurel sprigs (`SovereignEditionMark`,
+  `lib/src/widgets/sovereign_laurel.dart`). The card's colour defaults to
+  champagne (ring, edit button, counts), the Founder badge takes its champagne
+  finish, and the card's border is champagne. A chosen preset colour or effect
+  still applies over it; the theme, the avatar and the avatar frame are
+  untouched. The leaves follow the Sovereign frame's laurel.
+- **Layouts:** stacked on phones (the mark above the avatar, with room for the
+  Sovereign frame's crown), across the page on TV and Windows (the mark above
+  the name, and wider padding so the frame's laurel stays inside the hairline).
+- **Motion:** none of its own. Everything is painted once; Drift and Sheen work
+  as on any card.
+- **Entitlement:** `FounderPerk.founderProfileCard` / `founder_profile_card`,
+  the Founder entitlement as a whole ([entitlements](../backend/entitlements.md#founder-perks)).
+  Supporters and free accounts never see the section, not even locked. Applying
+  it waits for a fresh answer from the server (`SupporterController.refresh`),
+  as a Founder theme does, so an edited saved status or an offline device does
+  not apply it. `ProfileController.setStyle(style, perk:, founder:)` refuses it
+  without the perk, and the card shows `style.allowed(perk:, founder:)`, where
+  `founder` defaults to false. A Sovereign card saved on an account that is no
+  longer the Founder's shows the standard card and stays saved.
+- **Limits:** like every card style, it is a local setting seen only by its
+  owner, so the server has nothing to enforce. Someone who rewrites the app's
+  saved data on a rooted device could show it on their own screen, and nowhere
+  else; nobody else ever sees it.
+- **Saved:** as background id `sovereign` in the existing `style` entry. An
+  older app does not know the id and shows the standard card.
 
 ### Saved
 

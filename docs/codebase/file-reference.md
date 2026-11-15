@@ -19,10 +19,10 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/account/backend_config.dart`](#libsrcaccountbackend_configdart) | Shared | 25 | Where the Reelish API lives. |
 | [`lib/src/account/collection_sync.dart`](#libsrcaccountcollection_syncdart) | Shared | 558 | Syncs custom collections across the signed-in account's devices through the Reelish API: records changed on this device wait in a per-account outbox and are pushed shortly after editing stops; records other devices changed are pulled and applied where newer. |
 | [`lib/src/account/discovery_preferences_sync.dart`](#libsrcaccountdiscovery_preferences_syncdart) | Shared | 186 | Discovery preferences on the Reelish API (GET/PUT /api/v1/discovery/preferences): picked genres, the genre step and personalisation on or off, one small record per account. |
-| [`lib/src/account/profile_controller.dart`](#libsrcaccountprofile_controllerdart) | Shared | 328 | The user's Reelish profile on this device: a display name and an avatar (initials, a preset, or their own photo). |
+| [`lib/src/account/profile_controller.dart`](#libsrcaccountprofile_controllerdart) | Shared | 335 | The user's Reelish profile on this device: a display name and an avatar (initials, a preset, or their own photo). |
 | [`lib/src/account/progress_sync.dart`](#libsrcaccountprogress_syncdart) | Shared | 559 | Syncs playback progress across the signed-in account's devices through the Reelish API: changes saved on this device wait in a per-account outbox and are pushed when playback settles; rows other devices changed are pulled and applied where newer. |
 | [`lib/src/account/session_store.dart`](#libsrcaccountsession_storedart) | Shared | 167 | Keeps the Reelish session in the platform's secure storage (Android Keystore, Windows DPAPI), never in SharedPreferences. |
-| [`lib/src/account/supporter_controller.dart`](#libsrcaccountsupporter_controllerdart) | Shared | 277 | The signed-in account's place in the Reelish Supporters Program, and its entitlement: whether it has the supporter perks. |
+| [`lib/src/account/supporter_controller.dart`](#libsrcaccountsupporter_controllerdart) | Shared | 287 | The signed-in account's place in the Reelish Supporters Program, and its entitlement: whether it has the supporter perks. |
 | [`lib/src/account/trakt_avatar.dart`](#libsrcaccounttrakt_avatardart) | Shared | 30 | Trakt's avatar URL, checked on the device the way the Reelish API checks it (backend/src/trakt.ts, cleanAvatarUrl): HTTPS on Trakt's image hosts or Gravatar, with no credentials or unusual port, and never Trakt's stand-in picture. |
 | [`lib/src/account/watchlist_sync.dart`](#libsrcaccountwatchlist_syncdart) | Shared | 313 | Keeps My list and the Trakt watchlist in step, when the user turns it on. |
 | [`lib/src/analytics/analytics_events.dart`](#libsrcanalyticsanalytics_eventsdart) | Shared | 171 | The complete list of analytics events Reelish sends, in one place. |
@@ -109,9 +109,9 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/screens/plugin_details_screen.dart`](#libsrcscreensplugin_details_screendart) | Shared | 626 | A plugin-library repository's details page, from which it can be installed. |
 | [`lib/src/screens/plugin_library_screen.dart`](#libsrcscreensplugin_library_screendart) | Shared | 767 | Browse the community provider catalog and hand a manifest to the existing installer: the library as its own page, opened from Plugins on phone and TV. |
 | [`lib/src/screens/plugins_screen.dart`](#libsrcscreensplugins_screendart) | Shared | 949 | The phone and TV Plugins page: installed repositories, enabling providers, script updates and the plugin library. |
-| [`lib/src/screens/profile_screen.dart`](#libsrcscreensprofile_screendart) | Shared | 1580 | The signed-in person's page, in four parts: who they are (avatar, name, badges, and apart from those their viewing at a glance), how Reelish looks for them (profile card, avatar frame, app theme, app icon), their viewing statistics and their account. |
+| [`lib/src/screens/profile_screen.dart`](#libsrcscreensprofile_screendart) | Shared | 1613 | The signed-in person's page, in four parts: who they are (avatar, name, badges, and apart from those their viewing at a glance), how Reelish looks for them (profile card, avatar frame, app theme, app icon), their viewing statistics and their account. |
 | [`lib/src/screens/profile_stats_screen.dart`](#libsrcscreensprofile_stats_screendart) | Shared | 461 | Profile > Viewing statistics: what the viewer has watched recently, counted from this account's history and episode progress on this device (ViewingStats). |
-| [`lib/src/screens/profile_style_screen.dart`](#libsrcscreensprofile_style_screendart) | Shared | 703 | Profile > Profile card: the card's background, colour and animated accent (lib/src/theme/profile_styles.dart), with a live preview of the real card. |
+| [`lib/src/screens/profile_style_screen.dart`](#libsrcscreensprofile_style_screendart) | Shared | 761 | Profile > Profile card: the card's background, colour and animated accent (lib/src/theme/profile_styles.dart), with a live preview of the real card. |
 | [`lib/src/screens/recommendation_settings_screen.dart`](#libsrcscreensrecommendation_settings_screendart) | Shared | 181 | Settings → Recommendations: personalised rows on or off, the genres the viewer likes, titles hidden from recommendations, and a reset. |
 | [`lib/src/screens/search/search_cards.dart`](#libsrcscreenssearchsearch_cardsdart) | Shared | 325 | Universal Search's result cards, one layout per kind: posters for movies and series, round portraits for people, artwork for collections, and a wider card for the top result. |
 | [`lib/src/screens/search/search_detail_screens.dart`](#libsrcscreenssearchsearch_detail_screensdart) | Shared | 397 | The pages behind a person and a movie collection found in Universal Search. |
@@ -188,7 +188,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/theme/avatar_frames.dart`](#libsrcthemeavatar_framesdart) | Shared | 311 | The avatar frame collection: how each frame looks, by the stable id the Reelish API stores (backend/src/frames.ts lists the same ids and decides who may wear which). |
 | [`lib/src/theme/design_tokens.dart`](#libsrcthemedesign_tokensdart) | Shared | 184 | Reelish's design tokens: the spacing, radius, type, icon and motion steps every interface draws from. |
 | [`lib/src/theme/glass_theme.dart`](#libsrcthemeglass_themedart) | Shared | 482 | Colours, accent palettes, typography and the Material themes for phone and TV/Windows. |
-| [`lib/src/theme/profile_styles.dart`](#libsrcthemeprofile_stylesdart) | Shared | 316 | The profile card's own look: a background, a colour and an animated accent, chosen in Profile > Profile card and seen only by the card's owner. |
+| [`lib/src/theme/profile_styles.dart`](#libsrcthemeprofile_stylesdart) | Shared | 376 | The profile card's own look: a background, a colour and an animated accent, chosen in Profile > Profile card and seen only by the card's owner. |
 | [`lib/src/theme/reelish_icons.dart`](#libsrcthemereelish_iconsdart) | Shared | 457 | GENERATED by tool/icons/build.mjs from tool/icons/icons.mjs. |
 | [`lib/src/theme/supporter_themes.dart`](#libsrcthemesupporter_themesdart) | Shared | 595 | App themes for Reelish Supporters (Settings > Appearance). |
 | [`lib/src/theme/theme_tokens.dart`](#libsrcthemetheme_tokensdart) | Shared | 144 | The colours a Reelish theme gives every page: background, surfaces, text, borders and the tint of its glass. |
@@ -256,7 +256,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/widgets/poster_image.dart`](#libsrcwidgetsposter_imagedart) | Shared | 47 | The poster placeholder tile and the fade-in used when a poster image arrives. |
 | [`lib/src/widgets/profile_avatar.dart`](#libsrcwidgetsprofile_avatardart) | Shared | 193 | The user's avatar as chosen in their profile: their Trakt picture, their photo, a preset, or the first letter of their name on the accent. |
 | [`lib/src/widgets/profile_avatar_picker.dart`](#libsrcwidgetsprofile_avatar_pickerdart) | Shared | 168 | The avatar choices for the signed-in profile, shared by the account screen and the profile page's avatar sheet. |
-| [`lib/src/widgets/profile_card_backdrop.dart`](#libsrcwidgetsprofile_card_backdropdart) | Shared | 425 | Draws the profile card's chosen background and its animated accent (lib/src/theme/profile_styles.dart), all in code: no images, nothing to download or cache. |
+| [`lib/src/widgets/profile_card_backdrop.dart`](#libsrcwidgetsprofile_card_backdropdart) | Shared | 511 | Draws the profile card's chosen background and its animated accent (lib/src/theme/profile_styles.dart), all in code: no images, nothing to download or cache. |
 | [`lib/src/widgets/provider_installer_modal.dart`](#libsrcwidgetsprovider_installer_modaldart) | Shared | 183 | The sheet for installing a provider repository from a manifest URL. |
 | [`lib/src/widgets/provider_search_dialog.dart`](#libsrcwidgetsprovider_search_dialogdart) | Shared | 93 | "Searching providers…" while a play request looks for a stream. |
 | [`lib/src/widgets/recommendation_feedback_sheet.dart`](#libsrcwidgetsrecommendation_feedback_sheetdart) | Shared | 158 | Phone: the sheet a long press on a recommended title opens, saying why it was recommended and offering Not interested, Already watched and More like this. |
@@ -266,6 +266,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/widgets/social/share_dialog.dart`](#libsrcwidgetssocialshare_dialogdart) | Shared | 231 | Share with friends: pick up to ten friends, add a short note (not on TV, where typing is awkward) and send a title from its details page. |
 | [`lib/src/widgets/social/social_widgets.dart`](#libsrcwidgetssocialsocial_widgetsdart) | Shared | 529 | People in Friends: the avatar friends chose (a built-in preset or an initial), a person row for lists, a recommendation card, and the Add friend and Report dialogs. |
 | [`lib/src/widgets/soft_glass_dock.dart`](#libsrcwidgetssoft_glass_dockdart) | Shared | 287 | The phone and tablet bottom navigation dock. |
+| [`lib/src/widgets/sovereign_laurel.dart`](#libsrcwidgetssovereign_laureldart) | Shared | 214 | The golden laurel of Sovereign Edition, the Founder's own profile card (FounderPerk.founderProfileCard): the branch geometry, the engraved seal the card's background carries, and the "Sovereign Edition" designation by the name. |
 | [`lib/src/widgets/supporter_theme_picker.dart`](#libsrcwidgetssupporter_theme_pickerdart) | Shared | 835 | Chooses an app theme. |
 | [`lib/src/widgets/top_lit_edge.dart`](#libsrcwidgetstop_lit_edgedart) | Shared | 61 | A rounded hairline edge lit from above, for artwork tiles that would otherwise sit flat on the dark page. |
 | [`lib/src/widgets/tv/tv_focus.dart`](#libsrcwidgetstvtv_focusdart) | Android TV | 543 | TV focus and remote helpers: overscan-safe margins, the focus ring, dialog focus, key scrolling and the on-screen text entry dialog. |
@@ -453,7 +454,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/account/profile_controller.dart
 
-**Source:** [`lib/src/account/profile_controller.dart`](../../lib/src/account/profile_controller.dart) · **Platform:** Shared · **Lines:** 328
+**Source:** [`lib/src/account/profile_controller.dart`](../../lib/src/account/profile_controller.dart) · **Platform:** Shared · **Lines:** 335
 
 **Purpose:** The user's Reelish profile on this device: a display name and an avatar (initials, a preset, or their own photo).
 
@@ -501,7 +502,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/account/supporter_controller.dart
 
-**Source:** [`lib/src/account/supporter_controller.dart`](../../lib/src/account/supporter_controller.dart) · **Platform:** Shared · **Lines:** 277
+**Source:** [`lib/src/account/supporter_controller.dart`](../../lib/src/account/supporter_controller.dart) · **Platform:** Shared · **Lines:** 287
 
 **Purpose:** The signed-in account's place in the Reelish Supporters Program, and its entitlement: whether it has the supporter perks.
 
@@ -1861,13 +1862,13 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/screens/profile_screen.dart
 
-**Source:** [`lib/src/screens/profile_screen.dart`](../../lib/src/screens/profile_screen.dart) · **Platform:** Shared · **Lines:** 1580 · **Branches on:** isTv, usesTvLayout
+**Source:** [`lib/src/screens/profile_screen.dart`](../../lib/src/screens/profile_screen.dart) · **Platform:** Shared · **Lines:** 1613 · **Branches on:** isTv, usesTvLayout
 
 **Purpose:** The signed-in person's page, in four parts: who they are (avatar, name, badges, and apart from those their viewing at a glance), how Reelish looks for them (profile card, avatar frame, app theme, app icon), their viewing statistics and their account.
 
 **Declares:** `_Counts` (Class), `_CountsBeside` (Widget), `_CountsFoot` (Widget), `_CountsNote` (Widget), `_EditableAvatar` (Widget), `_IdentityCard` (Widget), `_NewDot` (Widget), `ProfileActivity` (Class), `_ProfileName` (Widget), `ProfileScreen` (Widget), `_ProfileScreenState` (Widget state), `_Sheet` (Widget), `_SignedOut` (Widget), `_SignOutTile` (Widget), `_Stat` (Widget), `_StatState` (Widget state), `_TraktBadge` (Widget)
 
-**Imports (project):** `src/account/account_badges.dart`, `src/account/account_controller.dart`, `src/account/avatar_frames.dart`, `src/account/profile_controller.dart`, `src/account/supporter_controller.dart`, `src/messaging/messages_controller.dart`, `src/models/episode_progress.dart`, `src/models/media_item.dart`, `src/models/resume_summary.dart`, `src/navigation/app_transitions.dart`, `src/platform/app_icon.dart`, `src/platform/device_capabilities.dart`, `src/screens/account_settings_screen.dart`, `src/screens/app_icon_settings_screen.dart`, `src/screens/avatar_frames_screen.dart`, `src/screens/playback_settings_screen.dart`, `src/screens/profile_stats_screen.dart`, `src/screens/profile_style_screen.dart`, `src/screens/social/friends_privacy_screen.dart`, `src/screens/social/friends_screen.dart`, `src/screens/supporters_screen.dart`, `src/services/accent_settings_controller.dart`, `src/services/storage_service.dart`, `src/social/social_controller.dart`, `src/theme/avatar_frames.dart`, `src/theme/design_tokens.dart`, `src/theme/glass_theme.dart`, `src/theme/profile_styles.dart`, `src/theme/reelish_icons.dart`, `src/theme/supporter_themes.dart`, `src/widgets/account_badges.dart`, `src/widgets/avatar_frame.dart`, `src/widgets/profile_avatar.dart`, `src/widgets/profile_avatar_picker.dart`, `src/widgets/profile_card_backdrop.dart`, `src/widgets/settings/settings_components.dart`
+**Imports (project):** `src/account/account_badges.dart`, `src/account/account_controller.dart`, `src/account/avatar_frames.dart`, `src/account/profile_controller.dart`, `src/account/supporter_controller.dart`, `src/messaging/messages_controller.dart`, `src/models/episode_progress.dart`, `src/models/media_item.dart`, `src/models/resume_summary.dart`, `src/navigation/app_transitions.dart`, `src/platform/app_icon.dart`, `src/platform/device_capabilities.dart`, `src/screens/account_settings_screen.dart`, `src/screens/app_icon_settings_screen.dart`, `src/screens/avatar_frames_screen.dart`, `src/screens/playback_settings_screen.dart`, `src/screens/profile_stats_screen.dart`, `src/screens/profile_style_screen.dart`, `src/screens/social/friends_privacy_screen.dart`, `src/screens/social/friends_screen.dart`, `src/screens/supporters_screen.dart`, `src/services/accent_settings_controller.dart`, `src/services/storage_service.dart`, `src/social/social_controller.dart`, `src/theme/avatar_frames.dart`, `src/theme/design_tokens.dart`, `src/theme/glass_theme.dart`, `src/theme/profile_styles.dart`, `src/theme/reelish_icons.dart`, `src/theme/supporter_themes.dart`, `src/widgets/account_badges.dart`, `src/widgets/avatar_frame.dart`, `src/widgets/profile_avatar.dart`, `src/widgets/profile_avatar_picker.dart`, `src/widgets/profile_card_backdrop.dart`, `src/widgets/settings/settings_components.dart`, `src/widgets/sovereign_laurel.dart`
 
 **Packages:** `flutter`
 
@@ -1893,7 +1894,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/screens/profile_style_screen.dart
 
-**Source:** [`lib/src/screens/profile_style_screen.dart`](../../lib/src/screens/profile_style_screen.dart) · **Platform:** Shared · **Lines:** 703 · **Branches on:** isTv, usesTvLayout
+**Source:** [`lib/src/screens/profile_style_screen.dart`](../../lib/src/screens/profile_style_screen.dart) · **Platform:** Shared · **Lines:** 761 · **Branches on:** isTv, usesTvLayout
 
 **Purpose:** Profile > Profile card: the card's background, colour and animated accent (lib/src/theme/profile_styles.dart), with a live preview of the real card.
 
@@ -3091,7 +3092,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Packages:** `flutter`
 
-**Imported by:** `src/desktop/desktop_collections.dart`, `src/desktop/desktop_plugins_page.dart`, `src/desktop/desktop_settings_page.dart`, `src/desktop/desktop_widgets.dart`, `src/screens/account_settings_screen.dart`, `src/screens/app_icon_settings_screen.dart`, `src/screens/avatar_frames_screen.dart`, `src/screens/collections/collection_pages.dart`, `src/screens/genre_onboarding_screen.dart`, `src/screens/home_screen.dart`, `src/screens/installed_provider_screen.dart`, `src/screens/library_screen.dart`, `src/screens/playback_settings_screen.dart`, `src/screens/plugin_collection_screen.dart`, `src/screens/plugin_details_screen.dart`, `src/screens/plugin_library_screen.dart`, `src/screens/plugins_screen.dart`, `src/screens/profile_screen.dart`, `src/screens/profile_stats_screen.dart`, `src/screens/profile_style_screen.dart`, `src/screens/search/search_cards.dart`, `src/screens/search/search_detail_screens.dart`, `src/screens/search/search_filter_bar.dart`, `src/screens/search/source_availability.dart`, `src/screens/search/universal_search_view.dart`, `src/screens/sign_in_screen.dart`, `src/screens/social/friend_collection_screen.dart`, `src/screens/social/friends_privacy_screen.dart`, `src/screens/social/friends_screen.dart`, `src/screens/social/messages_screen.dart`, `src/screens/subtitle_addons_screen.dart`, `src/screens/supporters_screen.dart`, `src/screens/tv/tv_details_screen.dart`, `src/screens/watch_party/create_party_screen.dart`, `src/screens/watch_party/join_party_screen.dart`, `src/screens/watch_party/party_desktop.dart`, `src/screens/watch_party/party_widgets.dart`, `src/screens/watch_party/waiting_room_screen.dart`, `src/theme/glass_theme.dart`, `src/theme/supporter_themes.dart`, `src/widgets/account_badges.dart`, `src/widgets/discovery_prompt_card.dart`, `src/widgets/media_card.dart`, `src/widgets/player/content_advisory_overlay.dart`, `src/widgets/player/custom_video_player.dart`, `src/widgets/player/party_activity.dart`, `src/widgets/player/party_badge.dart`, `src/widgets/player/player_settings_sheet.dart`, `src/widgets/player/player_volume_control.dart`, `src/widgets/player/skip_segment_button.dart`, `src/widgets/plugin_library/copy_manifest_button.dart`, `src/widgets/plugin_library/plugin_badges.dart`, `src/widgets/plugin_library/plugin_card.dart`, `src/widgets/plugin_library/plugin_filter_bar.dart`, `src/widgets/plugin_library/plugin_install_button.dart`, `src/widgets/plugin_library/plugin_library_notices.dart`, `src/widgets/plugin_library/plugin_logo.dart`, `src/widgets/plugin_library/plugin_scraper_tile.dart`, `src/widgets/plugin_library/plugin_search_bar.dart`, `src/widgets/plugin_library/plugin_skeleton.dart`, `src/widgets/plugin_library/plugin_stats.dart`, `src/widgets/plugin_manager/plugin_transparency.dart`, `src/widgets/profile_avatar_picker.dart`, `src/widgets/recommendation_feedback_sheet.dart`, `src/widgets/settings/developer_credit.dart`, `src/widgets/settings/settings_components.dart`, `src/widgets/settings/tmdb_attribution.dart`, `src/widgets/social/share_dialog.dart`, `src/widgets/social/social_widgets.dart`, `src/widgets/supporter_theme_picker.dart`, `src/widgets/watch_party/party_chat_panel.dart`
+**Imported by:** `src/desktop/desktop_collections.dart`, `src/desktop/desktop_plugins_page.dart`, `src/desktop/desktop_settings_page.dart`, `src/desktop/desktop_widgets.dart`, `src/screens/account_settings_screen.dart`, `src/screens/app_icon_settings_screen.dart`, `src/screens/avatar_frames_screen.dart`, `src/screens/collections/collection_pages.dart`, `src/screens/genre_onboarding_screen.dart`, `src/screens/home_screen.dart`, `src/screens/installed_provider_screen.dart`, `src/screens/library_screen.dart`, `src/screens/playback_settings_screen.dart`, `src/screens/plugin_collection_screen.dart`, `src/screens/plugin_details_screen.dart`, `src/screens/plugin_library_screen.dart`, `src/screens/plugins_screen.dart`, `src/screens/profile_screen.dart`, `src/screens/profile_stats_screen.dart`, `src/screens/profile_style_screen.dart`, `src/screens/search/search_cards.dart`, `src/screens/search/search_detail_screens.dart`, `src/screens/search/search_filter_bar.dart`, `src/screens/search/source_availability.dart`, `src/screens/search/universal_search_view.dart`, `src/screens/sign_in_screen.dart`, `src/screens/social/friend_collection_screen.dart`, `src/screens/social/friends_privacy_screen.dart`, `src/screens/social/friends_screen.dart`, `src/screens/social/messages_screen.dart`, `src/screens/subtitle_addons_screen.dart`, `src/screens/supporters_screen.dart`, `src/screens/tv/tv_details_screen.dart`, `src/screens/watch_party/create_party_screen.dart`, `src/screens/watch_party/join_party_screen.dart`, `src/screens/watch_party/party_desktop.dart`, `src/screens/watch_party/party_widgets.dart`, `src/screens/watch_party/waiting_room_screen.dart`, `src/theme/glass_theme.dart`, `src/theme/supporter_themes.dart`, `src/widgets/account_badges.dart`, `src/widgets/discovery_prompt_card.dart`, `src/widgets/media_card.dart`, `src/widgets/player/content_advisory_overlay.dart`, `src/widgets/player/custom_video_player.dart`, `src/widgets/player/party_activity.dart`, `src/widgets/player/party_badge.dart`, `src/widgets/player/player_settings_sheet.dart`, `src/widgets/player/player_volume_control.dart`, `src/widgets/player/skip_segment_button.dart`, `src/widgets/plugin_library/copy_manifest_button.dart`, `src/widgets/plugin_library/plugin_badges.dart`, `src/widgets/plugin_library/plugin_card.dart`, `src/widgets/plugin_library/plugin_filter_bar.dart`, `src/widgets/plugin_library/plugin_install_button.dart`, `src/widgets/plugin_library/plugin_library_notices.dart`, `src/widgets/plugin_library/plugin_logo.dart`, `src/widgets/plugin_library/plugin_scraper_tile.dart`, `src/widgets/plugin_library/plugin_search_bar.dart`, `src/widgets/plugin_library/plugin_skeleton.dart`, `src/widgets/plugin_library/plugin_stats.dart`, `src/widgets/plugin_manager/plugin_transparency.dart`, `src/widgets/profile_avatar_picker.dart`, `src/widgets/recommendation_feedback_sheet.dart`, `src/widgets/settings/developer_credit.dart`, `src/widgets/settings/settings_components.dart`, `src/widgets/settings/tmdb_attribution.dart`, `src/widgets/social/share_dialog.dart`, `src/widgets/social/social_widgets.dart`, `src/widgets/sovereign_laurel.dart`, `src/widgets/supporter_theme_picker.dart`, `src/widgets/watch_party/party_chat_panel.dart`
 
 **Tests importing it:** `test/content_advisory_test.dart`
 
@@ -3113,17 +3114,17 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/theme/profile_styles.dart
 
-**Source:** [`lib/src/theme/profile_styles.dart`](../../lib/src/theme/profile_styles.dart) · **Platform:** Shared · **Lines:** 316
+**Source:** [`lib/src/theme/profile_styles.dart`](../../lib/src/theme/profile_styles.dart) · **Platform:** Shared · **Lines:** 376
 
 **Purpose:** The profile card's own look: a background, a colour and an animated accent, chosen in Profile > Profile card and seen only by the card's owner.
 
-**Declares:** `ProfileBackdropCollection` (Enum), `ProfileBackdropStyle` (Theme), `ProfileEffect` (Enum), `ProfilePattern` (Enum), `ProfileStyle` (Theme)
+**Declares:** `ProfileBackdropCollection` (Enum), `ProfileBackdropStyle` (Theme), `ProfileEffect` (Enum), `ProfilePattern` (Enum), `ProfileStyle` (Theme), `SovereignColors` (Theme)
 
 **Imports (project):** `src/theme/glass_theme.dart`
 
 **Packages:** `flutter`
 
-**Imported by:** `src/account/profile_controller.dart`, `src/screens/profile_screen.dart`, `src/screens/profile_style_screen.dart`, `src/widgets/profile_card_backdrop.dart`
+**Imported by:** `src/account/profile_controller.dart`, `src/screens/profile_screen.dart`, `src/screens/profile_style_screen.dart`, `src/widgets/profile_card_backdrop.dart`, `src/widgets/sovereign_laurel.dart`
 
 **Tests importing it:** `test/profile_customization_test.dart`
 
@@ -4215,13 +4216,13 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/widgets/profile_card_backdrop.dart
 
-**Source:** [`lib/src/widgets/profile_card_backdrop.dart`](../../lib/src/widgets/profile_card_backdrop.dart) · **Platform:** Shared · **Lines:** 425 · **Branches on:** isTv
+**Source:** [`lib/src/widgets/profile_card_backdrop.dart`](../../lib/src/widgets/profile_card_backdrop.dart) · **Platform:** Shared · **Lines:** 511 · **Branches on:** isTv
 
 **Purpose:** Draws the profile card's chosen background and its animated accent (lib/src/theme/profile_styles.dart), all in code: no images, nothing to download or cache.
 
 **Declares:** `_BackdropPainter` (Painter), `_EffectPainter` (Painter), `ProfileCardBackdrop` (Widget), `ProfileCardEffect` (Widget), `_ProfileCardEffectState` (Widget state)
 
-**Imports (project):** `src/platform/device_capabilities.dart`, `src/theme/profile_styles.dart`
+**Imports (project):** `src/platform/device_capabilities.dart`, `src/theme/profile_styles.dart`, `src/widgets/sovereign_laurel.dart`
 
 **Packages:** `flutter`
 
@@ -4378,6 +4379,24 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 **Imported by:** `src/screens/home_screen.dart`, `src/screens/library_screen.dart`
 
 **Tests importing it:** `integration_test/app_smoke_test.dart`, `integration_test/ui_perf_test.dart`, `test/home_startup_budget_test.dart`, `test/soft_glass_dock_test.dart`, `test/tv_home_test.dart`, `test/ux_journeys_test.dart`
+
+## lib/src/widgets/sovereign_laurel.dart
+
+**Source:** [`lib/src/widgets/sovereign_laurel.dart`](../../lib/src/widgets/sovereign_laurel.dart) · **Platform:** Shared · **Lines:** 214
+
+**Purpose:** The golden laurel of Sovereign Edition, the Founder's own profile card (FounderPerk.founderProfileCard): the branch geometry, the engraved seal the card's background carries, and the "Sovereign Edition" designation by the name.
+
+**Declares:** `SovereignEditionMark` (Widget), `_SprigPainter` (Painter)
+
+**Top-level functions:** `_leaf`, `paintSovereignSeal`
+
+**Imports (project):** `src/theme/design_tokens.dart`, `src/theme/profile_styles.dart`
+
+**Packages:** `flutter`
+
+**Imported by:** `src/screens/profile_screen.dart`, `src/widgets/profile_card_backdrop.dart`
+
+**Tests importing it:** `test/profile_customization_test.dart`
 
 ## lib/src/widgets/supporter_theme_picker.dart
 

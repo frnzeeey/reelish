@@ -22,6 +22,7 @@ import 'package:onfeed/src/theme/glass_theme.dart';
 import 'package:onfeed/src/theme/profile_styles.dart';
 import 'package:onfeed/src/theme/supporter_themes.dart';
 import 'package:onfeed/src/widgets/profile_card_backdrop.dart';
+import 'package:onfeed/src/widgets/sovereign_laurel.dart';
 import 'package:onfeed/src/widgets/tv/tv_focus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -47,12 +48,23 @@ Future<ProfileController> _show(
   String entitlement = 'free',
   Map<String, Object?>? style,
   String? theme,
+  // The entitlement saved on the device from an earlier answer, which a
+  // tampered device could change.
+  String? savedEntitlement,
+  // The supporter status cannot be fetched.
+  bool offline = false,
 }) async {
   SharedPreferences.setMockInitialValues({
     ProfileController.storageKey: jsonEncode({
       'u': {'displayName': 'Sam', 'avatar': 'initial', 'style': ?style},
     }),
     'onfeed.appearance.theme': ?theme,
+    if (savedEntitlement != null)
+      'reelish.supporter.v1.u': jsonEncode({
+        'code': 'RS-ABCD-2345',
+        'status': 'none',
+        'entitlement': savedEntitlement,
+      }),
   });
   tester.view.physicalSize = const Size(412, 2400);
   tester.view.devicePixelRatio = 1;
@@ -66,23 +78,28 @@ Future<ProfileController> _show(
     final api = AccountApi(
       baseUrl: Uri.parse('https://api.reelish.test'),
       client: MockClient(
-        (request) async => http.Response(
-          jsonEncode(
-            request.url.path.endsWith('/supporters/me')
-                ? {
-                    'code': 'RS-ABCD-2345',
-                    'status': entitlement == 'supporter' ? 'verified' : 'none',
-                    'since': null,
-                    'recognition': {'listed': false, 'name': ''},
-                    'entitlement': entitlement,
-                  }
-                : {
-                    'user': {'id': 'u', 'username': 'sam_r'},
-                    'badges': [],
-                  },
-          ),
-          200,
-        ),
+        (request) async =>
+            offline && request.url.path.endsWith('/supporters/me')
+            ? http.Response('', 503)
+            : http.Response(
+                jsonEncode(
+                  request.url.path.endsWith('/supporters/me')
+                      ? {
+                          'code': 'RS-ABCD-2345',
+                          'status': entitlement == 'supporter'
+                              ? 'verified'
+                              : 'none',
+                          'since': null,
+                          'recognition': {'listed': false, 'name': ''},
+                          'entitlement': entitlement,
+                        }
+                      : {
+                          'user': {'id': 'u', 'username': 'sam_r'},
+                          'badges': [],
+                        },
+                ),
+                200,
+              ),
       ),
     );
     account = AccountController(
@@ -151,6 +168,7 @@ Future<void> _choose(WidgetTester tester, String label) async {
 
 Future<void> _apply(WidgetTester tester) async {
   await tester.ensureVisible(find.text('Apply'));
+  await tester.pump(const Duration(milliseconds: 400));
   await tester.tap(find.text('Apply'));
   await tester.runAsync(
     () => Future<void>.delayed(const Duration(milliseconds: 20)),
@@ -172,9 +190,19 @@ void main() {
         );
       }
       expect(
-        ProfileBackdropStyle.all.where((s) => !s.forSupporters),
+        ProfileBackdropStyle.all.where(
+          (s) => !s.forSupporters && !s.forFounder,
+        ),
         hasLength(8),
       );
+    });
+
+    test('Sovereign Edition is the only Founder card, and no supporter '
+        'card', () {
+      final founder = ProfileBackdropStyle.all.where((s) => s.forFounder);
+      expect(founder.map((s) => s.id), ['sovereign']);
+      expect(founder.single.forSupporters, isFalse);
+      expect(founder.single.collection, ProfileBackdropCollection.sovereign);
     });
 
     test('every background keeps the card dark and readable', () {
@@ -260,6 +288,41 @@ void main() {
         const ProfileStyle(backdrop: 'moss'),
       );
     });
+
+    test('Sovereign Edition shows only with the Founder perk: the supporter '
+        'perk is not enough', () {
+      const sovereign = ProfileStyle(
+        backdrop: 'sovereign',
+        color: 'teal',
+        effect: ProfileEffect.sheen,
+      );
+      expect(sovereign.needsFounderPerk, isTrue);
+      expect(sovereign.needsPerk, isTrue); // For its effect, not its card.
+      expect(const ProfileStyle(backdrop: 'sovereign').needsPerk, isFalse);
+      expect(_cinematic.needsFounderPerk, isFalse);
+      expect(
+        sovereign.allowed(perk: true),
+        const ProfileStyle(color: 'teal', effect: ProfileEffect.sheen),
+      );
+      expect(sovereign.allowed(perk: false), const ProfileStyle(color: 'teal'));
+      expect(sovereign.allowed(perk: true, founder: true), sovereign);
+      // A Founder perk without the supporter perk cannot happen on the
+      // server; if it did, only the card itself would show.
+      expect(
+        sovereign.allowed(perk: false, founder: true),
+        const ProfileStyle(backdrop: 'sovereign', color: 'teal'),
+      );
+    });
+
+    test('a saved Sovereign card round-trips, and an older app reading it '
+        'falls back to the standard card', () {
+      const sovereign = ProfileStyle(backdrop: 'sovereign');
+      expect(
+        ProfileStyle.fromJson(jsonDecode(jsonEncode(sovereign.toJson()))),
+        sovereign,
+      );
+      expect(sovereign.toJson(), {'backdrop': 'sovereign'});
+    });
   });
 
   group('ProfileController', () {
@@ -305,6 +368,23 @@ void main() {
         expect(profile.style, _cinematic);
       },
     );
+
+    test('refuses Sovereign Edition without the Founder perk, where it '
+        'saves', () async {
+      await profile.loadFor('a');
+      const sovereign = ProfileStyle(backdrop: 'sovereign');
+      expect(await profile.setStyle(sovereign, perk: true), isFalse);
+      expect(
+        await profile.setStyle(sovereign, perk: true, founder: false),
+        isFalse,
+      );
+      expect(profile.style, ProfileStyle.standard);
+      expect(
+        await profile.setStyle(sovereign, perk: true, founder: true),
+        isTrue,
+      );
+      expect(profile.style, sovereign);
+    });
 
     test('keeps each account\'s style apart', () async {
       await profile.loadFor('a');
@@ -386,6 +466,114 @@ void main() {
       );
       expect(backdrop.style.id, 'spotlight');
       expect(find.byType(ProfileCardEffect), findsOneWidget);
+    });
+  });
+
+  group('Sovereign Edition', () {
+    const sovereign = ProfileStyle(backdrop: 'sovereign');
+
+    for (final entitlement in ['free', 'supporter']) {
+      testWidgets('$entitlement: never offered, not even locked', (
+        tester,
+      ) async {
+        await _show(tester, entitlement: entitlement);
+        await _openStylePage(tester);
+        final page = find.byType(ProfileStyleScreen);
+        for (final text in ['FOUNDER COLLECTION', 'Sovereign Edition']) {
+          expect(
+            find.descendant(of: page, matching: find.text(text)),
+            findsNothing,
+          );
+        }
+      });
+
+      testWidgets('$entitlement: a Sovereign card saved on the device shows '
+          'the standard card', (tester) async {
+        final profile = await _show(
+          tester,
+          entitlement: entitlement,
+          style: sovereign.toJson(),
+        );
+        expect(find.byType(SovereignEditionMark), findsNothing);
+        expect(find.byType(ProfileCardBackdrop), findsNothing);
+        // Kept, as every saved choice is.
+        expect(profile.style, sovereign);
+      });
+    }
+
+    testWidgets('an entitlement edited on the device gives way to the '
+        'server\'s answer', (tester) async {
+      await _show(
+        tester,
+        entitlement: 'supporter',
+        savedEntitlement: 'founder',
+        style: sovereign.toJson(),
+      );
+      expect(find.byType(SovereignEditionMark), findsNothing);
+    });
+
+    testWidgets('founder: offered first, applies, and dresses the card', (
+      tester,
+    ) async {
+      final profile = await _show(tester, entitlement: 'founder');
+      await _openStylePage(tester);
+      expect(find.text('FOUNDER COLLECTION'), findsOneWidget);
+      await _choose(tester, 'Sovereign Edition');
+      // The preview is the real card, so it carries the designation too.
+      await tester.ensureVisible(
+        find.byType(SovereignEditionMark, skipOffstage: false),
+      );
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.byType(SovereignEditionMark), findsOneWidget);
+      await _apply(tester);
+      expect(profile.style, sovereign);
+      expect(find.text('Your profile card is updated.'), findsOneWidget);
+      Navigator.of(tester.element(find.byType(ProfileStyleScreen))).pop();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+      expect(find.byType(ProfileStyleScreen), findsNothing);
+      final backdrop = tester.widget<ProfileCardBackdrop>(
+        find.byType(ProfileCardBackdrop),
+      );
+      expect(backdrop.style.id, 'sovereign');
+      expect(find.byType(SovereignEditionMark), findsOneWidget);
+      expect(find.text('Sovereign Edition'), findsOneWidget); // The tile.
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('founder offline: the saved status shows the section, but '
+        'applying waits for the server', (tester) async {
+      final profile = await _show(
+        tester,
+        entitlement: 'founder',
+        savedEntitlement: 'founder',
+        offline: true,
+      );
+      await _openStylePage(tester);
+      await _choose(tester, 'Sovereign Edition');
+      await _apply(tester);
+      expect(profile.style, ProfileStyle.standard);
+      expect(
+        find.textContaining('Founder status could not be checked'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('founder on TV and Windows: the wide card carries the mark', (
+      tester,
+    ) async {
+      DeviceCapabilities.debugOverride = const DeviceCapabilities(
+        isTelevision: true,
+        hasTouchscreen: false,
+      );
+      addTearDown(
+        () => DeviceCapabilities.debugOverride = const DeviceCapabilities(),
+      );
+      await _show(tester, entitlement: 'founder', style: sovereign.toJson());
+      tester.view.physicalSize = const Size(1280, 2400);
+      await tester.pump(const Duration(milliseconds: 600));
+      expect(find.byType(SovereignEditionMark), findsOneWidget);
+      expect(tester.takeException(), isNull);
     });
   });
 
