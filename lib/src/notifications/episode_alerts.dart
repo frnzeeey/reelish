@@ -97,20 +97,21 @@ abstract final class AlertRoutes {
   }
 }
 
-/// What an alert opens: a title, a person or a collection, or the list of
-/// recent alerts ([kind] `recent`).
+/// What an alert opens: a title, a person or a collection, a year's
+/// Reelish Wrapped ([id] is the year), or the list of recent alerts
+/// ([kind] `recent`).
 class AlertTarget {
   const AlertTarget(this.kind, this.id, this.name);
 
   static const recent = AlertTarget('recent', 0, '');
 
-  /// `series`, `movie`, `person`, `collection` or `recent`.
+  /// `series`, `movie`, `person`, `collection`, `wrapped` or `recent`.
   final String kind;
   final int id;
   final String name;
 
   static final _shape = RegExp(
-    r'^(series|movie|person|collection):([1-9]\d{0,9})$',
+    r'^(series|movie|person|collection|wrapped):([1-9]\d{0,9})$',
   );
 
   static AlertTarget? parse(String? payload) {
@@ -552,6 +553,7 @@ class EpisodeAlerts extends ChangeNotifier {
     bool? watchlist,
     bool? people,
     bool? franchises,
+    bool? wrapped,
   }) => _save(
     _settings.copyWith(
       myList: myList,
@@ -561,6 +563,7 @@ class EpisodeAlerts extends ChangeNotifier {
       watchlist: watchlist,
       people: people,
       franchises: franchises,
+      wrapped: wrapped,
     ),
   );
 

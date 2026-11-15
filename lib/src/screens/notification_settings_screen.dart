@@ -144,6 +144,7 @@ class _NotificationSettingsScreenState
     AlertCategory.reminder => ReelishIcons.history,
     AlertCategory.person => ReelishIcons.person,
     AlertCategory.franchise => ReelishIcons.stack,
+    AlertCategory.wrapped => ReelishIcons.star,
   };
 
   @override
@@ -265,6 +266,15 @@ class _NotificationSettingsScreenState
                   value: settings.messages,
                   enabled: on,
                   onChanged: (value) => alerts.setSources(messages: value),
+                ),
+                SettingsSwitchTile(
+                  icon: ReelishIcons.star,
+                  title: 'Reelish Wrapped',
+                  description:
+                      'Once in January, when your recap of the year is out',
+                  value: settings.wrapped,
+                  enabled: on,
+                  onChanged: (value) => alerts.setSources(wrapped: value),
                 ),
               ],
             ),

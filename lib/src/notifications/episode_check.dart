@@ -31,6 +31,7 @@ class EpisodeAlertSettings {
     this.franchises = true,
     this.frequency = AlertFrequency.instant,
     this.quiet,
+    this.wrapped = true,
   });
 
   /// All alerts, on this device.
@@ -62,6 +63,9 @@ class EpisodeAlertSettings {
   /// Hours with no alerts; null for none.
   final QuietHours? quiet;
 
+  /// Reelish Wrapped is out, in January.
+  final bool wrapped;
+
   EpisodeAlertSettings copyWith({
     bool? enabled,
     bool? myList,
@@ -74,6 +78,7 @@ class EpisodeAlertSettings {
     bool? franchises,
     AlertFrequency? frequency,
     Object? quiet = _keep,
+    bool? wrapped,
   }) => EpisodeAlertSettings(
     enabled: enabled ?? this.enabled,
     myList: myList ?? this.myList,
@@ -86,6 +91,7 @@ class EpisodeAlertSettings {
     franchises: franchises ?? this.franchises,
     frequency: frequency ?? this.frequency,
     quiet: identical(quiet, _keep) ? this.quiet : quiet as QuietHours?,
+    wrapped: wrapped ?? this.wrapped,
   );
 }
 
@@ -189,6 +195,7 @@ class EpisodeAlertStore {
       franchises: flag('franchises', true),
       frequency: AlertFrequency.byName(s['frequency']),
       quiet: QuietHours.fromJson(s['quietStart'], s['quietEnd']),
+      wrapped: flag('wrapped', true),
     );
   }
 
@@ -205,6 +212,7 @@ class EpisodeAlertStore {
     'frequency': s.frequency.name,
     if (s.quiet != null) 'quietStart': s.quiet!.start,
     if (s.quiet != null) 'quietEnd': s.quiet!.end,
+    'wrapped': s.wrapped,
   };
 
   /// At most this many people and collections each (the API's limits).
@@ -488,6 +496,23 @@ abstract final class EpisodeCheck {
           : null,
     );
     events.addAll(reminders);
+    if (settings.wrapped) {
+      // Evidence on this device of viewing last year: a history entry or an
+      // episode saved in it.
+      bool lastYear(int at) =>
+          at > 0 &&
+          DateTime.fromMillisecondsSinceEpoch(at).year == time.year - 1;
+      events.addAll(
+        WrappedAnnouncement.detect(
+          now: time,
+          watchedLastYear:
+              history.any((item) => lastYear(item.progressAt)) ||
+              progress.values.any(
+                (series) => series.episodes.values.any((e) => lastYear(e.at)),
+              ),
+        ),
+      );
+    }
 
     // What to show now, and what waits.
     final deliveredRaw = entry['delivered'];

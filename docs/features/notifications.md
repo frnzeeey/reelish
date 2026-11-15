@@ -39,6 +39,7 @@ facts it needs and decides on its own what is news:
 | Collections you follow | A new film in the collection announced; then released | Collection `parts` |
 | Unfinished series | A series with an episode to go on with, left 3, 7 or 14 days (not more than 45), still in Continue watching; one series a reminder, at most one a day, once per stretch away | This device's progress only: no request |
 | Messages from friends | Who wrote, never what | Mailbox count, as before |
+| Reelish Wrapped | Last year's recap is out: once, in January, when this device saw viewing that year | No request ([Reelish Wrapped](wrapped.md)) |
 
 Minor metadata (a new poster, an overview, a release date moving again) is
 never news. Dates are TMDB's metadata, not playable availability; the alert

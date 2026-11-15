@@ -38,6 +38,7 @@ import '../widgets/profile_avatar_picker.dart';
 import '../widgets/settings/settings_components.dart';
 import '../widgets/account_badges.dart';
 import '../widgets/sovereign_laurel.dart';
+import '../wrapped/wrapped_screen.dart';
 import 'account_settings_screen.dart';
 import 'app_icon_settings_screen.dart';
 import 'avatar_frames_screen.dart';
@@ -465,6 +466,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
             description: 'What you have watched lately. Only you see it',
             onTap: _openStats,
           ),
+          // Opened by Home, which holds the catalog the recap looks in.
+          if (WrappedLauncher.open case final open?)
+            SettingsTile(
+              icon: ReelishIcons.star,
+              title: 'Reelish Wrapped',
+              description:
+                  'Your ${DateTime.now().year - 1} in movies and series, '
+                  'to look back on and share',
+              onTap: () => open(),
+            ),
         ],
       );
       final sections = [

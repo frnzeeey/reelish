@@ -20,7 +20,10 @@ enum AlertCategory {
   watchlist,
   reminder,
   person,
-  franchise;
+  franchise,
+
+  /// Last year's Reelish Wrapped is out (January).
+  wrapped;
 
   static AlertCategory? byName(Object? name) {
     for (final value in values) {
@@ -149,7 +152,7 @@ class AlertEvent {
   };
 
   static final _target = RegExp(
-    r'^(series|movie|person|collection):[1-9]\d{0,9}$',
+    r'^(series|movie|person|collection|wrapped):[1-9]\d{0,9}$',
   );
 
   /// Read defensively: a malformed entry is dropped, never a crash.
@@ -594,5 +597,29 @@ abstract final class UnfinishedReminders {
       );
     }
     return best == null ? const [] : [best];
+  }
+}
+
+/// Reelish Wrapped is out: once, in January, about the year just ended,
+/// for an account that watched something in it on this device. The key
+/// holds the year, so the planner never tells it twice.
+abstract final class WrappedAnnouncement {
+  static List<AlertEvent> detect({
+    required DateTime now,
+    required bool watchedLastYear,
+  }) {
+    if (now.month != DateTime.january || !watchedLastYear) return const [];
+    final year = now.year - 1;
+    return [
+      AlertEvent(
+        key: 'wrapped:$year',
+        category: AlertCategory.wrapped,
+        title: 'Your $year Reelish Wrapped is here',
+        body: 'Your year in movies and series, to look back on and share.',
+        target: 'wrapped:$year',
+        name: 'Wrapped $year',
+        at: now.millisecondsSinceEpoch,
+      ),
+    ];
   }
 }

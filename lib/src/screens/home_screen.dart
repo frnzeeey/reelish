@@ -4,8 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import '../theme/reelish_icons.dart';
+import '../account/account_api.dart';
 import '../account/account_badges.dart';
 import '../account/account_controller.dart';
+import '../account/backend_config.dart';
+import '../account/profile_controller.dart';
 import '../account/avatar_frames.dart';
 import '../account/discovery_preferences_sync.dart';
 import '../account/progress_sync.dart';
@@ -22,6 +25,8 @@ import '../notifications/episode_alerts.dart';
 import '../search/search_models.dart';
 import 'notification_settings_screen.dart';
 import 'search/search_detail_screens.dart';
+import '../wrapped/wrapped_screen.dart';
+import '../wrapped/wrapped_service.dart';
 import '../models/resume_summary.dart';
 import '../models/stream_source.dart';
 import '../navigation/app_transitions.dart';
@@ -302,6 +307,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) AlertRoutes.open = _openAlert;
     });
+    WrappedLauncher.open = _openWrapped;
     // Watch party invitations: Home exists only once someone is signed in.
     PartyLinks.pending.addListener(_openPartyLink);
     WidgetsBinding.instance.addPostFrameCallback((_) => _openPartyLink());
@@ -608,8 +614,38 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     return 'Could not load titles. Check your connection and retry.';
   }
 
+  /// Reelish Wrapped: the years, or [year]'s recap. Titles are looked up
+  /// through this screen's catalog, so the recap shares its cache.
+  void _openWrapped({int? year}) {
+    if (!mounted) return;
+    final service = WrappedService(
+      account: AccountController.instance,
+      api: AccountApi(baseUrl: BackendConfig.apiUrl),
+      details: _tmdb.detailsJson,
+    );
+    final name = ProfileController.instance.displayName ?? '';
+    unawaited(
+      Navigator.push<void>(
+        context,
+        MaterialPageRoute<void>(
+          builder: (context) => year != null && service.isOpen(year)
+              ? WrappedScreen(service: service, year: year, displayName: name)
+              : Scaffold(
+                  backgroundColor: GlassTheme.background,
+                  body: WrappedHubScreen(
+                    service: service,
+                    displayName: name,
+                    onBack: () => Navigator.of(context).pop(),
+                  ),
+                ),
+        ),
+      ),
+    );
+  }
+
   /// Where a tapped alert leads: the title's details, a person's or a
-  /// collection's page, or for a summary, Settings > Notifications.
+  /// collection's page, Reelish Wrapped, or for a summary, Settings >
+  /// Notifications.
   void _openAlert(AlertTarget target) {
     if (!mounted) return;
     Future<void> push(Widget page) => Navigator.push<void>(
@@ -617,6 +653,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       AppPageRoute<void>(context: context, builder: (_) => page),
     );
     switch (target.kind) {
+      case 'wrapped':
+        _openWrapped(year: target.id);
       case 'series' || 'movie':
         unawaited(
           _showDetails(
@@ -1438,6 +1476,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
     if (SocialTitles.open == _showDetails) SocialTitles.open = null;
     if (AlertRoutes.open == _openAlert) AlertRoutes.open = null;
+    if (WrappedLauncher.open == _openWrapped) WrappedLauncher.open = null;
     PartyLinks.pending.removeListener(_openPartyLink);
     _services.dispose();
     for (final timer in _gateTimers.values) {

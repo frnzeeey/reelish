@@ -796,6 +796,16 @@ class TmdbService {
   Future<Map<String, dynamic>> collectionJson(int id) =>
       _get('/collection/$id', ttl: TmdbCacheTtl.metadata);
 
+  /// A movie's or series' details as TMDB sent them, for Reelish Wrapped
+  /// (genres, cast with ids, seasons). The same request as [details], so
+  /// both share its cache, and sent behind the screen's own requests.
+  Future<Map<String, dynamic>> detailsJson(String type, int id) => _get(
+    '/${type == 'series' ? 'tv' : 'movie'}/$id',
+    params: _detailsParams,
+    ttl: TmdbCacheTtl.metadata,
+    priority: _TmdbRequestPriority.deferred,
+  );
+
   /// The movies and series in a TMDB `results` (or credits) list, as the
   /// catalog parses them: bad records skipped, each title once. [type]
   /// (`movie` or `tv`) is used for entries without a `media_type`.

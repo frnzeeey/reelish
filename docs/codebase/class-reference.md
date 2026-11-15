@@ -4,7 +4,7 @@
 
 Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensitive, leading `_` ignored). **Role** is derived from the declaration (its superclass) and folder. **Named in** counts the other files that mention the type by name: a measure of how far a change reaches. **Summary** is the first sentence of the type's own doc comment; a blank one means the type has none.
 
-1151 types: 691 public, 460 private to their file.
+1182 types: 712 public, 470 private to their file.
 
 [A](#a) · [B](#b) · [C](#c) · [D](#d) · [E](#e) · [F](#f) · [G](#g) · [H](#h) · [I](#i) · [J](#j) · [L](#l) · [M](#m) · [N](#n) · [O](#o) · [P](#p) · [Q](#q) · [R](#r) · [S](#s) · [T](#t) · [U](#u) · [V](#v) · [W](#w)
 
@@ -19,11 +19,11 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `AccentPalette` | Theme | [`glass_theme.dart:424`](../../lib/src/theme/glass_theme.dart#L424) |  | Shared | 6 lib files, 2 test files |  |
 | `_AccentPreview` | Widget | [`playback_settings_screen.dart:641`](../../lib/src/screens/playback_settings_screen.dart#L641) | extends StatelessWidget | Shared | its own file | A few of the places the accent shows (a filled button, a selected chip, a progress bar), drawn in `palette` before it is applied. |
 | `AccentSettingsController` | Notifier / controller | [`accent_settings_controller.dart:18`](../../lib/src/services/accent_settings_controller.dart#L18) | extends ChangeNotifier | Shared | 6 lib files, 15 test files |  |
-| `AccountApi` | Class | [`account_api.dart:79`](../../lib/src/account/account_api.dart#L79) |  | Shared | 17 lib files, 28 test files |  |
-| `AccountApiException` | Exception | [`account_api.dart:12`](../../lib/src/account/account_api.dart#L12) | implements Exception | Shared | 19 lib files, 3 test files | A failed account request. |
+| `AccountApi` | Class | [`account_api.dart:79`](../../lib/src/account/account_api.dart#L79) |  | Shared | 19 lib files, 29 test files |  |
+| `AccountApiException` | Exception | [`account_api.dart:12`](../../lib/src/account/account_api.dart#L12) | implements Exception | Shared | 20 lib files, 3 test files | A failed account request. |
 | `AccountBadge` | Enum | [`account_badges.dart:12`](../../lib/src/account/account_badges.dart#L12) |  | Shared | 1 lib file, 1 test file |  |
 | `AccountBadges` | Notifier / controller | [`account_badges.dart:14`](../../lib/src/account/account_badges.dart#L14) | extends ChangeNotifier | Shared | 3 lib files, 5 test files |  |
-| `AccountController` | Notifier / controller | [`account_controller.dart:18`](../../lib/src/account/account_controller.dart#L18) | extends ChangeNotifier | Shared | 28 lib files, 30 test files |  |
+| `AccountController` | Notifier / controller | [`account_controller.dart:18`](../../lib/src/account/account_controller.dart#L18) | extends ChangeNotifier | Shared | 29 lib files, 31 test files |  |
 | `AccountGate` | Widget | [`sign_in_screen.dart:19`](../../lib/src/screens/sign_in_screen.dart#L19) | extends StatefulWidget | Shared | 1 lib file, 2 test files | Shows `child` while signed in and `SignInScreen` otherwise. |
 | `_AccountGateState` | Widget state | [`sign_in_screen.dart:29`](../../lib/src/screens/sign_in_screen.dart#L29) | extends State<AccountGate> | Shared | its own file |  |
 | `AccountHistory` | Class | [`account_history.dart:12`](../../lib/src/account/account_history.dart#L12) |  | Shared | 1 lib file |  |
@@ -47,12 +47,12 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `_Advanced` | Widget | [`installed_provider_screen.dart:379`](../../lib/src/screens/installed_provider_screen.dart#L379) | extends StatelessWidget | Shared | its own file | Technical identifiers, folded away by default. |
 | `_AdvisoryCard` | Widget | [`content_advisory_overlay.dart:166`](../../lib/src/widgets/player/content_advisory_overlay.dart#L166) | extends StatelessWidget | Shared | its own file |  |
 | `AlertCategory` | Enum | [`smart_alerts.dart:17`](../../lib/src/notifications/smart_alerts.dart#L17) |  | Shared | 3 lib files, 2 test files | What an alert is about; each has its own switch in Settings. |
-| `AlertEvent` | Class | [`smart_alerts.dart:104`](../../lib/src/notifications/smart_alerts.dart#L104) |  | Shared | 3 lib files, 2 test files | One piece of news. |
-| `AlertFrequency` | Enum | [`smart_alerts.dart:34`](../../lib/src/notifications/smart_alerts.dart#L34) |  | Shared | 3 lib files, 1 test file | How alerts arrive: each as it is found, or gathered into one summary. |
-| `AlertPlan` | Class | [`smart_alerts.dart:181`](../../lib/src/notifications/smart_alerts.dart#L181) |  | Shared | 1 lib file | What a check shows now, and what waits for later. |
-| `AlertPlanner` | Class | [`smart_alerts.dart:195`](../../lib/src/notifications/smart_alerts.dart#L195) |  | Shared | 1 lib file, 1 test file |  |
+| `AlertEvent` | Class | [`smart_alerts.dart:107`](../../lib/src/notifications/smart_alerts.dart#L107) |  | Shared | 3 lib files, 2 test files | One piece of news. |
+| `AlertFrequency` | Enum | [`smart_alerts.dart:37`](../../lib/src/notifications/smart_alerts.dart#L37) |  | Shared | 3 lib files, 1 test file | How alerts arrive: each as it is found, or gathered into one summary. |
+| `AlertPlan` | Class | [`smart_alerts.dart:184`](../../lib/src/notifications/smart_alerts.dart#L184) |  | Shared | 1 lib file | What a check shows now, and what waits for later. |
+| `AlertPlanner` | Class | [`smart_alerts.dart:198`](../../lib/src/notifications/smart_alerts.dart#L198) |  | Shared | 1 lib file, 1 test file |  |
 | `AlertRoutes` | Class | [`episode_alerts.dart:66`](../../lib/src/notifications/episode_alerts.dart#L66) |  | Shared | 3 lib files | Where a tapped alert leads. |
-| `AlertTarget` | Class | [`episode_alerts.dart:102`](../../lib/src/notifications/episode_alerts.dart#L102) |  | Shared | 2 lib files, 1 test file | What an alert opens: a title, a person or a collection, or the list of recent alerts (`kind` `recent`). |
+| `AlertTarget` | Class | [`episode_alerts.dart:103`](../../lib/src/notifications/episode_alerts.dart#L103) |  | Shared | 2 lib files, 2 test files | What an alert opens: a title, a person or a collection, a year's Reelish Wrapped (`id` is the year), or the list of recent alerts (`kind` `recent`). |
 | `AlertTokenStore` | Class | [`episode_alerts.dart:29`](../../lib/src/notifications/episode_alerts.dart#L29) |  | Shared | 1 test file | Where the session's episode-check token is kept: secure storage, with the account it belongs to. |
 | `AmbientBackdrop` | Widget | [`ambient_backdrop.dart:9`](../../lib/src/widgets/ambient_backdrop.dart#L9) | extends StatelessWidget | Shared | 4 lib files |  |
 | `_AmbientGlow` | Widget | [`sign_in_screen.dart:222`](../../lib/src/screens/sign_in_screen.dart#L222) | extends StatelessWidget | Shared | its own file | A soft accent light behind the brand, drawn once (no blur filter). |
@@ -72,12 +72,12 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `AppIconSettingsScreen` | Widget | [`app_icon_settings_screen.dart:20`](../../lib/src/screens/app_icon_settings_screen.dart#L20) | extends StatefulWidget | Shared | 2 lib files, 1 test file |  |
 | `_AppIconSettingsScreenState` | Widget state | [`app_icon_settings_screen.dart:40`](../../lib/src/screens/app_icon_settings_screen.dart#L40) | extends State<AppIconSettingsScreen> | Shared | its own file |  |
 | `AppMetadata` | Service type | [`app_metadata.dart:4`](../../lib/src/services/app_metadata.dart#L4) |  | Shared | 4 lib files | Version and build details for the running app. |
-| `AppMotion` | Theme | [`design_tokens.dart:148`](../../lib/src/theme/design_tokens.dart#L148) |  | Shared | 32 lib files, 1 test file | Motion: durations by what moves and how far, and the curves to pair with them. |
+| `AppMotion` | Theme | [`design_tokens.dart:148`](../../lib/src/theme/design_tokens.dart#L148) |  | Shared | 33 lib files, 1 test file | Motion: durations by what moves and how far, and the curves to pair with them. |
 | `AppPageRoute` | Route | [`app_transitions.dart:4`](../../lib/src/navigation/app_transitions.dart#L4) | extends PageRouteBuilder<T> | Shared | 19 lib files, 1 test file | Shared transitions for standard pushed pages and media detail pages. |
 | `AppRadius` | Theme | [`design_tokens.dart:25`](../../lib/src/theme/design_tokens.dart#L25) |  | Shared | 44 lib files | Corner radii, smallest to largest. |
 | `AppServices` | Class | [`app_services.dart:13`](../../lib/src/app/app_services.dart#L13) |  | Shared | 1 lib file | The app's shared services, built in one place and handed to the screens and ViewModels that use them, rather than constructed inside widgets. |
-| `AppSpace` | Theme | [`design_tokens.dart:14`](../../lib/src/theme/design_tokens.dart#L14) |  | Shared | 49 lib files | Spacing on a 4 dp grid: padding, gaps and section spacing. |
-| `AppTextSize` | Theme | [`design_tokens.dart:53`](../../lib/src/theme/design_tokens.dart#L53) |  | Shared | 56 lib files | Font sizes of the type scale, for a `TextStyle` that needs its own weight or colour. |
+| `AppSpace` | Theme | [`design_tokens.dart:14`](../../lib/src/theme/design_tokens.dart#L14) |  | Shared | 50 lib files | Spacing on a 4 dp grid: padding, gaps and section spacing. |
+| `AppTextSize` | Theme | [`design_tokens.dart:53`](../../lib/src/theme/design_tokens.dart#L53) |  | Shared | 57 lib files | Font sizes of the type scale, for a `TextStyle` that needs its own weight or colour. |
 | `AppType` | Theme | [`design_tokens.dart:70`](../../lib/src/theme/design_tokens.dart#L70) |  | Shared | 3 lib files | The type scale. |
 | `AppUpdate` | Model | [`app_update.dart:79`](../../lib/src/models/app_update.dart#L79) |  | Shared | 5 lib files, 3 test files | A newer GitHub release that has a downloadable APK. |
 | `AppUpdateFlow` | Class | [`app_update_flow.dart:34`](../../lib/src/widgets/app_update_flow.dart#L34) |  | Shared | 3 lib files, 3 test files | Coordinates the update UI: prompt → download → install permission → Android installer. |
@@ -120,13 +120,14 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `_BackdropGrid` | Widget | [`profile_style_screen.dart:390`](../../lib/src/screens/profile_style_screen.dart#L390) | extends StatelessWidget | Shared | its own file | A collection's backgrounds in even columns; null is the standard card. |
 | `_BackdropPainter` | Painter | [`supporter_themes.dart:336`](../../lib/src/theme/supporter_themes.dart#L336) | extends CustomPainter | Shared | its own file |  |
 | `_BackdropPainter` | Painter | [`profile_card_backdrop.dart:34`](../../lib/src/widgets/profile_card_backdrop.dart#L34) | extends CustomPainter | Shared | its own file |  |
+| `_BackdropPainter` | Painter | [`wrapped_visuals.dart:53`](../../lib/src/wrapped/wrapped_visuals.dart#L53) | extends CustomPainter | Shared | its own file |  |
 | `_BackdropTile` | Widget | [`profile_style_screen.dart:440`](../../lib/src/screens/profile_style_screen.dart#L440) | extends StatelessWidget | Shared | its own file |  |
-| `BackendConfig` | Class | [`backend_config.dart:4`](../../lib/src/account/backend_config.dart#L4) |  | Shared | 17 lib files, 1 test file |  |
+| `BackendConfig` | Class | [`backend_config.dart:4`](../../lib/src/account/backend_config.dart#L4) |  | Shared | 18 lib files, 1 test file |  |
 | `_BackPainter` | Painter | [`avatar_frame.dart:279`](../../lib/src/widgets/avatar_frame.dart#L279) | extends CustomPainter | Shared | its own file | Painted once, behind the avatar: a soft glow of the frame's colour, the ring (unless it turns, when the light layer draws it) and the ornaments that sit around or on it. |
-| `_Badge` | Widget | [`plugin_badges.dart:55`](../../lib/src/widgets/plugin_library/plugin_badges.dart#L55) | extends StatelessWidget | Shared | its own file |  |
 | `_Badge` | Widget | [`desktop_widgets.dart:638`](../../lib/src/desktop/desktop_widgets.dart#L638) | extends StatelessWidget | Windows | its own file |  |
-| `_Banner` | Widget | [`messages_screen.dart:207`](../../lib/src/screens/social/messages_screen.dart#L207) | extends StatelessWidget | Shared | its own file |  |
+| `_Badge` | Widget | [`plugin_badges.dart:55`](../../lib/src/widgets/plugin_library/plugin_badges.dart#L55) | extends StatelessWidget | Shared | its own file |  |
 | `_Banner` | Widget | [`waiting_room_screen.dart:628`](../../lib/src/screens/watch_party/waiting_room_screen.dart#L628) | extends StatelessWidget | Shared | its own file |  |
+| `_Banner` | Widget | [`messages_screen.dart:207`](../../lib/src/screens/social/messages_screen.dart#L207) | extends StatelessWidget | Shared | its own file |  |
 | `_Batch` | Service type | [`paged_feed_controller.dart:483`](../../lib/src/services/paged_feed_controller.dart#L483) |  | Shared | its own file |  |
 | `_Benefit` | Widget | [`supporters_screen.dart:612`](../../lib/src/screens/supporters_screen.dart#L612) | extends StatelessWidget | Shared | its own file |  |
 | `_Biography` | Widget | [`search_detail_screens.dart:306`](../../lib/src/screens/search/search_detail_screens.dart#L306) | extends StatefulWidget | Shared | its own file |  |
@@ -139,7 +140,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `_BoundedArtworkResponse` | Class | [`artwork_image.dart:254`](../../lib/src/widgets/artwork_image.dart#L254) | implements FileServiceResponse | Shared | its own file |  |
 | `_Brand` | Widget | [`sign_in_screen.dart:244`](../../lib/src/screens/sign_in_screen.dart#L244) | extends StatelessWidget | Shared | its own file |  |
 | `_BrandArtwork` | Widget | [`brand_logo.dart:191`](../../lib/src/widgets/brand_logo.dart#L191) | extends StatelessWidget | Shared | its own file | Shows the `bounds` part of a square brand image at `height`, keeping its proportions. |
-| `BrandAssets` | Class | [`brand_logo.dart:14`](../../lib/src/widgets/brand_logo.dart#L14) |  | Shared | 4 lib files, 1 test file | Reelish's brand images, in one place. |
+| `BrandAssets` | Class | [`brand_logo.dart:14`](../../lib/src/widgets/brand_logo.dart#L14) |  | Shared | 5 lib files, 2 test files | Reelish's brand images, in one place. |
 | `_BrowserPanel` | Widget | [`sign_in_screen.dart:369`](../../lib/src/screens/sign_in_screen.dart#L369) | extends StatelessWidget | Shared | its own file | Browser sign-in in progress: Trakt is open in the browser. |
 | `_Bubble` | Widget | [`messages_screen.dart:573`](../../lib/src/screens/social/messages_screen.dart#L573) | extends StatelessWidget | Shared | its own file |  |
 
@@ -202,10 +203,11 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `ConversationTile` | Widget | [`messages_screen.dart:145`](../../lib/src/screens/social/messages_screen.dart#L145) | extends StatelessWidget | Shared | 1 lib file | A conversation in a list: the friend, the last message and when. |
 | `CopyManifestButton` | Widget | [`copy_manifest_button.dart:11`](../../lib/src/widgets/plugin_library/copy_manifest_button.dart#L11) | extends StatefulWidget | Shared | 2 lib files | Copies a manifest URL and briefly confirms it in place and in a snackbar. |
 | `_CopyManifestButtonState` | Widget state | [`copy_manifest_button.dart:42`](../../lib/src/widgets/plugin_library/copy_manifest_button.dart#L42) | extends State<CopyManifestButton> | Shared | its own file |  |
-| `_Counts` | Class | [`profile_screen.dart:1276`](../../lib/src/screens/profile_screen.dart#L1276) |  | Shared | its own file | My list, watched and in progress, counted from this device, as the card shows them: the counts, a line in their place (an empty library, or one that could not be read), or nothing yet while they load. |
-| `_CountsBeside` | Widget | [`profile_screen.dart:1422`](../../lib/src/screens/profile_screen.dart#L1422) | extends StatelessWidget | Shared | its own file | The counts beside the identity on a wide Windows card, set off from it by a hairline, where the card would otherwise stand empty. |
-| `_CountsFoot` | Widget | [`profile_screen.dart:1357`](../../lib/src/screens/profile_screen.dart#L1357) | extends StatelessWidget | Shared | its own file | The counts along the card's foot, a band of their own under a hairline so the viewing reads apart from the identity: three equal columns, a number over its name. |
-| `_CountsNote` | Widget | [`profile_screen.dart:1335`](../../lib/src/screens/profile_screen.dart#L1335) | extends StatelessWidget | Shared | its own file | A quiet line on the card in place of the counts. |
+| `_Counts` | Class | [`profile_screen.dart:1287`](../../lib/src/screens/profile_screen.dart#L1287) |  | Shared | its own file | My list, watched and in progress, counted from this device, as the card shows them: the counts, a line in their place (an empty library, or one that could not be read), or nothing yet while they load. |
+| `_CountsBeside` | Widget | [`profile_screen.dart:1433`](../../lib/src/screens/profile_screen.dart#L1433) | extends StatelessWidget | Shared | its own file | The counts beside the identity on a wide Windows card, set off from it by a hairline, where the card would otherwise stand empty. |
+| `_CountsFoot` | Widget | [`profile_screen.dart:1368`](../../lib/src/screens/profile_screen.dart#L1368) | extends StatelessWidget | Shared | its own file | The counts along the card's foot, a band of their own under a hairline so the viewing reads apart from the identity: three equal columns, a number over its name. |
+| `_CountsNote` | Widget | [`profile_screen.dart:1346`](../../lib/src/screens/profile_screen.dart#L1346) | extends StatelessWidget | Shared | its own file | A quiet line on the card in place of the counts. |
+| `_CountUp` | Widget | [`wrapped_screen.dart:1105`](../../lib/src/wrapped/wrapped_screen.dart#L1105) | extends StatelessWidget | Shared | its own file | A number counting up to `value` once `active`; at once under reduced motion. |
 | `CrashContext` | Enum | [`crash_reporter.dart:31`](../../lib/src/diagnostics/crash_reporter.dart#L31) |  | Shared | 3 lib files, 1 test file | What a report says about the moment it happened. |
 | `CrashReportConsentDialog` | Widget | [`crash_report_consent_dialog.dart:14`](../../lib/src/widgets/crash_report_consent_dialog.dart#L14) | extends StatelessWidget | Shared | 1 lib file, 1 test file | Asks once whether to share crash reports. |
 | `CrashReporter` | Class | [`crash_reporter.dart:44`](../../lib/src/diagnostics/crash_reporter.dart#L44) |  | Shared | 9 lib files, 1 test file | Records errors once the viewer agreed, and installs the error handlers. |
@@ -280,10 +282,10 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `_DetailPage` | Widget | [`search_detail_screens.dart:21`](../../lib/src/screens/search/search_detail_screens.dart#L21) | extends StatefulWidget | Shared | its own file | Loads a page and shows it, with retry; shared by both pages. |
 | `_DetailPageState` | Widget state | [`search_detail_screens.dart:36`](../../lib/src/screens/search/search_detail_screens.dart#L36) | extends State<_DetailPage<T>> | Shared | its own file |  |
 | `DetailsViewModel` | View model | [`details_view_model.dart:27`](../../lib/src/viewmodels/details_view_model.dart#L27) | extends ChangeNotifier | Shared | 3 lib files, 1 test file | The state behind a title's details page, shared by the mobile, TV and Windows details screens: TMDB details, the seasons and the selected season's episodes, and (on Windows) related titles. |
-| `Detected` | Typedef | [`smart_alerts.dart:272`](../../lib/src/notifications/smart_alerts.dart#L272) | = ( | Shared | 1 test file | What a detector found, and the state to keep for the next check. |
+| `Detected` | Typedef | [`smart_alerts.dart:275`](../../lib/src/notifications/smart_alerts.dart#L275) | = ( | Shared | 1 test file | What a detector found, and the state to keep for the next check. |
 | `DeveloperCreditFooter` | Widget | [`developer_credit.dart:11`](../../lib/src/widgets/settings/developer_credit.dart#L11) | extends StatelessWidget | Shared | 2 lib files |  |
 | `DeviceAuthorized` | Class | [`account_api.dart:34`](../../lib/src/account/account_api.dart#L34) | extends DevicePollResult | Shared | 1 lib file |  |
-| `DeviceCapabilities` | Platform adapter | [`device_capabilities.dart:20`](../../lib/src/platform/device_capabilities.dart#L20) |  | Shared | 54 lib files, 28 test files | What kind of device Reelish is running on, read once during startup. |
+| `DeviceCapabilities` | Platform adapter | [`device_capabilities.dart:20`](../../lib/src/platform/device_capabilities.dart#L20) |  | Shared | 56 lib files, 28 test files | What kind of device Reelish is running on, read once during startup. |
 | `DeviceCodeStart` | Class | [`account_api.dart:40`](../../lib/src/account/account_api.dart#L40) |  | Shared | 1 lib file |  |
 | `DevicePending` | Class | [`account_api.dart:29`](../../lib/src/account/account_api.dart#L29) | extends DevicePollResult | Shared | 1 lib file |  |
 | `DevicePollResult` | Class | [`account_api.dart:27`](../../lib/src/account/account_api.dart#L27) |  | Shared | its own file only | The answer to one device-sign-in poll. |
@@ -309,7 +311,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | Type | Role | Declared in | Relations | Platform | Named in | Summary |
 |---|---|---|---|---|---|---|
 | `_EdgeGradient` | Widget | [`player_controls.dart:949`](../../lib/src/widgets/player/player_controls.dart#L949) | extends StatelessWidget | Shared | its own file |  |
-| `_EditableAvatar` | Widget | [`profile_screen.dart:1039`](../../lib/src/screens/profile_screen.dart#L1039) | extends StatelessWidget | Shared | its own file | The avatar, large, in the theme's frame or an accent ring, with a small button on it to change it. |
+| `_EditableAvatar` | Widget | [`profile_screen.dart:1050`](../../lib/src/screens/profile_screen.dart#L1050) | extends StatelessWidget | Shared | its own file | The avatar, large, in the theme's frame or an accent ring, with a small button on it to change it. |
 | `_EffectMark` | Widget | [`profile_style_screen.dart:727`](../../lib/src/screens/profile_style_screen.dart#L727) | extends StatelessWidget | Shared | its own file |  |
 | `_EffectPainter` | Painter | [`profile_card_backdrop.dart:454`](../../lib/src/widgets/profile_card_backdrop.dart#L454) | extends CustomPainter | Shared | its own file |  |
 | `_EmailDetail` | Widget | [`supporters_screen.dart:590`](../../lib/src/screens/supporters_screen.dart#L590) | extends StatelessWidget | Shared | its own file |  |
@@ -326,21 +328,21 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `_EngineVideoController` | Service type | [`player_engine.dart:107`](../../lib/src/services/player_engine.dart#L107) | extends VideoPlayerController | Shared | its own file | A controller that tells `PlayerEngineGate` when it is gone. |
 | `Entitlement` | Enum | [`supporter_controller.dart:20`](../../lib/src/account/supporter_controller.dart#L20) |  | Shared | 2 lib files, 1 test file | What the account may use: free features; those plus every supporter perk; or, for the Founder, the Supporter entitlement as a whole plus the Founder identity. |
 | `_Entrance` | Widget | [`plugin_library_screen.dart:735`](../../lib/src/screens/plugin_library_screen.dart#L735) | extends StatelessWidget | Shared | its own file | Fades and lifts the first grid items in once, staggered. |
-| `EpisodeAlerts` | Notifier / controller | [`episode_alerts.dart:378`](../../lib/src/notifications/episode_alerts.dart#L378) | extends ChangeNotifier | Shared | 4 lib files, 2 test files |  |
+| `EpisodeAlerts` | Notifier / controller | [`episode_alerts.dart:379`](../../lib/src/notifications/episode_alerts.dart#L379) | extends ChangeNotifier | Shared | 4 lib files, 2 test files |  |
 | `EpisodeAlertSettings` | Class | [`episode_check.dart:21`](../../lib/src/notifications/episode_check.dart#L21) |  | Shared | 1 lib file, 2 test files | Which series alert, per Trakt account on this device. |
-| `EpisodeAlertStore` | Class | [`episode_check.dart:131`](../../lib/src/notifications/episode_check.dart#L131) |  | Shared | 3 lib files, 2 test files | What the alerts remember per Trakt account: settings, the last episode seen of each series, and the day of the last popular summary. |
-| `_EpisodeCard` | Widget | [`episode_panel.dart:483`](../../lib/src/widgets/player/episode_panel.dart#L483) | extends StatefulWidget | Shared | its own file |  |
+| `EpisodeAlertStore` | Class | [`episode_check.dart:137`](../../lib/src/notifications/episode_check.dart#L137) |  | Shared | 3 lib files, 2 test files | What the alerts remember per Trakt account: settings, the last episode seen of each series, and the day of the last popular summary. |
 | `_EpisodeCard` | Widget | [`tv_details_screen.dart:606`](../../lib/src/screens/tv/tv_details_screen.dart#L606) | extends StatelessWidget | Android TV | its own file |  |
+| `_EpisodeCard` | Widget | [`episode_panel.dart:483`](../../lib/src/widgets/player/episode_panel.dart#L483) | extends StatefulWidget | Shared | its own file |  |
 | `_EpisodeCardState` | Widget state | [`episode_panel.dart:505`](../../lib/src/widgets/player/episode_panel.dart#L505) | extends State<_EpisodeCard> | Shared | its own file |  |
-| `EpisodeCheck` | Class | [`episode_check.dart:272`](../../lib/src/notifications/episode_check.dart#L272) |  | Shared | 1 lib file, 2 test files |  |
-| `EpisodeCheckResult` | Class | [`episode_check.dart:261`](../../lib/src/notifications/episode_check.dart#L261) |  | Shared | 2 test files | The outcome of one check. |
+| `EpisodeCheck` | Class | [`episode_check.dart:280`](../../lib/src/notifications/episode_check.dart#L280) |  | Shared | 1 lib file, 2 test files |  |
+| `EpisodeCheckResult` | Class | [`episode_check.dart:269`](../../lib/src/notifications/episode_check.dart#L269) |  | Shared | 2 test files | The outcome of one check. |
 | `EpisodeContext` | Model | [`episode_context.dart:77`](../../lib/src/models/episode_context.dart#L77) |  | Shared | 3 lib files, 3 test files | The playing episode within its series: the single source of truth for episode navigation (the episode panel, Previous/Next, and auto-play). |
 | `EpisodeHandOff` | Class | [`custom_video_player.dart:66`](../../lib/src/widgets/player/custom_video_player.dart#L66) |  | Shared | 1 lib file | What the playing player offers the episode it hands over to. |
 | `EpisodeKey` | Class | [`skip_segments.dart:11`](../../lib/src/intro_skip/skip_segments.dart#L11) |  | Shared | 2 lib files, 2 test files | The episode IntroDB is asked about: IMDb series id, season, episode. |
 | `_EpisodeList` | Widget | [`desktop_details_screen.dart:989`](../../lib/src/desktop/desktop_details_screen.dart#L989) | extends StatefulWidget | Windows | its own file | The panel's episodes, scrolled once to `focusIndex` when it is set. |
 | `_EpisodeListState` | Widget state | [`desktop_details_screen.dart:1004`](../../lib/src/desktop/desktop_details_screen.dart#L1004) | extends State<_EpisodeList> | Windows | its own file |  |
 | `EpisodeLoadError` | Enum | [`details_view_model.dart:12`](../../lib/src/viewmodels/details_view_model.dart#L12) |  | Shared | 3 lib files, 1 test file | Which part of a series' episode list could not be loaded. |
-| `EpisodeNotifier` | Class | [`episode_check.dart:113`](../../lib/src/notifications/episode_check.dart#L113) |  | Shared | 1 lib file, 2 test files | Shows alerts; system notifications in the app, a fake in tests. |
+| `EpisodeNotifier` | Class | [`episode_check.dart:119`](../../lib/src/notifications/episode_check.dart#L119) |  | Shared | 1 lib file, 2 test files | Shows alerts; system notifications in the app, a fake in tests. |
 | `EpisodePanel` | Widget | [`episode_panel.dart:18`](../../lib/src/widgets/player/episode_panel.dart#L18) | extends StatefulWidget | Shared | 2 lib files, 1 test file | Lists a series' episodes by season, with thumbnails, runtimes, synopses and the viewer's progress. |
 | `_EpisodePanel` | Widget | [`desktop_details_screen.dart:951`](../../lib/src/desktop/desktop_details_screen.dart#L951) | extends StatelessWidget | Windows | its own file | The frosted panel the episodes sit in over the backdrop. |
 | `_EpisodePanelState` | Widget state | [`episode_panel.dart:178`](../../lib/src/widgets/player/episode_panel.dart#L178) | extends State<EpisodePanel> | Shared | its own file |  |
@@ -384,8 +386,8 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `_FolderAction` | Enum | [`collection_actions.dart:32`](../../lib/src/widgets/collections/collection_actions.dart#L32) |  | Shared | its own file | What `CollectionActions.manageFolder` can do with a folder. |
 | `FolderTarget` | Class | [`smart_collections.dart:160`](../../lib/src/collections/smart_collections.dart#L160) | extends CollectionTarget | Shared | 3 lib files |  |
 | `FollowAlertButton` | Widget | [`follow_alert_button.dart:15`](../../lib/src/widgets/follow_alert_button.dart#L15) | extends StatelessWidget | Shared | 1 lib file, 1 test file |  |
-| `FollowedWork` | Class | [`smart_alerts.dart:407`](../../lib/src/notifications/smart_alerts.dart#L407) |  | Shared | 1 lib file, 1 test file | Work by people followed and films in collections followed. |
-| `Follows` | Typedef | [`episode_check.dart:93`](../../lib/src/notifications/episode_check.dart#L93) | = ( | Shared | 7 lib files | People and collections followed for alerts, by TMDB id, with their names. |
+| `FollowedWork` | Class | [`smart_alerts.dart:410`](../../lib/src/notifications/smart_alerts.dart#L410) |  | Shared | 1 lib file, 1 test file | Work by people followed and films in collections followed. |
+| `Follows` | Typedef | [`episode_check.dart:99`](../../lib/src/notifications/episode_check.dart#L99) | = ( | Shared | 7 lib files | People and collections followed for alerts, by TMDB id, with their names. |
 | `_Footer` | Widget | [`genre_onboarding_screen.dart:172`](../../lib/src/screens/genre_onboarding_screen.dart#L172) | extends StatelessWidget | Shared | its own file |  |
 | `_FootNote` | Widget | [`app_icon_settings_screen.dart:250`](../../lib/src/screens/app_icon_settings_screen.dart#L250) | extends StatelessWidget | Shared | its own file | A note under a section, in the section description's style. |
 | `FounderBadge` | Widget | [`account_badges.dart:161`](../../lib/src/widgets/account_badges.dart#L161) | extends StatelessWidget | Shared | 2 lib files, 2 test files | The identity of the person who created Reelish. |
@@ -416,6 +418,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 |---|---|---|---|---|---|---|
 | `GamepadCommand` | Enum | [`desktop_gamepad.dart:11`](../../lib/src/platform/desktop_gamepad.dart#L11) |  | Windows | 1 test file | What a controller asks the interface to do. |
 | `GamepadNavigator` | Platform adapter | [`desktop_gamepad.dart:19`](../../lib/src/platform/desktop_gamepad.dart#L19) |  | Windows | 1 test file | Turns raw controller state into navigation commands: the D-pad or left stick moves (once on press, then repeating while held), A activates, B goes back. |
+| `_GenreBar` | Widget | [`wrapped_screen.dart:1138`](../../lib/src/wrapped/wrapped_screen.dart#L1138) | extends StatelessWidget | Shared | its own file |  |
 | `GenreCandidates` | Class | [`discovery_engine.dart:98`](../../lib/src/discovery/discovery_engine.dart#L98) |  | Shared | 1 lib file, 1 test file | TMDB's popular, well-rated titles of a genre the viewer picked: movies and series together. |
 | `GenreCatalog` | Class | [`tmdb_genres.dart:59`](../../lib/src/discovery/tmdb_genres.dart#L59) |  | Shared | 7 lib files, 3 test files | TMDB's movie and TV genre lists (`/genre/movie/list`, `/genre/tv/list`), and how a picked genre is asked for on each side. |
 | `GenreOnboardingScreen` | Widget | [`genre_onboarding_screen.dart:15`](../../lib/src/screens/genre_onboarding_screen.dart#L15) | extends StatefulWidget | Shared | 1 lib file, 1 test file |  |
@@ -437,7 +440,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `_GlassEdgePainter` | Class | [`desktop_shell.dart:1324`](../../lib/src/desktop/desktop_shell.dart#L1324) | extends BoxPainter | Windows | its own file |  |
 | `GlassFinish` | Widget | [`glass_button.dart:118`](../../lib/src/widgets/glass_button.dart#L118) | extends StatelessWidget | Shared | 2 lib files | Wraps content in the glass finish, for controls that draw their own `Material` (the player's play and pill buttons) and for fields with a translucent fill (search). |
 | `_GlassShadowPainter` | Painter | [`liquid_glass.dart:172`](../../lib/src/widgets/liquid_glass.dart#L172) | extends CustomPainter | Shared | its own file | Paints shadows only outside the glass. |
-| `GlassTheme` | Theme | [`glass_theme.dart:7`](../../lib/src/theme/glass_theme.dart#L7) |  | Shared | 116 lib files, 49 test files |  |
+| `GlassTheme` | Theme | [`glass_theme.dart:7`](../../lib/src/theme/glass_theme.dart#L7) |  | Shared | 117 lib files, 50 test files |  |
 | `_GradientSlider` | Widget | [`playback_settings_screen.dart:728`](../../lib/src/screens/playback_settings_screen.dart#L728) | extends StatelessWidget | Shared | its own file | A labelled slider whose track is a gradient of `colors`. |
 | `_GradientTrackShape` | Class | [`playback_settings_screen.dart:783`](../../lib/src/screens/playback_settings_screen.dart#L783) | extends RoundedRectSliderTrackShape | Shared | its own file |  |
 | `_Grid` | Widget | [`avatar_frames_screen.dart:323`](../../lib/src/screens/avatar_frames_screen.dart#L323) | extends StatelessWidget | Shared | its own file | A collection's frames, in even columns. |
@@ -452,16 +455,16 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `_Heading` | Widget | [`plugin_details_screen.dart:432`](../../lib/src/screens/plugin_details_screen.dart#L432) | extends StatelessWidget | Shared | its own file |  |
 | `_Heading` | Widget | [`desktop_plugins_page.dart:394`](../../lib/src/desktop/desktop_plugins_page.dart#L394) | extends StatelessWidget | Windows | its own file |  |
 | `HelpSupportScreen` | Widget | [`help_support_screen.dart:72`](../../lib/src/screens/help_support_screen.dart#L72) | extends StatelessWidget | Shared | 2 lib files, 3 test files |  |
-| `_Hero` | Widget | [`plugin_details_screen.dart:318`](../../lib/src/screens/plugin_details_screen.dart#L318) | extends StatelessWidget | Shared | its own file |  |
-| `_Hero` | Widget | [`plugin_collection_screen.dart:554`](../../lib/src/screens/plugin_collection_screen.dart#L554) | extends StatelessWidget | Shared | its own file |  |
-| `_Hero` | Widget | [`supporters_screen.dart:266`](../../lib/src/screens/supporters_screen.dart#L266) | extends StatelessWidget | Shared | its own file | The thank-you, the status and the one call to action. |
 | `_Hero` | Widget | [`installed_provider_screen.dart:284`](../../lib/src/screens/installed_provider_screen.dart#L284) | extends StatelessWidget | Shared | its own file |  |
+| `_Hero` | Widget | [`supporters_screen.dart:266`](../../lib/src/screens/supporters_screen.dart#L266) | extends StatelessWidget | Shared | its own file | The thank-you, the status and the one call to action. |
+| `_Hero` | Widget | [`plugin_collection_screen.dart:554`](../../lib/src/screens/plugin_collection_screen.dart#L554) | extends StatelessWidget | Shared | its own file |  |
+| `_Hero` | Widget | [`plugin_details_screen.dart:318`](../../lib/src/screens/plugin_details_screen.dart#L318) | extends StatelessWidget | Shared | its own file |  |
 | `_HeroDetails` | Widget | [`tv_browse.dart:184`](../../lib/src/screens/tv/tv_browse.dart#L184) | extends StatelessWidget | Android TV | its own file |  |
 | `_HeroText` | Widget | [`desktop_hero.dart:425`](../../lib/src/desktop/desktop_hero.dart#L425) | extends StatelessWidget | Windows | its own file |  |
 | `_HiddenDuringPauseScreen` | Widget | [`player_controls.dart:248`](../../lib/src/widgets/player/player_controls.dart#L248) | extends StatelessWidget | Shared | its own file | Fades `child` out, and makes it untappable and unfocusable, while the pause screen shows. |
-| `_HomeFeed` | Class | [`home_screen.dart:102`](../../lib/src/screens/home_screen.dart#L102) |  | Shared | its own file | One independently loaded single-request list (Trending, search). |
-| `HomeScreen` | Widget | [`home_screen.dart:111`](../../lib/src/screens/home_screen.dart#L111) | extends StatefulWidget | Shared | 1 lib file, 6 test files |  |
-| `_HomeScreenState` | Widget state | [`home_screen.dart:127`](../../lib/src/screens/home_screen.dart#L127) | extends State<HomeScreen>; with WidgetsBindingObserver | Shared | its own file |  |
+| `_HomeFeed` | Class | [`home_screen.dart:107`](../../lib/src/screens/home_screen.dart#L107) |  | Shared | its own file | One independently loaded single-request list (Trending, search). |
+| `HomeScreen` | Widget | [`home_screen.dart:116`](../../lib/src/screens/home_screen.dart#L116) | extends StatefulWidget | Shared | 1 lib file, 6 test files |  |
+| `_HomeScreenState` | Widget state | [`home_screen.dart:132`](../../lib/src/screens/home_screen.dart#L132) | extends State<HomeScreen>; with WidgetsBindingObserver | Shared | its own file |  |
 | `HomeViewModel` | View model | [`home_view_model.dart:23`](../../lib/src/viewmodels/home_view_model.dart#L23) | extends ChangeNotifier | Shared | 3 lib files, 2 test files | Home's data, shared by the phone, TV and Windows layouts: the catalog rows, Top 10 and how it is seeded, the Continue watching row, and My list. |
 | `HostAddressLookup` | Typedef | [`network_target_policy.dart:8`](../../lib/src/services/network_target_policy.dart#L8) | = Future<List<InternetAddress>> Function(String host); | Shared | its own file only |  |
 | `_HostChip` | Widget | [`waiting_room_screen.dart:607`](../../lib/src/screens/watch_party/waiting_room_screen.dart#L607) | extends StatelessWidget | Shared | its own file |  |
@@ -479,7 +482,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `IconGalleryApp` | Widget | [`icon_gallery.dart:13`](../../lib/icon_gallery.dart#L13) | extends StatelessWidget | Shared | 1 test file |  |
 | `IconGalleryScreen` | Widget | [`icon_gallery.dart:27`](../../lib/icon_gallery.dart#L27) | extends StatefulWidget | Shared | its own file only | Every icon, with its name, at any size, on a dark or light surface, in white or the accent, and with its solid form beside it. |
 | `_IconGalleryScreenState` | Widget state | [`icon_gallery.dart:34`](../../lib/icon_gallery.dart#L34) | extends State<IconGalleryScreen> | Shared | its own file |  |
-| `_IdentityCard` | Widget | [`profile_screen.dart:665`](../../lib/src/screens/profile_screen.dart#L665) | extends StatelessWidget | Shared | its own file | Who is signed in, in the card that leads the page. |
+| `_IdentityCard` | Widget | [`profile_screen.dart:676`](../../lib/src/screens/profile_screen.dart#L676) | extends StatelessWidget | Shared | its own file | Who is signed in, in the card that leads the page. |
 | `_InfoTable` | Widget | [`plugin_details_screen.dart:468`](../../lib/src/screens/plugin_details_screen.dart#L468) | extends StatelessWidget | Shared | its own file |  |
 | `_Initial` | Widget | [`profile_avatar.dart:177`](../../lib/src/widgets/profile_avatar.dart#L177) | extends StatelessWidget | Shared | its own file |  |
 | `InstalledProviderScreen` | Widget | [`installed_provider_screen.dart:21`](../../lib/src/screens/installed_provider_screen.dart#L21) | extends StatelessWidget | Shared | 1 lib file, 1 test file |  |
@@ -550,7 +553,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `MediaFreshnessRules` | Service type | [`media_catalog_rules.dart:99`](../../lib/src/services/media_catalog_rules.dart#L99) |  | Shared | 3 lib files, 8 test files | Date rules for discovery rows. |
 | `MediaItem` | Model | [`media_item.dart:1`](../../lib/src/models/media_item.dart#L1) |  | Shared | 59 lib files, 58 test files |  |
 | `_MediaSection` | Widget | [`library_screen.dart:400`](../../lib/src/screens/library_screen.dart#L400) | extends StatelessWidget | Shared | its own file |  |
-| `MemorySessionStore` | Class | [`session_store.dart:154`](../../lib/src/account/session_store.dart#L154) | implements SessionStore | Shared | 30 test files |  |
+| `MemorySessionStore` | Class | [`session_store.dart:154`](../../lib/src/account/session_store.dart#L154) | implements SessionStore | Shared | 31 test files |  |
 | `_MenuPill` | Widget | [`plugin_filter_bar.dart:152`](../../lib/src/widgets/plugin_library/plugin_filter_bar.dart#L152) | extends StatelessWidget | Shared | its own file | A pill that opens a menu: 40 px drawn, inside a 48 dp hit area on touch and TV so it is as easy to reach as the chips beside it. |
 | `_Message` | Widget | [`universal_search_view.dart:782`](../../lib/src/screens/search/universal_search_view.dart#L782) | extends StatelessWidget | Shared | its own file |  |
 | `MessageIndex` | Typedef | [`message_store.dart:23`](../../lib/src/messaging/message_store.dart#L23) | = ( | Shared | 1 test file | What `MessageStore.open` reads back. |
@@ -579,14 +582,14 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `_NameDialogState` | Widget state | [`account_settings_screen.dart:639`](../../lib/src/screens/account_settings_screen.dart#L639) | extends State<_NameDialog> | Shared | its own file |  |
 | `_NavigationButton` | Widget | [`episode_panel.dart:422`](../../lib/src/widgets/player/episode_panel.dart#L422) | extends StatelessWidget | Shared | its own file |  |
 | `NetworkDestinationValidator` | Service type | [`network_target_policy.dart:15`](../../lib/src/services/network_target_policy.dart#L15) |  | Shared | 10 lib files, 20 test files | Resolves untrusted destinations, rejects non-public addresses, and pins Dart HTTP connections to the addresses that passed validation. |
-| `_NewDot` | Widget | [`profile_screen.dart:580`](../../lib/src/screens/profile_screen.dart#L580) | extends StatelessWidget | Shared | its own file | Something new in Friends (requests or recommendations), beside its row. |
-| `NewEpisode` | Class | [`episode_check.dart:96`](../../lib/src/notifications/episode_check.dart#L96) |  | Shared | 1 lib file, 2 test files | One episode to tell the user about. |
+| `_NewDot` | Widget | [`profile_screen.dart:591`](../../lib/src/screens/profile_screen.dart#L591) | extends StatelessWidget | Shared | its own file | Something new in Friends (requests or recommendations), beside its row. |
+| `NewEpisode` | Class | [`episode_check.dart:102`](../../lib/src/notifications/episode_check.dart#L102) |  | Shared | 1 lib file, 2 test files | One episode to tell the user about. |
 | `_NewFolder` | Class | [`collection_actions.dart:43`](../../lib/src/widgets/collections/collection_actions.dart#L43) | extends _Destination | Shared | its own file |  |
 | `NextEpisodeCard` | Widget | [`player_controls.dart:1368`](../../lib/src/widgets/player/player_controls.dart#L1368) | extends StatelessWidget | Shared | 1 lib file, 1 test file | Near the end of an episode: offers the next one, with a cancellable countdown when auto-play is enabled. |
 | `NormalizedStreamSource` | Service type | [`stream_normalizer.dart:4`](../../lib/src/services/stream_normalizer.dart#L4) |  | Shared | its own file only |  |
 | `_Note` | Widget | [`friends_screen.dart:684`](../../lib/src/screens/social/friends_screen.dart#L684) | extends StatelessWidget | Shared | its own file |  |
-| `_Note` | Widget | [`plugin_details_screen.dart:599`](../../lib/src/screens/plugin_details_screen.dart#L599) | extends StatelessWidget | Shared | its own file | An inline warning note. |
 | `_Note` | Widget | [`universal_search_view.dart:515`](../../lib/src/screens/search/universal_search_view.dart#L515) | extends StatelessWidget | Shared | its own file |  |
+| `_Note` | Widget | [`plugin_details_screen.dart:599`](../../lib/src/screens/plugin_details_screen.dart#L599) | extends StatelessWidget | Shared | its own file | An inline warning note. |
 | `_Note` | Widget | [`profile_stats_screen.dart:447`](../../lib/src/screens/profile_stats_screen.dart#L447) | extends StatelessWidget | Shared | its own file |  |
 | `_Notice` | Widget | [`sign_in_screen.dart:772`](../../lib/src/screens/sign_in_screen.dart#L772) | extends StatelessWidget | Shared | its own file |  |
 | `_Notice` | Widget | [`desktop_plugins_page.dart:512`](../../lib/src/desktop/desktop_plugins_page.dart#L512) | extends StatelessWidget | Windows | its own file |  |
@@ -607,8 +610,8 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 
 | Type | Role | Declared in | Relations | Platform | Named in | Summary |
 |---|---|---|---|---|---|---|
-| `_Page` | Widget | [`desktop_shell.dart:167`](../../lib/src/desktop/desktop_shell.dart#L167) | extends StatelessWidget | Windows | its own file |  |
 | `_Page` | Enum | [`player_settings_sheet.dart:144`](../../lib/src/widgets/player/player_settings_sheet.dart#L144) |  | Shared | its own file |  |
+| `_Page` | Widget | [`desktop_shell.dart:167`](../../lib/src/desktop/desktop_shell.dart#L167) | extends StatelessWidget | Windows | its own file |  |
 | `PagedFeedController` | Notifier / controller | [`paged_feed_controller.dart:137`](../../lib/src/services/paged_feed_controller.dart#L137) | extends ChangeNotifier | Shared | 8 lib files, 5 test files | The pages of one home row: what is loaded, whether more exist, and the guards that keep requests for it from piling up. |
 | `PagedFeedState` | Service type | [`paged_feed_controller.dart:60`](../../lib/src/services/paged_feed_controller.dart#L60) |  | Shared | its own file only |  |
 | `PagedFeedStatus` | Enum | [`paged_feed_controller.dart:44`](../../lib/src/services/paged_feed_controller.dart#L44) |  | Shared | 7 lib files, 2 test files | Where a row is in its first load. |
@@ -784,8 +787,8 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `PluginStatusChip` | Widget | [`plugin_transparency.dart:39`](../../lib/src/widgets/plugin_manager/plugin_transparency.dart#L39) | extends StatelessWidget | Shared | 2 lib files | Small icon + label chip; text stays `GlassTheme.textPrimary` so it is readable in every theme, the colour marks only the icon and outline. |
 | `_PluginsView` | Enum | [`desktop_plugins_page.dart:53`](../../lib/src/desktop/desktop_plugins_page.dart#L53) |  | Windows | its own file | What the Plugins page shows: what is installed, or the Community Library to add more. |
 | `PluginTrustBadge` | Widget | [`plugin_transparency.dart:18`](../../lib/src/widgets/plugin_manager/plugin_transparency.dart#L18) | extends StatelessWidget | Shared | 1 lib file | A compact source-trust chip. |
-| `_Poster` | Widget | [`supporter_theme_picker.dart:431`](../../lib/src/widgets/supporter_theme_picker.dart#L431) | extends StatelessWidget | Shared | its own file |  |
 | `_Poster` | Widget | [`desktop_details_screen.dart:1098`](../../lib/src/desktop/desktop_details_screen.dart#L1098) | extends StatelessWidget | Windows | its own file |  |
+| `_Poster` | Widget | [`supporter_theme_picker.dart:431`](../../lib/src/widgets/supporter_theme_picker.dart#L431) | extends StatelessWidget | Shared | its own file |  |
 | `_PosterCard` | Widget | [`friend_collection_screen.dart:249`](../../lib/src/screens/social/friend_collection_screen.dart#L249) | extends StatelessWidget | Shared | its own file |  |
 | `_PosterFallback` | Widget | [`party_widgets.dart:87`](../../lib/src/screens/watch_party/party_widgets.dart#L87) | extends StatelessWidget | Shared | its own file |  |
 | `PosterPlaceholder` | Widget | [`poster_image.dart:8`](../../lib/src/widgets/poster_image.dart#L8) | extends StatelessWidget | Shared | 6 lib files, 1 test file | The neutral tile behind a poster: a soft top-lit surface with a film glyph. |
@@ -793,9 +796,9 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `_Preview` | Widget | [`avatar_frames_screen.dart:185`](../../lib/src/screens/avatar_frames_screen.dart#L185) | extends StatelessWidget | Shared | its own file | The person's own avatar in the frame being looked at, its name and what can be done with it. |
 | `_PreviewScreen` | Widget | [`supporter_theme_picker.dart:275`](../../lib/src/widgets/supporter_theme_picker.dart#L275) | extends StatelessWidget | Shared | its own file | A small Reelish screen in `theme`: the dock, search, chips, posters with progress, the primary and secondary buttons, and a floating surface. |
 | `_PrimaryButton` | Widget | [`sign_in_screen.dart:641`](../../lib/src/screens/sign_in_screen.dart#L641) | extends StatelessWidget | Shared | its own file |  |
-| `_PrivacyNote` | Widget | [`sign_in_screen.dart:671`](../../lib/src/screens/sign_in_screen.dart#L671) | extends StatelessWidget | Shared | its own file |  |
 | `_PrivacyNote` | Widget | [`messages_screen.dart:245`](../../lib/src/screens/social/messages_screen.dart#L245) | extends StatelessWidget | Shared | its own file |  |
-| `ProfileActivity` | Class | [`profile_screen.dart:55`](../../lib/src/screens/profile_screen.dart#L55) |  | Shared | 1 test file | What the library holds, counted from this device's history and My list, as the library itself counts it: Watched is the watch history, In progress what Continue watching offers. |
+| `_PrivacyNote` | Widget | [`sign_in_screen.dart:671`](../../lib/src/screens/sign_in_screen.dart#L671) | extends StatelessWidget | Shared | its own file |  |
+| `ProfileActivity` | Class | [`profile_screen.dart:56`](../../lib/src/screens/profile_screen.dart#L56) |  | Shared | 1 test file | What the library holds, counted from this device's history and My list, as the library itself counts it: Watched is the watch history, In progress what Continue watching offers. |
 | `ProfileAvatar` | Class | [`profile_controller.dart:55`](../../lib/src/account/profile_controller.dart#L55) |  | Shared | 5 lib files, 5 test files | What the avatar shows. |
 | `ProfileAvatarPicker` | Widget | [`profile_avatar_picker.dart:14`](../../lib/src/widgets/profile_avatar_picker.dart#L14) | extends StatelessWidget | Shared | 2 lib files, 1 test file | The avatar choices: the Trakt picture, the saved photo, the initial, and each preset. |
 | `ProfileAvatarView` | Widget | [`profile_avatar.dart:48`](../../lib/src/widgets/profile_avatar.dart#L48) | extends StatelessWidget | Shared | 5 lib files, 1 test file | Draws `avatar` at `size`. |
@@ -805,13 +808,13 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `ProfileCardBackdrop` | Widget | [`profile_card_backdrop.dart:19`](../../lib/src/widgets/profile_card_backdrop.dart#L19) | extends StatelessWidget | Shared | 2 lib files, 1 test file | `style` filling its box. |
 | `ProfileCardEffect` | Widget | [`profile_card_backdrop.dart:318`](../../lib/src/widgets/profile_card_backdrop.dart#L318) | extends StatefulWidget | Shared | 1 lib file, 1 test file | `effect` over the card, in `color`. |
 | `_ProfileCardEffectState` | Widget state | [`profile_card_backdrop.dart:337`](../../lib/src/widgets/profile_card_backdrop.dart#L337) | extends State<ProfileCardEffect>; with SingleTickerProviderStateMixin, WidgetsBindingObserver | Shared | its own file |  |
-| `ProfileController` | Notifier / controller | [`profile_controller.dart:80`](../../lib/src/account/profile_controller.dart#L80) | extends ChangeNotifier | Shared | 9 lib files, 11 test files |  |
+| `ProfileController` | Notifier / controller | [`profile_controller.dart:80`](../../lib/src/account/profile_controller.dart#L80) | extends ChangeNotifier | Shared | 10 lib files, 11 test files |  |
 | `ProfileEffect` | Enum | [`profile_styles.dart:258`](../../lib/src/theme/profile_styles.dart#L258) |  | Shared | 3 lib files, 1 test file | A gentle animation on the card. |
-| `_ProfileName` | Widget | [`profile_screen.dart:1156`](../../lib/src/screens/profile_screen.dart#L1156) | extends StatelessWidget | Shared | its own file | The name, and close under it the account it signs in with, so the two read as one; then the account's identity capsules, Sovereign and Supporter, each of which opens the Supporters page. |
+| `_ProfileName` | Widget | [`profile_screen.dart:1167`](../../lib/src/screens/profile_screen.dart#L1167) | extends StatelessWidget | Shared | its own file | The name, and close under it the account it signs in with, so the two read as one; then the account's identity capsules, Sovereign and Supporter, each of which opens the Supporters page. |
 | `ProfilePattern` | Enum | [`profile_styles.dart:59`](../../lib/src/theme/profile_styles.dart#L59) |  | Shared | 1 lib file, 1 test file | How a background is drawn. |
 | `ProfilePhotoException` | Exception | [`profile_controller.dart:75`](../../lib/src/account/profile_controller.dart#L75) | implements Exception | Shared | 1 lib file, 1 test file | Thrown when a photo cannot be used; `message` is shown to the user. |
-| `ProfileScreen` | Widget | [`profile_screen.dart:90`](../../lib/src/screens/profile_screen.dart#L90) | extends StatefulWidget | Shared | 1 lib file, 7 test files |  |
-| `_ProfileScreenState` | Widget state | [`profile_screen.dart:140`](../../lib/src/screens/profile_screen.dart#L140) | extends State<ProfileScreen> | Shared | its own file |  |
+| `ProfileScreen` | Widget | [`profile_screen.dart:91`](../../lib/src/screens/profile_screen.dart#L91) | extends StatefulWidget | Shared | 1 lib file, 7 test files |  |
+| `_ProfileScreenState` | Widget state | [`profile_screen.dart:141`](../../lib/src/screens/profile_screen.dart#L141) | extends State<ProfileScreen> | Shared | its own file |  |
 | `ProfileStatsScreen` | Widget | [`profile_stats_screen.dart:17`](../../lib/src/screens/profile_stats_screen.dart#L17) | extends StatefulWidget | Shared | 1 lib file, 2 test files |  |
 | `_ProfileStatsScreenState` | Widget state | [`profile_stats_screen.dart:27`](../../lib/src/screens/profile_stats_screen.dart#L27) | extends State<ProfileStatsScreen> | Shared | its own file |  |
 | `ProfileStyle` | Theme | [`profile_styles.dart:280`](../../lib/src/theme/profile_styles.dart#L280) |  | Shared | 3 lib files, 1 test file | The card's look as chosen: a background (`ProfileBackdropStyle.id`), a colour (`AccentPalette.id`: a preset, or `custom:rrggbb`) and an effect. |
@@ -840,8 +843,8 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `ProviderScriptCache` | Service type | [`provider_script_cache.dart:9`](../../lib/src/services/provider_script_cache.dart#L9) |  | Shared | 1 lib file, 1 test file | In-memory cache of provider scripts for this app session. |
 | `ProviderSearchDialog` | Widget | [`provider_search_dialog.dart:8`](../../lib/src/widgets/provider_search_dialog.dart#L8) | extends StatelessWidget | Shared | 1 lib file | "Searching providers…" while a play request looks for a stream. |
 | `ProviderSources` | Class | [`playback_availability.dart:42`](../../lib/src/search/playback_availability.dart#L42) |  | Shared | its own file only | What one provider listed: how many sources and what it said about them. |
-| `_ProviderTile` | Widget | [`plugins_screen.dart:708`](../../lib/src/screens/plugins_screen.dart#L708) | extends StatelessWidget | Shared | its own file |  |
 | `_ProviderTile` | Widget | [`desktop_plugins_page.dart:866`](../../lib/src/desktop/desktop_plugins_page.dart#L866) | extends StatelessWidget | Windows | its own file |  |
+| `_ProviderTile` | Widget | [`plugins_screen.dart:708`](../../lib/src/screens/plugins_screen.dart#L708) | extends StatelessWidget | Shared | its own file |  |
 | `_PublicNameDialog` | Widget | [`supporters_screen.dart:695`](../../lib/src/screens/supporters_screen.dart#L695) | extends StatefulWidget | Shared | its own file |  |
 | `_PublicNameDialogState` | Widget state | [`supporters_screen.dart:704`](../../lib/src/screens/supporters_screen.dart#L704) | extends State<_PublicNameDialog> | Shared | its own file |  |
 | `PublicSupporter` | Typedef | [`supporter_controller.dart:133`](../../lib/src/account/supporter_controller.dart#L133) | = ( | Shared | 1 lib file | A name on the public list, with the month its supporter joined. |
@@ -850,17 +853,17 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 
 | Type | Role | Declared in | Relations | Platform | Named in | Summary |
 |---|---|---|---|---|---|---|
-| `QuietHours` | Class | [`smart_alerts.dart:62`](../../lib/src/notifications/smart_alerts.dart#L62) |  | Shared | 3 lib files, 1 test file | Hours in which nothing is shown: what is found waits for the first check after them. |
+| `QuietHours` | Class | [`smart_alerts.dart:65`](../../lib/src/notifications/smart_alerts.dart#L65) |  | Shared | 3 lib files, 1 test file | Hours in which nothing is shown: what is found waits for the first check after them. |
 
 ## R
 
 | Type | Role | Declared in | Relations | Platform | Named in | Summary |
 |---|---|---|---|---|---|---|
 | `_RailContents` | Widget | [`desktop_shell.dart:398`](../../lib/src/desktop/desktop_shell.dart#L398) | extends StatelessWidget | Windows | its own file |  |
-| `_RailItem` | Widget | [`tv_home_shell.dart:349`](../../lib/src/screens/tv/tv_home_shell.dart#L349) | extends StatefulWidget | Android TV | its own file |  |
 | `_RailItem` | Widget | [`desktop_settings_page.dart:287`](../../lib/src/desktop/desktop_settings_page.dart#L287) | extends StatefulWidget | Windows | its own file | A category in the rail; Enter or a click shows it. |
-| `_RailItemState` | Widget state | [`tv_home_shell.dart:370`](../../lib/src/screens/tv/tv_home_shell.dart#L370) | extends State<_RailItem> | Android TV | its own file |  |
+| `_RailItem` | Widget | [`tv_home_shell.dart:349`](../../lib/src/screens/tv/tv_home_shell.dart#L349) | extends StatefulWidget | Android TV | its own file |  |
 | `_RailItemState` | Widget state | [`desktop_settings_page.dart:318`](../../lib/src/desktop/desktop_settings_page.dart#L318) | extends State<_RailItem> | Windows | its own file |  |
+| `_RailItemState` | Widget state | [`tv_home_shell.dart:370`](../../lib/src/screens/tv/tv_home_shell.dart#L370) | extends State<_RailItem> | Android TV | its own file |  |
 | `_RailTitle` | Widget | [`desktop_settings_page.dart:232`](../../lib/src/desktop/desktop_settings_page.dart#L232) | extends StatelessWidget | Windows | its own file |  |
 | `_RankedCard` | Widget | [`desktop_top_ten.dart:307`](../../lib/src/desktop/desktop_top_ten.dart#L307) | extends StatefulWidget | Windows | its own file | One ranked title: the outlined numeral, with the poster card over its right edge. |
 | `_RankedCardState` | Widget state | [`desktop_top_ten.dart:331`](../../lib/src/desktop/desktop_top_ten.dart#L331) | extends State<_RankedCard> | Windows | its own file |  |
@@ -876,13 +879,13 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `RecommendationsScreen` | Widget | [`friends_screen.dart:563`](../../lib/src/screens/social/friends_screen.dart#L563) | extends StatefulWidget | Shared | 2 test files | Every title friends sent, newest first. |
 | `_RecommendationsScreenState` | Widget state | [`friends_screen.dart:574`](../../lib/src/screens/social/friends_screen.dart#L574) | extends State<RecommendationsScreen> | Shared | its own file |  |
 | `RecommendationTile` | Widget | [`social_widgets.dart:406`](../../lib/src/widgets/social/social_widgets.dart#L406) | extends StatelessWidget | Shared | 1 lib file | A title a friend sent: poster, title and year, who sent it and their note, a dot while unopened, and Remove. |
-| `Rect` | Typedef | [`avatar_image.dart:110`](../../lib/src/account/avatar_image.dart#L110) | = ui.Rect; | Shared | 9 lib files, 6 test files |  |
+| `Rect` | Typedef | [`avatar_image.dart:110`](../../lib/src/account/avatar_image.dart#L110) | = ui.Rect; | Shared | 10 lib files, 6 test files |  |
 | `ReelishApp` | Widget | [`main.dart:51`](../../lib/main.dart#L51) | extends StatefulWidget | Shared | 1 lib file, 1 test file |  |
 | `_ReelishAppState` | Widget state | [`main.dart:58`](../../lib/main.dart#L58) | extends State<ReelishApp> | Shared | its own file |  |
 | `ReelishDevice` | Enum | [`plugin_compatibility.dart:9`](../../lib/src/services/plugin_compatibility.dart#L9) |  | Shared | 5 lib files, 1 test file | The interface Reelish runs as. |
 | `ReelishGlassCard` | Widget | [`liquid_glass.dart:481`](../../lib/src/widgets/liquid_glass.dart#L481) | extends StatefulWidget | Shared | 1 lib file, 1 test file | Tappable `LiquidGlass` that presses in like a physical pane: it scales down slightly, dims its highlights and settles its shadow, then springs back on release. |
 | `_ReelishGlassCardState` | Widget state | [`liquid_glass.dart:519`](../../lib/src/widgets/liquid_glass.dart#L519) | extends State<ReelishGlassCard> | Shared | its own file |  |
-| `ReelishIcons` | Theme | [`reelish_icons.dart:7`](../../lib/src/theme/reelish_icons.dart#L7) |  | Shared | 105 lib files, 11 test files | Reelish's own icons, as a font compiled from `assets/icons/svg`. |
+| `ReelishIcons` | Theme | [`reelish_icons.dart:7`](../../lib/src/theme/reelish_icons.dart#L7) |  | Shared | 106 lib files, 11 test files | Reelish's own icons, as a font compiled from `assets/icons/svg`. |
 | `ReelishIdentity` | Widget | [`app_information_screens.dart:17`](../../lib/src/screens/app_information_screens.dart#L17) | extends StatelessWidget | Shared | its own file only | The Reelish name, icon and tagline, used where the app identifies itself. |
 | `ReelishLayoutMode` | Enum | [`device_capabilities.dart:153`](../../lib/src/platform/device_capabilities.dart#L153) |  | Shared | 1 test file | The interface family Reelish shows. |
 | `ReelishMark` | Widget | [`brand_logo.dart:174`](../../lib/src/widgets/brand_logo.dart#L174) | extends StatelessWidget | Shared | 1 lib file, 1 test file | The Reelish mark at `height`, without its canvas's transparent margins. |
@@ -890,7 +893,8 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `_ReelishPausedOverlayState` | Widget state | [`paused_overlay.dart:170`](../../lib/src/widgets/player/paused_overlay.dart#L170) | extends State<ReelishPausedOverlay>; with SingleTickerProviderStateMixin | Shared | its own file |  |
 | `ReelishPlugin` | Model | [`plugin_catalog.dart:61`](../../lib/src/models/plugin_catalog.dart#L61) |  | Shared | 9 lib files, 1 test file | One community provider repository (a provider manifest). |
 | `ReelishPrimaryLogo` | Widget | [`brand_logo.dart:159`](../../lib/src/widgets/brand_logo.dart#L159) | extends StatelessWidget | Shared | 1 lib file | The primary logo (the mark over the wordmark) at `height`, without its canvas's transparent margins. |
-| `ReelishWordmark` | Widget | [`brand_logo.dart:95`](../../lib/src/widgets/brand_logo.dart#L95) | extends StatelessWidget | Shared | 3 lib files, 1 test file | The Reelish wordmark at `height`, without its canvas's transparent margins. |
+| `ReelishWordmark` | Widget | [`brand_logo.dart:95`](../../lib/src/widgets/brand_logo.dart#L95) | extends StatelessWidget | Shared | 5 lib files, 1 test file | The Reelish wordmark at `height`, without its canvas's transparent margins. |
+| `_ReelPainter` | Painter | [`wrapped_visuals.dart:136`](../../lib/src/wrapped/wrapped_visuals.dart#L136) | extends CustomPainter | Shared | its own file |  |
 | `_ReleaseNotes` | Widget | [`desktop_update_dialogs.dart:28`](../../lib/src/desktop/desktop_update_dialogs.dart#L28) | extends StatefulWidget | Windows | its own file | The release notes box shared by the desktop update dialogs. |
 | `_ReleaseNotesState` | Widget state | [`desktop_update_dialogs.dart:37`](../../lib/src/desktop/desktop_update_dialogs.dart#L37) | extends State<_ReleaseNotes> | Windows | its own file |  |
 | `RememberedSubtitle` | Service type | [`storage_service.dart:1059`](../../lib/src/services/storage_service.dart#L1059) |  | Shared | 1 lib file, 1 test file | A remembered subtitle choice for one title. |
@@ -902,10 +906,10 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `ReportReason` | Enum | [`friends_controller.dart:202`](../../lib/src/social/friends_controller.dart#L202) |  | Shared | 1 lib file, 1 test file | The reasons a person can be reported for, by the name the API uses. |
 | `ReportScreen` | Widget | [`help_support_screen.dart:453`](../../lib/src/screens/help_support_screen.dart#L453) | extends StatefulWidget | Shared | 2 test files | The bug report and feedback form: fill in, review exactly what will be sent, then send once. |
 | `_ReportScreenState` | Widget state | [`help_support_screen.dart:475`](../../lib/src/screens/help_support_screen.dart#L475) | extends State<ReportScreen> | Shared | its own file |  |
-| `_RepositoryCard` | Widget | [`desktop_plugins_page.dart:610`](../../lib/src/desktop/desktop_plugins_page.dart#L610) | extends StatefulWidget | Windows | its own file |  |
 | `_RepositoryCard` | Widget | [`plugins_screen.dart:522`](../../lib/src/screens/plugins_screen.dart#L522) | extends StatefulWidget | Shared | its own file |  |
-| `_RepositoryCardState` | Widget state | [`desktop_plugins_page.dart:628`](../../lib/src/desktop/desktop_plugins_page.dart#L628) | extends State<_RepositoryCard> | Windows | its own file |  |
+| `_RepositoryCard` | Widget | [`desktop_plugins_page.dart:610`](../../lib/src/desktop/desktop_plugins_page.dart#L610) | extends StatefulWidget | Windows | its own file |  |
 | `_RepositoryCardState` | Widget state | [`plugins_screen.dart:538`](../../lib/src/screens/plugins_screen.dart#L538) | extends State<_RepositoryCard> | Shared | its own file |  |
+| `_RepositoryCardState` | Widget state | [`desktop_plugins_page.dart:628`](../../lib/src/desktop/desktop_plugins_page.dart#L628) | extends State<_RepositoryCard> | Windows | its own file |  |
 | `_RepositoryError` | Widget | [`plugins_screen.dart:868`](../../lib/src/screens/plugins_screen.dart#L868) | extends StatelessWidget | Shared | its own file | A repository that did not load (`onRetry` and `onRemove`), provider code waiting for approval (`onApprove`) or a provider lookup error (`onDismiss`). |
 | `_ResumeOverlay` | Widget | [`desktop_widgets.dart:504`](../../lib/src/desktop/desktop_widgets.dart#L504) | extends StatelessWidget | Windows | its own file | The name, where you are and a play glyph, drawn on a landscape card's backdrop. |
 | `_ResumeSection` | Widget | [`desktop_shell.dart:795`](../../lib/src/desktop/desktop_shell.dart#L795) | extends StatelessWidget | Windows | its own file | Continue watching in the rail: a heading, then the most recent titles, scrolling within the room between browsing and Plugins. |
@@ -916,7 +920,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `_ReviewEmailDialog` | Widget | [`supporters_screen.dart:485`](../../lib/src/screens/supporters_screen.dart#L485) | extends StatefulWidget | Shared | its own file | The email that proves a donation: where it goes, and what it says. |
 | `_ReviewEmailDialogState` | Widget state | [`supporters_screen.dart:500`](../../lib/src/screens/supporters_screen.dart#L500) | extends State<_ReviewEmailDialog> | Shared | its own file |  |
 | `_RootTitle` | Widget | [`settings_components.dart:160`](../../lib/src/widgets/settings/settings_components.dart#L160) | extends StatelessWidget | Shared | its own file |  |
-| `_RowHeading` | Widget | [`home_screen.dart:3164`](../../lib/src/screens/home_screen.dart#L3164) | extends StatelessWidget | Shared | its own file | A Home row's title. |
+| `_RowHeading` | Widget | [`home_screen.dart:3203`](../../lib/src/screens/home_screen.dart#L3203) | extends StatelessWidget | Shared | its own file | A Home row's title. |
 
 ## S
 
@@ -949,6 +953,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `_SeekButton` | Widget | [`player_controls.dart:456`](../../lib/src/widgets/player/player_controls.dart#L456) | extends StatelessWidget | Shared | its own file |  |
 | `SeekCost` | Class | [`playback_sync.dart:96`](../../lib/src/watch_party/playback_sync.dart#L96) |  | Shared | 1 lib file, 1 test file | How long a seek takes on this device and stream, from asking to the picture moving again. |
 | `SeekFlash` | Class | [`player_controls.dart:974`](../../lib/src/widgets/player/player_controls.dart#L974) |  | Shared | 1 lib file, 1 test file | One double-tap seek, shown briefly on the tapped side. |
+| `_Segments` | Widget | [`wrapped_screen.dart:1076`](../../lib/src/wrapped/wrapped_screen.dart#L1076) | extends StatelessWidget | Shared | its own file | The slides as segments along the top. |
 | `_Separator` | Widget | [`plugin_filter_bar.dart:138`](../../lib/src/widgets/plugin_library/plugin_filter_bar.dart#L138) | extends StatelessWidget | Shared | its own file |  |
 | `SeriesProgress` | Model | [`episode_progress.dart:70`](../../lib/src/models/episode_progress.dart#L70) |  | Shared | 13 lib files, 14 test files | Per-episode progress for one series, plus the episode watched last. |
 | `SessionStore` | Class | [`session_store.dart:117`](../../lib/src/account/session_store.dart#L117) |  | Shared | 1 lib file | Reads and writes the one stored session. |
@@ -957,35 +962,37 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `SettingsHeader` | Widget | [`settings_components.dart:217`](../../lib/src/widgets/settings/settings_components.dart#L217) | extends StatelessWidget | Shared | its own file only | Pinned header with a back button, used by every settings sub-screen. |
 | `SettingsIconBadge` | Widget | [`settings_components.dart:294`](../../lib/src/widgets/settings/settings_components.dart#L294) | extends StatelessWidget | Shared | 1 lib file | The tinted rounded square behind a settings icon. |
 | `SettingsMetrics` | Class | [`settings_components.dart:10`](../../lib/src/widgets/settings/settings_components.dart#L10) |  | Shared | 9 lib files, 1 test file | Shared measurements for every settings page, so sub-screens line up. |
-| `SettingsPage` | Widget | [`settings_components.dart:25`](../../lib/src/widgets/settings/settings_components.dart#L25) | extends StatelessWidget | Shared | 13 lib files, 1 test file | A settings page: header, sectioned content, and the TMDB footer. |
+| `SettingsPage` | Widget | [`settings_components.dart:25`](../../lib/src/widgets/settings/settings_components.dart#L25) | extends StatelessWidget | Shared | 14 lib files, 1 test file | A settings page: header, sectioned content, and the TMDB footer. |
 | `SettingsParagraph` | Widget | [`settings_components.dart:529`](../../lib/src/widgets/settings/settings_components.dart#L529) | extends StatelessWidget | Shared | 6 lib files | Readable body copy inside a `SettingsSection`, such as legal text. |
 | `SettingsScaffold` | Widget | [`settings_components.dart:123`](../../lib/src/widgets/settings/settings_components.dart#L123) | extends StatelessWidget | Shared | 9 lib files | `SettingsPage` in its own scaffold, for pages pushed as routes. |
 | `SettingsScreen` | Widget | [`playback_settings_screen.dart:38`](../../lib/src/screens/playback_settings_screen.dart#L38) | extends StatelessWidget | Shared | 1 lib file, 4 test files |  |
-| `SettingsSection` | Widget | [`settings_components.dart:317`](../../lib/src/widgets/settings/settings_components.dart#L317) | extends StatelessWidget | Shared | 23 lib files, 1 test file | A labeled group of settings rows on one shared glass surface. |
+| `SettingsSection` | Widget | [`settings_components.dart:317`](../../lib/src/widgets/settings/settings_components.dart#L317) | extends StatelessWidget | Shared | 24 lib files, 1 test file | A labeled group of settings rows on one shared glass surface. |
 | `SettingsSectionHeader` | Widget | [`settings_components.dart:382`](../../lib/src/widgets/settings/settings_components.dart#L382) | extends StatelessWidget | Shared | its own file only |  |
 | `SettingsSliderTile` | Widget | [`settings_components.dart:599`](../../lib/src/widgets/settings/settings_components.dart#L599) | extends StatelessWidget | Shared | 2 lib files | A row with a labeled slider below its description. |
 | `SettingsSwitchTile` | Widget | [`settings_components.dart:566`](../../lib/src/widgets/settings/settings_components.dart#L566) | extends StatelessWidget | Shared | 10 lib files, 1 test file | A row with a switch; tapping anywhere on the row toggles it. |
-| `SettingsTile` | Widget | [`settings_components.dart:420`](../../lib/src/widgets/settings/settings_components.dart#L420) | extends StatelessWidget | Shared | 17 lib files, 1 test file | One settings row: optional icon, title, description and a current value, with a trailing control or a chevron when it opens something. |
+| `SettingsTile` | Widget | [`settings_components.dart:420`](../../lib/src/widgets/settings/settings_components.dart#L420) | extends StatelessWidget | Shared | 18 lib files, 1 test file | One settings row: optional icon, title, description and a current value, with a trailing control or a chevron when it opens something. |
 | `SharedCollection` | Class | [`friends_controller.dart:82`](../../lib/src/social/friends_controller.dart#L82) |  | Shared | 2 lib files, 1 test file | A collection a friend shares, as their page lists it. |
 | `SharedCollectionPage` | Typedef | [`friends_controller.dart:195`](../../lib/src/social/friends_controller.dart#L195) | = ( | Shared | its own file only | One page of a shared collection; `collection` only on the first. |
 | `SharedCollectionTile` | Widget | [`friend_collection_screen.dart:22`](../../lib/src/screens/social/friend_collection_screen.dart#L22) | extends StatelessWidget | Shared | 1 lib file | A shared collection on a friend's page: its cover, name and size. |
 | `_ShareDialog` | Widget | [`share_dialog.dart:56`](../../lib/src/widgets/social/share_dialog.dart#L56) | extends StatefulWidget | Shared | its own file |  |
 | `_ShareDialogState` | Widget state | [`share_dialog.dart:71`](../../lib/src/widgets/social/share_dialog.dart#L71) | extends State<_ShareDialog> | Shared | its own file |  |
 | `ShareResult` | Typedef | [`recommendations_controller.dart:127`](../../lib/src/social/recommendations_controller.dart#L127) | = ( | Shared | 1 lib file | What a send did: who got it, and who it could not go to. |
+| `_ShareSheet` | Widget | [`wrapped_screen.dart:1281`](../../lib/src/wrapped/wrapped_screen.dart#L1281) | extends StatefulWidget | Shared | its own file |  |
+| `_ShareSheetState` | Widget state | [`wrapped_screen.dart:1298`](../../lib/src/wrapped/wrapped_screen.dart#L1298) | extends State<_ShareSheet> | Shared | its own file |  |
 | `_SheenPainter` | Painter | [`avatar_frame.dart:918`](../../lib/src/widgets/avatar_frame.dart#L918) | extends CustomPainter | Shared | its own file | The Sovereign sheen, over the laurel and crown: once a cycle a band of pale light crosses the metal from the upper left, where the Sovereign Crest is lit from, and a sparkle flares on the crown's tallest pearl as it passes. |
-| `_Sheet` | Widget | [`profile_screen.dart:621`](../../lib/src/screens/profile_screen.dart#L621) | extends StatelessWidget | Shared | its own file | A bottom sheet's surface, as the app's other sheets draw it. |
+| `_Sheet` | Widget | [`profile_screen.dart:632`](../../lib/src/screens/profile_screen.dart#L632) | extends StatelessWidget | Shared | its own file | A bottom sheet's surface, as the app's other sheets draw it. |
 | `_Sheet` | Widget | [`recommendation_feedback_sheet.dart:52`](../../lib/src/widgets/recommendation_feedback_sheet.dart#L52) | extends StatelessWidget | Shared | its own file |  |
 | `_ShownDetails` | Widget | [`desktop_hero.dart:1118`](../../lib/src/desktop/desktop_hero.dart#L1118) | extends StatelessWidget | Windows | its own file | The shown card's foot: its name, a details line (rating, year, type and genres, whichever are known) and a round play button. |
 | `_Sidebar` | Widget | [`desktop_shell.dart:200`](../../lib/src/desktop/desktop_shell.dart#L200) | extends StatefulWidget | Windows | its own file | The rail. |
 | `_SidebarItem` | Widget | [`desktop_shell.dart:523`](../../lib/src/desktop/desktop_shell.dart#L523) | extends StatefulWidget | Windows | its own file |  |
 | `_SidebarItemState` | Widget state | [`desktop_shell.dart:540`](../../lib/src/desktop/desktop_shell.dart#L540) | extends State<_SidebarItem> | Windows | its own file |  |
 | `_SidebarState` | Widget state | [`desktop_shell.dart:229`](../../lib/src/desktop/desktop_shell.dart#L229) | extends State<_Sidebar> | Windows | its own file |  |
-| `_SignedOut` | Widget | [`profile_screen.dart:1594`](../../lib/src/screens/profile_screen.dart#L1594) | extends StatelessWidget | Shared | its own file | Only seen for a moment: the sign-in screen replaces the app when no one is signed in. |
+| `_SignedOut` | Widget | [`profile_screen.dart:1605`](../../lib/src/screens/profile_screen.dart#L1605) | extends StatelessWidget | Shared | its own file | Only seen for a moment: the sign-in screen replaces the app when no one is signed in. |
 | `SignInMethod` | Enum | [`account_controller.dart:234`](../../lib/src/account/account_controller.dart#L234) |  | Shared | 1 lib file, 1 test file | How the user approves Reelish on Trakt. |
 | `_SignInProgress` | Widget | [`sign_in_screen.dart:313`](../../lib/src/screens/sign_in_screen.dart#L313) | extends StatelessWidget | Shared | its own file |  |
 | `SignInScreen` | Widget | [`sign_in_screen.dart:80`](../../lib/src/screens/sign_in_screen.dart#L80) | extends StatefulWidget | Shared | its own file only |  |
 | `_SignInScreenState` | Widget state | [`sign_in_screen.dart:89`](../../lib/src/screens/sign_in_screen.dart#L89) | extends State<SignInScreen> | Shared | its own file |  |
-| `_SignOutTile` | Widget | [`profile_screen.dart:1548`](../../lib/src/screens/profile_screen.dart#L1548) | extends StatelessWidget | Shared | its own file | Sign out, in the danger colour; it asks first. |
+| `_SignOutTile` | Widget | [`profile_screen.dart:1559`](../../lib/src/screens/profile_screen.dart#L1559) | extends StatelessWidget | Shared | its own file | Sign out, in the danger colour; it asks first. |
 | `_SkeletonCard` | Widget | [`desktop_top_ten.dart:491`](../../lib/src/desktop/desktop_top_ten.dart#L491) | extends StatelessWidget | Windows | its own file |  |
 | `SkipKind` | Enum | [`skip_segments.dart:8`](../../lib/src/intro_skip/skip_segments.dart#L8) |  | Shared | 3 lib files, 1 test file | Which part of an episode a segment covers. |
 | `SkipMode` | Enum | [`skip_planner.dart:9`](../../lib/src/intro_skip/skip_planner.dart#L9) |  | Shared | 2 lib files, 2 test files | What the viewer chose for a kind of segment (Settings > Playback). |
@@ -994,6 +1001,8 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `SkipSegment` | Class | [`skip_segments.dart:52`](../../lib/src/intro_skip/skip_segments.dart#L52) |  | Shared | 3 lib files, 1 test file | One timed segment as IntroDB aggregates it. |
 | `SkipSegmentButton` | Widget | [`skip_segment_button.dart:13`](../../lib/src/widgets/player/skip_segment_button.dart#L13) | extends StatelessWidget | Shared | 1 lib file |  |
 | `_Slide` | Class | [`plugin_skeleton.dart:62`](../../lib/src/widgets/plugin_library/plugin_skeleton.dart#L62) | extends GradientTransform | Shared | its own file |  |
+| `_Slide` | Class | [`wrapped_screen.dart:124`](../../lib/src/wrapped/wrapped_screen.dart#L124) |  | Shared | its own file |  |
+| `_SlideScope` | Class | [`wrapped_screen.dart:133`](../../lib/src/wrapped/wrapped_screen.dart#L133) |  | Shared | its own file | What a slide is drawn with. |
 | `SmartCollection` | Enum | [`smart_collections.dart:10`](../../lib/src/collections/smart_collections.dart#L10) |  | Shared | 4 lib files, 1 test file |  |
 | `SmartCollections` | Class | [`smart_collections.dart:47`](../../lib/src/collections/smart_collections.dart#L47) |  | Shared | 1 lib file, 1 test file |  |
 | `SmartCollectionSources` | Class | [`smart_collections.dart:26`](../../lib/src/collections/smart_collections.dart#L26) |  | Shared | 1 lib file, 1 test file | What the smart collections are made from. |
@@ -1014,8 +1023,8 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `SovereignColors` | Theme | [`profile_styles.dart:37`](../../lib/src/theme/profile_styles.dart#L37) |  | Shared | 3 lib files | Sovereign Edition's Golden Wine: deep wine under champagne gold. |
 | `SovereignEditionMark` | Widget | [`sovereign_laurel.dart:130`](../../lib/src/widgets/sovereign_laurel.dart#L130) | extends StatelessWidget | Shared | 1 lib file, 1 test file | "Sovereign Edition" between two laurel sprigs, in champagne gold: the card's designation, set above the name. |
 | `_SpeedMeter` | Service type | [`windows_update_controller.dart:430`](../../lib/src/services/windows_update_controller.dart#L430) |  | Windows | its own file | Download speed averaged over the last few seconds. |
-| `_Spinner` | Widget | [`friends_screen.dart:699`](../../lib/src/screens/social/friends_screen.dart#L699) | extends StatelessWidget | Shared | its own file |  |
 | `_Spinner` | Widget | [`desktop_provider_search.dart:219`](../../lib/src/desktop/desktop_provider_search.dart#L219) | extends StatelessWidget | Windows | its own file | A coral ring turning around a search glyph, on a faint track. |
+| `_Spinner` | Widget | [`friends_screen.dart:699`](../../lib/src/screens/social/friends_screen.dart#L699) | extends StatelessWidget | Shared | its own file |  |
 | `SplashArt` | Enum | [`splash_art.dart:25`](../../lib/src/platform/splash_art.dart#L25) |  | Shared | 1 lib file, 2 test files | What the launch screen draws. |
 | `SplashArtStore` | Platform adapter | [`splash_art.dart:28`](../../lib/src/platform/splash_art.dart#L28) |  | Shared | 2 lib files, 1 test file | Keeps the launch screen's artwork in step with the signed-in account. |
 | `SplashGate` | Widget | [`splash_screen.dart:327`](../../lib/src/screens/splash_screen.dart#L327) | extends StatefulWidget | Shared | 1 lib file, 2 test files | Restores what the first screen needs, shows `SplashView` meanwhile, and fades to the screen `builder` returns as soon as that work finishes. |
@@ -1032,17 +1041,17 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `_StartupProgress` | Widget | [`splash_screen.dart:277`](../../lib/src/screens/splash_screen.dart#L277) | extends StatelessWidget | Shared | its own file |  |
 | `_StartupScreen` | Widget | [`main.dart:151`](../../lib/main.dart#L151) | extends StatefulWidget | Shared | its own file |  |
 | `_StartupScreenState` | Widget state | [`main.dart:160`](../../lib/main.dart#L160) | extends State<_StartupScreen> | Shared | its own file |  |
-| `_Stat` | Widget | [`profile_screen.dart:1445`](../../lib/src/screens/profile_screen.dart#L1445) | extends StatefulWidget | Shared | its own file | One count: the number in the card's light over its name. |
+| `_Stat` | Widget | [`profile_screen.dart:1456`](../../lib/src/screens/profile_screen.dart#L1456) | extends StatefulWidget | Shared | its own file | One count: the number in the card's light over its name. |
 | `_Stat` | Widget | [`desktop_plugins_page.dart:341`](../../lib/src/desktop/desktop_plugins_page.dart#L341) | extends StatelessWidget | Windows | its own file |  |
-| `_State` | Enum | [`skip_planner.dart:44`](../../lib/src/intro_skip/skip_planner.dart#L44) |  | Shared | its own file |  |
 | `_State` | Class | [`discovery_preferences_sync.dart:146`](../../lib/src/account/discovery_preferences_sync.dart#L146) |  | Shared | its own file |  |
+| `_State` | Enum | [`skip_planner.dart:44`](../../lib/src/intro_skip/skip_planner.dart#L44) |  | Shared | its own file |  |
 | `_Stats` | Widget | [`profile_stats_screen.dart:88`](../../lib/src/screens/profile_stats_screen.dart#L88) | extends StatelessWidget | Shared | its own file |  |
-| `_StatState` | Widget state | [`profile_screen.dart:1470`](../../lib/src/screens/profile_screen.dart#L1470) | extends State<_Stat> | Shared | its own file |  |
+| `_StatState` | Widget state | [`profile_screen.dart:1481`](../../lib/src/screens/profile_screen.dart#L1481) | extends State<_Stat> | Shared | its own file |  |
 | `_Status` | Widget | [`sign_in_screen.dart:706`](../../lib/src/screens/sign_in_screen.dart#L706) | extends StatelessWidget | Shared | its own file |  |
 | `_StatusBarScrim` | Widget | [`media_details_screen.dart:911`](../../lib/src/screens/media_details_screen.dart#L911) | extends StatelessWidget | Shared | its own file | Shades the status bar once content scrolls beneath it, so the clock and icons never sit on top of text. |
 | `_Step` | Widget | [`sign_in_screen.dart:526`](../../lib/src/screens/sign_in_screen.dart#L526) | extends StatelessWidget | Shared | its own file |  |
 | `StorageService` | Service type | [`storage_service.dart:18`](../../lib/src/services/storage_service.dart#L18) |  | Shared | 29 lib files, 41 test files |  |
-| `StoredSession` | Class | [`session_store.dart:11`](../../lib/src/account/session_store.dart#L11) |  | Shared | 1 lib file, 30 test files | One signed-in device's session as the backend issued it. |
+| `StoredSession` | Class | [`session_store.dart:11`](../../lib/src/account/session_store.dart#L11) |  | Shared | 1 lib file, 31 test files | One signed-in device's session as the backend issued it. |
 | `StreamDiscovery` | Service type | [`stream_discovery.dart:7`](../../lib/src/services/stream_discovery.dart#L7) |  | Shared | 4 lib files, 1 test file | Owns one progressive provider lookup and its results for one playback request. |
 | `StreamNormalizer` | Service type | [`stream_normalizer.dart:15`](../../lib/src/services/stream_normalizer.dart#L15) |  | Shared | 1 lib file, 1 test file | Converts provider-specific JSON shapes into Reelish's canonical source. |
 | `StreamSelectorSheet` | Widget | [`stream_selector_sheet.dart:15`](../../lib/src/widgets/player/stream_selector_sheet.dart#L15) | extends StatefulWidget | Shared | 2 lib files, 1 test file | Lists playable sources. |
@@ -1096,7 +1105,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `_SyncState` | Class | [`collection_sync.dart:489`](../../lib/src/account/collection_sync.dart#L489) |  | Shared | its own file | One account's collection sync state on this device. |
 | `_SyncState` | Class | [`progress_sync.dart:490`](../../lib/src/account/progress_sync.dart#L490) |  | Shared | its own file | One account's sync state on this device. |
 | `SyncThresholds` | Class | [`playback_sync.dart:62`](../../lib/src/watch_party/playback_sync.dart#L62) |  | Shared | 1 lib file | How far apart is acceptable, and when to stop nudging. |
-| `SystemEpisodeNotifier` | Class | [`episode_alerts.dart:143`](../../lib/src/notifications/episode_alerts.dart#L143) | implements EpisodeNotifier | Shared | 1 lib file | System notifications for new episodes. |
+| `SystemEpisodeNotifier` | Class | [`episode_alerts.dart:144`](../../lib/src/notifications/episode_alerts.dart#L144) | implements EpisodeNotifier | Shared | 1 lib file | System notifications for new episodes. |
 
 ## T
 
@@ -1115,8 +1124,8 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `ThemePreviewResult` | Enum | [`supporter_theme_picker.dart:132`](../../lib/src/widgets/supporter_theme_picker.dart#L132) |  | Shared | its own file only | What the person chose in a theme preview. |
 | `ThemeSurfaces` | Theme | [`theme_tokens.dart:8`](../../lib/src/theme/theme_tokens.dart#L8) |  | Shared | 4 lib files, 2 test files |  |
 | `_Thumbnail` | Widget | [`episode_panel.dart:755`](../../lib/src/widgets/player/episode_panel.dart#L755) | extends StatelessWidget | Shared | its own file | 16:9 episode still with progress along its bottom edge. |
-| `_Tile` | Widget | [`collection_pages.dart:217`](../../lib/src/screens/collections/collection_pages.dart#L217) | extends StatelessWidget | Shared | its own file | A collection, folder or smart collection: its cover, name and count. |
 | `_Tile` | Widget | [`profile_stats_screen.dart:222`](../../lib/src/screens/profile_stats_screen.dart#L222) | extends StatelessWidget | Shared | its own file |  |
+| `_Tile` | Widget | [`collection_pages.dart:217`](../../lib/src/screens/collections/collection_pages.dart#L217) | extends StatelessWidget | Shared | its own file | A collection, folder or smart collection: its cover, name and count. |
 | `_TileRow` | Widget | [`collection_pages.dart:191`](../../lib/src/screens/collections/collection_pages.dart#L191) | extends StatelessWidget | Shared | its own file |  |
 | `_TimeLabel` | Widget | [`player_controls.dart:745`](../../lib/src/widgets/player/player_controls.dart#L745) | extends StatefulWidget | Shared | its own file |  |
 | `_TimeLabelState` | Widget state | [`player_controls.dart:755`](../../lib/src/widgets/player/player_controls.dart#L755) | extends State<_TimeLabel> | Shared | its own file |  |
@@ -1124,6 +1133,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `TitleAvailability` | Class | [`playback_availability.dart:56`](../../lib/src/search/playback_availability.dart#L56) |  | Shared | its own file only |  |
 | `_TitleFallback` | Widget | [`tv_poster_card.dart:117`](../../lib/src/widgets/tv/tv_poster_card.dart#L117) | extends StatelessWidget | Android TV | its own file |  |
 | `TitleFeedback` | Class | [`discovery_data.dart:23`](../../lib/src/discovery/discovery_data.dart#L23) |  | Shared | 1 lib file, 2 test files |  |
+| `TitleInfo` | Class | [`wrapped_stats.dart:101`](../../lib/src/wrapped/wrapped_stats.dart#L101) |  | Shared | 1 lib file, 1 test file | What Wrapped needs of a title's TMDB details. |
 | `_Titles` | Typedef | [`universal_search_controller.dart:119`](../../lib/src/search/universal_search_controller.dart#L119) | = ( | Shared | its own file | Raw TMDB results with what search needs beyond a `MediaItem`. |
 | `TmdbAttribution` | Class | [`tmdb_attribution.dart:9`](../../lib/src/widgets/settings/tmdb_attribution.dart#L9) |  | Shared | 1 lib file, 1 test file | TMDB attribution wording and assets, per https://developer.themoviedb.org/docs/faq and https://www.themoviedb.org/about/logos-attribution. |
 | `_TmdbAttributionBlock` | Widget | [`credits_screen.dart:300`](../../lib/src/screens/credits_screen.dart#L300) | extends StatelessWidget | Shared | its own file |  |
@@ -1134,18 +1144,18 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `TmdbCacheTtl` | Service type | [`tmdb_response_cache.dart:8`](../../lib/src/services/tmdb_response_cache.dart#L8) |  | Shared | 2 lib files, 3 test files | Central freshness policy for TMDB response types. |
 | `TmdbGenre` | Service type | [`media_catalog_rules.dart:4`](../../lib/src/services/media_catalog_rules.dart#L4) |  | Shared | 1 test file | TMDB genre ids used by the catalog rules. |
 | `TmdbGenres` | Class | [`tmdb_genres.dart:6`](../../lib/src/discovery/tmdb_genres.dart#L6) |  | Shared | 7 lib files |  |
-| `_TmdbHttpException` | Exception | [`tmdb_service.dart:1330`](../../lib/src/services/tmdb_service.dart#L1330) | implements Exception | Shared | its own file |  |
+| `_TmdbHttpException` | Exception | [`tmdb_service.dart:1340`](../../lib/src/services/tmdb_service.dart#L1340) | implements Exception | Shared | its own file |  |
 | `TmdbLogo` | Widget | [`tmdb_attribution.dart:26`](../../lib/src/widgets/settings/tmdb_attribution.dart#L26) | extends StatelessWidget | Shared | 1 lib file | The official TMDB logo at a given height, never stretched. |
-| `_TmdbRequestLimiter` | Service type | [`tmdb_service.dart:1337`](../../lib/src/services/tmdb_service.dart#L1337) |  | Shared | its own file |  |
-| `_TmdbRequestPriority` | Enum | [`tmdb_service.dart:1328`](../../lib/src/services/tmdb_service.dart#L1328) |  | Shared | its own file |  |
+| `_TmdbRequestLimiter` | Service type | [`tmdb_service.dart:1347`](../../lib/src/services/tmdb_service.dart#L1347) |  | Shared | its own file |  |
+| `_TmdbRequestPriority` | Enum | [`tmdb_service.dart:1338`](../../lib/src/services/tmdb_service.dart#L1338) |  | Shared | its own file |  |
 | `TmdbResponseCache` | Service type | [`tmdb_response_cache.dart:96`](../../lib/src/services/tmdb_response_cache.dart#L96) |  | Shared | 2 lib files, 14 test files | Small bounded disk cache. |
 | `TmdbSearchCatalog` | Class | [`universal_search_controller.dart:40`](../../lib/src/search/universal_search_controller.dart#L40) | implements SearchCatalog | Shared | 1 lib file |  |
-| `TmdbService` | Service type | [`tmdb_service.dart:21`](../../lib/src/services/tmdb_service.dart#L21) |  | Shared | 14 lib files, 18 test files |  |
-| `TmdbSignedOutException` | Exception | [`tmdb_service.dart:1321`](../../lib/src/services/tmdb_service.dart#L1321) | implements Exception | Shared | 1 test file | No signed-in session: the catalog needs a Trakt sign-in. |
+| `TmdbService` | Service type | [`tmdb_service.dart:21`](../../lib/src/services/tmdb_service.dart#L21) |  | Shared | 15 lib files, 18 test files |  |
+| `TmdbSignedOutException` | Exception | [`tmdb_service.dart:1331`](../../lib/src/services/tmdb_service.dart#L1331) | implements Exception | Shared | 1 test file | No signed-in session: the catalog needs a Trakt sign-in. |
 | `_Toggle` | Widget | [`icon_gallery.dart:115`](../../lib/icon_gallery.dart#L115) | extends StatelessWidget | Shared | its own file |  |
 | `_ToggleFavoriteIntent` | Class | [`desktop_widgets.dart:161`](../../lib/src/desktop/desktop_widgets.dart#L161) | extends Intent | Windows | its own file |  |
-| `_TopBar` | Widget | [`player_controls.dart:281`](../../lib/src/widgets/player/player_controls.dart#L281) | extends StatelessWidget | Shared | its own file |  |
 | `_TopBar` | Widget | [`plugin_library_screen.dart:598`](../../lib/src/screens/plugin_library_screen.dart#L598) | extends StatelessWidget | Shared | its own file |  |
+| `_TopBar` | Widget | [`player_controls.dart:281`](../../lib/src/widgets/player/player_controls.dart#L281) | extends StatelessWidget | Shared | its own file |  |
 | `_TopLevel` | Class | [`collection_actions.dart:39`](../../lib/src/widgets/collections/collection_actions.dart#L39) | extends _Destination | Shared | its own file |  |
 | `TopLitEdge` | Class | [`top_lit_edge.dart:8`](../../lib/src/widgets/top_lit_edge.dart#L8) | extends Decoration | Shared | 2 lib files | A rounded hairline that is brightest along the top edge and fades down the sides, as if lit from above. |
 | `_TopLitPainter` | Class | [`top_lit_edge.dart:30`](../../lib/src/widgets/top_lit_edge.dart#L30) | extends BoxPainter | Shared | its own file |  |
@@ -1158,7 +1168,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `_TrailingProgress` | Widget | [`tv_browse.dart:616`](../../lib/src/screens/tv/tv_browse.dart#L616) | extends StatelessWidget | Android TV | its own file |  |
 | `_TrailingRetry` | Widget | [`tv_browse.dart:634`](../../lib/src/screens/tv/tv_browse.dart#L634) | extends StatelessWidget | Android TV | its own file |  |
 | `_TraktAttributionBlock` | Widget | [`credits_screen.dart:244`](../../lib/src/screens/credits_screen.dart#L244) | extends StatelessWidget | Shared | its own file | TMDB's logo, required notice and a description of what TMDB supplies. |
-| `_TraktBadge` | Widget | [`profile_screen.dart:1241`](../../lib/src/screens/profile_screen.dart#L1241) | extends StatelessWidget | Shared | its own file | The account behind the profile, as a quiet line: signed in with Trakt. |
+| `_TraktBadge` | Widget | [`profile_screen.dart:1252`](../../lib/src/screens/profile_screen.dart#L1252) | extends StatelessWidget | Shared | its own file | The account behind the profile, as a quiet line: signed in with Trakt. |
 | `TroubleshootingArticle` | Class | [`help_content.dart:43`](../../lib/src/support/help_content.dart#L43) |  | Shared | 1 lib file | A problem, why it happens, and what to try, ending in a report. |
 | `TroubleshootingArticleScreen` | Widget | [`help_support_screen.dart:383`](../../lib/src/screens/help_support_screen.dart#L383) | extends StatelessWidget | Shared | its own file only |  |
 | `TroubleshootingScreen` | Widget | [`help_support_screen.dart:351`](../../lib/src/screens/help_support_screen.dart#L351) | extends StatelessWidget | Shared | 1 test file |  |
@@ -1216,7 +1226,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | Type | Role | Declared in | Relations | Platform | Named in | Summary |
 |---|---|---|---|---|---|---|
 | `_Unavailable` | Widget | [`friends_privacy_screen.dart:430`](../../lib/src/screens/social/friends_privacy_screen.dart#L430) | extends StatelessWidget | Shared | its own file |  |
-| `UnfinishedReminders` | Class | [`smart_alerts.dart:538`](../../lib/src/notifications/smart_alerts.dart#L538) |  | Shared | 3 lib files, 1 test file | Reminders about series started and left. |
+| `UnfinishedReminders` | Class | [`smart_alerts.dart:541`](../../lib/src/notifications/smart_alerts.dart#L541) |  | Shared | 3 lib files, 1 test file | Reminders about series started and left. |
 | `UniversalSearchController` | Notifier / controller | [`universal_search_controller.dart:121`](../../lib/src/search/universal_search_controller.dart#L121) | extends ChangeNotifier | Shared | 3 lib files, 2 test files |  |
 | `UniversalSearchScreen` | Widget | [`universal_search_screen.dart:13`](../../lib/src/screens/search/universal_search_screen.dart#L13) | extends StatelessWidget | Shared | 2 lib files, 2 test files |  |
 | `UniversalSearchView` | Widget | [`universal_search_view.dart:28`](../../lib/src/screens/search/universal_search_view.dart#L28) | extends StatefulWidget | Shared | 2 lib files, 2 test files |  |
@@ -1243,7 +1253,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 
 | Type | Role | Declared in | Relations | Platform | Named in | Summary |
 |---|---|---|---|---|---|---|
-| `ViewingRules` | Class | [`viewing_activity.dart:31`](../../lib/src/discovery/viewing_activity.dart#L31) |  | Shared | 1 lib file | Thresholds that turn watch positions into a `ViewingStatus`. |
+| `ViewingRules` | Class | [`viewing_activity.dart:31`](../../lib/src/discovery/viewing_activity.dart#L31) |  | Shared | 2 lib files | Thresholds that turn watch positions into a `ViewingStatus`. |
 | `ViewingStats` | Model | [`viewing_stats.dart:29`](../../lib/src/models/viewing_stats.dart#L29) |  | Shared | 1 lib file, 1 test file |  |
 | `ViewingStatus` | Enum | [`viewing_activity.dart:10`](../../lib/src/discovery/viewing_activity.dart#L10) |  | Shared | 1 lib file, 1 test file | How a title's viewing stands, as the recommendation weights see it. |
 | `_ViewSwitch` | Widget | [`desktop_plugins_page.dart:292`](../../lib/src/desktop/desktop_plugins_page.dart#L292) | extends StatelessWidget | Windows | its own file | Installed or Discover, under the page title. |
@@ -1257,10 +1267,10 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `_Warning` | Widget | [`desktop_plugins_page.dart:546`](../../lib/src/desktop/desktop_plugins_page.dart#L546) | extends StatelessWidget | Windows | its own file |  |
 | `WatchingFriend` | Class | [`friends_controller.dart:154`](../../lib/src/social/friends_controller.dart#L154) |  | Shared | its own file only | A friend watching something now. |
 | `WatchlistSync` | Notifier / controller | [`watchlist_sync.dart:19`](../../lib/src/account/watchlist_sync.dart#L19) | extends ChangeNotifier | Shared | 2 lib files, 1 test file |  |
-| `WatchlistUpdates` | Class | [`smart_alerts.dart:277`](../../lib/src/notifications/smart_alerts.dart#L277) |  | Shared | 1 lib file, 1 test file | Watchlist updates for series and movies on My list: a new season announced or given a premiere date, a movie given a release date, and a movie released. |
+| `WatchlistUpdates` | Class | [`smart_alerts.dart:280`](../../lib/src/notifications/smart_alerts.dart#L280) |  | Shared | 1 lib file, 1 test file | Watchlist updates for series and movies on My list: a new season announced or given a premiere date, a movie given a release date, and a movie released. |
 | `WatchPartyController` | Notifier / controller | [`watch_party_controller.dart:193`](../../lib/src/watch_party/watch_party_controller.dart#L193) | extends ChangeNotifier | Shared | 6 lib files, 2 test files |  |
-| `_WatchTogetherRow` | Widget | [`desktop_pages.dart:287`](../../lib/src/desktop/desktop_pages.dart#L287) | extends StatelessWidget | Windows | its own file | Watch Party on Home: what it is, how to start one, and the way in with a code, which otherwise only Profile and Settings offer. |
 | `_WatchTogetherRow` | Widget | [`tv_pages.dart:303`](../../lib/src/screens/tv/tv_pages.dart#L303) | extends StatelessWidget | Android TV | its own file | Watch Party on Home: what it is, how to start one, and the way in with a code. |
+| `_WatchTogetherRow` | Widget | [`desktop_pages.dart:287`](../../lib/src/desktop/desktop_pages.dart#L287) | extends StatelessWidget | Windows | its own file | Watch Party on Home: what it is, how to start one, and the way in with a code, which otherwise only Profile and Settings offer. |
 | `WebSignInStart` | Class | [`account_api.dart:57`](../../lib/src/account/account_api.dart#L57) |  | Shared | its own file only | A started browser sign-in: the Trakt page to open, and a token to poll. |
 | `_Welcome` | Widget | [`sign_in_screen.dart:286`](../../lib/src/screens/sign_in_screen.dart#L286) | extends StatelessWidget | Shared | its own file | The first step: one clear action, with the alternative beside it. |
 | `WindowsInstallation` | Platform adapter | [`windows_installation.dart:13`](../../lib/src/platform/windows_installation.dart#L13) |  | Windows | 2 lib files, 1 test file | How the running Windows copy of Reelish was installed. |
@@ -1269,3 +1279,24 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `WindowsUpdateSection` | Widget | [`desktop_update_section.dart:16`](../../lib/src/desktop/desktop_update_section.dart#L16) | extends StatefulWidget | Windows | 1 lib file, 1 test file | About on Windows: version, update status, last check, the update action for the current state, and the automatic-check switch. |
 | `_WindowsUpdateSectionState` | Widget state | [`desktop_update_section.dart:32`](../../lib/src/desktop/desktop_update_section.dart#L32) | extends State<WindowsUpdateSection> | Windows | its own file |  |
 | `WindowsUpdateStage` | Enum | [`windows_update_controller.dart:14`](../../lib/src/services/windows_update_controller.dart#L14) |  | Windows | 3 lib files, 1 test file | Where a Windows update is. |
+| `WrappedAnnouncement` | Class | [`smart_alerts.dart:606`](../../lib/src/notifications/smart_alerts.dart#L606) |  | Shared | 1 lib file, 1 test file | Reelish Wrapped is out: once, in January, about the year just ended, for an account that watched something in it on this device. |
+| `WrappedArtwork` | Widget | [`wrapped_visuals.dart:243`](../../lib/src/wrapped/wrapped_visuals.dart#L243) | extends StatelessWidget | Shared | 2 lib files | A poster or portrait, never stretched: cover-cropped in its own box, with a quiet tile when there is no image. |
+| `WrappedBackdrop` | Widget | [`wrapped_visuals.dart:39`](../../lib/src/wrapped/wrapped_visuals.dart#L39) | extends StatelessWidget | Shared | 2 lib files | The stage and its two light leaks, painted once. |
+| `WrappedCard` | Widget | [`wrapped_cards.dart:79`](../../lib/src/wrapped/wrapped_cards.dart#L79) | extends StatelessWidget | Shared | 1 lib file, 1 test file |  |
+| `WrappedCardFormat` | Enum | [`wrapped_cards.dart:15`](../../lib/src/wrapped/wrapped_cards.dart#L15) |  | Shared | 1 lib file, 1 test file |  |
+| `WrappedCardKind` | Enum | [`wrapped_cards.dart:13`](../../lib/src/wrapped/wrapped_cards.dart#L13) |  | Shared | 1 lib file |  |
+| `WrappedCardOptions` | Class | [`wrapped_cards.dart:31`](../../lib/src/wrapped/wrapped_cards.dart#L31) |  | Shared | 1 lib file, 1 test file | What the viewer chose to put on a card. |
+| `WrappedExport` | Class | [`wrapped_export.dart:15`](../../lib/src/wrapped/wrapped_export.dart#L15) |  | Shared | 1 lib file, 1 test file |  |
+| `WrappedHubScreen` | Widget | [`wrapped_screen.dart:34`](../../lib/src/wrapped/wrapped_screen.dart#L34) | extends StatelessWidget | Shared | 1 lib file | Profile > Reelish Wrapped: each year there is, and when the next opens. |
+| `WrappedLauncher` | Class | [`wrapped_screen.dart:29`](../../lib/src/wrapped/wrapped_screen.dart#L29) |  | Shared | 2 lib files | Opens Reelish Wrapped: the list of years, or `year`'s recap. |
+| `WrappedPalette` | Class | [`wrapped_visuals.dart:13`](../../lib/src/wrapped/wrapped_visuals.dart#L13) |  | Shared | 2 lib files | The two lights of a slide or card over the stage. |
+| `WrappedPersona` | Class | [`wrapped_stats.dart:209`](../../lib/src/wrapped/wrapped_stats.dart#L209) |  | Shared | its own file only | A personality, and why the viewer has it. |
+| `WrappedReel` | Widget | [`wrapped_visuals.dart:107`](../../lib/src/wrapped/wrapped_visuals.dart#L107) | extends StatelessWidget | Shared | 2 lib files | The Reel: a ring of light with film sprockets around `child`, Wrapped's signature. |
+| `WrappedRow` | Class | [`wrapped_stats.dart:25`](../../lib/src/wrapped/wrapped_stats.dart#L25) |  | Shared | 1 lib file, 1 test file | One synced progress row, as `GET /progress` answers it. |
+| `WrappedScreen` | Widget | [`wrapped_screen.dart:104`](../../lib/src/wrapped/wrapped_screen.dart#L104) | extends StatefulWidget | Shared | 1 lib file, 1 test file |  |
+| `_WrappedScreenState` | Widget state | [`wrapped_screen.dart:153`](../../lib/src/wrapped/wrapped_screen.dart#L153) | extends State<WrappedScreen>; with SingleTickerProviderStateMixin | Shared | its own file |  |
+| `WrappedService` | Class | [`wrapped_service.dart:21`](../../lib/src/wrapped/wrapped_service.dart#L21) |  | Shared | 2 lib files, 1 test file |  |
+| `WrappedStats` | Class | [`wrapped_stats.dart:473`](../../lib/src/wrapped/wrapped_stats.dart#L473) |  | Shared | 1 lib file, 1 test file |  |
+| `WrappedSummary` | Class | [`wrapped_stats.dart:258`](../../lib/src/wrapped/wrapped_stats.dart#L258) |  | Shared | 3 lib files, 1 test file | One year of viewing, as computed once and kept. |
+| `WrappedTitle` | Class | [`wrapped_stats.dart:169`](../../lib/src/wrapped/wrapped_stats.dart#L169) |  | Shared | its own file only | A title as Wrapped shows it. |
+| `WrappedType` | Class | [`wrapped_visuals.dart:209`](../../lib/src/wrapped/wrapped_visuals.dart#L209) |  | Shared | 2 lib files | Wrapped's type, sized from `scale` (1 on a phone-width slide). |
