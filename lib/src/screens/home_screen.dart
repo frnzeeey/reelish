@@ -18,6 +18,10 @@ import '../models/media_details.dart';
 import '../discovery/discovery_controller.dart';
 import '../discovery/discovery_preferences.dart';
 import '../models/media_item.dart';
+import '../notifications/episode_alerts.dart';
+import '../search/search_models.dart';
+import 'notification_settings_screen.dart';
+import 'search/search_detail_screens.dart';
 import '../models/resume_summary.dart';
 import '../models/stream_source.dart';
 import '../navigation/app_transitions.dart';
@@ -293,6 +297,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _providerPlugins.addListener(_onPluginChange);
     PartyPlayerLauncher.open = _openPartyTitle;
     SocialTitles.open = _showDetails;
+    // A tapped alert, including the one that launched the app: after the
+    // first frame, when a page can be pushed.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) AlertRoutes.open = _openAlert;
+    });
     // Watch party invitations: Home exists only once someone is signed in.
     PartyLinks.pending.addListener(_openPartyLink);
     WidgetsBinding.instance.addPostFrameCallback((_) => _openPartyLink());
@@ -597,6 +606,63 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       return 'The catalog is busy right now. Wait a moment and retry.';
     }
     return 'Could not load titles. Check your connection and retry.';
+  }
+
+  /// Where a tapped alert leads: the title's details, a person's or a
+  /// collection's page, or for a summary, Settings > Notifications.
+  void _openAlert(AlertTarget target) {
+    if (!mounted) return;
+    Future<void> push(Widget page) => Navigator.push<void>(
+      context,
+      AppPageRoute<void>(context: context, builder: (_) => page),
+    );
+    switch (target.kind) {
+      case 'series' || 'movie':
+        unawaited(
+          _showDetails(
+            MediaItem(id: '${target.id}', type: target.kind, name: target.name),
+          ),
+        );
+      case 'person':
+        unawaited(
+          push(
+            PersonScreen(
+              id: target.id,
+              name: target.name,
+              load: (id) async =>
+                  PersonDetails.fromJson(await _tmdb.personJson(id)) ??
+                  (throw StateError('No such person.')),
+              onOpenTitle: (item) => unawaited(_showDetails(item)),
+            ),
+          ),
+        );
+      case 'collection':
+        unawaited(
+          push(
+            CollectionScreen(
+              id: target.id,
+              name: target.name,
+              load: (id) async =>
+                  CollectionDetails.fromJson(await _tmdb.collectionJson(id)) ??
+                  (throw StateError('No such collection.')),
+              onOpenTitle: (item) => unawaited(_showDetails(item)),
+            ),
+          ),
+        );
+      default:
+        unawaited(
+          push(
+            Scaffold(
+              backgroundColor: GlassTheme.background,
+              body: Builder(
+                builder: (context) => NotificationSettingsScreen(
+                  onBack: () => Navigator.of(context).pop(),
+                ),
+              ),
+            ),
+          ),
+        );
+    }
   }
 
   Future<void> _showDetails(MediaItem item) async {
@@ -1371,6 +1437,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       PartyPlayerLauncher.open = null;
     }
     if (SocialTitles.open == _showDetails) SocialTitles.open = null;
+    if (AlertRoutes.open == _openAlert) AlertRoutes.open = null;
     PartyLinks.pending.removeListener(_openPartyLink);
     _services.dispose();
     for (final timer in _gateTimers.values) {

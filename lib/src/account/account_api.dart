@@ -291,15 +291,20 @@ class AccountApi {
     return token;
   }
 
-  /// The latest aired episode of each series in [series] (TMDB ids), and
-  /// of today's popular series when [popular], and how many messages wait
-  /// for this device (and from whom) when [messages]; uses a
-  /// [notificationToken].
+  /// The latest aired episode, season count and next episode of each series
+  /// in [series] (TMDB ids), and of today's popular series when [popular],
+  /// and how many messages wait for this device (and from whom) when
+  /// [messages]; and, when given, the release status of [movies], the
+  /// recent and upcoming work of [people] and the films of [collections].
+  /// Uses a [notificationToken].
   Future<
     ({
       List<Map<String, dynamic>> series,
       List<Map<String, dynamic>> popular,
       ({int count, List<String> from})? messages,
+      List<Map<String, dynamic>> movies,
+      List<Map<String, dynamic>> people,
+      List<Map<String, dynamic>> collections,
     })
   >
   checkEpisodes(
@@ -307,12 +312,22 @@ class AccountApi {
     List<int> series, {
     bool popular = false,
     bool messages = false,
+    List<int>? movies,
+    List<int>? people,
+    List<int>? collections,
   }) async {
     final body = await _send(
       'POST',
       '/notifications/episodes',
       token: alertToken,
-      body: {'series': series, 'popular': popular, 'messages': messages},
+      body: {
+        'series': series,
+        'popular': popular,
+        'messages': messages,
+        'movies': ?movies,
+        'people': ?people,
+        'collections': ?collections,
+      },
     );
     List<Map<String, dynamic>> maps(Object? value) => [
       for (final entry in value is List ? value : const [])
@@ -333,6 +348,9 @@ class AccountApi {
               ],
             )
           : null,
+      movies: maps(body['movies']),
+      people: maps(body['people']),
+      collections: maps(body['collections']),
     );
   }
 

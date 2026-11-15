@@ -10,6 +10,7 @@ import 'package:onfeed/src/account/session_store.dart';
 import 'package:onfeed/src/models/media_item.dart';
 import 'package:onfeed/src/notifications/episode_alerts.dart';
 import 'package:onfeed/src/notifications/episode_check.dart';
+import 'package:onfeed/src/notifications/smart_alerts.dart';
 import 'package:onfeed/src/screens/notification_settings_screen.dart';
 import 'package:onfeed/src/screens/sign_in_screen.dart';
 import 'package:onfeed/src/services/storage_service.dart';
@@ -32,6 +33,18 @@ class _Notifier implements EpisodeNotifier {
   @override
   Future<void> showMessages(int count, List<String> from) async =>
       messages.add((count, from));
+
+  final updates = <(AlertCategory, List<AlertEvent>)>[];
+  final digests = <List<AlertEvent>>[];
+
+  @override
+  Future<void> showUpdates(
+    AlertCategory category,
+    List<AlertEvent> events,
+  ) async => updates.add((category, events));
+
+  @override
+  Future<void> showDigest(List<AlertEvent> events) async => digests.add(events);
 }
 
 /// The API's answer: each series' latest episode, set per test.
@@ -242,10 +255,27 @@ void main() {
           enabled: true,
           myList: false,
           watching: true,
+          watchlist: false,
         ),
       );
       await check();
       expect(fake.requested.last, [2]);
+
+      // My list updates still ask about series on My list (for seasons),
+      // but their episodes alert only with Series on My list on.
+      await settings(
+        const EpisodeAlertSettings(
+          enabled: true,
+          myList: false,
+          watching: true,
+        ),
+      );
+      fake.latest[1] = (1, 2, _day(now));
+      fake.latest[2] = (1, 2, _day(now));
+      notifier.shown.clear();
+      await check();
+      expect(fake.requested.last.toSet(), {1, 2});
+      expect(notifier.shown.expand((l) => l).map((e) => e.tmdbId), [2]);
     });
 
     test(
@@ -386,7 +416,7 @@ void main() {
         ),
       ),
     );
-    expect(find.text('New episode alerts'), findsOneWidget);
+    expect(find.text('Allow notifications'), findsOneWidget);
     expect(find.text('Series on My list'), findsOneWidget);
     expect(find.text('Popular series'), findsOneWidget);
     // Off: the source switches are disabled.

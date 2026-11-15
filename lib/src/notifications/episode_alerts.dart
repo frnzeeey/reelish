@@ -20,6 +20,7 @@ import '../account/backend_config.dart';
 import '../platform/device_capabilities.dart';
 import '../services/storage_service.dart';
 import 'episode_check.dart';
+import 'smart_alerts.dart';
 import '../analytics/analytics_events.dart';
 import '../analytics/analytics_service.dart';
 
@@ -56,6 +57,88 @@ class AlertTokenStore {
   }
 }
 
+/// Where a tapped alert leads. Home sets [open] while it is up, as it does
+/// for watch parties; a tap that launched the app waits in [_waiting] until
+/// then. A payload is `{"to": "series:<id>", "n": name}` for one title,
+/// person or collection, or `recent` for a summary, which opens Settings >
+/// Notifications. Payloads come only from Reelish's own alerts, and are
+/// still parsed strictly.
+abstract final class AlertRoutes {
+  static void Function(AlertTarget target)? _open;
+  static AlertTarget? _waiting;
+
+  static set open(void Function(AlertTarget target)? value) {
+    _open = value;
+    final waiting = _waiting;
+    if (value != null && waiting != null) {
+      _waiting = null;
+      value(waiting);
+    }
+  }
+
+  static void Function(AlertTarget target)? get open => _open;
+
+  /// Follows a tapped alert's [payload], now or once Home is up.
+  static void handle(String? payload) {
+    final target = AlertTarget.parse(payload);
+    if (target == null) return;
+    final open = _open;
+    if (open != null) {
+      open(target);
+    } else {
+      _waiting = target;
+    }
+  }
+
+  @visibleForTesting
+  static void debugReset() {
+    _open = null;
+    _waiting = null;
+  }
+}
+
+/// What an alert opens: a title, a person or a collection, or the list of
+/// recent alerts ([kind] `recent`).
+class AlertTarget {
+  const AlertTarget(this.kind, this.id, this.name);
+
+  static const recent = AlertTarget('recent', 0, '');
+
+  /// `series`, `movie`, `person`, `collection` or `recent`.
+  final String kind;
+  final int id;
+  final String name;
+
+  static final _shape = RegExp(
+    r'^(series|movie|person|collection):([1-9]\d{0,9})$',
+  );
+
+  static AlertTarget? parse(String? payload) {
+    if (payload == null || payload.isEmpty) return null;
+    if (payload == 'recent') return recent;
+    try {
+      final json = jsonDecode(payload);
+      if (json is! Map) return null;
+      return of(
+        '${json['to']}',
+        json['n'] is String ? json['n'] as String : '',
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// [target] as an alert stores it (`series:<id>`), with [name].
+  static AlertTarget? of(String target, String name) {
+    final match = _shape.firstMatch(target);
+    if (match == null) return null;
+    return AlertTarget(match[1]!, int.parse(match[2]!), name);
+  }
+
+  static String payloadOf(String target, String name) =>
+      jsonEncode({'to': target, 'n': name});
+}
+
 /// System notifications for new episodes.
 class SystemEpisodeNotifier implements EpisodeNotifier {
   SystemEpisodeNotifier([FlutterLocalNotificationsPlugin? plugin])
@@ -63,6 +146,17 @@ class SystemEpisodeNotifier implements EpisodeNotifier {
 
   final FlutterLocalNotificationsPlugin _plugin;
   bool _ready = false;
+
+  static const _updatesChannel = AndroidNotificationDetails(
+    'title_updates',
+    'Title updates',
+    channelDescription:
+        'Seasons and release dates on My list, people and collections you '
+        'follow, and reminders',
+    importance: Importance.low,
+    priority: Priority.low,
+    icon: 'ic_launcher_monochrome',
+  );
 
   static const _channel = AndroidNotificationDetails(
     'new_episodes',
@@ -87,8 +181,22 @@ class SystemEpisodeNotifier implements EpisodeNotifier {
 
   Future<void> _init() async {
     if (_ready) return;
-    await _plugin.initialize(settings: initialization);
+    await _plugin.initialize(
+      settings: initialization,
+      onDidReceiveNotificationResponse: (response) =>
+          AlertRoutes.handle(response.payload),
+    );
     _ready = true;
+  }
+
+  /// Listens for taps while the app runs, and follows the tap that
+  /// launched it, if one did. Call once at startup, in the app.
+  Future<void> listenForTaps() async {
+    await _init();
+    final launch = await _plugin.getNotificationAppLaunchDetails();
+    if (launch?.didNotificationLaunchApp ?? false) {
+      AlertRoutes.handle(launch?.notificationResponse?.payload);
+    }
   }
 
   /// Asks for permission where the system needs it (Android 13+). True
@@ -114,8 +222,11 @@ class SystemEpisodeNotifier implements EpisodeNotifier {
         await _plugin.show(
           id: e.tmdbId & 0x3fffffff,
           title: 'New episode of ${e.seriesName}',
-          body: '${_label(e)} is out now.',
+          // Aired, which is TMDB's to say; whether it plays depends on the
+          // user's sources.
+          body: '${_label(e)} has aired.',
           notificationDetails: _details,
+          payload: AlertTarget.payloadOf('series:${e.tmdbId}', e.seriesName),
         );
       }
       return;
@@ -126,7 +237,73 @@ class SystemEpisodeNotifier implements EpisodeNotifier {
       title: '${episodes.length} new episodes',
       body: '${names.take(3).join(', ')} and ${names.length - 3} more.',
       notificationDetails: _details,
+      payload: 'recent',
     );
+  }
+
+  /// Update ids: 10 and up by category, so a newer summary of a category
+  /// replaces the older one rather than piling up.
+  @override
+  Future<void> showUpdates(
+    AlertCategory category,
+    List<AlertEvent> events,
+  ) async {
+    if (events.isEmpty) return;
+    await _init();
+    const details = NotificationDetails(android: _updatesChannel);
+    if (events.length == 1) {
+      final e = events.single;
+      await _plugin.show(
+        id: 10 + category.index,
+        title: e.title,
+        body: e.body,
+        notificationDetails: details,
+        payload: AlertTarget.payloadOf(e.target, e.name),
+      );
+      return;
+    }
+    final heading = switch (category) {
+      AlertCategory.watchlist => '${events.length} updates on My list',
+      AlertCategory.person => '${events.length} new from people you follow',
+      AlertCategory.franchise =>
+        '${events.length} new in collections you follow',
+      _ => '${events.length} updates',
+    };
+    await _plugin.show(
+      id: 10 + category.index,
+      title: heading,
+      body: _list(events),
+      notificationDetails: details,
+      payload: 'recent',
+    );
+  }
+
+  @override
+  Future<void> showDigest(List<AlertEvent> events) async {
+    if (events.isEmpty) return;
+    await _init();
+    await _plugin.show(
+      id: 20,
+      title: events.length == 1
+          ? events.single.title
+          : 'Your Reelish summary: ${events.length} updates',
+      body: events.length == 1 ? events.single.body : _list(events),
+      notificationDetails: const NotificationDetails(android: _updatesChannel),
+      payload: events.length == 1
+          ? AlertTarget.payloadOf(events.single.target, events.single.name)
+          : 'recent',
+    );
+  }
+
+  static String _list(List<AlertEvent> events) {
+    final names = {
+      for (final e in events)
+        if (e.name.isNotEmpty) e.name,
+    }.toList();
+    if (names.isEmpty) return 'Open Reelish to see them.';
+    return names.length > 3
+        ? '${names.take(3).join(', ')} and ${names.length - 3} more.'
+        : '${names.join(', ')}.';
   }
 
   static const _messagesChannel = AndroidNotificationDetails(
@@ -170,6 +347,12 @@ class SystemEpisodeNotifier implements EpisodeNotifier {
           ? '$shown and ${names.length - 3} more have new episodes.'
           : '$shown ${names.length == 1 ? 'has a new episode' : 'have new episodes'}.',
       notificationDetails: _details,
+      payload: episodes.length == 1
+          ? AlertTarget.payloadOf(
+              'series:${episodes.single.tmdbId}',
+              episodes.single.seriesName,
+            )
+          : 'recent',
     );
   }
 }
@@ -236,6 +419,25 @@ class EpisodeAlerts extends ChangeNotifier {
   AppLifecycleListener? _lifecycle;
 
   EpisodeAlertSettings get settings => _settings;
+
+  Follows _follows = (people: <int, String>{}, collections: <int, String>{});
+  List<({AlertEvent event, bool read})> _recent = const [];
+
+  /// People and collections followed on this device, with their names.
+  Follows get follows => _follows;
+
+  /// Alerts shown lately, newest first.
+  List<({AlertEvent event, bool read})> get recent => _recent;
+
+  /// Alerts shown since Settings > Notifications was last opened.
+  int get unread => _recent.where((r) => !r.read).length;
+
+  /// Whether someone is signed in, so following can be offered.
+  bool get signedIn => _userId != null;
+
+  bool followsPerson(int id) => _follows.people.containsKey(id);
+  bool followsCollection(int id) => _follows.collections.containsKey(id);
+
   DateTime? get lastChecked => _lastChecked;
   String? get error => _error;
   bool get checking => _checking;
@@ -278,6 +480,8 @@ class EpisodeAlerts extends ChangeNotifier {
   Future<void> _switchTo(String? userId, {required bool signedOut}) async {
     _timer?.cancel();
     _settings = const EpisodeAlertSettings();
+    _follows = (people: <int, String>{}, collections: <int, String>{});
+    _recent = const [];
     _lastChecked = null;
     _error = null;
     if (signedOut || userId == null) {
@@ -292,6 +496,8 @@ class EpisodeAlerts extends ChangeNotifier {
     final entry = await EpisodeAlertStore.entry(userId);
     if (_userId != userId) return;
     _settings = EpisodeAlertStore.settingsOf(entry);
+    _follows = EpisodeAlertStore.followsOf(entry);
+    _recent = EpisodeAlertStore.recentOf(entry);
     final at = entry['lastChecked'];
     _lastChecked = at is int ? DateTime.fromMillisecondsSinceEpoch(at) : null;
     notifyListeners();
@@ -343,14 +549,92 @@ class EpisodeAlerts extends ChangeNotifier {
     bool? watching,
     bool? popular,
     bool? messages,
+    bool? watchlist,
+    bool? people,
+    bool? franchises,
   }) => _save(
     _settings.copyWith(
       myList: myList,
       watching: watching,
       popular: popular,
       messages: messages,
+      watchlist: watchlist,
+      people: people,
+      franchises: franchises,
     ),
   );
+
+  /// Reminders about series left [days]; 0 turns them off.
+  Future<void> setReminderDays(int days) {
+    if (!UnfinishedReminders.choices.contains(days)) return Future.value();
+    return _save(_settings.copyWith(reminderDays: days));
+  }
+
+  Future<void> setFrequency(AlertFrequency value) =>
+      _save(_settings.copyWith(frequency: value));
+
+  /// [value] null turns quiet hours off.
+  Future<void> setQuietHours(QuietHours? value) =>
+      _save(_settings.copyWith(quiet: value));
+
+  /// Follows or unfollows a person. False when [follow] would pass the
+  /// limit of [EpisodeAlertStore.maxFollows].
+  Future<bool> setFollowPerson(int id, String name, {required bool follow}) =>
+      _setFollow(id, name, follow: follow, people: true);
+
+  Future<bool> setFollowCollection(
+    int id,
+    String name, {
+    required bool follow,
+  }) => _setFollow(id, name, follow: follow, people: false);
+
+  Future<bool> _setFollow(
+    int id,
+    String name, {
+    required bool follow,
+    required bool people,
+  }) async {
+    final userId = _userId;
+    if (userId == null || id <= 0) return false;
+    final current = Map<int, String>.of(
+      people ? _follows.people : _follows.collections,
+    );
+    if (follow) {
+      if (!current.containsKey(id) &&
+          current.length >= EpisodeAlertStore.maxFollows) {
+        return false;
+      }
+      current[id] = name.length > 200 ? name.substring(0, 200) : name;
+    } else {
+      current.remove(id);
+    }
+    _follows = people
+        ? (people: current, collections: _follows.collections)
+        : (people: _follows.people, collections: current);
+    notifyListeners();
+    final saved = _follows;
+    await EpisodeAlertStore.update(userId, (e) {
+      e['follows'] = EpisodeAlertStore.followsJson(saved);
+    });
+    return true;
+  }
+
+  /// Marks every recent alert seen: Settings > Notifications was opened.
+  Future<void> markRecentRead() async {
+    final userId = _userId;
+    if (userId == null || unread == 0) return;
+    _recent = [for (final r in _recent) (event: r.event, read: true)];
+    notifyListeners();
+    await EpisodeAlertStore.update(userId, (e) {
+      final raw = e['recent'];
+      if (raw is List) {
+        e['recent'] = [
+          for (final item in raw)
+            if (item is Map) {...item, 'read': true},
+        ];
+      }
+    });
+  }
 
   Future<void> _save(EpisodeAlertSettings value) async {
     final userId = _userId;
@@ -406,6 +690,7 @@ class EpisodeAlerts extends ChangeNotifier {
         final entry = await EpisodeAlertStore.entry(userId);
         final at = entry['lastChecked'];
         if (at is int) _lastChecked = DateTime.fromMillisecondsSinceEpoch(at);
+        _recent = EpisodeAlertStore.recentOf(entry);
       }
       notifyListeners();
     }

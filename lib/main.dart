@@ -212,6 +212,12 @@ class _StartupScreenState extends State<_StartupScreen> {
         // Alerts then check only while the app runs.
       }
       EpisodeAlerts.instance.attach(AccountController.instance);
+      // A tapped alert opens its title once Home is up (AlertRoutes).
+      try {
+        await SystemEpisodeNotifier().listenForTaps();
+      } catch (_) {
+        // Alerts still show; a tap then only opens the app.
+      }
     }
     return results.first! as bool;
   }

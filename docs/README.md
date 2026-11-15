@@ -40,6 +40,7 @@ search the generated references below: every file, class and function in
 | [Universal Search](features/universal-search.md) | Movies, series, people and collections in one search: requests, ranking, filters, provider sources, cost |
 | [Watch Party](features/watch-party.md) | Reliability audit, how actions reach the room, presence and reconnection, reactions, chat, invitation links, cost |
 | [Plugin Manager](features/plugin-manager.md) | Provider audit, collection and provider pages, compatibility, source trust, update check, security |
+| [Notifications](features/notifications.md) | New episodes, My list updates, people and collections followed, reminders, quiet hours and summaries: how checks run, deduplication, privacy, cost |
 | [Usage statistics](features/analytics.md) | Opt-in Firebase Analytics on Android: events, privacy, setup, DebugView, cost |
 | [Account badges](backend/badges.md) | Founder and Supporter: where each comes from, and why neither is a permission |
 | [Entitlements](backend/entitlements.md) | Free, Supporter and Founder: one rule for every supporter perk, and how to add one |

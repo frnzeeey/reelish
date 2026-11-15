@@ -1,7 +1,8 @@
 // The pages behind a person and a movie collection found in Universal
 // Search. A person's page keeps acting, directing and other work apart (many
 // people do several); a collection lists its films in release order. Titles
-// open the existing details pages.
+// open the existing details pages. Where alerts exist, both offer Follow
+// (FollowAlertButton).
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -13,6 +14,7 @@ import '../../theme/design_tokens.dart';
 import '../../theme/glass_theme.dart';
 import '../../theme/reelish_icons.dart';
 import '../../widgets/artwork_image.dart';
+import '../../widgets/follow_alert_button.dart';
 import 'search_cards.dart';
 
 /// Loads a page and shows it, with retry; shared by both pages.
@@ -284,6 +286,7 @@ class PersonScreen extends StatelessWidget {
                     ),
                   if (born.isNotEmpty)
                     Text(born, style: TextStyle(color: GlassTheme.muted)),
+                  FollowAlertButton.person(id: id, name: person.name),
                 ],
               ),
             ),
@@ -381,6 +384,10 @@ class CollectionScreen extends StatelessWidget {
           color: GlassTheme.primary,
           fontWeight: FontWeight.w700,
         ),
+      ),
+      Align(
+        alignment: AlignmentDirectional.centerStart,
+        child: FollowAlertButton.collection(id: id, name: collection.name),
       ),
       if (collection.overview.isNotEmpty)
         Padding(

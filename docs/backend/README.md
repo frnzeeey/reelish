@@ -124,7 +124,7 @@ its own).
 | `GET /api/v1/supporters/public` | Bearer | `{supporters: [{name, since}]}`, opted-in only |
 | `POST /api/v1/trakt/watchlist` | Bearer | `{add, remove}` (≤ 100 `{type, tmdbId}` each) → `{added, removed, notFound}`; 409 `trakt_limit` or `trakt_reauth_required` |
 | `POST /api/v1/notifications/token` | Bearer | `{token}`: an episode-check token for this session (replaces the previous one) |
-| `POST /api/v1/notifications/episodes` | Alert token | `{series: [tmdbId] (≤ 150), popular}` → each series' `lastEpisode`, and TMDB's popular series when asked |
+| `POST /api/v1/notifications/episodes` | Alert token | `{series: [tmdbId] (≤ 150), popular, messages, movies? (≤ 30), people? (≤ 15), collections? (≤ 15)}` → each series' `lastEpisode`, `seasons`, `status`, `nextEpisode`; TMDB's popular series when asked; and, only when listed, each movie's `status`/`releaseDate`, each person's recent and upcoming significant `credits` (leading film roles, series parts of 3+ episodes, directing; no cameos, talk or reality shows, nothing older than 45 days) and each collection's `parts`. Stateless: nothing about what anyone follows is stored ([notifications](../features/notifications.md)) |
 | `GET /api/v1/sessions` | Bearer | The account's signed-in devices |
 | `DELETE /api/v1/sessions/{id}` | Bearer | End one of the account's own sessions |
 | `GET /api/v1/tmdb/{tmdb path}` | Bearer | Allowlisted TMDB v3 request (below) |
