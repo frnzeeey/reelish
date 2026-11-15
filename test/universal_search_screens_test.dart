@@ -14,6 +14,7 @@ import 'package:onfeed/src/screens/search/search_detail_screens.dart';
 import 'package:onfeed/src/screens/search/universal_search_screen.dart';
 import 'package:onfeed/src/screens/search/universal_search_view.dart';
 import 'package:onfeed/src/search/playback_availability.dart';
+import 'package:onfeed/src/search/search_models.dart';
 import 'package:onfeed/src/search/universal_search_controller.dart';
 import 'package:onfeed/src/theme/glass_theme.dart';
 
@@ -278,6 +279,58 @@ void main() {
     final second = tester.getTopLeft(find.text('Dune: Part Two').last);
     expect(first.dx, lessThan(second.dx), reason: 'release order');
   });
+
+  for (final (width, columns) in [
+    (320.0, 2),
+    (360.0, 3),
+    (393.0, 3),
+    (412.0, 3),
+    (600.0, 5),
+  ]) {
+    testWidgets('phone: a person\'s titles fill $columns columns at '
+        '${width.toInt()} dp', (tester) async {
+      await pump(
+        tester,
+        PersonScreen(
+          id: 1,
+          name: 'Ada',
+          load: (id) async => PersonDetails.fromJson({
+            'id': id,
+            'name': 'Ada',
+            'known_for_department': 'Acting',
+            'combined_credits': {
+              'cast': [
+                for (var i = 1; i <= 8; i++)
+                  {
+                    'id': i,
+                    'media_type': 'movie',
+                    'title': 'Film $i',
+                    'character': 'Role $i',
+                    'vote_count': 1000 - i,
+                  },
+              ],
+              'crew': <Object>[],
+            },
+          })!,
+          onOpenTitle: opened.add,
+        ),
+        size: Size(width, 2400),
+      );
+      await tester.pumpAndSettle();
+      final cards = find.byType(SearchTitleCard);
+      expect(cards, findsNWidgets(8));
+      final top = tester.getTopLeft(cards.first).dy;
+      final firstRow = [
+        for (var i = 0; i < 8; i++)
+          if (tester.getTopLeft(cards.at(i)).dy == top) i,
+      ];
+      expect(firstRow, hasLength(columns));
+      // The row reaches the page's right margin: no strip left over.
+      final right = tester.getTopRight(cards.at(columns - 1)).dx;
+      expect(right, closeTo(width - 16, 1));
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   testWidgets('See all opens one kind; filters show, apply and clear', (
     tester,

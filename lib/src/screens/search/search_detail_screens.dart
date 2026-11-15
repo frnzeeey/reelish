@@ -4,6 +4,8 @@
 // open the existing details pages. Where alerts exist, both offer Follow
 // (FollowAlertButton).
 
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -155,9 +157,38 @@ Widget _heading(String text) => Padding(
   ),
 );
 
+/// The narrowest a phone poster gets before a row drops a column.
+const double _phonePosterMin = 100;
+
+/// Titles in rows. TV and Windows keep their fixed poster size; on a phone
+/// the posters share the row evenly, as many as fit at [_phonePosterMin]
+/// (three on a 360 dp phone), so no strip is left at the edge.
 Widget _titles(
   List<MediaItem> items,
   ValueChanged<MediaItem> onOpen, {
+  List<String>? roles,
+}) {
+  if (DeviceCapabilities.usesTvLayout) {
+    return _titleWrap(items, onOpen, SearchSizes.poster, roles: roles);
+  }
+  return LayoutBuilder(
+    builder: (context, box) {
+      const spacing = AppSpace.sm;
+      final columns = math.max(
+        2,
+        ((box.maxWidth + spacing) / (_phonePosterMin + spacing)).floor(),
+      );
+      final width = (box.maxWidth - spacing * (columns - 1)) / columns;
+      // Floored a hair so rounding never pushes the last poster to a new row.
+      return _titleWrap(items, onOpen, width - 0.01, roles: roles);
+    },
+  );
+}
+
+Widget _titleWrap(
+  List<MediaItem> items,
+  ValueChanged<MediaItem> onOpen,
+  double width, {
   List<String>? roles,
 }) => Wrap(
   spacing: AppSpace.sm,
@@ -165,13 +196,13 @@ Widget _titles(
   children: [
     for (final (index, item) in items.indexed)
       SizedBox(
-        width: SearchSizes.poster,
+        width: width,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SearchTitleCard(
               item: item,
-              width: SearchSizes.poster,
+              width: width,
               onOpen: () => onOpen(item),
             ),
             if (roles != null && roles[index].isNotEmpty)

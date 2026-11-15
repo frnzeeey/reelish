@@ -115,7 +115,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/screens/profile_style_screen.dart`](#libsrcscreensprofile_style_screendart) | Shared | 761 | Profile > Profile card: the card's background, colour and animated accent (lib/src/theme/profile_styles.dart), with a live preview of the real card. |
 | [`lib/src/screens/recommendation_settings_screen.dart`](#libsrcscreensrecommendation_settings_screendart) | Shared | 181 | Settings → Recommendations: personalised rows on or off, the genres the viewer likes, titles hidden from recommendations, and a reset. |
 | [`lib/src/screens/search/search_cards.dart`](#libsrcscreenssearchsearch_cardsdart) | Shared | 325 | Universal Search's result cards, one layout per kind: posters for movies and series, round portraits for people, artwork for collections, and a wider card for the top result. |
-| [`lib/src/screens/search/search_detail_screens.dart`](#libsrcscreenssearchsearch_detail_screensdart) | Shared | 404 | The pages behind a person and a movie collection found in Universal Search. |
+| [`lib/src/screens/search/search_detail_screens.dart`](#libsrcscreenssearchsearch_detail_screensdart) | Shared | 435 | The pages behind a person and a movie collection found in Universal Search. |
 | [`lib/src/screens/search/search_filter_bar.dart`](#libsrcscreenssearchsearch_filter_bardart) | Shared | 247 | Universal Search's filters for movies and series: genres, release years and a minimum TMDB user rating. |
 | [`lib/src/screens/search/source_availability.dart`](#libsrcscreenssearchsource_availabilitydart) | Shared | 166 | Whether the viewer's enabled providers list sources for a movie, shown under Universal Search's top result. |
 | [`lib/src/screens/search/universal_search_screen.dart`](#libsrcscreenssearchuniversal_search_screendart) | Shared | 41 | Universal Search as a full-screen page, opened from the phone's Home header. |
@@ -1968,11 +1968,13 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/screens/search/search_detail_screens.dart
 
-**Source:** [`lib/src/screens/search/search_detail_screens.dart`](../../lib/src/screens/search/search_detail_screens.dart) · **Platform:** Shared · **Lines:** 404 · **Branches on:** isTv, isDesktop
+**Source:** [`lib/src/screens/search/search_detail_screens.dart`](../../lib/src/screens/search/search_detail_screens.dart) · **Platform:** Shared · **Lines:** 435 · **Branches on:** isTv, isDesktop, usesTvLayout
 
 **Purpose:** The pages behind a person and a movie collection found in Universal Search.
 
 **Declares:** `_Biography` (Widget), `_BiographyState` (Widget state), `CollectionScreen` (Widget), `_DetailPage` (Widget), `_DetailPageState` (Widget state), `PersonScreen` (Widget)
+
+**Top-level functions:** `_titles`
 
 **Imports (project):** `src/models/media_item.dart`, `src/platform/device_capabilities.dart`, `src/screens/search/search_cards.dart`, `src/search/search_models.dart`, `src/theme/design_tokens.dart`, `src/theme/glass_theme.dart`, `src/theme/reelish_icons.dart`, `src/widgets/artwork_image.dart`, `src/widgets/follow_alert_button.dart`
 
@@ -2388,7 +2390,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Imported by:** `src/screens/home_screen.dart`, `src/screens/search/search_cards.dart`, `src/screens/search/search_detail_screens.dart`, `src/screens/search/search_filter_bar.dart`, `src/screens/search/universal_search_view.dart`, `src/search/universal_search_controller.dart`
 
-**Tests importing it:** `test/universal_search_test.dart`
+**Tests importing it:** `test/universal_search_screens_test.dart`, `test/universal_search_test.dart`
 
 ## lib/src/search/search_ranking.dart
 
