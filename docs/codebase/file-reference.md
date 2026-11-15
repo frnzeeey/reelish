@@ -276,7 +276,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/widgets/update_dialog.dart`](#libsrcwidgetsupdate_dialogdart) | Shared | 488 | Update dialogs: the offer with release notes, APK download progress, the install-permission prompt and notices, and the frame, buttons and formatting the Windows update dialogs reuse. |
 | [`lib/src/widgets/watch_party/party_chat_panel.dart`](#libsrcwidgetswatch_partyparty_chat_paneldart) | Shared | 413 | Reactions and chat for a watch party, shared by the waiting room (in the page colours) and the player's party sheet (in the player's dark colours). |
 | [`lib/src/wrapped/wrapped_cards.dart`](#libsrcwrappedwrapped_cardsdart) | Shared | 513 | The share cards of Reelish Wrapped: one highlight each, in a story (9:16), portrait (4:5) or square (1:1) frame, drawn at a fixed 360-wide logical size and exported at three times that (1080 px wide). |
-| [`lib/src/wrapped/wrapped_export.dart`](#libsrcwrappedwrapped_exportdart) | Shared | 99 | Exports a Reelish Wrapped card as a PNG: the system share sheet and the gallery on Android phones and tablets (the app's own `onfeed/share` channel, ShareChannel.kt), a file in Pictures\Reelish on Windows. |
+| [`lib/src/wrapped/wrapped_export.dart`](#libsrcwrappedwrapped_exportdart) | Shared | 121 | Exports a Reelish Wrapped card as a PNG: the system share sheet and the gallery on Android phones and tablets (the app's own `onfeed/share` channel, ShareChannel.kt), a file in Pictures\Reelish on Windows. |
 | [`lib/src/wrapped/wrapped_screen.dart`](#libsrcwrappedwrapped_screendart) | Shared | 1487 | Reelish Wrapped as a story: a slide per highlight, only for highlights with real numbers behind them, then a finale with how everything was counted. |
 | [`lib/src/wrapped/wrapped_service.dart`](#libsrcwrappedwrapped_servicedart) | Shared | 183 | Loads Reelish Wrapped: reads the account's whole synced progress record (GET /progress, the route the devices already sync with), looks up the finished titles' TMDB details through the app's own cached details request, computes the year (WrappedStats) and keeps the result on this device, per account and year, so a recap stays the same when the server's 400-day progress retention later drops the year's early rows. |
 | [`lib/src/wrapped/wrapped_stats.dart`](#libsrcwrappedwrapped_statsdart) | Shared | 860 | Reelish Wrapped's numbers: one calendar year of the account's own viewing, counted from the playback progress Reelish syncs across its devices (GET /progress) and the titles' TMDB details. |
@@ -1412,7 +1412,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Imported by:** `main.dart`, `src/screens/home_screen.dart`, `src/screens/notification_settings_screen.dart`, `src/screens/playback_settings_screen.dart`, `src/widgets/follow_alert_button.dart`
 
-**Tests importing it:** `test/episode_alerts_test.dart`, `test/smart_alerts_test.dart`, `test/wrapped_test.dart`
+**Tests importing it:** `integration_test/alert_tap_native_test.dart`, `test/episode_alerts_test.dart`, `test/smart_alerts_test.dart`, `test/wrapped_test.dart`
 
 ## lib/src/notifications/episode_check.dart
 
@@ -1428,7 +1428,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Imported by:** `src/notifications/episode_alerts.dart`, `src/widgets/follow_alert_button.dart`
 
-**Tests importing it:** `test/episode_alerts_test.dart`, `test/smart_alerts_test.dart`
+**Tests importing it:** `integration_test/alert_tap_native_test.dart`, `test/episode_alerts_test.dart`, `test/smart_alerts_test.dart`
 
 ## lib/src/notifications/smart_alerts.dart
 
@@ -1508,7 +1508,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Imported by:** `main.dart`, `src/account/account_controller.dart`, `src/notifications/episode_alerts.dart`, `src/platform/app_icon.dart`, `src/platform/desktop_gamepad.dart`, `src/platform/desktop_window.dart`, `src/screens/account_settings_screen.dart`, `src/screens/avatar_frames_screen.dart`, `src/screens/first_run_consent_screen.dart`, `src/screens/genre_onboarding_screen.dart`, `src/screens/home_screen.dart`, `src/screens/installed_provider_screen.dart`, `src/screens/legal_information_screen.dart`, `src/screens/player_screen.dart`, `src/screens/plugin_collection_screen.dart`, `src/screens/plugin_details_screen.dart`, `src/screens/plugin_library_screen.dart`, `src/screens/profile_screen.dart`, `src/screens/profile_stats_screen.dart`, `src/screens/profile_style_screen.dart`, `src/screens/search/search_cards.dart`, `src/screens/search/search_detail_screens.dart`, `src/screens/search/universal_search_view.dart`, `src/screens/sign_in_screen.dart`, `src/screens/social/friend_collection_screen.dart`, `src/screens/social/friends_privacy_screen.dart`, `src/screens/social/friends_screen.dart`, `src/screens/social/messages_screen.dart`, `src/screens/supporters_screen.dart`, `src/screens/watch_party/create_party_screen.dart`, `src/screens/watch_party/join_party_screen.dart`, `src/screens/watch_party/waiting_room_screen.dart`, `src/services/plugin_compatibility.dart`, `src/support/support_service.dart`, `src/widgets/app_update_flow.dart`, `src/widgets/collections/collection_actions.dart`, `src/widgets/player/custom_video_player.dart`, `src/widgets/player/episode_panel.dart`, `src/widgets/player/party_activity.dart`, `src/widgets/player/paused_overlay.dart`, `src/widgets/player/player_controls.dart`, `src/widgets/player/player_progress_bar.dart`, `src/widgets/player/player_settings_sheet.dart`, `src/widgets/player/player_sheet.dart`, `src/widgets/plugin_library/plugin_filter_bar.dart`, `src/widgets/plugin_manager/plugin_transparency.dart`, `src/widgets/profile_avatar_picker.dart`, `src/widgets/profile_card_backdrop.dart`, `src/widgets/provider_installer_modal.dart`, `src/widgets/social/share_dialog.dart`, `src/widgets/social/social_widgets.dart`, `src/widgets/supporter_theme_picker.dart`, `src/widgets/tv/tv_focus.dart`, `src/widgets/watch_party/party_chat_panel.dart`, `src/wrapped/wrapped_export.dart`, `src/wrapped/wrapped_screen.dart`
 
-**Tests importing it:** `integration_test/windows_player_ui_test.dart`, `integration_test/windows_torrent_test.dart`, `test/account_test.dart`, `test/audio_tracks_test.dart`, `test/discovery_rows_ui_test.dart`, `test/friends_polish_test.dart`, `test/friends_privacy_test.dart`, `test/friends_test.dart`, `test/genre_onboarding_test.dart`, `test/github_update_check_test.dart`, `test/help_support_test.dart`, `test/intro_skip_player_test.dart`, `test/messages_screen_test.dart`, `test/paused_overlay_test.dart`, `test/player_session_test.dart`, `test/plugin_library_test.dart`, `test/profile_customization_test.dart`, `test/profile_layout_test.dart`, `test/profile_test.dart`, `test/recommendations_test.dart`, `test/shared_collections_test.dart`, `test/supporter_themes_test.dart`, `test/supporters_test.dart`, `test/tv_home_test.dart`, `test/tv_support_test.dart`, `test/universal_search_screens_test.dart`, `test/ux_journeys_test.dart`, `test/watch_party_test.dart`
+**Tests importing it:** `integration_test/windows_player_ui_test.dart`, `integration_test/windows_torrent_test.dart`, `test/account_test.dart`, `test/audio_tracks_test.dart`, `test/discovery_rows_ui_test.dart`, `test/friends_polish_test.dart`, `test/friends_privacy_test.dart`, `test/friends_test.dart`, `test/genre_onboarding_test.dart`, `test/github_update_check_test.dart`, `test/help_support_test.dart`, `test/intro_skip_player_test.dart`, `test/messages_screen_test.dart`, `test/paused_overlay_test.dart`, `test/player_session_test.dart`, `test/plugin_library_test.dart`, `test/profile_customization_test.dart`, `test/profile_layout_test.dart`, `test/profile_test.dart`, `test/recommendations_test.dart`, `test/shared_collections_test.dart`, `test/supporter_themes_test.dart`, `test/supporters_test.dart`, `test/tv_home_test.dart`, `test/tv_support_test.dart`, `test/universal_search_screens_test.dart`, `test/ux_journeys_test.dart`, `test/watch_party_test.dart`, `test/wrapped_test.dart`
 
 ## lib/src/platform/splash_art.dart
 
@@ -4560,7 +4560,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/wrapped/wrapped_export.dart
 
-**Source:** [`lib/src/wrapped/wrapped_export.dart`](../../lib/src/wrapped/wrapped_export.dart) · **Platform:** Shared · **Lines:** 99 · **Branches on:** isTv, Platform.isWindows, Platform.isAndroid
+**Source:** [`lib/src/wrapped/wrapped_export.dart`](../../lib/src/wrapped/wrapped_export.dart) · **Platform:** Shared · **Lines:** 121 · **Branches on:** isTv, Platform.isWindows, Platform.isAndroid
 
 **Purpose:** Exports a Reelish Wrapped card as a PNG: the system share sheet and the gallery on Android phones and tablets (the app's own `onfeed/share` channel, ShareChannel.kt), a file in Pictures\Reelish on Windows.
 
@@ -4568,11 +4568,11 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Imports (project):** `src/platform/device_capabilities.dart`
 
-**Packages:** `flutter`
+**Packages:** `flutter`, `path_provider_windows`
 
 **Imported by:** `src/wrapped/wrapped_screen.dart`
 
-**Tests importing it:** `test/wrapped_test.dart`
+**Tests importing it:** `integration_test/wrapped_export_native_test.dart`, `test/wrapped_test.dart`
 
 ## lib/src/wrapped/wrapped_screen.dart
 

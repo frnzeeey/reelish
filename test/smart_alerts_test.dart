@@ -366,6 +366,41 @@ void main() {
     });
   });
 
+  group('AlertRoutes', () {
+    setUp(AlertRoutes.debugReset);
+    tearDown(AlertRoutes.debugReset);
+
+    test('the tap that launched the app waits for Home, then opens once', () {
+      AlertRoutes.handle(AlertTarget.payloadOf('movie:7', 'Heat'));
+      final opened = <AlertTarget>[];
+      AlertRoutes.open = opened.add;
+      expect(opened.map((t) => '${t.kind}:${t.id}:${t.name}'), [
+        'movie:7:Heat',
+      ]);
+      // Home rebuilt or came back: the old tap is not opened again.
+      AlertRoutes.open = null;
+      AlertRoutes.open = opened.add;
+      expect(opened, hasLength(1));
+    });
+
+    test('while Home is up, a tap opens at once; a bad one opens nothing', () {
+      final opened = <AlertTarget>[];
+      AlertRoutes.open = opened.add;
+      AlertRoutes.handle('recent');
+      AlertRoutes.handle('{"to":"https://evil/x"}');
+      AlertRoutes.handle(null);
+      expect(opened, [AlertTarget.recent]);
+    });
+
+    test('only the latest tap before Home waits', () {
+      AlertRoutes.handle(AlertTarget.payloadOf('series:1', 'A'));
+      AlertRoutes.handle(AlertTarget.payloadOf('person:2', 'B'));
+      final opened = <AlertTarget>[];
+      AlertRoutes.open = opened.add;
+      expect(opened.single.kind, 'person');
+    });
+  });
+
   group('EpisodeCheck with smart alerts', () {
     late _Api fake;
     late StorageService storage;

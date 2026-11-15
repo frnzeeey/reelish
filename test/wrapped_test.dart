@@ -12,6 +12,7 @@ import 'package:onfeed/src/account/account_controller.dart';
 import 'package:onfeed/src/account/session_store.dart';
 import 'package:onfeed/src/notifications/episode_alerts.dart';
 import 'package:onfeed/src/notifications/smart_alerts.dart';
+import 'package:onfeed/src/platform/device_capabilities.dart';
 import 'package:onfeed/src/theme/glass_theme.dart';
 import 'package:onfeed/src/widgets/brand_logo.dart';
 import 'package:onfeed/src/wrapped/wrapped_cards.dart';
@@ -581,55 +582,94 @@ void main() {
       );
     }
 
+    /// The 2026 story on a [size] screen, opened on a recap already kept.
+    Future<void> pumpKeptStory(
+      WidgetTester tester, {
+      Size size = const Size(1280, 720),
+    }) async {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      SharedPreferences.setMockInitialValues({});
+      final account = AccountController(
+        store: MemorySessionStore(
+          StoredSession(
+            sessionId: 's',
+            accessToken: 'a',
+            accessExpiresAt:
+                DateTime.now().millisecondsSinceEpoch ~/ 1000 + 900,
+            refreshToken: 'r',
+            refreshExpiresAt:
+                DateTime.now().millisecondsSinceEpoch ~/ 1000 + 86400,
+            userId: 'u',
+            username: 'viewer',
+          ),
+        ),
+      );
+      await tester.runAsync(account.restore);
+      final service = WrappedService(
+        account: account,
+        api: AccountApi(
+          baseUrl: Uri.parse('https://api.reelish.app'),
+          client: MockClient((_) async => http.Response('{}', 500)),
+        ),
+        details: (_, _) async => {},
+        clock: () => DateTime(2027, 1, 5),
+      );
+      // A recap already kept: the screen opens on it.
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+        WrappedService.storageKey,
+        jsonEncode({
+          'u': {'2026': summary.toJson()},
+        }),
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: GlassTheme.dark,
+          home: WrappedScreen(service: service, year: 2026),
+        ),
+      );
+      await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+    }
+
+    testWidgets(
+      'on TV the remote walks the story, and nothing offers to share',
+      (tester) async {
+        DeviceCapabilities.debugOverride = const DeviceCapabilities(
+          isTelevision: true,
+          hasTouchscreen: false,
+        );
+        addTearDown(
+          () => DeviceCapabilities.debugOverride = const DeviceCapabilities(),
+        );
+        expect(WrappedExport.canShare, isFalse);
+        expect(await WrappedExport.canSave(), isFalse);
+        await pumpKeptStory(tester, size: const Size(1920, 1080));
+        expect(find.text('One year. Countless stories.'), findsOneWidget);
+        for (var i = 0; i < 12; i++) {
+          expect(
+            find.textContaining('Share'),
+            findsNothing,
+            reason: 'slide $i',
+          );
+          await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+          await tester.pump();
+          await tester.pump(const Duration(seconds: 2));
+        }
+        expect(find.text('Your 2026 in stories'), findsOneWidget);
+        expect(find.text('Replay'), findsOneWidget);
+        expect(find.textContaining('Share'), findsNothing);
+        expect(tester.takeException(), isNull);
+      },
+    );
+
     testWidgets(
       'the story moves with the keyboard and ends on the finale',
       (tester) async {
-        tester.view.physicalSize = const Size(1280, 720);
-        tester.view.devicePixelRatio = 1;
-        addTearDown(tester.view.reset);
-        SharedPreferences.setMockInitialValues({});
-        final account = AccountController(
-          store: MemorySessionStore(
-            StoredSession(
-              sessionId: 's',
-              accessToken: 'a',
-              accessExpiresAt:
-                  DateTime.now().millisecondsSinceEpoch ~/ 1000 + 900,
-              refreshToken: 'r',
-              refreshExpiresAt:
-                  DateTime.now().millisecondsSinceEpoch ~/ 1000 + 86400,
-              userId: 'u',
-              username: 'viewer',
-            ),
-          ),
-        );
-        await tester.runAsync(account.restore);
-        final service = WrappedService(
-          account: account,
-          api: AccountApi(
-            baseUrl: Uri.parse('https://api.reelish.app'),
-            client: MockClient((_) async => http.Response('{}', 500)),
-          ),
-          details: (_, _) async => {},
-          clock: () => DateTime(2027, 1, 5),
-        );
-        // A recap already kept: the screen opens on it.
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString(
-          WrappedService.storageKey,
-          jsonEncode({
-            'u': {'2026': summary.toJson()},
-          }),
-        );
-        await tester.pumpWidget(
-          MaterialApp(
-            theme: GlassTheme.dark,
-            home: WrappedScreen(service: service, year: 2026),
-          ),
-        );
-        await tester.runAsync(() => Future<void>.delayed(Duration.zero));
-        await tester.pump();
-        await tester.pump(const Duration(seconds: 2));
+        await pumpKeptStory(tester);
         expect(find.text('One year. Countless stories.'), findsOneWidget);
         for (var i = 0; i < 12; i++) {
           await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);

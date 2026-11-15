@@ -45,6 +45,9 @@ dependencies:
   # Windows-only: bundles libmpv for the desktop player (no Android code).
   media_kit_libs_windows_video: ^1.0.11
   path_provider: ^2.1.5
+  # Windows known folders (the real Pictures folder, which OneDrive may move)
+  # for saved Reelish Wrapped cards; already resolved through path_provider.
+  path_provider_windows: ^2.3.0
   flutter_go_torrent_streamer:
     path: packages/flutter_go_torrent_streamer
   flutter_js:

@@ -51,8 +51,8 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `AlertFrequency` | Enum | [`smart_alerts.dart:37`](../../lib/src/notifications/smart_alerts.dart#L37) |  | Shared | 3 lib files, 1 test file | How alerts arrive: each as it is found, or gathered into one summary. |
 | `AlertPlan` | Class | [`smart_alerts.dart:184`](../../lib/src/notifications/smart_alerts.dart#L184) |  | Shared | 1 lib file | What a check shows now, and what waits for later. |
 | `AlertPlanner` | Class | [`smart_alerts.dart:198`](../../lib/src/notifications/smart_alerts.dart#L198) |  | Shared | 1 lib file, 1 test file |  |
-| `AlertRoutes` | Class | [`episode_alerts.dart:66`](../../lib/src/notifications/episode_alerts.dart#L66) |  | Shared | 3 lib files | Where a tapped alert leads. |
-| `AlertTarget` | Class | [`episode_alerts.dart:103`](../../lib/src/notifications/episode_alerts.dart#L103) |  | Shared | 2 lib files, 2 test files | What an alert opens: a title, a person or a collection, a year's Reelish Wrapped (`id` is the year), or the list of recent alerts (`kind` `recent`). |
+| `AlertRoutes` | Class | [`episode_alerts.dart:66`](../../lib/src/notifications/episode_alerts.dart#L66) |  | Shared | 3 lib files, 2 test files | Where a tapped alert leads. |
+| `AlertTarget` | Class | [`episode_alerts.dart:103`](../../lib/src/notifications/episode_alerts.dart#L103) |  | Shared | 2 lib files, 3 test files | What an alert opens: a title, a person or a collection, a year's Reelish Wrapped (`id` is the year), or the list of recent alerts (`kind` `recent`). |
 | `AlertTokenStore` | Class | [`episode_alerts.dart:29`](../../lib/src/notifications/episode_alerts.dart#L29) |  | Shared | 1 test file | Where the session's episode-check token is kept: secure storage, with the account it belongs to. |
 | `AmbientBackdrop` | Widget | [`ambient_backdrop.dart:9`](../../lib/src/widgets/ambient_backdrop.dart#L9) | extends StatelessWidget | Shared | 4 lib files |  |
 | `_AmbientGlow` | Widget | [`sign_in_screen.dart:222`](../../lib/src/screens/sign_in_screen.dart#L222) | extends StatelessWidget | Shared | its own file | A soft accent light behind the brand, drawn once (no blur filter). |
@@ -285,7 +285,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `Detected` | Typedef | [`smart_alerts.dart:275`](../../lib/src/notifications/smart_alerts.dart#L275) | = ( | Shared | 1 test file | What a detector found, and the state to keep for the next check. |
 | `DeveloperCreditFooter` | Widget | [`developer_credit.dart:11`](../../lib/src/widgets/settings/developer_credit.dart#L11) | extends StatelessWidget | Shared | 2 lib files |  |
 | `DeviceAuthorized` | Class | [`account_api.dart:34`](../../lib/src/account/account_api.dart#L34) | extends DevicePollResult | Shared | 1 lib file |  |
-| `DeviceCapabilities` | Platform adapter | [`device_capabilities.dart:20`](../../lib/src/platform/device_capabilities.dart#L20) |  | Shared | 56 lib files, 28 test files | What kind of device Reelish is running on, read once during startup. |
+| `DeviceCapabilities` | Platform adapter | [`device_capabilities.dart:20`](../../lib/src/platform/device_capabilities.dart#L20) |  | Shared | 56 lib files, 29 test files | What kind of device Reelish is running on, read once during startup. |
 | `DeviceCodeStart` | Class | [`account_api.dart:40`](../../lib/src/account/account_api.dart#L40) |  | Shared | 1 lib file |  |
 | `DevicePending` | Class | [`account_api.dart:29`](../../lib/src/account/account_api.dart#L29) | extends DevicePollResult | Shared | 1 lib file |  |
 | `DevicePollResult` | Class | [`account_api.dart:27`](../../lib/src/account/account_api.dart#L27) |  | Shared | its own file only | The answer to one device-sign-in poll. |
@@ -583,7 +583,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `_NavigationButton` | Widget | [`episode_panel.dart:422`](../../lib/src/widgets/player/episode_panel.dart#L422) | extends StatelessWidget | Shared | its own file |  |
 | `NetworkDestinationValidator` | Service type | [`network_target_policy.dart:15`](../../lib/src/services/network_target_policy.dart#L15) |  | Shared | 10 lib files, 20 test files | Resolves untrusted destinations, rejects non-public addresses, and pins Dart HTTP connections to the addresses that passed validation. |
 | `_NewDot` | Widget | [`profile_screen.dart:591`](../../lib/src/screens/profile_screen.dart#L591) | extends StatelessWidget | Shared | its own file | Something new in Friends (requests or recommendations), beside its row. |
-| `NewEpisode` | Class | [`episode_check.dart:102`](../../lib/src/notifications/episode_check.dart#L102) |  | Shared | 1 lib file, 2 test files | One episode to tell the user about. |
+| `NewEpisode` | Class | [`episode_check.dart:102`](../../lib/src/notifications/episode_check.dart#L102) |  | Shared | 1 lib file, 3 test files | One episode to tell the user about. |
 | `_NewFolder` | Class | [`collection_actions.dart:43`](../../lib/src/widgets/collections/collection_actions.dart#L43) | extends _Destination | Shared | its own file |  |
 | `NextEpisodeCard` | Widget | [`player_controls.dart:1368`](../../lib/src/widgets/player/player_controls.dart#L1368) | extends StatelessWidget | Shared | 1 lib file, 1 test file | Near the end of an episode: offers the next one, with a cancellable countdown when auto-play is enabled. |
 | `NormalizedStreamSource` | Service type | [`stream_normalizer.dart:4`](../../lib/src/services/stream_normalizer.dart#L4) |  | Shared | its own file only |  |
@@ -1105,7 +1105,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `_SyncState` | Class | [`collection_sync.dart:489`](../../lib/src/account/collection_sync.dart#L489) |  | Shared | its own file | One account's collection sync state on this device. |
 | `_SyncState` | Class | [`progress_sync.dart:490`](../../lib/src/account/progress_sync.dart#L490) |  | Shared | its own file | One account's sync state on this device. |
 | `SyncThresholds` | Class | [`playback_sync.dart:62`](../../lib/src/watch_party/playback_sync.dart#L62) |  | Shared | 1 lib file | How far apart is acceptable, and when to stop nudging. |
-| `SystemEpisodeNotifier` | Class | [`episode_alerts.dart:144`](../../lib/src/notifications/episode_alerts.dart#L144) | implements EpisodeNotifier | Shared | 1 lib file | System notifications for new episodes. |
+| `SystemEpisodeNotifier` | Class | [`episode_alerts.dart:144`](../../lib/src/notifications/episode_alerts.dart#L144) | implements EpisodeNotifier | Shared | 1 lib file, 1 test file | System notifications for new episodes. |
 
 ## T
 
@@ -1286,7 +1286,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `WrappedCardFormat` | Enum | [`wrapped_cards.dart:15`](../../lib/src/wrapped/wrapped_cards.dart#L15) |  | Shared | 1 lib file, 1 test file |  |
 | `WrappedCardKind` | Enum | [`wrapped_cards.dart:13`](../../lib/src/wrapped/wrapped_cards.dart#L13) |  | Shared | 1 lib file |  |
 | `WrappedCardOptions` | Class | [`wrapped_cards.dart:31`](../../lib/src/wrapped/wrapped_cards.dart#L31) |  | Shared | 1 lib file, 1 test file | What the viewer chose to put on a card. |
-| `WrappedExport` | Class | [`wrapped_export.dart:15`](../../lib/src/wrapped/wrapped_export.dart#L15) |  | Shared | 1 lib file, 1 test file |  |
+| `WrappedExport` | Class | [`wrapped_export.dart:16`](../../lib/src/wrapped/wrapped_export.dart#L16) |  | Shared | 1 lib file, 2 test files |  |
 | `WrappedHubScreen` | Widget | [`wrapped_screen.dart:34`](../../lib/src/wrapped/wrapped_screen.dart#L34) | extends StatelessWidget | Shared | 1 lib file | Profile > Reelish Wrapped: each year there is, and when the next opens. |
 | `WrappedLauncher` | Class | [`wrapped_screen.dart:29`](../../lib/src/wrapped/wrapped_screen.dart#L29) |  | Shared | 2 lib files | Opens Reelish Wrapped: the list of years, or `year`'s recap. |
 | `WrappedPalette` | Class | [`wrapped_visuals.dart:13`](../../lib/src/wrapped/wrapped_visuals.dart#L13) |  | Shared | 2 lib files | The two lights of a slide or card over the stage. |

@@ -82,7 +82,10 @@ Export (`wrapped_export.dart`): the share sheet and Pictures/Reelish
 (Android 10+) through the app's own `onfeed/share` channel
 (`ShareChannel.kt`; the PNG goes to `cache/shares`, exposed only through the
 app's FileProvider, one file at a time); Pictures\Reelish on Windows, with
-the file shown in Explorer. Not on TV. Images and the wordmark are loaded
+the file shown in Explorer. The Windows Pictures folder is the known folder
+(`path_provider_windows`), so OneDrive backup's OneDrive\Pictures is used
+when it has moved there. Not on TV. `integration_test/wrapped_export_native_test.dart`
+runs the real export on an Android device or Windows. Images and the wordmark are loaded
 before the capture; a failure says so and nothing half-made is shared.
 
 ## Privacy

@@ -9,6 +9,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import 'package:path_provider_windows/path_provider_windows.dart';
 
 import '../platform/device_capabilities.dart';
 
@@ -68,9 +69,9 @@ abstract final class WrappedExport {
     final file = _safe(name);
     try {
       if (!kIsWeb && Platform.isWindows) {
-        final home = Platform.environment['USERPROFILE'];
-        if (home == null || home.isEmpty) return null;
-        final dir = Directory('$home\\Pictures\\Reelish');
+        final pictures = await _windowsPictures();
+        if (pictures == null) return null;
+        final dir = Directory('$pictures\\Reelish');
         await dir.create(recursive: true);
         final path = '${dir.path}\\$file.png';
         await File(path).writeAsBytes(png, flush: true);
@@ -89,6 +90,27 @@ abstract final class WrappedExport {
       }
     } catch (_) {}
     return null;
+  }
+
+  /// Windows' FOLDERID_Pictures (`WindowsKnownFolder.Pictures`, which the
+  /// analyzer cannot see through the package's conditional export).
+  @visibleForTesting
+  static const windowsPicturesFolderId =
+      '{33E28130-4E1E-4676-835A-98395C3BC3BB}';
+
+  /// The user's Pictures folder, wherever Windows keeps it (OneDrive backup
+  /// moves it to OneDrive\Pictures), else %USERPROFILE%\Pictures.
+  static Future<String?> _windowsPictures() async {
+    try {
+      // Typed for the real implementation (null when Windows has no such
+      // folder); the analyzer reads the package's web stub, which differs.
+      final Future<String?> Function(String) lookup =
+          PathProviderWindows().getPath;
+      final known = await lookup(windowsPicturesFolderId);
+      if (known != null && known.isNotEmpty) return known;
+    } catch (_) {}
+    final home = Platform.environment['USERPROFILE'];
+    return home == null || home.isEmpty ? null : '$home\\Pictures';
   }
 
   /// A file name of letters, digits and dashes only.
