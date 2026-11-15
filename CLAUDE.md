@@ -149,7 +149,9 @@ release. Docs: `docs/features/analytics.md`, `docs/features/crash-reporting.md`.
    approval, or Authenticode checks to make something work.
 5. **Secrets.** The TMDB credential lives only in the Reelish API's Worker
    secrets (`backend/`, `docs/backend/operations.md`); the app has none and
-   must never get one back. Never print, copy, commit or log secrets,
+   must never get one back. Docs that mention `lib/tmdb_config.local.dart`
+   or `ONFEED_TMDB_API_KEY` (CONTRIBUTING, getting-started, configuration
+   reference, releasing) describe the old setup; no code or CI reads them. Never print, copy, commit or log secrets,
    session or Trakt tokens, keystore or signing material. Don't log full
    stream URLs or auth headers.
 6. **Persisted data stays readable.** SharedPreferences keys and JSON shapes
