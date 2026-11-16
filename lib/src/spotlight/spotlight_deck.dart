@@ -277,19 +277,22 @@ class _SpotlightCardState extends State<_SpotlightCard> {
               borderRadius: radius,
               boxShadow: lifted
                   ? [
+                      // Kept under the card (drawn in, blurred less): a
+                      // wide dark shadow read as a muddy band around it on
+                      // the near-black page.
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: .42 * emphasis),
-                        blurRadius: 28,
-                        offset: Offset(0, 14 * emphasis),
+                        color: Colors.black.withValues(alpha: .3 * emphasis),
+                        blurRadius: 18,
+                        spreadRadius: -6,
+                        offset: Offset(0, 10 * emphasis),
                       ),
-                      // A restrained glow in the accent around the shown
-                      // card.
+                      // A restrained glow in the accent, close to the card.
                       BoxShadow(
                         color: GlassTheme.primary.withValues(
-                          alpha: .16 * emphasis,
+                          alpha: .1 * emphasis,
                         ),
-                        blurRadius: 24,
-                        spreadRadius: -6,
+                        blurRadius: 16,
+                        spreadRadius: -8,
                       ),
                     ]
                   : null,
