@@ -295,6 +295,7 @@ void main() {
     Future<MessagesController> controller({
       String userId = 'user-1',
       Future<MessageSocket> Function(Uri, String)? connector,
+      Duration ackDelay = const Duration(milliseconds: 5),
     }) async {
       api = AccountApi(
         baseUrl: Uri.parse('https://api.reelish.test'),
@@ -323,7 +324,7 @@ void main() {
               return socket;
             },
         backoff: (_) => const Duration(milliseconds: 10),
-        ackDelay: const Duration(milliseconds: 5),
+        ackDelay: ackDelay,
         lingerAfterClose: const Duration(milliseconds: 10),
         sendSpacing: const Duration(milliseconds: 5),
         lifecycle: false,
@@ -390,7 +391,11 @@ void main() {
     });
 
     test('acknowledges a batch once, after all of it is saved', () async {
-      final messages = await controller();
+      // The app's own grouping window: with the tests' 5 ms a slow machine
+      // can save each message after the last acknowledgement went out.
+      final messages = await controller(
+        ackDelay: const Duration(milliseconds: 250),
+      );
       final socket = await connected(messages);
       for (var seq = 1; seq <= 30; seq++) {
         socket.receive(_event(seq, 'b$seq'));
