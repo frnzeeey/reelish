@@ -408,6 +408,79 @@ void main() {
       }
     });
 
+    testWidgets('mid-swipe the words keep their size while the body moves, and '
+        'nothing fades through a transparency layer', (tester) async {
+      for (final motion in SpotlightMotion.values) {
+        final controller = SpotlightDeck.controllerFor(motion.style);
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Center(
+                child: SizedBox(
+                  width: 400,
+                  height: 300,
+                  child: SpotlightDeck(
+                    controller: controller,
+                    style: motion.style,
+                    itemCount: 3,
+                    itemBuilder: (context, index) => ColoredBox(
+                      key: ValueKey('body $index'),
+                      color: Colors.indigo,
+                    ),
+                    foregroundBuilder: (context, index) => Align(
+                      alignment: Alignment.bottomLeft,
+                      child: SpotlightReveal(
+                        order: 1,
+                        child: Text('Words $index'),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        final words = find.text('Words 0');
+        final restWords = tester.getRect(words).size;
+        final restBody = tester.getRect(find.byKey(const ValueKey('body 0')));
+        final gesture = await tester.startGesture(
+          tester.getCenter(find.byType(SpotlightDeck)),
+        );
+        await gesture.moveBy(const Offset(-40, 0));
+        await gesture.moveBy(const Offset(-40, 0));
+        await tester.pump();
+        // The words are never scaled or turned: the same size on screen.
+        expect(
+          tester.getRect(words).size.width,
+          closeTo(restWords.width, .01),
+          reason: motion.label,
+        );
+        expect(
+          tester.getRect(words).size.height,
+          closeTo(restWords.height, .01),
+          reason: motion.label,
+        );
+        // The body does move with the style.
+        expect(
+          tester.getRect(find.byKey(const ValueKey('body 0'))),
+          isNot(restBody),
+          reason: motion.label,
+        );
+        // No transparency layer anywhere in the deck.
+        expect(
+          find.descendant(
+            of: find.byType(SpotlightDeck),
+            matching: find.byType(Opacity),
+          ),
+          findsNothing,
+          reason: motion.label,
+        );
+        await gesture.up();
+        await tester.pumpWidget(const SizedBox());
+        controller.dispose();
+      }
+    });
+
     testWidgets('reduced motion shows Minimal Motion', (tester) async {
       late SpotlightMotionStyle shown;
       await tester.pumpWidget(

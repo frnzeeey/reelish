@@ -40,6 +40,21 @@ focused poster and never rotates, so the setting is not shown on TV.
   - A neighbour is dimmed by a page-coloured overlay, not made transparent.
     Transparency drew the whole card off-screen every frame. On the solid
     page the two look the same.
+- **Two layers per card.** The body (artwork and scrim, `itemBuilder`)
+  turns, scales and lifts with the style. The words and buttons
+  (`foregroundBuilder`) follow the body's bottom-left corner but are never
+  scaled or turned. Their lines appear by a wipe (`SpotlightReveal`: a
+  clip, off at rest), not a fade.
+  - Why: on the emulator the Spotlight first drew at 45–63 ms per frame
+    (p50), against 21.8 ms for the old carousel. Turning effects off one at
+    a time showed the text was the cost: text drawn under a changing scale
+    or perspective is redrawn glyph by glyph every frame, and a fading line
+    is drawn off-screen first.
+  - With the two layers and the wipe, it measured 24–32 ms, about the old
+    carousel's cost. `integration_test/ui_perf_test.dart` measures every
+    preset.
+  - A test checks that the words keep their size mid-swipe and that no
+    `Opacity` is used.
 - **The one ticker of its own** is Floating's 6 s bob, created only while
   that preset shows and disposed when it changes. Tickers pause off screen.
 - **Neighbours.** A card counts as shown when it is more than half in the

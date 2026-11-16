@@ -2491,6 +2491,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     imageCacheHeight:
                         (height * MediaQuery.devicePixelRatioOf(context))
                             .round(),
+                  ),
+                  foregroundBuilder: (context, page) => _featuredWords(
+                    items[page % items.length],
                     // At its shortest the title and actions take the space
                     // (the header no longer takes the card's top).
                     showDescription: height >= 340 - _headerRoom,
@@ -2529,221 +2532,224 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  Widget _featured(
-    MediaItem item, {
-    required int imageCacheHeight,
-    bool showDescription = true,
-  }) => ClipRRect(
-    borderRadius: BorderRadius.circular(24),
-    child: Stack(
-      fit: StackFit.expand,
-      children: [
-        if (item.background.isNotEmpty)
-          // Zoomed by the Spotlight animation as the card comes into focus;
-          // the same decoded image throughout.
-          SpotlightZoom(
-            child: ArtworkImage.network(
-              item.background,
-              fit: BoxFit.cover,
-              cacheHeight: imageCacheHeight,
-              errorBuilder: (_, _, _) =>
-                  ColoredBox(color: GlassTheme.elevatedSurface),
+  /// A Spotlight card's body: its artwork and scrim, which the Spotlight
+  /// animation turns, scales and lifts.
+  Widget _featured(MediaItem item, {required int imageCacheHeight}) =>
+      ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (item.background.isNotEmpty)
+              // Zoomed by the Spotlight animation as the card comes into focus;
+              // the same decoded image throughout.
+              SpotlightZoom(
+                child: ArtworkImage.network(
+                  item.background,
+                  fit: BoxFit.cover,
+                  cacheHeight: imageCacheHeight,
+                  errorBuilder: (_, _, _) =>
+                      ColoredBox(color: GlassTheme.elevatedSurface),
+                ),
+              )
+            else
+              ColoredBox(color: GlassTheme.elevatedSurface),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color(0x77000000),
+                    Color(0x26000000),
+                    Color(0x00000000),
+                    GlassTheme.artworkScrim.withValues(alpha: .851),
+                    // The page colour in dark themes; a light theme keeps the
+                    // foot dark so the white title and buttons still read.
+                    GlassTheme.artworkScrim,
+                  ],
+                  stops: [0, .2, .46, .82, 1],
+                ),
+              ),
             ),
-          )
-        else
-          ColoredBox(color: GlassTheme.elevatedSurface),
-        DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Color(0x77000000),
-                Color(0x26000000),
-                Color(0x00000000),
-                GlassTheme.artworkScrim.withValues(alpha: .851),
-                // The page colour in dark themes; a light theme keeps the
-                // foot dark so the white title and buttons still read.
-                GlassTheme.artworkScrim,
-              ],
-              stops: [0, .2, .46, .82, 1],
+          ],
+        ),
+      );
+
+  /// A Spotlight card's words and controls, drawn flat over its artwork
+  /// (SpotlightDeck.foregroundBuilder): they follow the card but never scale
+  /// or turn with it, so the text is never redrawn at a new size each frame.
+  Widget _featuredWords(
+    MediaItem item, {
+    bool showDescription = true,
+  }) => Padding(
+    padding: const EdgeInsets.fromLTRB(21, 0, 21, 22),
+    child: Align(
+      alignment: Alignment.bottomLeft,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        // Each line appears as the card comes into focus, in order
+        // (SpotlightReveal; together unless the animation staggers them).
+        children: [
+          SpotlightReveal(
+            order: 0,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              // Dark glass with the brighter accent, as on the details page,
+              // so the label keeps its contrast on any artwork: it sits
+              // where the shade is clear, and at .8 every accent keeps
+              // 4.5:1 even over white (at .38 it fell to about 1:1).
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: .8),
+                borderRadius: BorderRadius.circular(30),
+                border: Border.all(
+                  color: GlassTheme.primary.withValues(alpha: .45),
+                ),
+              ),
+              child: Text(
+                'REELISH SPOTLIGHT',
+                style: TextStyle(
+                  color: GlassTheme.coralBright,
+                  fontSize: 10,
+                  letterSpacing: 1.5,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
             ),
           ),
-        ),
-        Positioned(
-          left: 21,
-          right: 21,
-          bottom: 22,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            // Each line appears as the card comes into focus, in order
-            // (SpotlightReveal; together unless the animation staggers them).
-            children: [
-              SpotlightReveal(
-                order: 0,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  // Dark glass with the brighter accent, as on the details page,
-                  // so the label keeps its contrast on any artwork: it sits
-                  // where the shade is clear, and at .8 every accent keeps
-                  // 4.5:1 even over white (at .38 it fell to about 1:1).
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: .8),
-                    borderRadius: BorderRadius.circular(30),
-                    border: Border.all(
-                      color: GlassTheme.primary.withValues(alpha: .45),
-                    ),
-                  ),
-                  child: Text(
-                    'REELISH SPOTLIGHT',
-                    style: TextStyle(
-                      color: GlassTheme.coralBright,
-                      fontSize: 10,
-                      letterSpacing: 1.5,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
+          const SizedBox(height: 11),
+          SpotlightReveal(
+            order: 1,
+            child: Text(
+              item.name,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              // Not the page text, which is dark on a light theme.
+              style: TextStyle(
+                color: GlassTheme.onArtwork,
+                fontSize: 35,
+                height: 1.02,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -1.1,
               ),
-              const SizedBox(height: 11),
-              SpotlightReveal(
-                order: 1,
-                child: Text(
-                  item.name,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  // Not the page text, which is dark on a light theme.
-                  style: TextStyle(
-                    color: GlassTheme.onArtwork,
-                    fontSize: 35,
-                    height: 1.02,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -1.1,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              // The rating as on the cards and the other interfaces: the
-              // theme star, then the score.
-              SpotlightReveal(
-                order: 2,
-                child: Text.rich(
+            ),
+          ),
+          const SizedBox(height: 8),
+          // The rating as on the cards and the other interfaces: the
+          // theme star, then the score.
+          SpotlightReveal(
+            order: 2,
+            child: Text.rich(
+              TextSpan(
+                children: [
                   TextSpan(
-                    children: [
-                      TextSpan(
-                        text: [
-                          item.year,
-                          item.type == 'series' ? 'Series' : 'Movie',
-                        ].where((value) => value.isNotEmpty).join('  ·  '),
+                    text: [
+                      item.year,
+                      item.type == 'series' ? 'Series' : 'Movie',
+                    ].where((value) => value.isNotEmpty).join('  ·  '),
+                  ),
+                  if (item.rating.isNotEmpty) ...[
+                    const TextSpan(text: '  ·  '),
+                    WidgetSpan(
+                      alignment: PlaceholderAlignment.middle,
+                      child: Icon(
+                        ReelishIcons.starFilled,
+                        size: 15,
+                        color: GlassTheme.primary,
                       ),
-                      if (item.rating.isNotEmpty) ...[
-                        const TextSpan(text: '  ·  '),
-                        WidgetSpan(
-                          alignment: PlaceholderAlignment.middle,
-                          child: Icon(
-                            ReelishIcons.starFilled,
-                            size: 15,
-                            color: GlassTheme.primary,
-                          ),
-                        ),
-                        TextSpan(text: ' ${item.rating}'),
-                      ],
-                    ],
-                  ),
-                  style: const TextStyle(
-                    color: Color(0xC7FFFFFF),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
+                    ),
+                    TextSpan(text: ' ${item.rating}'),
+                  ],
+                ],
+              ),
+              style: const TextStyle(
+                color: Color(0xC7FFFFFF),
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          if (showDescription && item.description.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            SpotlightReveal(
+              order: 3,
+              child: Text(
+                item.description,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Color(0xC7FFFFFF),
+                  height: 1.35,
+                  fontSize: 13,
                 ),
               ),
-              if (showDescription && item.description.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                SpotlightReveal(
-                  order: 3,
-                  child: Text(
-                    item.description,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Color(0xC7FFFFFF),
-                      height: 1.35,
-                      fontSize: 13,
+            ),
+          ],
+          const SizedBox(height: 15),
+          // On a narrow phone, or with "In My list" or large text, the
+          // two buttons shrink to fit instead of overflowing.
+          SpotlightReveal(
+            order: 4,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Row(
+                children: [
+                  FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: GlassTheme.primary,
+                      foregroundColor: GlassTheme.background,
+                      shape: const StadiumBorder(),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 22,
+                        vertical: 15,
+                      ),
+                    ),
+                    onPressed: () => _showDetails(item),
+                    icon: const Icon(ReelishIcons.info),
+                    label: const Text(
+                      'Details',
+                      style: TextStyle(fontWeight: FontWeight.w800),
                     ),
                   ),
-                ),
-              ],
-              const SizedBox(height: 15),
-              // On a narrow phone, or with "In My list" or large text, the
-              // two buttons shrink to fit instead of overflowing.
-              SpotlightReveal(
-                order: 4,
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: Row(
-                    children: [
-                      FilledButton.icon(
-                        style: FilledButton.styleFrom(
-                          backgroundColor: GlassTheme.primary,
-                          foregroundColor: GlassTheme.background,
+                  const SizedBox(width: 10),
+                  // As on the details page, it says when the title is
+                  // already saved.
+                  Builder(
+                    builder: (context) {
+                      final saved = _favoriteKeys.contains(_favoriteKey(item));
+                      return OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: saved
+                              ? GlassTheme.primary
+                              : Colors.white,
                           shape: const StadiumBorder(),
+                          side: BorderSide(
+                            color: saved
+                                ? GlassTheme.primary.withValues(alpha: .55)
+                                : Colors.white.withValues(alpha: .35),
+                          ),
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 22,
+                            horizontal: 19,
                             vertical: 15,
                           ),
                         ),
-                        onPressed: () => _showDetails(item),
-                        icon: const Icon(ReelishIcons.info),
-                        label: const Text(
-                          'Details',
-                          style: TextStyle(fontWeight: FontWeight.w800),
+                        onPressed: () => _toggleFavoriteAndSay(item),
+                        icon: Icon(
+                          saved ? ReelishIcons.check : ReelishIcons.add,
+                          size: 19,
                         ),
-                      ),
-                      const SizedBox(width: 10),
-                      // As on the details page, it says when the title is
-                      // already saved.
-                      Builder(
-                        builder: (context) {
-                          final saved = _favoriteKeys.contains(
-                            _favoriteKey(item),
-                          );
-                          return OutlinedButton.icon(
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: saved
-                                  ? GlassTheme.primary
-                                  : Colors.white,
-                              shape: const StadiumBorder(),
-                              side: BorderSide(
-                                color: saved
-                                    ? GlassTheme.primary.withValues(alpha: .55)
-                                    : Colors.white.withValues(alpha: .35),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 19,
-                                vertical: 15,
-                              ),
-                            ),
-                            onPressed: () => _toggleFavoriteAndSay(item),
-                            icon: Icon(
-                              saved ? ReelishIcons.check : ReelishIcons.add,
-                              size: 19,
-                            ),
-                            label: Text(saved ? 'On My list' : 'My list'),
-                          );
-                        },
-                      ),
-                    ],
+                        label: Text(saved ? 'On My list' : 'My list'),
+                      );
+                    },
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     ),
   );
 

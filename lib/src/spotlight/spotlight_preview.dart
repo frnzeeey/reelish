@@ -96,12 +96,14 @@ class _SpotlightPreviewState extends State<SpotlightPreview> {
         itemCount: null,
         borderRadius: 18,
         onPageChanged: (page) => _page = page,
-        itemBuilder: (context, page) => _card(page % _fields.length),
+        itemBuilder: (context, page) => _body(page % _fields.length),
+        foregroundBuilder: (context, page) => _words(page % _fields.length),
       ),
     ),
   );
 
-  Widget _card(int index) => ClipRRect(
+  /// The card's body, as the Home card's artwork and scrim.
+  Widget _body(int index) => ClipRRect(
     borderRadius: BorderRadius.circular(18),
     child: Stack(
       fit: StackFit.expand,
@@ -127,57 +129,58 @@ class _SpotlightPreviewState extends State<SpotlightPreview> {
             ),
           ),
         ),
-        Positioned(
-          left: 14,
-          right: 14,
-          bottom: 14,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SpotlightReveal(
-                order: 0,
-                rise: 8,
-                child: Container(
-                  width: 54,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: const Color(0xCCFFFFFF),
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              SpotlightReveal(
-                order: 1,
-                rise: 8,
-                child: Text(
-                  _titles[index],
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 6),
-              SpotlightReveal(
-                order: 2,
-                rise: 8,
-                child: Container(
-                  width: 90,
-                  height: 5,
-                  decoration: BoxDecoration(
-                    color: const Color(0x80FFFFFF),
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
       ],
+    ),
+  );
+
+  /// The card's words, drawn flat over the body as on Home.
+  Widget _words(int index) => Padding(
+    padding: const EdgeInsets.all(14),
+    child: Align(
+      alignment: Alignment.bottomLeft,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SpotlightReveal(
+            order: 0,
+            child: Container(
+              width: 54,
+              height: 6,
+              decoration: BoxDecoration(
+                color: const Color(0xCCFFFFFF),
+                borderRadius: BorderRadius.circular(3),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          SpotlightReveal(
+            order: 1,
+            child: Text(
+              _titles[index],
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          SpotlightReveal(
+            order: 2,
+            child: Container(
+              width: 90,
+              height: 5,
+              decoration: BoxDecoration(
+                color: const Color(0x80FFFFFF),
+                borderRadius: BorderRadius.circular(3),
+              ),
+            ),
+          ),
+        ],
+      ),
     ),
   );
 }

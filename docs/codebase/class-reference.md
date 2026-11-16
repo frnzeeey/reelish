@@ -457,9 +457,9 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | Type | Role | Declared in | Relations | Platform | Named in | Summary |
 |---|---|---|---|---|---|---|
 | `_Header` | Widget | [`plugin_library_screen.dart:669`](../../lib/src/screens/plugin_library_screen.dart#L669) | extends StatelessWidget | Shared | its own file |  |
-| `_HeaderActions` | Widget | [`home_screen.dart:3228`](../../lib/src/screens/home_screen.dart#L3228) | extends StatelessWidget | Shared | its own file | Join a watch party (labelled, quieter) and Search (the main action, at full contrast) in one capsule, rather than a circle each. |
+| `_HeaderActions` | Widget | [`home_screen.dart:3234`](../../lib/src/screens/home_screen.dart#L3234) | extends StatelessWidget | Shared | its own file | Join a watch party (labelled, quieter) and Search (the main action, at full contrast) in one capsule, rather than a circle each. |
 | `_HeaderActions` | Widget | [`plugin_library_screen.dart:627`](../../lib/src/screens/plugin_library_screen.dart#L627) | extends StatelessWidget | Shared | its own file |  |
-| `_HeaderMark` | Widget | [`home_screen.dart:3211`](../../lib/src/screens/home_screen.dart#L3211) | extends StatelessWidget | Shared | its own file | The Reelish mark on its own (logo_icon.png), in the page's text colour: part of the bar rather than an app tile floating on it. |
+| `_HeaderMark` | Widget | [`home_screen.dart:3217`](../../lib/src/screens/home_screen.dart#L3217) | extends StatelessWidget | Shared | its own file | The Reelish mark on its own (logo_icon.png), in the page's text colour: part of the bar rather than an app tile floating on it. |
 | `_Heading` | Widget | [`desktop_plugins_page.dart:394`](../../lib/src/desktop/desktop_plugins_page.dart#L394) | extends StatelessWidget | Windows | its own file |  |
 | `_Heading` | Widget | [`plugin_details_screen.dart:432`](../../lib/src/screens/plugin_details_screen.dart#L432) | extends StatelessWidget | Shared | its own file |  |
 | `HelpSupportScreen` | Widget | [`help_support_screen.dart:72`](../../lib/src/screens/help_support_screen.dart#L72) | extends StatelessWidget | Shared | 2 lib files, 3 test files |  |
@@ -935,7 +935,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `_ReviewEmailDialog` | Widget | [`supporters_screen.dart:485`](../../lib/src/screens/supporters_screen.dart#L485) | extends StatefulWidget | Shared | its own file | The email that proves a donation: where it goes, and what it says. |
 | `_ReviewEmailDialogState` | Widget state | [`supporters_screen.dart:500`](../../lib/src/screens/supporters_screen.dart#L500) | extends State<_ReviewEmailDialog> | Shared | its own file |  |
 | `_RootTitle` | Widget | [`settings_components.dart:160`](../../lib/src/widgets/settings/settings_components.dart#L160) | extends StatelessWidget | Shared | its own file |  |
-| `_RowHeading` | Widget | [`home_screen.dart:3192`](../../lib/src/screens/home_screen.dart#L3192) | extends StatelessWidget | Shared | its own file | A Home row's title. |
+| `_RowHeading` | Widget | [`home_screen.dart:3198`](../../lib/src/screens/home_screen.dart#L3198) | extends StatelessWidget | Shared | its own file | A Home row's title. |
 
 ## S
 
@@ -1047,14 +1047,14 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `SplashSpec` | Class | [`splash_screen.dart:13`](../../lib/src/screens/splash_screen.dart#L13) |  | Shared | 2 test files | Visual constants shared with the native launch screen in `android/app/src/main/res`; change them together so the hand-off from the system splash to Flutter has no jump. |
 | `SplashView` | Widget | [`splash_screen.dart:63`](../../lib/src/screens/splash_screen.dart#L63) | extends StatefulWidget | Shared | its own file only | The startup screen shown while `SplashGate` restores what the first screen needs. |
 | `_SplashViewState` | Widget state | [`splash_screen.dart:92`](../../lib/src/screens/splash_screen.dart#L92) | extends State<SplashView>; with SingleTickerProviderStateMixin | Shared | its own file |  |
-| `_SpotlightCard` | Widget | [`spotlight_deck.dart:163`](../../lib/src/spotlight/spotlight_deck.dart#L163) | extends StatefulWidget | Shared | its own file |  |
+| `_SpotlightCard` | Widget | [`spotlight_deck.dart:179`](../../lib/src/spotlight/spotlight_deck.dart#L179) | extends StatefulWidget | Shared | its own file |  |
 | `_SpotlightCard` | Widget | [`desktop_hero.dart:961`](../../lib/src/desktop/desktop_hero.dart#L961) | extends StatefulWidget | Windows | its own file |  |
 | `SpotlightCardFrame` | Class | [`spotlight_motion.dart:91`](../../lib/src/spotlight/spotlight_motion.dart#L91) |  | Shared | 1 lib file | Where one card is drawn, as a function of its distance from the centre. |
-| `_SpotlightCardScope` | Widget | [`spotlight_deck.dart:316`](../../lib/src/spotlight/spotlight_deck.dart#L316) | extends InheritedWidget | Shared | its own file |  |
-| `_SpotlightCardState` | Widget state | [`spotlight_deck.dart:192`](../../lib/src/spotlight/spotlight_deck.dart#L192) | extends State<_SpotlightCard> | Shared | its own file |  |
+| `_SpotlightCardScope` | Widget | [`spotlight_deck.dart:363`](../../lib/src/spotlight/spotlight_deck.dart#L363) | extends InheritedWidget | Shared | its own file |  |
+| `_SpotlightCardState` | Widget state | [`spotlight_deck.dart:210`](../../lib/src/spotlight/spotlight_deck.dart#L210) | extends State<_SpotlightCard> | Shared | its own file |  |
 | `_SpotlightCardState` | Widget state | [`desktop_hero.dart:991`](../../lib/src/desktop/desktop_hero.dart#L991) | extends State<_SpotlightCard> | Windows | its own file |  |
-| `SpotlightDeck` | Widget | [`spotlight_deck.dart:17`](../../lib/src/spotlight/spotlight_deck.dart#L17) | extends StatefulWidget | Shared | 2 lib files, 3 test files |  |
-| `_SpotlightDeckState` | Widget state | [`spotlight_deck.dart:66`](../../lib/src/spotlight/spotlight_deck.dart#L66) | extends State<SpotlightDeck>; with SingleTickerProviderStateMixin | Shared | its own file |  |
+| `SpotlightDeck` | Widget | [`spotlight_deck.dart:25`](../../lib/src/spotlight/spotlight_deck.dart#L25) | extends StatefulWidget | Shared | 2 lib files, 3 test files |  |
+| `_SpotlightDeckState` | Widget state | [`spotlight_deck.dart:81`](../../lib/src/spotlight/spotlight_deck.dart#L81) | extends State<SpotlightDeck>; with SingleTickerProviderStateMixin | Shared | its own file |  |
 | `SpotlightExperienceScreen` | Widget | [`spotlight_experience_screen.dart:22`](../../lib/src/screens/spotlight_experience_screen.dart#L22) | extends StatefulWidget | Shared | 1 lib file, 1 test file |  |
 | `_SpotlightExperienceScreenState` | Widget state | [`spotlight_experience_screen.dart:34`](../../lib/src/screens/spotlight_experience_screen.dart#L34) | extends State<SpotlightExperienceScreen> | Shared | its own file |  |
 | `SpotlightMotion` | Enum | [`spotlight_motion.dart:12`](../../lib/src/spotlight/spotlight_motion.dart#L12) |  | Shared | 6 lib files, 3 test files | Every Spotlight animation. |
@@ -1063,8 +1063,8 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `SpotlightPreview` | Widget | [`spotlight_preview.dart:12`](../../lib/src/spotlight/spotlight_preview.dart#L12) | extends StatefulWidget | Shared | 1 lib file |  |
 | `_SpotlightPreviewState` | Widget state | [`spotlight_preview.dart:30`](../../lib/src/spotlight/spotlight_preview.dart#L30) | extends State<SpotlightPreview> | Shared | its own file |  |
 | `_SpotlightRail` | Widget | [`desktop_hero.dart:769`](../../lib/src/desktop/desktop_hero.dart#L769) | extends StatelessWidget | Windows | its own file | Every Spotlight title in order, along the hero's foot, as one strip of equal height: the shown title first, as a wide backdrop card with its name, details and a play button, then the titles after it as posters, round to the first again. |
-| `SpotlightReveal` | Widget | [`spotlight_deck.dart:359`](../../lib/src/spotlight/spotlight_deck.dart#L359) | extends StatelessWidget | Shared | 2 lib files, 1 test file | A line of a card's title and details, appearing as the card comes into focus: fading in and rising `rise` pixels, after the lines before it when the style staggers them (`order` 0 first). |
-| `SpotlightZoom` | Widget | [`spotlight_deck.dart:336`](../../lib/src/spotlight/spotlight_deck.dart#L336) | extends StatelessWidget | Shared | 2 lib files | A card's backdrop: zoomed by its style as it moves in and out of focus. |
+| `SpotlightReveal` | Widget | [`spotlight_deck.dart:407`](../../lib/src/spotlight/spotlight_deck.dart#L407) | extends StatelessWidget | Shared | 2 lib files, 1 test file | A line of a card's words, appearing as the card comes into focus: it rises into view from behind its own lower edge (a wipe), after the lines before it when the style staggers them (`order` 0 first). |
+| `SpotlightZoom` | Widget | [`spotlight_deck.dart:384`](../../lib/src/spotlight/spotlight_deck.dart#L384) | extends StatelessWidget | Shared | 2 lib files | A card's backdrop: zoomed by its style as it moves in and out of focus. |
 | `_SprigPainter` | Painter | [`sovereign_laurel.dart:172`](../../lib/src/widgets/sovereign_laurel.dart#L172) | extends CustomPainter | Shared | its own file | One sprig: a short laurel branch curving up beside the words, its tip at the top, the left one mirroring the right. |
 | `_Stacked` | Class | [`spotlight_motion.dart:356`](../../lib/src/spotlight/spotlight_motion.dart#L356) | extends SpotlightMotionStyle | Shared | its own file |  |
 | `StallWatchdog` | Class | [`stall_watchdog.dart:10`](../../lib/src/widgets/player/stall_watchdog.dart#L10) |  | Shared | 1 lib file, 1 test file | Notices playback that is stuck: playing, buffering, and not moving for `limit`. |

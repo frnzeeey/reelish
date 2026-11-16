@@ -4,6 +4,14 @@
 // fling all drive the same frames, and nothing can run two transitions at
 // once. Each card works its frame out once per tick; inside the card only
 // [SpotlightZoom] and [SpotlightReveal] rebuild, never the card's content.
+//
+// A card has two layers. The body (artwork, scrim) turns, scales and lifts
+// with the style. The foreground (title, details, buttons) only follows the
+// body's corner, never scaled or turned: text drawn under a changing scale
+// or perspective is redrawn glyph by glyph every frame, which measured at
+// about twice the old carousel's cost on a device. Its lines appear by a
+// wipe (a clip), not a fade, for the same reason: a fading line is drawn
+// off-screen first.
 // The one ticker of its own is the gentle float of a style that [floats],
 // running only while that style is shown.
 import 'dart:async';
@@ -21,6 +29,7 @@ class SpotlightDeck extends StatefulWidget {
     required this.style,
     required this.itemCount,
     required this.itemBuilder,
+    this.foregroundBuilder,
     this.onPageChanged,
     this.onUserScroll,
     this.borderRadius = 24,
@@ -32,7 +41,13 @@ class SpotlightDeck extends StatefulWidget {
 
   /// Null for an endless carousel.
   final int? itemCount;
+
+  /// The card's body: artwork and scrim, moved with the style.
   final IndexedWidgetBuilder itemBuilder;
+
+  /// The card's words and controls, drawn flat over the body and filling
+  /// it; they follow the body's bottom-left corner but never scale or turn.
+  final IndexedWidgetBuilder? foregroundBuilder;
   final ValueChanged<int>? onPageChanged;
 
   /// The person started dragging the cards.
@@ -151,6 +166,7 @@ class _SpotlightDeckState extends State<SpotlightDeck>
                   curve: Curves.easeInOutCubic,
                 ),
               ),
+              foreground: widget.foregroundBuilder?.call(context, index),
               child: widget.itemBuilder(context, index),
             ),
           ),
@@ -171,6 +187,7 @@ class _SpotlightCard extends StatefulWidget {
     required this.borderRadius,
     required this.onBringForward,
     required this.child,
+    this.foreground,
   });
 
   final int index;
@@ -184,6 +201,7 @@ class _SpotlightCard extends StatefulWidget {
   /// A tap on a neighbour: it becomes the shown card.
   final VoidCallback onBringForward;
   final Widget child;
+  final Widget? foreground;
 
   @override
   State<_SpotlightCard> createState() => _SpotlightCardState();
@@ -238,78 +256,107 @@ class _SpotlightCardState extends State<_SpotlightCard> {
   @override
   Widget build(BuildContext context) {
     final radius = BorderRadius.circular(widget.borderRadius);
-    // The same widgets whether shown or not, so the card's content is never
-    // rebuilt as it comes and goes.
-    final content = ValueListenableBuilder<bool>(
-      valueListenable: _shown,
+    // Always the same widgets around the card, only their values changing:
+    // a widget added or dropped mid-swipe would rebuild the whole card
+    // (artwork, text, buttons) each time.
+    final body = ValueListenableBuilder<SpotlightCardFrame>(
+      valueListenable: _frame,
       child: widget.child,
-      builder: (context, shown, child) => GestureDetector(
-        // A neighbour's content ignores taps, so the card itself takes
-        // them; the shown card leaves them to its content.
-        behavior: shown ? HitTestBehavior.deferToChild : HitTestBehavior.opaque,
-        onTap: shown ? null : widget.onBringForward,
-        child: IgnorePointer(
-          ignoring: !shown,
-          child: ExcludeSemantics(excluding: !shown, child: child),
-        ),
-      ),
+      builder: (context, frame, card) {
+        final emphasis = frame.emphasis.clamp(0.0, 1.0);
+        final lifted = widget.style.lifted && emphasis > .01;
+        // Faded toward the page colour by an overlay, not made see-through:
+        // transparency draws the card off-screen first, every frame. On the
+        // page's solid colour the two look the same.
+        final dim = 1 - frame.opacity.clamp(0.0, 1.0);
+        return Transform(
+          transform: frame.transform,
+          alignment: Alignment.center,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: radius,
+              boxShadow: lifted
+                  ? [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: .42 * emphasis),
+                        blurRadius: 28,
+                        offset: Offset(0, 14 * emphasis),
+                      ),
+                      // A restrained glow in the accent around the shown
+                      // card.
+                      BoxShadow(
+                        color: GlassTheme.primary.withValues(
+                          alpha: .16 * emphasis,
+                        ),
+                        blurRadius: 24,
+                        spreadRadius: -6,
+                      ),
+                    ]
+                  : null,
+            ),
+            child: DecoratedBox(
+              position: DecorationPosition.foreground,
+              decoration: BoxDecoration(
+                borderRadius: radius,
+                color: dim > .005
+                    ? GlassTheme.background.withValues(alpha: dim)
+                    : null,
+              ),
+              child: card,
+            ),
+          ),
+        );
+      },
     );
+    final foreground = widget.foreground;
+    final card = foreground == null
+        ? body
+        : LayoutBuilder(
+            builder: (context, constraints) => Stack(
+              fit: StackFit.expand,
+              children: [
+                body,
+                ValueListenableBuilder<SpotlightCardFrame>(
+                  valueListenable: _frame,
+                  child: foreground,
+                  builder: (context, frame, words) => Transform.translate(
+                    offset: _cornerShift(frame.transform, constraints.biggest),
+                    child: words,
+                  ),
+                ),
+              ],
+            ),
+          );
+    // A neighbour's controls take no taps and its words are not read out;
+    // a tap anywhere on it brings it forward.
     return _SpotlightCardScope(
       frame: _frame,
       style: widget.style,
-      child: ValueListenableBuilder<SpotlightCardFrame>(
-        valueListenable: _frame,
-        child: content,
-        // Always the same three widgets around the card, only their values
-        // changing: a widget added or dropped mid-swipe would rebuild the
-        // whole card (artwork, text, buttons) each time.
-        builder: (context, frame, card) {
-          final emphasis = frame.emphasis.clamp(0.0, 1.0);
-          final lifted = widget.style.lifted && emphasis > .01;
-          // Faded toward the page colour by an overlay, not made
-          // see-through: transparency draws the card off-screen first, every
-          // frame. On the page's solid colour the two look the same.
-          final dim = 1 - frame.opacity.clamp(0.0, 1.0);
-          return Transform(
-            transform: frame.transform,
-            alignment: Alignment.center,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: radius,
-                boxShadow: lifted
-                    ? [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: .42 * emphasis),
-                          blurRadius: 28,
-                          offset: Offset(0, 14 * emphasis),
-                        ),
-                        // A restrained glow in the accent around the shown
-                        // card.
-                        BoxShadow(
-                          color: GlassTheme.primary.withValues(
-                            alpha: .16 * emphasis,
-                          ),
-                          blurRadius: 24,
-                          spreadRadius: -6,
-                        ),
-                      ]
-                    : null,
-              ),
-              child: DecoratedBox(
-                position: DecorationPosition.foreground,
-                decoration: BoxDecoration(
-                  borderRadius: radius,
-                  color: dim > .005
-                      ? GlassTheme.background.withValues(alpha: dim)
-                      : null,
-                ),
-                child: card,
-              ),
-            ),
-          );
-        },
+      child: ValueListenableBuilder<bool>(
+        valueListenable: _shown,
+        child: card,
+        builder: (context, shown, child) => GestureDetector(
+          behavior: shown
+              ? HitTestBehavior.deferToChild
+              : HitTestBehavior.opaque,
+          onTap: shown ? null : widget.onBringForward,
+          child: IgnorePointer(
+            ignoring: !shown,
+            child: ExcludeSemantics(excluding: !shown, child: child),
+          ),
+        ),
       ),
     );
+  }
+
+  /// How far the body's bottom-left corner has moved under [transform]
+  /// (applied about the centre of a card of [size]), so the flat foreground
+  /// can follow it.
+  static Offset _cornerShift(Matrix4 transform, Size size) {
+    final centre = size.center(Offset.zero);
+    final corner = Offset(0, size.height);
+    final moved = MatrixUtils.transformPoint(transform, corner - centre);
+    return moved + centre - corner;
   }
 }
 
@@ -332,7 +379,8 @@ class _SpotlightCardScope extends InheritedWidget {
 }
 
 /// A card's backdrop: zoomed by its style as it moves in and out of focus.
-/// Outside a [SpotlightDeck] it is shown as it is.
+/// Always under the same transform, so the image is never rebuilt. Outside
+/// a [SpotlightDeck] it is shown as it is.
 class SpotlightZoom extends StatelessWidget {
   const SpotlightZoom({super.key, required this.child});
 
@@ -345,27 +393,21 @@ class SpotlightZoom extends StatelessWidget {
     return ValueListenableBuilder<SpotlightCardFrame>(
       valueListenable: scope.frame,
       child: child,
-      builder: (context, frame, child) => frame.imageScale == 1
-          ? child!
-          : Transform.scale(scale: frame.imageScale, child: child),
+      builder: (context, frame, child) =>
+          Transform.scale(scale: frame.imageScale, child: child),
     );
   }
 }
 
-/// A line of a card's title and details, appearing as the card comes into
-/// focus: fading in and rising [rise] pixels, after the lines before it when
-/// the style staggers them ([order] 0 first). Outside a [SpotlightDeck] it
-/// is shown as it is.
+/// A line of a card's words, appearing as the card comes into focus: it
+/// rises into view from behind its own lower edge (a wipe), after the lines
+/// before it when the style staggers them ([order] 0 first). A clip, not a
+/// fade, because a fading line is drawn off-screen first, every frame; at
+/// rest nothing is clipped. Outside a [SpotlightDeck] it is shown as it is.
 class SpotlightReveal extends StatelessWidget {
-  const SpotlightReveal({
-    super.key,
-    required this.order,
-    required this.child,
-    this.rise = 14,
-  });
+  const SpotlightReveal({super.key, required this.order, required this.child});
 
   final int order;
-  final double rise;
   final Widget child;
 
   @override
@@ -376,12 +418,15 @@ class SpotlightReveal extends StatelessWidget {
       valueListenable: scope.frame,
       child: child,
       builder: (context, frame, child) {
-        final shown = scope.style.lineReveal(frame.reveal, order);
-        if (shown >= 1) return child!;
-        return Opacity(
-          opacity: Curves.easeOut.transform(shown),
-          child: Transform.translate(
-            offset: Offset(0, (1 - shown) * rise),
+        final shown = Curves.easeOutCubic.transform(
+          scope.style.lineReveal(frame.reveal, order).clamp(0.0, 1.0),
+        );
+        // The same two widgets whatever the value, so the line is never
+        // rebuilt.
+        return ClipRect(
+          clipBehavior: shown >= 1 ? Clip.none : Clip.hardEdge,
+          child: FractionalTranslation(
+            translation: Offset(0, 1 - shown),
             child: child,
           ),
         );
