@@ -30,9 +30,9 @@ flowchart LR
 | Socket route | `backend/src/messaging/messages.ts`, `GET /api/v1/messages/socket` | Authenticates the session, requires Friends on, forwards the socket to the caller's own mailbox with the account and session ids as headers it builds itself. |
 | Hooks in existing routes | `social/friends.ts`, `social/profiles.ts`, `auth.ts`, `episode-alerts.ts` | Block purges waiting messages both ways. Friends off and account deletion wipe the mailbox. The summary counts waiting messages. The background check can report them. |
 | Daily count | D1 `social_counters.messages` (migration `0015_messages.sql`) | Next to the other social limits. Pruned by the existing daily cron. |
-| `MessagesController` | `lib/src/messaging/messages_controller.dart` | The conversations, the outbox, the socket and its lifecycle, acknowledgements and receipts. |
+| `MessagesController` | `lib/src/messaging/messages_controller.dart` | The conversations, the outbox, the socket and its lifecycle, acknowledgements and receipts; deleting, unsending and the per-account settings. |
 | `MessageStore` | `lib/src/messaging/message_store.dart` | Files on this device, per account. |
-| Screens | `lib/src/screens/social/messages_screen.dart` | Conversation list, chat, composer. Opened from Friends (`friends_screen.dart`) and a friend's page. |
+| Screens | `lib/src/screens/social/messages_screen.dart`, `conversation_options_screen.dart` | Conversation list, chat, composer, message actions; a conversation's options (nickname, mute, delete). Opened from Friends (`friends_screen.dart`) and a friend's page. |
 | Alerts | `lib/src/notifications/episode_check.dart`, `episode_alerts.dart` | "Messages from friends" in Settings › Notifications, folded into the episode check (Android background, Windows while open). |
 
 Nothing new was added for identity, profiles or friendships. Sessions,
@@ -97,6 +97,50 @@ signed-in device receives whatever is still waiting. **History is not
 copied between devices**: each device keeps what it received or sent while
 signed in.
 
+## Deleting, unsending, nicknames and mute
+
+All of these belong to one account. Nothing deletes the other person's
+copy, except an unsend of your own message, which they see as "Message
+unsent". Every action needs the connection (the app says when it is
+offline) so that all of the account's devices end up the same.
+
+| Action | Where it is kept | Who is affected |
+|---|---|---|
+| **Delete for you** (any message) | On each device: the message stays as a marker without its text (`x:'d'` in its line), so a redelivered copy does not bring it back. The file is rewritten at once (`MessageStore.replace`), so the text leaves the disk. Other devices hear of it through a `hide` event in the account's own mailbox. | This account only |
+| **Unsend** (your own sent or delivered message) | The friend's mailbox drops the message if it still waits (it is never delivered) and stores an `unsend` event for their devices. A copy (`out:true`) goes to your other devices. Devices keep a marker without text (`x:'u'`), shown as unsent. | Both people |
+| **Delete conversation** | `conversation_prefs.cleared_at` (Reelish time) in the account's mailbox, given to every device. Each device drops messages up to that time, deletes or rewrites the file, and ignores older redeliveries. A newer message starts the conversation again. | This account only |
+| **Nickname** | `conversation_prefs.nickname`. Shown instead of the friend's name in the list, the chat and its options. Their `@handle` always stays visible, and their own name is shown on the options page. | This account only |
+| **Mute** | `conversation_prefs.muted`. Messages arrive as usual and the conversation keeps its own unread count. It is left out of `Mailbox.pending()`, which feeds the background alert and the Friends summary badge, and out of the app's total unread. | This account only |
+
+**Persistent settings.** `conversation_prefs` (`conv`, `muted`, `nickname`,
+`cleared_at`, `updated_at`) is a table in the account's own mailbox Durable
+Object. Unlike `events`, it is not pruned. A row with nothing set is deleted,
+and an account may keep at most 1,000 rows. The mailbox sends all of them in
+`ready` and pushes each change to every connected device. A device that was
+offline or is newly signed in gets them when it connects, and keeps a copy in
+`index.json` (`prefs`) for offline starts. They are written only when they
+change. Turning Friends off or deleting the account wipes them, along with
+the rest of the mailbox. Deleting a conversation keeps its nickname and mute.
+
+**Why the unsend is safe.** The server sets an unsend's conversation from the
+sender's verified account, and the sender's id is the socket's account. The
+recipient's devices apply an unsend from the friend (`out:false`) only to
+*incoming* messages in that conversation (`i:<id>`). So whatever id a client
+names, it can only reach its own messages. An `out:true` unsend or a `hide`
+can only come from the account's own mailbox. Unsend works after a
+friendship ends, but never across a block. The server cannot check how old
+the message is (it keeps no delivered messages), so there is no time limit.
+
+**Alerts and timing.** Mute and deletion are checked by the server each time
+a device asks for waiting messages, so they apply on the next background
+check of every device. They do not withdraw an alert that is already
+showing. Alerts only say how many messages wait and from whom, never which
+conversation.
+
+**Groups.** Conversations are one to one. The settings are keyed by
+conversation. A group would need nicknames keyed by conversation and
+member.
+
 ## Local storage
 
 ```
@@ -137,7 +181,8 @@ signed in.
 | Only participants read messages | A device connects only to its own mailbox. The account and session come from the verified token as headers the Worker sets. A client header such as `X-Mailbox-User` is overwritten (tested). There is no route that reads another mailbox. |
 | No impersonation | The sender is the socket's account. The sender's handle, name and avatar in a message come from D1, never from the client. |
 | Conversation id manipulation | The server computes conversation ids. A client cannot choose one or address a mailbox by it. The app ignores frames with unsafe ids. |
-| Deletion | A device can only acknowledge its own cursor, never above what it was sent. No message route deletes another person's data. Block, Friends off and account deletion are the only purges. |
+| Deletion | A device can only acknowledge its own cursor, never above what it was sent. No message route deletes another person's data. Block, Friends off and account deletion are the only purges. Delete for you, delete conversation, nickname and mute write only to the caller's own mailbox. An unsend reaches the friend's devices for the sender's own messages only (see [Deleting, unsending, nicknames and mute](#deleting-unsending-nicknames-and-mute)). |
+| Per-account settings | Validated on the server: conversation id pattern, nickname 1–32 characters on one line with the same unsafe characters removed as in messages, booleans only, at most 1,000 rows, `hide` at most 100 well-formed keys. A request without a valid `ref` counts as an invalid frame. |
 | Blocks | A block deletes waiting messages both ways and refuses all later sends. |
 | Input | At most 2,000 UTF-16 units. Control, bidirectional-override and zero-width characters removed. Newlines kept, runs of more than three blank lines collapsed. Frames over 12 KB refused. The app shows text as plain text: no links are made clickable and nothing is rendered as HTML. |
 | Rate and spam | A token bucket per socket (a burst of 20 frames, then one a second). Five invalid frames close it (4029). 1,000 messages per account per UTC day. `SOCIAL_LIMITER` on connecting. |
@@ -182,6 +227,10 @@ outbox.
 | Summary (`GET /social/profile`) | (existing) | +1 | 0 | (existing) |
 | Background check, messages on | (existing) | +1 | 0 | +1 read |
 | Daily alarm while something waits | 0 | 1 | ≈ 1–3 | 1 read |
+| Mute, nickname or delete a conversation | 0 | 1/20 | 1 (row reads: 1–2) | — |
+| Delete for you | 0 | 1/20 | 0, or ≈ 2 + later 1 delete with other devices | — |
+| Unsend | 0 | ≈ 1.05 (retract RPC + 1/20 frame) | ≈ 3 (+ ≈ 2 with other devices) | 1 read |
+| Settings sent on connecting | 0 | 0 | 0 | — (DO rows read: one per stored setting, at most 1,000) |
 
 So one message costs roughly **4–5 rows written** when both people are
 online with one device each, and **up to ~10** with offline senders and
@@ -248,7 +297,11 @@ Socket frames are JSON text.
 
 | From | Frame | Meaning |
 |---|---|---|
-| Server | `{t:'ready', serverTime, limits:{maxChars}}` | Connected. |
+| Server | `{t:'ready', serverTime, limits:{maxChars, maxNickname}, prefs:[{conv, muted, nickname, clearedAt}]}` | Connected, with every setting of this account. |
+| Server | `{t:'prefs', prefs:[…]}` | A setting changed (from any device of the account). |
+| Server | `{t:'event', seq, kind:'hide', conv, keys, at}` | This account deleted these messages for itself on another device. |
+| Server | `{t:'event', seq, kind:'unsend', conv, id, out, at}` | A message was unsent: the friend's (`out` false) or this account's, from another device. |
+| Server | `{t:'done', ref, conv}` / `{t:'failed', ref, code}` | Answer to `pref`, `hide` or `unsend` (`invalid`, `invalid_nickname`, `too_many`, `not_friends`, `unavailable`). |
 | Server | `{t:'event', seq, kind:'message', conv, id, out, peer:{handle,displayName,avatar}, text, at}` | A message to save (`out`: one this account sent from another device). |
 | Server | `{t:'event', seq, kind:'receipt', conv, ids, at}` | These of my messages reached the friend. |
 | Server | `{t:'synced', seq}` | Caught up; later events are pushed live. |
@@ -257,6 +310,12 @@ Socket frames are JSON text.
 | Server | `{t:'error', code}` | `invalid_message`, `unknown_message`, `rate_limited`. |
 | Client | `{t:'send', to, id, text}` | Send to a friend by handle. |
 | Client | `{t:'ack', seq}` | Everything up to `seq` is saved. |
+| Client | `{t:'pref', ref, conv, muted?, nickname?, clear?}` | Set this account's mute or nickname (`null` resets it), or delete the conversation for it. |
+| Client | `{t:'hide', ref, conv, keys}` | Delete messages for this account (keys `i:<id>` / `o:<id>`). |
+| Client | `{t:'unsend', ref, to, id}` | Unsend this account's message `id` to the friend `to`. |
+
+Older app versions ignore the new frames and event kinds and still
+acknowledge them, so nothing waits on their account.
 
 Close codes: 4001 connected again elsewhere (same session), 4003 Friends
 off (stop), 4029 too many invalid frames, 4401 session ended.
@@ -279,8 +338,15 @@ store shapes leave room for it: a `v` field on messages and an encrypted
 - Alerts with the app closed only on Android, every few hours (WorkManager
   minimum and the episode-check cadence). Windows checks only while the
   app runs. No alerts on TV, and no instant push.
-- Text only: no images, reactions, read receipts, typing indicators,
-  editing or deleting sent messages.
+- Text only: no images, reactions, read receipts, typing indicators or
+  editing.
+- An unsend cannot take back what the friend already read, copied or saw
+  in an alert. A device of theirs that stays offline for more than 14 days
+  misses it, as it would a message. A device of yours that does the same
+  misses a "delete for you" (deleted conversations, nicknames and mute are
+  kept until changed, so it still gets those).
+- Deleting, unsending and changing a setting need a connection; they are
+  not queued offline.
 - Messages older than 14 days that never reached a device are lost (the
   sender's copy stays, marked sent).
 - Local files are not encrypted at rest.
@@ -292,9 +358,9 @@ store shapes leave room for it: a `v` field on messages and an encrypted
 
 | Suite | Covers |
 |---|---|
-| `backend/test/messages.test.ts` (21) | Real-time delivery, ack, deletion and receipts. Offline queueing, summary count, sync on connect. Idempotent retries. Redelivery after an interrupted ack. Friends-only, block and unfriend. Text rules and size. Daily limit. Flood closing. Unauthenticated, no upgrade, Friends off. Forged headers. Several devices and copies to them. Batched backlog. Ack beyond what was sent. TTL expiry and signed-out devices. Revoked session closing an open socket. Friends off wipes, then works again. Conversation ids. Background check without text. |
+| `backend/test/messages.test.ts` (30) | Real-time delivery, ack, deletion and receipts. Offline queueing, summary count, sync on connect. Idempotent retries. Redelivery after an interrupted ack. Friends-only, block and unfriend. Text rules and size. Daily limit. Flood closing. Unauthenticated, no upgrade, Friends off. Forged headers. Several devices and copies to them. Batched backlog. Ack beyond what was sent. TTL expiry and signed-out devices. Revoked session closing an open socket. Friends off wipes, then works again. Conversation ids. Background check without text. Nickname and mute private to the account, on all of its devices and on a new one, and reset. Setting validation. Mute out of alerts and the summary while delivery goes on. Delete conversation for one account only, with newer messages still arriving. Delete for you only to the account's other devices. Unsend before delivery (text never delivered) and after, after unfriending, refused across a block. An unsend cannot reach the friend's own messages. Settings wiped with Friends off. |
 | `backend/test/social-friends.test.ts` | Updated for the new `conversation` and `messages` fields. |
-| `test/messaging_test.dart` (22) | Store: last line wins, direction-keyed ids, cut-off lines, index and outbox, account separation, wipe, compaction, unsafe ids. Controller: save-then-ack, redelivery once, grouped acks, offline send then sent/delivered, restart keeping history and outbox, resend after reconnect, failed and retry, passing refusals, length, copies from other devices, unsafe frames, backoff and stopping, closing when no screen is open, conversations kept apart, Friends off, another account. |
-| `test/messages_screen_test.dart` (8) | Empty state, sending → sent, Enter sends on Windows, failure and retry, list with unread count and privacy note, offline banner and outbox, TV composer through the text dialog, time labels. |
+| `test/messaging_test.dart` (22) | Store: last line wins, direction-keyed ids, cut-off lines, index and outbox, account separation, wipe, compaction, unsafe ids. Controller: save-then-ack, redelivery once, grouped acks, offline send then sent/delivered, restart keeping history and outbox, resend after reconnect, failed and retry, passing refusals, length, copies from other devices, unsafe frames, backoff and stopping, closing when no screen is open, conversations kept apart, Friends off, another account. Settings from the account on a new device, kept across a restart, a reset elsewhere, muted conversations out of the total. Nickname and mute requests, local validation, refusals, a dropped connection. Delete for you with the text off the disk and no return on redelivery. Delete for you from another device. Unsend own and the friend's, and the friend unable to unsend yours. Delete conversation, older redelivery ignored, a newer message starting it again, and an offline device catching up. |
+| `test/messages_screen_test.dart` (15) | Empty state, sending → sent, Enter sends on Windows, failure and retry, list with unread count and privacy note, offline banner and outbox, TV composer through the text dialog, time labels. Delete for you from the long-press menu, with confirmation. Unsend with confirmation. Windows right-click menu. TV Select on a message. List with nickname, handle, muted icon and long press. Options page: nickname, mute, delete. Options offline. |
 | `test/episode_alerts_test.dart` | A message alert once per arrival, never with text, and the switch. |
 | `test/friends_test.dart` | Windows two-column layout with Messages leading the left column. |

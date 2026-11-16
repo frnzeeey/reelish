@@ -40,6 +40,18 @@ const sessionCheckMs = 10 * 60 * 1000;
 const handlePattern = /^[A-Za-z][A-Za-z0-9_]{2,19}$/;
 /** A message id chosen by the sending device (a UUID). */
 export const messageIdPattern = /^[A-Za-z0-9-]{8,64}$/;
+/** A conversation id as [conversationId] makes them (and the app accepts). */
+const conversationPattern = /^[A-Za-z0-9_-]{16,64}$/;
+/** A message as a device keys it: direction and the sender's id. */
+const messageKeyPattern = /^[io]:[A-Za-z0-9-]{8,64}$/;
+/** The device's name for a request, echoed in the answer. */
+const refPattern = /^[A-Za-z0-9-]{1,40}$/;
+/** Longest nickname, in UTF-16 code units. */
+export const maxNicknameChars = 32;
+/** Conversations one account may keep settings for. */
+export const maxConversationPrefs = 1000;
+/** Messages one "delete for me" may name. */
+const maxHideKeys = 100;
 
 /** Close codes the app understands. */
 export const mailboxCloseCodes = {
@@ -79,7 +91,51 @@ export interface ReceiptPayload {
   at: number;
 }
 
-type Payload = MessagePayload | ReceiptPayload;
+/** Messages this account deleted for itself, for its other devices. */
+export interface HidePayload {
+  kind: 'hide';
+  conv: string;
+  /** Message keys as the devices store them (`i:<id>` / `o:<id>`). */
+  keys: string[];
+  at: number;
+}
+
+/** A message its sender unsent: shown as unsent on every device. */
+export interface UnsendPayload {
+  kind: 'unsend';
+  conv: string;
+  /** The sender's message id. */
+  id: string;
+  /** True in the sender's own mailbox (for their other devices). */
+  out: boolean;
+  at: number;
+}
+
+type Payload = MessagePayload | ReceiptPayload | HidePayload | UnsendPayload;
+
+/**
+ * This account's own settings for one conversation, kept until changed and
+ * given to every device of the account; never seen by the other person.
+ */
+export interface ConversationPrefs {
+  conv: string;
+  muted: boolean;
+  /** What this account calls the other person here; null for their name. */
+  nickname: string | null;
+  /** Deleted here at this server time (ms): earlier messages are gone. */
+  clearedAt: number | null;
+}
+
+type PrefsRow = {
+  conv: string;
+  muted: number;
+  nickname: string | null;
+  cleared_at: number | null;
+};
+
+function prefsView(row: PrefsRow): ConversationPrefs {
+  return { conv: row.conv, muted: row.muted === 1, nickname: row.nickname, clearedAt: row.cleared_at };
+}
 
 export interface Delivery {
   fromUserId: string;
@@ -121,6 +177,13 @@ export function cleanText(value: unknown): string | null {
   return text ? text : null;
 }
 
+/** A nickname as it may be stored: one line, no unsafe characters; null when empty or too long. */
+export function cleanNickname(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const text = value.replace(unsafe, '').replace(/\s+/g, ' ').trim();
+  return text && text.length <= maxNicknameChars ? text : null;
+}
+
 export class Mailbox extends DurableObject<Env> {
   private readonly sql: SqlStorage;
 
@@ -148,6 +211,13 @@ export class Mailbox extends DurableObject<Env> {
         session_id TEXT PRIMARY KEY,
         cursor INTEGER NOT NULL,
         seen_at INTEGER NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS conversation_prefs (
+        conv TEXT PRIMARY KEY,
+        muted INTEGER NOT NULL DEFAULT 0,
+        nickname TEXT,
+        cleared_at INTEGER,
+        updated_at INTEGER NOT NULL
       );
     `);
   }
@@ -186,18 +256,40 @@ export class Mailbox extends DurableObject<Env> {
     }
   }
 
-  /** Messages this device has not saved yet, and up to three of their senders. */
+  /**
+   * Messages this device has not saved yet, and up to three of their senders.
+   * Muted conversations are left out (this drives alerts and the summary),
+   * and so are messages from before a conversation was deleted here.
+   */
   async pending(sessionId: string): Promise<{ count: number; from: string[] }> {
     const cursor = this.cursorOf(sessionId);
+    const counted = `kind = 'message' AND outgoing = 0 AND seq > ?
+      AND NOT EXISTS (SELECT 1 FROM conversation_prefs p
+                       WHERE p.conv = json_extract(events.body, '$.conv')
+                         AND (p.muted = 1 OR p.cleared_at >= json_extract(events.body, '$.at')))`;
     const rows = this.sql.exec<{ count: number }>(
-      `SELECT COUNT(*) AS count FROM events WHERE kind = 'message' AND outgoing = 0 AND seq > ?`, cursor,
+      `SELECT COUNT(*) AS count FROM events WHERE ${counted}`, cursor,
     ).one();
     const from = this.sql.exec<{ handle: string }>(
       `SELECT json_extract(body, '$.peer.handle') AS handle FROM events
-        WHERE kind = 'message' AND outgoing = 0 AND seq > ?
+        WHERE ${counted}
         GROUP BY handle ORDER BY MAX(seq) DESC LIMIT 3`, cursor,
     ).toArray().map((row) => row.handle).filter((handle) => typeof handle === 'string');
     return { count: rows.count, from };
+  }
+
+  /**
+   * [fromUserId] unsent their message [id]: it is not delivered if it still
+   * waits, and the devices that have it show it as unsent. Only the sender's
+   * own mailbox calls this, with the sender's verified account, and devices
+   * apply it only to that sender's messages, so no one can unsend another's.
+   */
+  async retract(fromUserId: string, conv: string, id: string, at: number): Promise<void> {
+    this.sql.exec(
+      `DELETE FROM events WHERE kind = 'message' AND peer = ? AND outgoing = 0 AND client_id = ?`,
+      fromUserId, id,
+    );
+    await this.append(fromUserId, { kind: 'unsend', conv, id, out: false, at });
   }
 
   /** Removes everything waiting between this account and [peerUserId] (a block). */
@@ -248,7 +340,10 @@ export class Mailbox extends DurableObject<Env> {
       strikes: 0,
     };
     this.ctx.acceptWebSocket(server, [sessionId]);
-    this.send(server, { t: 'ready', serverTime: now, limits: { maxChars: maxMessageChars } });
+    this.send(server, {
+      t: 'ready', serverTime: now, limits: { maxChars: maxMessageChars, maxNickname: maxNicknameChars },
+      prefs: this.allPrefs(),
+    });
     this.sendBatch(server, attachment);
     return new Response(null, { status: 101, webSocket: pair[0] });
   }
@@ -279,6 +374,12 @@ export class Mailbox extends DurableObject<Env> {
         return this.onAck(ws, attachment, msg);
       case 'send':
         return this.onSend(ws, attachment, msg);
+      case 'pref':
+        return this.onPref(ws, attachment, msg);
+      case 'hide':
+        return this.onHide(ws, attachment, msg);
+      case 'unsend':
+        return this.onUnsend(ws, attachment, msg);
       default:
         this.strike(ws, attachment, 'unknown_message');
     }
@@ -438,6 +539,124 @@ export class Mailbox extends DurableObject<Env> {
     this.send(ws, { t: 'sent', id, conv, at: result.at });
   }
 
+  /**
+   * `{t:'pref', ref, conv, muted?, nickname?, clear?}`: this account's own
+   * settings for a conversation. Stored in this account's mailbox only, then
+   * given to every device of the account. `clear` deletes the conversation
+   * for this account: its devices drop what came before now.
+   */
+  private onPref(ws: WebSocket, a: Attachment, msg: Record<string, unknown>) {
+    const ref = typeof msg.ref === 'string' && refPattern.test(msg.ref) ? msg.ref : null;
+    if (!ref) return this.strike(ws, a, 'invalid_message');
+    const fail = (code: string) => this.send(ws, { t: 'failed', ref, code });
+    const conv = typeof msg.conv === 'string' && conversationPattern.test(msg.conv) ? msg.conv : null;
+    if (!conv) return fail('invalid');
+    const current = this.prefRow(conv);
+    let muted = current?.muted ?? 0;
+    let nickname = current?.nickname ?? null;
+    let clearedAt = current?.cleared_at ?? null;
+    let changed = false;
+    if ('muted' in msg) {
+      if (typeof msg.muted !== 'boolean') return fail('invalid');
+      muted = msg.muted ? 1 : 0;
+      changed = true;
+    }
+    if ('nickname' in msg) {
+      if (msg.nickname === null) {
+        nickname = null;
+      } else {
+        const clean = cleanNickname(msg.nickname);
+        if (!clean) return fail('invalid_nickname');
+        nickname = clean;
+      }
+      changed = true;
+    }
+    if (msg.clear === true) {
+      clearedAt = Date.now();
+      changed = true;
+    }
+    if (!changed) return fail('invalid');
+    if (muted === 0 && nickname === null && clearedAt === null) {
+      this.sql.exec(`DELETE FROM conversation_prefs WHERE conv = ?`, conv);
+    } else {
+      if (!current) {
+        const { count } = this.sql.exec<{ count: number }>(`SELECT COUNT(*) AS count FROM conversation_prefs`).one();
+        if (count >= maxConversationPrefs) return fail('too_many');
+      }
+      this.sql.exec(
+        `INSERT INTO conversation_prefs (conv, muted, nickname, cleared_at, updated_at) VALUES (?, ?, ?, ?, ?)
+         ON CONFLICT (conv) DO UPDATE SET muted = excluded.muted, nickname = excluded.nickname,
+           cleared_at = excluded.cleared_at, updated_at = excluded.updated_at`,
+        conv, muted, nickname, clearedAt, Date.now(),
+      );
+    }
+    const view = prefsView({ conv, muted, nickname, cleared_at: clearedAt });
+    // Every device of this account, this one included, before the answer.
+    for (const { socket } of this.sockets()) this.send(socket, { t: 'prefs', prefs: [view] });
+    this.send(ws, { t: 'done', ref, conv });
+  }
+
+  /**
+   * `{t:'hide', ref, conv, keys}`: messages this account deleted for itself.
+   * Nothing leaves this mailbox: the account's other devices are told (an
+   * event, only when it has others), and the other person keeps theirs.
+   */
+  private async onHide(ws: WebSocket, a: Attachment, msg: Record<string, unknown>) {
+    const ref = typeof msg.ref === 'string' && refPattern.test(msg.ref) ? msg.ref : null;
+    if (!ref) return this.strike(ws, a, 'invalid_message');
+    const conv = typeof msg.conv === 'string' && conversationPattern.test(msg.conv) ? msg.conv : null;
+    const keys = Array.isArray(msg.keys) ? msg.keys : null;
+    if (!conv || !keys || keys.length === 0 || keys.length > maxHideKeys
+        || !keys.every((key) => typeof key === 'string' && messageKeyPattern.test(key))) {
+      return this.send(ws, { t: 'failed', ref, code: 'invalid' });
+    }
+    const others = this.liveDevices().some((device) => device.session_id !== a.sessionId);
+    if (others) {
+      await this.append(a.userId, { kind: 'hide', conv, keys: [...new Set(keys as string[])], at: Date.now() });
+    }
+    this.send(ws, { t: 'done', ref, conv });
+  }
+
+  /**
+   * `{t:'unsend', ref, to, id}`: this account unsends its own message [id] to
+   * [to]. The friend's mailbox drops it if it still waits and tells their
+   * devices, which apply it to this account's messages only. Allowed after a
+   * friendship ends, never across a block.
+   */
+  private async onUnsend(ws: WebSocket, a: Attachment, msg: Record<string, unknown>) {
+    const ref = typeof msg.ref === 'string' && refPattern.test(msg.ref) ? msg.ref : null;
+    if (!ref) return this.strike(ws, a, 'invalid_message');
+    const fail = (code: string) => this.send(ws, { t: 'failed', ref, code });
+    const id = typeof msg.id === 'string' && messageIdPattern.test(msg.id) ? msg.id : null;
+    const to = typeof msg.to === 'string' ? msg.to.replace(/^@/, '') : '';
+    if (!id || !handlePattern.test(to)) return fail('not_friends');
+    let row: { id: string; blocked: number } | null;
+    try {
+      row = await this.env.DB.prepare(
+        `SELECT t.user_id AS id,
+                EXISTS (SELECT 1 FROM blocks
+                         WHERE (blocker_id = ?1 AND blocked_id = t.user_id) OR (blocker_id = t.user_id AND blocked_id = ?1)) AS blocked
+           FROM social_profiles t WHERE t.handle_key = ?2`,
+      ).bind(a.userId, to.toLowerCase()).first();
+    } catch (error) {
+      log('warn', 'messages.lookup_failed', { message: String(error).slice(0, 200) });
+      return fail('unavailable');
+    }
+    // Unknown and blocked answer the same.
+    if (!row || row.id === a.userId || row.blocked) return fail('not_friends');
+    const conv = await conversationId(a.userId, row.id);
+    const now = Date.now();
+    try {
+      await mailbox(this.env, row.id).retract(a.userId, conv, id, now);
+    } catch (error) {
+      log('warn', 'messages.retract_failed', { message: String(error).slice(0, 200) });
+      return fail('unavailable');
+    }
+    const others = this.liveDevices().some((device) => device.session_id !== a.sessionId);
+    if (others) await this.append(row.id, { kind: 'unsend', conv, id, out: true, at: now });
+    this.send(ws, { t: 'done', ref, conv });
+  }
+
   // ---- Helpers ----
 
   /** Stores an event and pushes it to every device that is caught up. */
@@ -491,6 +710,18 @@ export class Mailbox extends DurableObject<Env> {
     }
     const now = Date.now();
     await this.ctx.storage.setAlarm(Math.max(Math.min(oldest + messageTtlMs, now + day), now + 1000));
+  }
+
+  private prefRow(conv: string): PrefsRow | undefined {
+    return this.sql.exec<PrefsRow>(
+      `SELECT conv, muted, nickname, cleared_at FROM conversation_prefs WHERE conv = ?`, conv,
+    ).toArray()[0];
+  }
+
+  private allPrefs(): ConversationPrefs[] {
+    return this.sql.exec<PrefsRow>(
+      `SELECT conv, muted, nickname, cleared_at FROM conversation_prefs`,
+    ).toArray().map(prefsView);
   }
 
   private cursorOf(sessionId: string): number {

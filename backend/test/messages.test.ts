@@ -431,3 +431,218 @@ describe('Private messages', () => {
     expect(((await without.json()) as Record<string, unknown>).messages).toBeUndefined();
   });
 });
+
+/** Sends a request and waits for its answer (`done` or `failed`). */
+async function ask(device: Device, frame: Record<string, unknown>): Promise<Frame> {
+  const ref = crypto.randomUUID().slice(0, 12);
+  device.send({ ...frame, ref });
+  const deadline = Date.now() + 3000;
+  for (;;) {
+    const found = device.frames.find((f) => (f.t === 'done' || f.t === 'failed') && f.ref === ref);
+    if (found) return found;
+    if (Date.now() > deadline) throw new Error(`no answer for ${ref}; got ${JSON.stringify(device.frames)}`);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+}
+
+const readyPrefs = (device: Device) =>
+  device.frames.find((f) => f.t === 'ready')!.prefs as Record<string, unknown>[];
+
+const pendingCount = async (token: string) => {
+  const summary = await call('/api/v1/social/profile', { token });
+  return ((await summary.json()) as { counts: { messages: number } }).counts.messages;
+};
+
+describe('Per-account conversation settings, deletion and unsending', () => {
+  it('keeps nickname and mute for this account only, on every one of its devices', async () => {
+    const { ana, ben } = await friends();
+    const conv = await conversationId(ana.id, ben.id);
+    const phone = await connect(ana.token);
+    const pc = await connect((await secondDevice(ana)).token);
+
+    expect(await ask(phone, { t: 'pref', conv, nickname: '  Benny​  the\n Ben ', muted: true }))
+      .toMatchObject({ t: 'done', conv });
+    const pushed = await pc.next('prefs');
+    expect(pushed.prefs).toEqual([{ conv, muted: true, nickname: 'Benny the Ben', clearedAt: null }]);
+
+    // A device that connects later (or a new one) gets them on connecting.
+    const tablet = await connect((await secondDevice(ana)).token);
+    expect(readyPrefs(tablet)).toEqual([{ conv, muted: true, nickname: 'Benny the Ben', clearedAt: null }]);
+    // Ben sees none of it.
+    const benDevice = await connect(ben.token);
+    expect(readyPrefs(benDevice)).toEqual([]);
+
+    // Reset: nothing stored any more.
+    expect(await ask(pc, { t: 'pref', conv, nickname: null, muted: false })).toMatchObject({ t: 'done' });
+    const later = await connect(ana.token);
+    expect(readyPrefs(later)).toEqual([]);
+  });
+
+  it('validates nicknames and settings', async () => {
+    const { ana, ben } = await friends();
+    const conv = await conversationId(ana.id, ben.id);
+    const device = await connect(ana.token);
+    expect(await ask(device, { t: 'pref', conv, nickname: '   ' })).toMatchObject({ t: 'failed', code: 'invalid_nickname' });
+    expect(await ask(device, { t: 'pref', conv, nickname: 'x'.repeat(33) }))
+      .toMatchObject({ t: 'failed', code: 'invalid_nickname' });
+    expect(await ask(device, { t: 'pref', conv, nickname: 42 })).toMatchObject({ t: 'failed', code: 'invalid_nickname' });
+    expect(await ask(device, { t: 'pref', conv, muted: 'yes' })).toMatchObject({ t: 'failed', code: 'invalid' });
+    expect(await ask(device, { t: 'pref', conv })).toMatchObject({ t: 'failed', code: 'invalid' });
+    expect(await ask(device, { t: 'pref', conv: '../../etc', muted: true })).toMatchObject({ t: 'failed', code: 'invalid' });
+    expect(await ask(device, { t: 'pref', conv, nickname: 'x'.repeat(32) })).toMatchObject({ t: 'done' });
+    // A request without a ref is a protocol error.
+    device.send({ t: 'pref', conv, muted: true });
+    expect(await device.next('error')).toMatchObject({ code: 'invalid_message' });
+  });
+
+  it('leaves a muted conversation out of alerts and the summary, without stopping delivery', async () => {
+    const { ana, ben } = await friends();
+    const conv = await conversationId(ana.id, ben.id);
+    const benDevice = await connect(ben.token);
+    await benDevice.message(ana.handle, 'Still delivered');
+    expect(await pendingCount(ana.token)).toBe(1);
+
+    const anaDevice = await connect(ana.token);
+    expect(anaDevice.events().map((e) => e.text)).toEqual(['Still delivered']);
+    expect(await ask(anaDevice, { t: 'pref', conv, muted: true })).toMatchObject({ t: 'done' });
+    anaDevice.ws.close(1000, 'closed without saving');
+    expect(await pendingCount(ana.token)).toBe(0);
+    const token = (await (await call('/api/v1/notifications/token', { token: ana.token, body: {} })).json()) as {
+      token: string;
+    };
+    const check = await call('/api/v1/notifications/episodes', { token: token.token, body: { series: [], messages: true } });
+    expect(((await check.json()) as { messages: unknown }).messages).toEqual({ count: 0, from: [] });
+    // Still waiting to be delivered: muting stops alerts, not messages.
+    expect(await stored(ana.id)).toHaveLength(1);
+    const again = await connect(ana.token);
+    expect(again.events().map((e) => e.text)).toEqual(['Still delivered']);
+    expect(await ask(again, { t: 'pref', conv, muted: false })).toMatchObject({ t: 'done' });
+    again.ws.close(1000, 'closed without saving');
+    expect(await pendingCount(ana.token)).toBe(1);
+    // Ben's own alerts are untouched by Ana's choice.
+    expect(readyPrefs(await connect(ben.token))).toEqual([]);
+  });
+
+  it('deletes a conversation for this account only; newer messages still arrive', async () => {
+    const { ana, ben } = await friends();
+    const conv = await conversationId(ana.id, ben.id);
+    const benDevice = await connect(ben.token);
+    await benDevice.message(ana.handle, 'Before');
+    const anaDevice = await connect(ana.token);
+    expect(await ask(anaDevice, { t: 'pref', conv, clear: true })).toMatchObject({ t: 'done', conv });
+    const prefs = (await anaDevice.next('prefs')).prefs as { clearedAt: number }[];
+    expect(prefs[0].clearedAt).toBeGreaterThan(0);
+    anaDevice.ws.close(1000, 'closed without saving');
+    // What came before the deletion is not announced again.
+    expect(await pendingCount(ana.token)).toBe(0);
+
+    // Nothing of Ben's changes: no settings of his, his messages still go.
+    expect(readyPrefs(benDevice)).toEqual([]);
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    expect((await benDevice.message(ana.handle, 'After')).t).toBe('sent');
+    expect(await pendingCount(ana.token)).toBe(1);
+    const back = await connect(ana.token);
+    expect(readyPrefs(back)[0]).toMatchObject({ conv, clearedAt: prefs[0].clearedAt });
+    expect(back.events().map((e) => e.text)).toEqual(['Before', 'After']);
+  });
+
+  it('tells only this account’s other devices about messages deleted for itself', async () => {
+    const { ana, ben } = await friends();
+    const conv = await conversationId(ana.id, ben.id);
+    const phone = await connect(ana.token);
+    expect(await ask(phone, { t: 'hide', conv, keys: ['i:abcdefgh-1234'] })).toMatchObject({ t: 'done' });
+    // No other device: nothing is stored.
+    expect(await stored(ana.id)).toEqual([]);
+
+    const pc = await connect((await secondDevice(ana)).token);
+    expect(await ask(phone, { t: 'hide', conv, keys: ['i:abcdefgh-1234', 'o:ijklmnop-5678'] }))
+      .toMatchObject({ t: 'done' });
+    expect(await pc.next('event', (e) => e.kind === 'hide'))
+      .toMatchObject({ conv, keys: ['i:abcdefgh-1234', 'o:ijklmnop-5678'] });
+    expect(await stored(ben.id)).toEqual([]);
+
+    expect(await ask(phone, { t: 'hide', conv, keys: [] })).toMatchObject({ t: 'failed', code: 'invalid' });
+    expect(await ask(phone, { t: 'hide', conv, keys: ['x:nope-nope'] })).toMatchObject({ t: 'failed', code: 'invalid' });
+    expect(await ask(phone, { t: 'hide', conv: 'short', keys: ['i:abcdefgh-1234'] }))
+      .toMatchObject({ t: 'failed', code: 'invalid' });
+  });
+
+  it('unsends a waiting message before it is delivered, and tells devices that have it', async () => {
+    const { ana, ben } = await friends();
+    const conv = await conversationId(ana.id, ben.id);
+    const anaPhone = await connect(ana.token);
+    const anaPc = await connect((await secondDevice(ana)).token);
+    await anaPhone.message(ben.handle, 'Oops', 'unsend-0001');
+    expect((await stored(ben.id)).map((e) => e.client_id)).toEqual(['unsend-0001']);
+
+    expect(await ask(anaPhone, { t: 'unsend', to: ben.handle, id: 'unsend-0001' })).toMatchObject({ t: 'done', conv });
+    // The text is gone from Ben's mailbox; only the unsend waits.
+    expect(await stored(ben.id)).toEqual([{ kind: 'unsend', client_id: null }]);
+    expect(await pendingCount(ben.token)).toBe(0);
+    // Ana's other device learns of it, as her own message.
+    expect(await anaPc.next('event', (e) => e.kind === 'unsend')).toMatchObject({ conv, id: 'unsend-0001', out: true });
+
+    const benDevice = await connect(ben.token);
+    expect(benDevice.events()).toEqual([
+      expect.objectContaining({ kind: 'unsend', conv, id: 'unsend-0001', out: false }),
+    ]);
+    expect(JSON.stringify(benDevice.frames)).not.toContain('Oops');
+  });
+
+  it('unsends a delivered message on the friend’s devices, and refuses across a block', async () => {
+    const { ana, ben } = await friends();
+    const conv = await conversationId(ana.id, ben.id);
+    const anaDevice = await connect(ana.token);
+    const benDevice = await connect(ben.token);
+    await anaDevice.message(ben.handle, 'Delivered', 'unsend-0002');
+    const event = await benDevice.next('event', (e) => e.id === 'unsend-0002');
+    benDevice.send({ t: 'ack', seq: event.seq });
+    await anaDevice.next('receipt');
+
+    expect(await ask(anaDevice, { t: 'unsend', to: ben.handle, id: 'unsend-0002' })).toMatchObject({ t: 'done' });
+    expect(await benDevice.next('event', (e) => e.kind === 'unsend'))
+      .toMatchObject({ conv, id: 'unsend-0002', out: false });
+
+    // Still possible once the friendship ends, never across a block.
+    await call(`/api/v1/social/friends/${ben.handle}`, { method: 'DELETE', token: ana.token });
+    expect(await ask(anaDevice, { t: 'unsend', to: ben.handle, id: 'unsend-0002' })).toMatchObject({ t: 'done' });
+    const pair = await friends();
+    const blocker = await connect(pair.ana.token);
+    const blocked = await call('/api/v1/social/blocks', { token: pair.ben.token, body: { handle: pair.ana.handle } });
+    expect(blocked.status).toBe(200);
+    expect(await ask(blocker, { t: 'unsend', to: pair.ben.handle, id: 'unsend-0003' }))
+      .toMatchObject({ t: 'failed', code: 'not_friends' });
+    expect(await stored(pair.ben.id)).toEqual([]);
+    expect(await ask(anaDevice, { t: 'unsend', to: 'nobody_here_x', id: 'unsend-0002' }))
+      .toMatchObject({ t: 'failed', code: 'not_friends' });
+    expect(await ask(anaDevice, { t: 'unsend', to: ana.handle, id: 'unsend-0002' }))
+      .toMatchObject({ t: 'failed', code: 'not_friends' });
+  });
+
+  it('cannot reach a friend’s own message: an unsend always names its real sender', async () => {
+    const { ana, ben } = await friends();
+    const anaDevice = await connect(ana.token);
+    const benDevice = await connect(ben.token);
+    await benDevice.message(ana.handle, 'Ben wrote this', 'bens-msg-0001');
+    await anaDevice.next('event', (e) => e.id === 'bens-msg-0001');
+    // Ana names Ben's id: it reaches Ben's devices as about a message from
+    // Ana (incoming there, out: false), never as Ben's outgoing one, and
+    // nothing reaches Ana's mailbox that could touch her copy of his.
+    expect(await ask(anaDevice, { t: 'unsend', to: ben.handle, id: 'bens-msg-0001' })).toMatchObject({ t: 'done' });
+    expect(await benDevice.next('event', (e) => e.kind === 'unsend')).toMatchObject({ id: 'bens-msg-0001', out: false });
+    expect((await stored(ana.id)).filter((e) => e.kind === 'unsend')).toEqual([]);
+  });
+
+  it('forgets the settings when Friends is turned off', async () => {
+    const { ana, ben } = await friends();
+    const conv = await conversationId(ana.id, ben.id);
+    const device = await connect(ana.token);
+    expect(await ask(device, { t: 'pref', conv, muted: true })).toMatchObject({ t: 'done' });
+    const off = await call('/api/v1/social/profile', { method: 'DELETE', token: ana.token });
+    expect(off.status).toBe(200);
+    await device.waitClosed();
+    const left = await runInDurableObject(mailbox(testEnv, ana.id), async (_: Mailbox, state) =>
+      state.storage.sql.exec<{ count: number }>(`SELECT COUNT(*) AS count FROM conversation_prefs`).one());
+    expect(left.count).toBe(0);
+  });
+});

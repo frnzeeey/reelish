@@ -216,6 +216,54 @@ void main() {
       expect((await s.messages(conv)).single.status, message.status);
     });
 
+    test(
+      'reads files written before deleting, unsending and settings',
+      () async {
+        // index.json and a conversation line exactly as the previous version
+        // wrote them: no `prefs`, no `x`.
+        final folder = Directory(
+          '${root.path}${Platform.pathSeparator}messages'
+          '${Platform.pathSeparator}user-1',
+        );
+        await folder.create(recursive: true);
+        final line = jsonEncode({
+          'id': 'm1',
+          'c': conv,
+          'o': false,
+          't': 'From before',
+          'at': 1000,
+          's': 'delivered',
+        });
+        await File(
+          '${folder.path}${Platform.pathSeparator}$conv.jsonl',
+        ).writeAsString('$line\n');
+        await File(
+          '${folder.path}${Platform.pathSeparator}index.json',
+        ).writeAsString(
+          jsonEncode({
+            'v': 1,
+            'conversations': [
+              {
+                'id': conv,
+                'peer': {'handle': 'ana'},
+                'last': jsonDecode(line),
+                'unread': 1,
+              },
+            ],
+            'outbox': <Object>[],
+          }),
+        );
+        final s = store();
+        final index = await s.open('user-1');
+        expect(index.conversations.single.unread, 1);
+        expect(index.prefs, isEmpty);
+        final read = (await s.messages(conv)).single;
+        expect(read.text, 'From before');
+        expect(read.removal, MessageRemoval.none);
+        expect(read.visible, isTrue);
+      },
+    );
+
     test('refuses conversation ids that are not safe file names', () async {
       final s = store();
       await s.open('user-1');
@@ -554,6 +602,320 @@ void main() {
       await settle();
       final second = await controller(userId: 'user-2');
       expect(second.conversations, isEmpty);
+    });
+
+    // ---- Deleting, unsending, nicknames and mute ----
+
+    /// Connects, with the settings the mailbox gives on connecting.
+    Future<FakeSocket> connectedWith(
+      MessagesController messages,
+      List<Map<String, Object?>> prefs,
+    ) async {
+      messages.attach();
+      await settle();
+      final socket = sockets.last;
+      socket.receive({
+        't': 'ready',
+        'serverTime': 1,
+        'limits': {'maxChars': 2000},
+        'prefs': prefs,
+      });
+      socket.receive({'t': 'synced', 'seq': 0});
+      await settle();
+      return socket;
+    }
+
+    /// Answers the last request of type [t] as the mailbox would: the
+    /// settings broadcast first (when given), then `done`, or `failed`.
+    Future<void> answer(
+      FakeSocket socket,
+      String t, {
+      Map<String, Object?>? prefs,
+      String? refused,
+    }) async {
+      await eventually(() => socket.of(t).isNotEmpty);
+      final ref = socket.of(t).last['ref'];
+      if (prefs != null) {
+        socket.receive({
+          't': 'prefs',
+          'prefs': [prefs],
+        });
+      }
+      socket.receive(
+        refused == null
+            ? {'t': 'done', 'ref': ref, 'conv': conv}
+            : {'t': 'failed', 'ref': ref, 'code': refused},
+      );
+    }
+
+    Map<String, Object?> pref({
+      bool muted = false,
+      String? nickname,
+      int? clearedAt,
+    }) => {
+      'conv': conv,
+      'muted': muted,
+      'nickname': nickname,
+      'clearedAt': clearedAt,
+    };
+
+    Future<String> fileText(String userId) async {
+      final file = File(
+        '${root.path}${Platform.pathSeparator}messages'
+        '${Platform.pathSeparator}$userId${Platform.pathSeparator}$conv.jsonl',
+      );
+      return await file.exists() ? file.readAsString() : '';
+    }
+
+    test(
+      'a new device gets the account’s nickname and mute; they survive a '
+      'restart, and a muted conversation stays out of the total unread',
+      () async {
+        final messages = await controller();
+        await connectedWith(messages, [pref(muted: true, nickname: 'Annie')]);
+        final socket = sockets.last;
+        socket.receive(_event(1, 'a1'));
+        await settle();
+        final conversation = messages.conversations.single;
+        // Delivered and counted on the conversation, not in the total.
+        expect(conversation.unread, 1);
+        expect(messages.unread, 0);
+        final shown = messages.displayPeer(conversation);
+        expect(shown.label, 'Annie');
+        expect(shown.handle, 'ana');
+        // The friend's own name is kept, not overwritten.
+        expect(conversation.peer.displayName, 'Ana');
+
+        // Restarted offline: the settings were saved with the list.
+        final again = await controller();
+        expect(again.prefsOf(conv).muted, isTrue);
+        expect(again.prefsOf(conv).nickname, 'Annie');
+        // Reset on another device: the next connection's list wins.
+        await connectedWith(again, []);
+        expect(again.prefsOf(conv).isEmpty, isTrue);
+        expect(again.unread, 1);
+      },
+    );
+
+    test('nickname and mute go to the mailbox, apply its answer, and say why '
+        'when they cannot', () async {
+      final messages = await controller();
+      // Not connected: nothing is changed only here.
+      expect(
+        await messages.setMuted(conv, true),
+        messageActionErrorText('offline'),
+      );
+      final socket = await connectedWith(messages, []);
+
+      final naming = messages.setNickname(conv, '  Big \n  Ana ');
+      await answer(socket, 'pref', prefs: pref(nickname: 'Big Ana'));
+      expect(await naming, isNull);
+      expect(socket.of('pref').last, containsPair('nickname', 'Big Ana'));
+      expect(messages.prefsOf(conv).nickname, 'Big Ana');
+
+      // Empty or too long: refused here, never sent.
+      final sent = socket.of('pref').length;
+      expect(
+        await messages.setNickname(conv, '   '),
+        messageActionErrorText('invalid_nickname'),
+      );
+      expect(
+        await messages.setNickname(conv, 'x' * 33),
+        messageActionErrorText('invalid_nickname'),
+      );
+      expect(socket.of('pref'), hasLength(sent));
+
+      final muting = messages.setMuted(conv, true);
+      await answer(socket, 'pref', refused: 'too_many');
+      expect(await muting, messageActionErrorText('too_many'));
+      expect(messages.isMuted(conv), isFalse);
+
+      // The connection drops before the answer.
+      final lost = messages.setMuted(conv, true);
+      await eventually(() => socket.of('pref').length == sent + 2);
+      await socket.drop();
+      expect(await lost, messageActionErrorText('offline'));
+    });
+
+    test('delete for me: gone here once the mailbox agrees, its text off the '
+        'disk, and a redelivered copy does not bring it back', () async {
+      final messages = await controller();
+      final socket = await connectedWith(messages, []);
+      socket.receive(_event(1, 'a1', text: 'Secret plan'));
+      socket.receive(_event(2, 'a2', text: 'Second'));
+      await settle();
+      final target = messages.messagesOf(conv).first;
+
+      final deleting = messages.deleteForMe(target);
+      await answer(socket, 'hide');
+      expect(await deleting, isNull);
+      expect(socket.of('hide').single['keys'], ['i:a1']);
+      expect(messages.messagesOf(conv).map((m) => m.id), ['a2']);
+      expect(await fileText('user-1'), isNot(contains('Secret plan')));
+      // Was unread: no longer counted.
+      expect(messages.conversations.single.unread, 1);
+
+      // The same message again (an interrupted acknowledgement).
+      socket.receive(_event(1, 'a1', text: 'Secret plan'));
+      await settle();
+      expect(messages.messagesOf(conv).map((m) => m.id), ['a2']);
+      final again = await controller();
+      expect((await again.load(conv)).where((m) => m.visible), hasLength(1));
+    });
+
+    test(
+      'delete for me on another device of the account applies here',
+      () async {
+        final messages = await controller();
+        final socket = await connectedWith(messages, []);
+        socket.receive(_event(1, 'a1'));
+        socket.receive(_event(2, 'a2'));
+        socket.receive({
+          't': 'event',
+          'seq': 3,
+          'kind': 'hide',
+          'conv': conv,
+          'keys': ['i:a2', 'i:unknown-1'],
+          'at': 9000,
+        });
+        await settle();
+        expect(messages.messagesOf(conv).map((m) => m.id), ['a1']);
+        expect(messages.conversations.single.last?.id, 'a1');
+        await eventually(() => socket.of('ack').lastOrNull?['seq'] == 3);
+      },
+    );
+
+    test('unsend: own message shown as unsent on both sides; a friend can only '
+        'unsend their own messages', () async {
+      final messages = await controller();
+      final socket = await connectedWith(messages, []);
+      final conversation = messages.open(
+        const SocialPerson(handle: 'ana', conversation: conv),
+      );
+      await messages.send(conversation, 'Wrong chat, sorry');
+      await eventually(() => socket.of('send').isNotEmpty);
+      final mine = socket.of('send').single['id'] as String;
+      socket.receive({'t': 'sent', 'id': mine, 'conv': conv, 'at': 9000});
+      await settle();
+
+      final unsending = messages.unsend(messages.messagesOf(conv).single);
+      await answer(socket, 'unsend');
+      expect(await unsending, isNull);
+      expect(socket.of('unsend').single, containsPair('to', 'ana'));
+      final unsent = messages.messagesOf(conv).single;
+      expect(unsent.unsent, isTrue);
+      expect(unsent.text, isEmpty);
+      expect(await fileText('user-1'), isNot(contains('Wrong chat')));
+      expect(MessagesController.canUnsend(unsent), isFalse);
+
+      // The friend unsends one of theirs.
+      socket.receive(_event(1, 'b1', text: 'Their oops'));
+      socket.receive({
+        't': 'event',
+        'seq': 2,
+        'kind': 'unsend',
+        'conv': conv,
+        'id': 'b1',
+        'out': false,
+        'at': 9100,
+      });
+      await settle();
+      final theirs = messages.messagesOf(conv).firstWhere((m) => m.id == 'b1');
+      expect(theirs.unsent, isTrue);
+      expect(messages.conversations.single.unread, 0);
+
+      // Naming one of this account's ids from the friend's side cannot
+      // touch it: only their incoming messages match.
+      await messages.send(conversation, 'Keep this');
+      await eventually(() => socket.of('send').length == 2);
+      final keep = socket.of('send').last['id'] as String;
+      socket.receive({
+        't': 'event',
+        'seq': 3,
+        'kind': 'unsend',
+        'conv': conv,
+        'id': keep,
+        'out': false,
+        'at': 9200,
+      });
+      await settle();
+      final kept = messages.messagesOf(conv).firstWhere((m) => m.id == keep);
+      expect(kept.unsent, isFalse);
+      expect(kept.text, 'Keep this');
+
+      // From this account's other device (`out`): it applies.
+      socket.receive({
+        't': 'event',
+        'seq': 4,
+        'kind': 'unsend',
+        'conv': conv,
+        'id': keep,
+        'out': true,
+        'at': 9300,
+      });
+      await settle();
+      expect(
+        messages.messagesOf(conv).firstWhere((m) => m.id == keep).unsent,
+        isTrue,
+      );
+    });
+
+    test('deleting a conversation clears it on this device; older copies stay '
+        'gone and a newer message starts it again', () async {
+      final messages = await controller();
+      final socket = await connectedWith(messages, []);
+      socket.receive(_event(1, 'a1', text: 'Old news'));
+      socket.receive(_event(2, 'a2'));
+      await settle();
+      expect(messages.conversations, hasLength(1));
+
+      final deleting = messages.deleteConversation(conv);
+      await answer(socket, 'pref', prefs: pref(clearedAt: 5002));
+      expect(await deleting, isNull);
+      expect(socket.of('pref').single, containsPair('clear', true));
+      expect(messages.conversations, isEmpty);
+      expect(messages.messagesOf(conv), isEmpty);
+      expect(messages.unread, 0);
+      expect(await fileText('user-1'), isEmpty);
+
+      // A redelivered older message does not come back.
+      socket.receive(_event(1, 'a1', text: 'Old news'));
+      await settle();
+      expect(messages.conversations, isEmpty);
+
+      // A new one starts the conversation again, with only itself.
+      socket.receive(_event(3, 'a3', text: 'Still there?'));
+      await settle();
+      expect(messages.messagesOf(conv).map((m) => m.id), ['a3']);
+      expect(messages.conversations.single.unread, 1);
+
+      // Another device of the account, offline meanwhile, catches up.
+      final other = MessagesController(
+        account: account,
+        api: api,
+        store: MessageStore(directory: () async => root),
+        social: SocialController(account: account, api: api),
+        lifecycle: false,
+      );
+      addTearDown(other.dispose);
+      await other.ensureLoaded();
+      expect(other.messagesOf(conv), isEmpty);
+      expect((await other.load(conv)).map((m) => m.id), ['a3']);
+    });
+
+    test('a device that was offline drops what came before a deletion made on '
+        'another device', () async {
+      final first = await controller();
+      final socket = await connectedWith(first, []);
+      socket.receive(_event(1, 'a1'));
+      socket.receive(_event(2, 'a2'));
+      await settle();
+      first.detach();
+
+      final again = await controller();
+      await connectedWith(again, [pref(clearedAt: 5001)]);
+      expect((await again.load(conv)).map((m) => m.id), ['a2']);
+      expect(again.conversations.single.last?.id, 'a2');
     });
   });
 }

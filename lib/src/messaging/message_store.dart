@@ -23,6 +23,9 @@ import 'message_models.dart';
 typedef MessageIndex = ({
   List<Conversation> conversations,
   List<PendingSend> outbox,
+
+  /// This account's settings per conversation, as Reelish last sent them.
+  Map<String, ConversationPrefs> prefs,
 });
 
 class MessageStore {
@@ -67,12 +70,13 @@ class MessageStore {
       final folder = _folder = await _accountFolder(userId);
       final file = File('${folder.path}${Platform.pathSeparator}index.json');
       if (!await file.exists()) {
-        return (conversations: <Conversation>[], outbox: <PendingSend>[]);
+        return _emptyIndex();
       }
       final decoded = jsonDecode(await file.readAsString());
       if (decoded is! Map) throw const FormatException('index');
       final conversations = decoded['conversations'];
       final outbox = decoded['outbox'];
+      final prefs = decoded['prefs'];
       return (
         conversations: [
           if (conversations is List)
@@ -85,13 +89,28 @@ class MessageStore {
           if (outbox is List)
             for (final entry in outbox) ?PendingSend.fromJson(entry),
         ],
+        prefs: {
+          if (prefs is List)
+            for (final entry in prefs)
+              if (ConversationPrefs.fromJson(entry) case (
+                final id,
+                final pref,
+              ) when conversationIdPattern.hasMatch(id))
+                id: pref,
+        },
       );
     } catch (_) {
       // An unreadable index: start the list again. The conversation files
       // stay, and a conversation opened from Friends reads its history.
-      return (conversations: <Conversation>[], outbox: <PendingSend>[]);
+      return _emptyIndex();
     }
   }
+
+  static MessageIndex _emptyIndex() => (
+    conversations: <Conversation>[],
+    outbox: <PendingSend>[],
+    prefs: <String, ConversationPrefs>{},
+  );
 
   File? _conversationFile(String conversation) {
     final folder = _folder;
@@ -169,11 +188,31 @@ class MessageStore {
     _lines[conversation] = lines;
   });
 
-  /// Saves the conversation list and the outbox.
+  /// Rewrites [conversation] as exactly [all], so the text of a deleted or
+  /// unsent message leaves the disk; an empty one is removed.
+  Future<void> replace(String conversation, List<ChatMessage> all) =>
+      _queue(() async {
+        final file = _conversationFile(conversation);
+        if (file == null) return;
+        if (all.isEmpty) {
+          _lines.remove(conversation);
+          if (await file.exists()) await file.delete();
+          return;
+        }
+        await file.parent.create(recursive: true);
+        await _replace(
+          file,
+          [for (final m in all) jsonEncode(m.toJson())].join('\n'),
+        );
+        _lines[conversation] = all.length;
+      });
+
+  /// Saves the conversation list, the outbox and the settings.
   Future<void> saveIndex(
     List<Conversation> conversations,
-    List<PendingSend> outbox,
-  ) => _queue(() async {
+    List<PendingSend> outbox, {
+    Map<String, ConversationPrefs> prefs = const {},
+  }) => _queue(() async {
     final folder = _folder;
     if (folder == null) return;
     await folder.create(recursive: true);
@@ -183,6 +222,10 @@ class MessageStore {
         'v': _version,
         'conversations': [for (final c in conversations) c.toJson()],
         'outbox': [for (final p in outbox) p.toJson()],
+        'prefs': [
+          for (final MapEntry(:key, :value) in prefs.entries)
+            if (!value.isEmpty) value.toJson(key),
+        ],
       }),
     );
   });

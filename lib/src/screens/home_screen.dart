@@ -2622,7 +2622,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   ),
                 ),
                 child: Text(
-                  'SPOTLIGHT',
+                  'REELISH SPOTLIGHT',
                   style: TextStyle(
                     color: GlassTheme.coralBright,
                     fontSize: 10,

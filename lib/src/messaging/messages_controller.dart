@@ -90,6 +90,7 @@ class MessagesController extends ChangeNotifier {
     @visibleForTesting this.ackDelay = const Duration(milliseconds: 250),
     @visibleForTesting this.lingerAfterClose = const Duration(seconds: 20),
     @visibleForTesting this.sendSpacing = const Duration(milliseconds: 1100),
+    @visibleForTesting this.requestTimeout = const Duration(seconds: 10),
     this.lifecycle = true,
   }) : _account = account ?? AccountController.instance,
        _api = api ?? AccountApi(baseUrl: BackendConfig.apiUrl),
@@ -115,6 +116,9 @@ class MessagesController extends ChangeNotifier {
   /// Spacing between outbox sends once the quick allowance is used.
   final Duration sendSpacing;
 
+  /// How long a delete, unsend or setting change waits for Reelish.
+  final Duration requestTimeout;
+
   /// Off in tests: no app lifecycle listener.
   final bool lifecycle;
 
@@ -131,8 +135,18 @@ class MessagesController extends ChangeNotifier {
   List<Conversation> _conversations = [];
   List<PendingSend> _outbox = [];
 
-  /// Conversations read from disk, by id.
+  /// This account's settings per conversation (mute, nickname, deleted),
+  /// as Reelish last sent them; kept in the index for offline starts.
+  Map<String, ConversationPrefs> _prefs = {};
+
+  /// Conversations read from disk, by id, with the markers of deleted
+  /// messages ([messagesOf] leaves those out).
   final Map<String, List<ChatMessage>> _histories = {};
+
+  /// Requests waiting for the mailbox's answer, by ref: null when done, or
+  /// the refusal's code.
+  final Map<String, Completer<String?>> _requests = {};
+  int _nextRef = 0;
 
   int _viewers = 0;
   String? _visibleConversation;
@@ -172,9 +186,32 @@ class MessagesController extends ChangeNotifier {
         ]
       : const [];
 
-  /// Messages from friends not yet seen on this device.
-  int get unread =>
-      loaded ? _conversations.fold(0, (sum, c) => sum + c.unread) : 0;
+  /// Messages from friends not yet seen on this device, muted
+  /// conversations aside (each still shows its own count).
+  int get unread => loaded
+      ? _conversations.fold(0, (sum, c) => isMuted(c.id) ? sum : sum + c.unread)
+      : 0;
+
+  /// This account's settings for [conversation].
+  ConversationPrefs prefsOf(String conversation) =>
+      _prefs[conversation] ?? ConversationPrefs.none;
+
+  bool isMuted(String conversation) => prefsOf(conversation).muted;
+
+  /// The friend as this account sees them here: their nickname, if one is
+  /// set, in place of their name. Their handle always stays as it is, so a
+  /// nickname cannot pass for someone else.
+  SocialPerson displayPeer(Conversation conversation) {
+    final nickname = prefsOf(conversation.id).nickname;
+    final peer = conversation.peer;
+    if (nickname == null) return peer;
+    return SocialPerson(
+      handle: peer.handle,
+      displayName: nickname,
+      avatar: peer.avatar,
+      conversation: peer.conversation,
+    );
+  }
 
   Conversation? conversation(String id) {
     for (final c in _conversations) {
@@ -183,9 +220,18 @@ class MessagesController extends ChangeNotifier {
     return null;
   }
 
-  /// The messages of [conversation] read so far; [load] reads them.
-  List<ChatMessage> messagesOf(String conversation) =>
-      _histories[conversation] ?? const [];
+  /// The messages of [conversation] read so far, unsent ones included and
+  /// those deleted here left out; [load] reads them.
+  List<ChatMessage> messagesOf(String conversation) => [
+    for (final m in _histories[conversation] ?? const <ChatMessage>[])
+      if (m.visible) m,
+  ];
+
+  /// [conversation]'s own message [id] (sent by this account), if read.
+  ChatMessage? _outgoing(String conversation, String id) =>
+      (_histories[conversation] ?? const <ChatMessage>[])
+          .where((m) => m.outgoing && m.id == id)
+          .firstOrNull;
 
   bool hasHistory(String conversation) => _histories.containsKey(conversation);
 
@@ -219,12 +265,14 @@ class MessagesController extends ChangeNotifier {
     _loaded = false;
     _conversations = [];
     _outbox = [];
+    _prefs = {};
     _histories.clear();
     _savedSeq = _ackedSeq = 0;
     final index = await _store.open(userId);
     if (_userId != userId) return;
     _conversations = index.conversations..sort(_newestFirst);
     _outbox = index.outbox;
+    _prefs = {...index.prefs};
     // The outbox sends text kept in its conversations: read those now.
     for (final conversation in {for (final p in _outbox) p.conversation}) {
       final read = await _store.messages(conversation);
@@ -254,6 +302,7 @@ class MessagesController extends ChangeNotifier {
     _loaded = false;
     _conversations = [];
     _outbox = [];
+    _prefs = {};
     _histories.clear();
     _setConnection(MessagesConnection.idle);
     if (userId != null) unawaited(ensureLoaded());
@@ -265,9 +314,15 @@ class MessagesController extends ChangeNotifier {
     final known = _histories[conversation];
     if (known != null) return known;
     final read = await _store.messages(conversation);
-    // Something may have arrived while reading: merged in.
+    // Something may have arrived while reading: merged in. Anything from
+    // before the conversation was deleted here stays gone, even if the app
+    // stopped before its file was rewritten.
     final arrived = _histories[conversation] ?? const <ChatMessage>[];
-    final byKey = {for (final m in read) m.key: m};
+    final cleared = prefsOf(conversation).clearedAt;
+    final byKey = {
+      for (final m in read)
+        if (cleared == null || m.at.isAfter(cleared)) m.key: m,
+    };
     for (final m in arrived) {
       byKey[m.key] = m;
     }
@@ -287,6 +342,7 @@ class MessagesController extends ChangeNotifier {
     _disconnect();
     _conversations = [];
     _outbox = [];
+    _prefs = {};
     _histories.clear();
     _savedSeq = _ackedSeq = 0;
     notifyListeners();
@@ -483,10 +539,10 @@ class MessagesController extends ChangeNotifier {
   }
 
   String? _textOf(PendingSend pending) {
-    for (final m in messagesOf(pending.conversation)) {
-      if (m.outgoing && m.id == pending.id) return m.text;
-    }
-    return null;
+    final message = _outgoing(pending.conversation, pending.id);
+    return message == null || message.removal != MessageRemoval.none
+        ? null
+        : message.text;
   }
 
   bool _takeToken() {
@@ -601,6 +657,13 @@ class MessagesController extends ChangeNotifier {
     _socket = null;
     _ready = false;
     _inFlight.clear();
+    // Unanswered requests: the mailbox may or may not have them. Each one
+    // can be asked again safely (a setting is the same, a delete repeats).
+    final waiting = [..._requests.values];
+    _requests.clear();
+    for (final request in waiting) {
+      if (!request.isCompleted) request.complete('offline');
+    }
     _outboxTimer?.cancel();
     unawaited(_subscription?.cancel());
     _subscription = null;
@@ -672,7 +735,22 @@ class MessagesController extends ChangeNotifier {
         final limits = frame['limits'];
         final chars = limits is Map ? limits['maxChars'] : null;
         if (chars is int && chars > 0) _maxChars = chars;
+        // Every setting this account has: what is not listed is unset.
+        if (frame['prefs'] case final List prefs) {
+          await _applyPrefs(prefs, complete: true);
+        }
         _pumpOutbox();
+      case 'prefs':
+        if (frame['prefs'] case final List prefs) await _applyPrefs(prefs);
+      case 'done' || 'failed':
+        final ref = frame['ref'];
+        final request = ref is String ? _requests.remove(ref) : null;
+        if (request != null && !request.isCompleted) {
+          final code = frame['code'];
+          request.complete(
+            frame['t'] == 'done' ? null : (code is String ? code : 'failed'),
+          );
+        }
       case 'synced':
         _setConnection(MessagesConnection.online);
         // What waited in the mailbox is on this device now.
@@ -696,6 +774,10 @@ class MessagesController extends ChangeNotifier {
         await _onMessage(frame);
       case 'receipt':
         await _onReceipt(frame, deferIndex: true);
+      case 'hide':
+        await _onHideEvent(frame);
+      case 'unsend':
+        await _onUnsendEvent(frame);
     }
     // Saved: may be acknowledged.
     if (seq > _savedSeq) _savedSeq = seq;
@@ -735,6 +817,9 @@ class MessagesController extends ChangeNotifier {
         peer == null) {
       return;
     }
+    // From before this account deleted the conversation: not brought back.
+    final cleared = prefsOf(conv).clearedAt;
+    if (cleared != null && at <= cleared.millisecondsSinceEpoch) return;
     final outgoing = frame['out'] == true;
     final message = ChatMessage(
       id: id,
@@ -802,9 +887,7 @@ class MessagesController extends ChangeNotifier {
     if (id is! String) return;
     final pending = _outbox.where((p) => p.id == id).firstOrNull;
     if (pending == null) return;
-    final message = messagesOf(
-      pending.conversation,
-    ).where((m) => m.outgoing && m.id == id).firstOrNull;
+    final message = _outgoing(pending.conversation, id);
     await _settle(
       id,
       message == null || message.status == MessageStatus.delivered
@@ -830,9 +913,7 @@ class MessagesController extends ChangeNotifier {
       _outboxTimer = Timer(const Duration(seconds: 15), _pumpOutbox);
       return;
     }
-    final message = messagesOf(
-      pending.conversation,
-    ).where((m) => m.outgoing && m.id == id).firstOrNull;
+    final message = _outgoing(pending.conversation, id);
     await _settle(
       id,
       message?.copyWith(
@@ -866,7 +947,7 @@ class MessagesController extends ChangeNotifier {
     _histories[conv] = history;
 
     final existing = conversation(conv);
-    final last = history.isEmpty ? null : history.last;
+    final last = _lastVisible(history);
     final updated =
         (existing ??
                 Conversation(
@@ -876,6 +957,7 @@ class MessagesController extends ChangeNotifier {
             .copyWith(
               peer: peer,
               last: last,
+              clearLast: last == null,
               unread: (existing?.unread ?? 0) + unreadDelta,
             );
     _conversations = [
@@ -898,12 +980,281 @@ class MessagesController extends ChangeNotifier {
     }
   }
 
+  static ChatMessage? _lastVisible(List<ChatMessage> history) =>
+      history.reversed.where((m) => m.visible).firstOrNull;
+
+  // ---- Deleting, unsending and this account's settings ----
+  //
+  // None of these delete anything of the friend's. A conversation deleted
+  // here, a message deleted for this account, a nickname and a mute live in
+  // this account's own mailbox (backend/src/messaging/mailbox.ts), which
+  // passes them to its other devices. Only an unsend reaches the friend, and
+  // their devices apply it to this account's own messages only. Each needs
+  // the connection, so every device of the account ends up the same.
+
+  /// Whether this account can unsend [message] for both people.
+  static bool canUnsend(ChatMessage message) =>
+      message.outgoing &&
+      message.removal == MessageRemoval.none &&
+      (message.status == MessageStatus.sent ||
+          message.status == MessageStatus.delivered);
+
+  /// Mutes or unmutes [conversation] for this account: no alerts for it on
+  /// any of its devices. Returns an error to show, or null.
+  Future<String?> setMuted(String conversation, bool muted) async => _errorFor(
+    await _request({'t': 'pref', 'conv': conversation, 'muted': muted}),
+  );
+
+  /// Sets what this account calls the friend in [conversation], or goes
+  /// back to their own name when [nickname] is null. Only this account sees
+  /// it; the friend's profile is untouched. Returns an error, or null.
+  Future<String?> setNickname(String conversation, String? nickname) async {
+    String? clean;
+    if (nickname != null) {
+      clean = cleanNickname(nickname);
+      if (clean == null) return messageActionErrorText('invalid_nickname');
+    }
+    return _errorFor(
+      await _request({'t': 'pref', 'conv': conversation, 'nickname': clean}),
+    );
+  }
+
+  /// Deletes [conversation] for this account, on all of its devices. The
+  /// friend keeps theirs; a later message starts it again. Returns an
+  /// error, or null.
+  Future<String?> deleteConversation(String conversation) async => _errorFor(
+    await _request({'t': 'pref', 'conv': conversation, 'clear': true}),
+  );
+
+  /// Deletes [message] for this account, on all of its devices; the friend
+  /// keeps it. Returns an error, or null.
+  Future<String?> deleteForMe(ChatMessage message) async {
+    if (message.status == MessageStatus.sending) {
+      return 'Wait until it is sent, then delete it.';
+    }
+    final error = _errorFor(
+      await _request({
+        't': 'hide',
+        'conv': message.conversation,
+        'keys': [message.key],
+      }),
+    );
+    if (error != null) return error;
+    await _remove(message.conversation, {message.key}, MessageRemoval.deleted);
+    return null;
+  }
+
+  /// Unsends this account's [message] for both people: it shows as unsent
+  /// on every device. Returns an error, or null.
+  Future<String?> unsend(ChatMessage message) async {
+    final peer = conversation(message.conversation)?.peer;
+    if (!canUnsend(message) || peer == null) {
+      return messageActionErrorText('not_friends');
+    }
+    final error = _errorFor(
+      await _request({'t': 'unsend', 'to': peer.handle, 'id': message.id}),
+    );
+    if (error != null) return error;
+    await _remove(message.conversation, {message.key}, MessageRemoval.unsent);
+    return null;
+  }
+
+  static String? _errorFor(String? code) =>
+      code == null ? null : messageActionErrorText(code);
+
+  /// Sends [frame] with a ref and waits for its answer: null when done, or
+  /// the code it was refused with (`offline` without a connection).
+  Future<String?> _request(Map<String, Object?> frame) async {
+    if (!_ready || _socket == null) return 'offline';
+    final ref = 'r${++_nextRef}';
+    final completer = Completer<String?>();
+    _requests[ref] = completer;
+    _sendJson({...frame, 'ref': ref});
+    try {
+      return await completer.future.timeout(requestTimeout);
+    } on TimeoutException {
+      return 'unavailable';
+    } finally {
+      _requests.remove(ref);
+    }
+  }
+
+  /// Settings from the mailbox: all of them when [complete] (on connecting),
+  /// otherwise the ones that changed. A newer deletion drops the messages
+  /// before it from this device.
+  Future<void> _applyPrefs(List<dynamic> raw, {bool complete = false}) async {
+    final next = complete ? <String, ConversationPrefs>{} : {..._prefs};
+    for (final entry in raw) {
+      final parsed = ConversationPrefs.fromServer(entry);
+      if (parsed == null || !conversationIdPattern.hasMatch(parsed.$1)) {
+        continue;
+      }
+      final (id, pref) = parsed;
+      if (pref.isEmpty) {
+        next.remove(id);
+      } else {
+        next[id] = pref;
+      }
+    }
+    final cleared = <String, DateTime>{
+      for (final MapEntry(:key, :value) in next.entries)
+        if (value.clearedAt case final at?
+            when _prefs[key]?.clearedAt == null ||
+                at.isAfter(_prefs[key]!.clearedAt!))
+          key: at,
+    };
+    if (cleared.isEmpty && _samePrefs(next, _prefs)) return;
+    _prefs = next;
+    notifyListeners();
+    for (final MapEntry(:key, :value) in cleared.entries) {
+      await _clearLocal(key, value);
+    }
+    await _saveIndex();
+  }
+
+  static bool _samePrefs(
+    Map<String, ConversationPrefs> a,
+    Map<String, ConversationPrefs> b,
+  ) {
+    if (a.length != b.length) return false;
+    for (final MapEntry(:key, :value) in a.entries) {
+      final other = b[key];
+      if (other == null ||
+          jsonEncode(other.toJson(key)) != jsonEncode(value.toJson(key))) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /// [conversation] was deleted for this account at [at]: every message up
+  /// to then goes from this device, its file included.
+  Future<void> _clearLocal(String conversation, DateTime at) async {
+    final history = await load(conversation);
+    final kept = [
+      for (final m in history)
+        if (m.at.isAfter(at)) m,
+    ];
+    final gone = {
+      for (final m in history)
+        if (m.outgoing && !m.at.isAfter(at)) m.id,
+    };
+    _outbox = [
+      for (final p in _outbox)
+        if (p.conversation != conversation || !gone.contains(p.id)) p,
+    ];
+    _histories[conversation] = kept;
+    final index = _conversations.indexWhere((c) => c.id == conversation);
+    if (index >= 0) {
+      final last = _lastVisible(kept);
+      final incoming = kept.where((m) => !m.outgoing && m.visible).length;
+      _conversations[index] = _conversations[index].copyWith(
+        last: last,
+        clearLast: last == null,
+        unread: min(_conversations[index].unread, incoming),
+      );
+      _conversations.sort(_newestFirst);
+    }
+    notifyListeners();
+    await _store.replace(conversation, kept);
+  }
+
+  /// Marks [keys] in [conversation] as unsent or deleted here. A message
+  /// already deleted stays deleted; one not on this device is left alone.
+  Future<void> _remove(
+    String conversation,
+    Set<String> keys,
+    MessageRemoval removal,
+  ) async {
+    final history = [...await load(conversation)];
+    final existing = this.conversation(conversation);
+    // The unread ones are the latest messages from the friend.
+    var unread = existing?.unread ?? 0;
+    if (unread > 0) {
+      final incoming = [
+        for (final m in history)
+          if (!m.outgoing && m.removal == MessageRemoval.none) m.key,
+      ];
+      final unreadKeys = incoming.skip(max(0, incoming.length - unread));
+      unread -= unreadKeys.where(keys.contains).length;
+    }
+    var changed = false;
+    for (var i = 0; i < history.length; i++) {
+      final m = history[i];
+      if (!keys.contains(m.key) ||
+          m.removal == MessageRemoval.deleted ||
+          m.removal == removal) {
+        continue;
+      }
+      history[i] = m.removed(removal);
+      changed = true;
+    }
+    if (!changed) return;
+    final ids = {
+      for (final key in keys)
+        if (key.startsWith('o:')) key.substring(2),
+    };
+    _outbox = [
+      for (final p in _outbox)
+        if (p.conversation != conversation || !ids.contains(p.id)) p,
+    ];
+    _histories[conversation] = history;
+    if (existing != null) {
+      final last = _lastVisible(history);
+      _conversations[_conversations.indexOf(existing)] = existing.copyWith(
+        last: last,
+        clearLast: last == null,
+        unread: max(0, unread),
+      );
+      _conversations.sort(_newestFirst);
+    }
+    notifyListeners();
+    // Rewritten, not appended to: the text leaves the disk now.
+    await _store.replace(conversation, history);
+    await _saveIndex();
+  }
+
+  /// Messages this account deleted for itself on another of its devices.
+  /// Only this account's own mailbox sends these.
+  Future<void> _onHideEvent(Map<String, dynamic> frame) async {
+    final conv = frame['conv'];
+    final keys = frame['keys'];
+    if (conv is! String ||
+        !conversationIdPattern.hasMatch(conv) ||
+        keys is! List) {
+      return;
+    }
+    final valid = {
+      for (final key in keys)
+        if (key is String && RegExp(r'^[io]:').hasMatch(key)) key,
+    };
+    if (valid.isNotEmpty) await _remove(conv, valid, MessageRemoval.deleted);
+  }
+
+  /// A message unsent by its sender. From the friend (`out` false) it can
+  /// only name one of their own messages to this account: the server sets
+  /// the conversation from the real sender, and only incoming messages
+  /// match. With `out`, this account unsent it on another device.
+  Future<void> _onUnsendEvent(Map<String, dynamic> frame) async {
+    final conv = frame['conv'];
+    final id = frame['id'];
+    if (conv is! String ||
+        !conversationIdPattern.hasMatch(conv) ||
+        id is! String) {
+      return;
+    }
+    final key = '${frame['out'] == true ? 'o' : 'i'}:$id';
+    await _remove(conv, {key}, MessageRemoval.unsent);
+  }
+
   /// The conversation list changed since it was last written.
   bool _indexDirty = false;
 
   Future<void> _saveIndex() {
     _indexDirty = false;
-    return _store.saveIndex(_conversations, _outbox).catchError((Object _) {
+    return _store.saveIndex(_conversations, _outbox, prefs: _prefs).catchError((
+      Object _,
+    ) {
       _indexDirty = true;
     });
   }

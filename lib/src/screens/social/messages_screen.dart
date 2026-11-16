@@ -2,10 +2,16 @@
 // Opened from Friends (and a friend's page) on phone, TV and Windows. The
 // composer is a text field with a mouse or touch; on TV, Select opens the
 // remote-friendly text dialog. Messages live on this device
-// (MessagesController); docs/messaging/README.md.
+// (MessagesController); docs/messaging/README.md. A message's actions (Copy,
+// Unsend, Delete for you): long press on a phone opens a sheet, right click
+// on Windows adds them to the text's menu, Select on TV opens a dialog (a
+// failed message retries, as before). Nickname, mute and deleting a
+// conversation are in ConversationOptionsScreen.
 import 'dart:async';
+import 'dart:math' show max, min;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show RenderAbstractViewport;
 import 'package:flutter/services.dart';
 
 import '../../messaging/message_models.dart';
@@ -79,6 +85,7 @@ class MessagesScreen extends StatefulWidget {
     this.messages,
     this.onBack,
     required this.openChat,
+    this.openOptions,
   });
 
   /// [MessagesController.instance] when null.
@@ -87,6 +94,9 @@ class MessagesScreen extends StatefulWidget {
 
   /// Opens a conversation (the caller pushes [ChatScreen]).
   final void Function(Conversation conversation) openChat;
+
+  /// Opens a conversation's options (long press or right click on it).
+  final void Function(Conversation conversation)? openOptions;
 
   @override
   State<MessagesScreen> createState() => _MessagesScreenState();
@@ -130,7 +140,11 @@ class _MessagesScreenState extends State<MessagesScreen>
                 for (final conversation in conversations)
                   ConversationTile(
                     conversation: conversation,
+                    messages: messages,
                     onTap: () => widget.openChat(conversation),
+                    onOptions: widget.openOptions == null
+                        ? null
+                        : () => widget.openOptions!(conversation),
                   ),
               ],
             ),
@@ -141,46 +155,91 @@ class _MessagesScreenState extends State<MessagesScreen>
   );
 }
 
-/// A conversation in a list: the friend, the last message and when.
+/// What a conversation list shows of [last].
+String messagePreview(ChatMessage last) {
+  if (last.unsent) {
+    return last.outgoing ? 'You unsent a message' : 'Message unsent';
+  }
+  return '${last.outgoing ? 'You: ' : ''}'
+      '${last.text.replaceAll(RegExp(r'\s+'), ' ')}';
+}
+
+/// A conversation in a list: the friend (by the nickname this account gave
+/// them, if any), the last message and when, and whether it is muted.
 class ConversationTile extends StatelessWidget {
   const ConversationTile({
     super.key,
     required this.conversation,
     required this.onTap,
+    this.messages,
+    this.onOptions,
   });
 
   final Conversation conversation;
   final VoidCallback onTap;
 
+  /// [MessagesController.instance] when null.
+  final MessagesController? messages;
+
+  /// Long press or right click: the conversation's options.
+  final VoidCallback? onOptions;
+
   @override
   Widget build(BuildContext context) {
+    final controller = messages ?? MessagesController.instance;
+    final person = controller.displayPeer(conversation);
+    final muted = controller.isMuted(conversation.id);
     final last = conversation.last;
-    final preview = last == null
-        ? null
-        : '${last.outgoing ? 'You: ' : ''}'
-              '${last.text.replaceAll(RegExp(r'\s+'), ' ')}';
+    final preview = last == null ? null : messagePreview(last);
     final unread = conversation.unread;
+    Widget tile = PersonTile(
+      person: person,
+      subtitle: [?preview, if (last != null) messageTime(last.at)].join(' · '),
+      onTap: onTap,
+      trailing: muted || unread > 0
+          ? Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (muted)
+                  ExcludeSemantics(
+                    child: Icon(
+                      ReelishIcons.volumeOff,
+                      size: 18,
+                      color: GlassTheme.muted,
+                    ),
+                  ),
+                if (muted && unread > 0) const SizedBox(width: 6),
+                if (unread > 0) _UnreadBadge(unread, muted: muted),
+              ],
+            )
+          : null,
+    );
+    if (onOptions != null && !DeviceCapabilities.isTv) {
+      tile = GestureDetector(
+        onLongPress: onOptions,
+        onSecondaryTap: onOptions,
+        child: tile,
+      );
+    }
     return Semantics(
-      label: unread > 0
-          ? '${conversation.peer.label}, $unread unread'
-          : conversation.peer.label,
-      child: PersonTile(
-        person: conversation.peer,
-        subtitle: [
-          ?preview,
-          if (last != null) messageTime(last.at),
-        ].join(' · '),
-        onTap: onTap,
-        trailing: unread > 0 ? _UnreadBadge(unread) : null,
-      ),
+      label: [
+        person.label,
+        if (unread > 0) '$unread unread',
+        if (muted) 'muted',
+      ].join(', '),
+      onLongPressHint: onOptions == null ? null : 'Conversation options',
+      child: tile,
     );
   }
 }
 
 class _UnreadBadge extends StatelessWidget {
-  const _UnreadBadge(this.count);
+  const _UnreadBadge(this.count, {this.muted = false});
 
   final int count;
+
+  /// Quieter in a muted conversation.
+  final bool muted;
 
   @override
   Widget build(BuildContext context) => ExcludeSemantics(
@@ -188,7 +247,7 @@ class _UnreadBadge extends StatelessWidget {
       constraints: const BoxConstraints(minWidth: 22),
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       decoration: BoxDecoration(
-        color: GlassTheme.primary,
+        color: muted ? GlassTheme.muted : GlassTheme.primary,
         borderRadius: BorderRadius.circular(AppRadius.pill),
       ),
       child: Text(
@@ -269,6 +328,7 @@ class ChatScreen extends StatefulWidget {
     this.messages,
     this.onBack,
     this.onOpenFriend,
+    this.onOpenOptions,
   });
 
   final Conversation conversation;
@@ -279,6 +339,9 @@ class ChatScreen extends StatefulWidget {
 
   /// Opens the friend's page (block, report, remove).
   final VoidCallback? onOpenFriend;
+
+  /// Opens this conversation's options (nickname, mute, delete).
+  final VoidCallback? onOpenOptions;
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -368,10 +431,214 @@ class _ChatScreenState extends State<ChatScreen> with _Attached<ChatScreen> {
 
   Future<void> _sendDraft() => _send(_draft.text);
 
+  /// Messages being deleted or unsent: dimmed until Reelish answers.
+  final Set<String> _working = {};
+
+  void _show(String text) => ScaffoldMessenger.maybeOf(context)
+    ?..hideCurrentSnackBar()
+    ..showSnackBar(SnackBar(content: Text(text)));
+
+  String get _peerLabel {
+    final conversation = messages.conversation(_id) ?? widget.conversation;
+    return messages.displayPeer(conversation).label;
+  }
+
+  Future<void> _act(
+    ChatMessage message,
+    Future<String?> Function() action,
+    String done,
+  ) async {
+    if (!_working.add(message.key)) return;
+    setState(() {});
+    final error = await action();
+    if (!mounted) return;
+    setState(() => _working.remove(message.key));
+    _show(error ?? done);
+  }
+
+  /// Deletes [message] from this account's devices; the friend keeps it.
+  Future<void> _deleteForMe(ChatMessage message) async {
+    final peer = _peerLabel;
+    final confirmed = await confirmSocial(
+      context,
+      title: 'Delete for you?',
+      message: MessagesController.canUnsend(message)
+          ? 'It is deleted from all your devices. $peer still has it. To '
+                'remove it for both of you, choose Unsend instead.'
+          : 'It is deleted from all your devices. $peer still has their '
+                'copy.',
+      action: 'Delete',
+      destructive: true,
+    );
+    if (!confirmed || !mounted) return;
+    await _act(message, () => messages.deleteForMe(message), 'Deleted for you');
+  }
+
+  /// Unsends [message] for both people.
+  Future<void> _unsend(ChatMessage message) async {
+    final peer = _peerLabel;
+    final confirmed = await confirmSocial(
+      context,
+      title: 'Unsend for everyone?',
+      message:
+          'It is removed for you and $peer, on all devices, and shows as '
+          'unsent. $peer may have read it already.',
+      action: 'Unsend',
+      destructive: true,
+    );
+    if (!confirmed || !mounted) return;
+    await _act(message, () => messages.unsend(message), 'Message unsent');
+  }
+
+  /// What can be done with [message]: a sheet on a phone (long press), a
+  /// dialog on TV (Select). Windows uses the text's right-click menu.
+  Future<void> _showActions(ChatMessage message) async {
+    final actions = <(String, String, IconData)>[
+      if (!message.unsent) ('copy', 'Copy text', ReelishIcons.copy),
+      if (MessagesController.canUnsend(message))
+        ('unsend', 'Unsend for everyone', ReelishIcons.restore),
+      if (message.status != MessageStatus.sending)
+        ('delete', 'Delete for you', ReelishIcons.trash),
+    ];
+    if (actions.isEmpty) return;
+    final String? choice;
+    if (DeviceCapabilities.isTv) {
+      choice = await showDialog<String>(
+        context: context,
+        builder: (context) => SimpleDialog(
+          title: Text(message.outgoing ? 'Your message' : 'Message'),
+          children: [
+            for (final (id, label, _) in actions)
+              if (id != 'copy')
+                SimpleDialogOption(
+                  onPressed: () => Navigator.pop(context, id),
+                  child: Text(label),
+                ),
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+          ],
+        ),
+      );
+    } else {
+      choice = await showModalBottomSheet<String>(
+        context: context,
+        showDragHandle: true,
+        backgroundColor: GlassTheme.elevatedSurface,
+        builder: (context) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final (id, label, icon) in actions)
+                ListTile(
+                  leading: Icon(
+                    icon,
+                    color: id == 'copy'
+                        ? GlassTheme.primary
+                        : GlassTheme.danger,
+                  ),
+                  title: Text(label),
+                  onTap: () => Navigator.pop(context, id),
+                ),
+            ],
+          ),
+        ),
+      );
+    }
+    if (!mounted) return;
+    switch (choice) {
+      case 'copy':
+        await Clipboard.setData(ClipboardData(text: message.text));
+        if (mounted) _show('Copied');
+      case 'unsend':
+        await _unsend(message);
+      case 'delete':
+        await _deleteForMe(message);
+    }
+  }
+
+  /// On TV, Up and Down read every line of a message taller than the screen:
+  /// while part of the focused message lies beyond the screen's edge in the
+  /// direction pressed, the list scrolls through it (at most 70% of a screen
+  /// a press); and focus moving onto such a message lines up the edge it
+  /// came from, not the far one, so its middle is not jumped over. Only keys
+  /// pressed on something in the list reach this: the composer is outside.
+  KeyEventResult _tvReadKey(FocusNode node, KeyEvent event) {
+    if (event is KeyUpEvent) return KeyEventResult.ignored;
+    final down = event.logicalKey == LogicalKeyboardKey.arrowDown;
+    if (!down && event.logicalKey != LogicalKeyboardKey.arrowUp) {
+      return KeyEventResult.ignored;
+    }
+    final focused = FocusManager.instance.primaryFocus;
+    final item = focused?.context?.findRenderObject();
+    if (focused == null || item is! RenderBox || !_scroll.hasClients) {
+      return KeyEventResult.ignored;
+    }
+    final position = _scroll.position;
+    final extent = position.viewportDimension;
+    final viewport = RenderAbstractViewport.maybeOf(item);
+    if (viewport == null) return KeyEventResult.ignored;
+    // Scroll offsets with the item's top at the top of the screen, and its
+    // bottom at the bottom.
+    final atTop = viewport.getOffsetToReveal(item, 0).offset;
+    final atBottom = viewport.getOffsetToReveal(item, 1).offset;
+    if (down ? position.pixels < atBottom - 1 : position.pixels > atTop + 1) {
+      _scrollTo(
+        down
+            ? min(atBottom, position.pixels + extent * .7)
+            : max(atTop, position.pixels - extent * .7),
+      );
+      return KeyEventResult.handled;
+    }
+    if (!focused.focusInDirection(
+      down ? TraversalDirection.down : TraversalDirection.up,
+    )) {
+      // Nothing further this way: TvKeyScroll scrolls the list.
+      return KeyEventResult.ignored;
+    }
+    // The focus manager applies the move in a microtask: look after it.
+    scheduleMicrotask(() {
+      final now = FocusManager.instance.primaryFocus;
+      final next = now?.context?.findRenderObject();
+      if (!mounted ||
+          identical(now, focused) ||
+          next is! RenderBox ||
+          !next.attached ||
+          next.size.height <= extent ||
+          RenderAbstractViewport.maybeOf(next) != viewport) {
+        return;
+      }
+      // Coming up, its end is next to what was just read; coming down, its
+      // start.
+      _scrollTo(viewport.getOffsetToReveal(next, down ? 0 : 1).offset);
+    });
+    return KeyEventResult.handled;
+  }
+
+  void _scrollTo(double offset) {
+    final position = _scroll.position;
+    final target = offset.clamp(
+      position.minScrollExtent,
+      position.maxScrollExtent,
+    );
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _scroll.jumpTo(target);
+    } else {
+      unawaited(
+        _scroll.animateTo(
+          target,
+          duration: const Duration(milliseconds: 260),
+          curve: Curves.easeOutCubic,
+        ),
+      );
+    }
+  }
+
   Future<void> _writeOnTv() async {
     final text = await TvTextEntryDialog.show(
       context,
-      title: 'Message ${widget.conversation.peer.label}',
+      title: 'Message $_peerLabel',
       hint: 'Write a message',
       textInputAction: TextInputAction.send,
     );
@@ -382,7 +649,10 @@ class _ChatScreenState extends State<ChatScreen> with _Attached<ChatScreen> {
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: messages,
     builder: (context, _) {
-      final peer = messages.conversation(_id)?.peer ?? widget.conversation.peer;
+      final peer = messages.displayPeer(
+        messages.conversation(_id) ?? widget.conversation,
+      );
+      final muted = messages.isMuted(_id);
       final all = messages.messagesOf(_id);
       final shown = all.length > _shown
           ? all.sublist(all.length - _shown)
@@ -394,8 +664,10 @@ class _ChatScreenState extends State<ChatScreen> with _Attached<ChatScreen> {
             _ChatHeader(
               peer: peer,
               status: note,
+              muted: muted,
               onBack: widget.onBack,
               onOpenFriend: widget.onOpenFriend,
+              onOpenOptions: widget.onOpenOptions,
             ),
             Expanded(
               child: TvKeyScroll(
@@ -404,41 +676,58 @@ class _ChatScreenState extends State<ChatScreen> with _Attached<ChatScreen> {
                     ? const Center(child: CircularProgressIndicator())
                     : all.isEmpty
                     ? _EmptyChat(peer: peer)
-                    : ListView.builder(
-                        controller: controller,
-                        padding: const EdgeInsets.fromLTRB(
-                          AppSpace.md,
-                          AppSpace.sm,
-                          AppSpace.md,
-                          AppSpace.md,
-                        ),
-                        itemCount: shown.length + (all.length > _shown ? 1 : 0),
-                        itemBuilder: (context, index) {
-                          if (all.length > _shown) {
-                            if (index == 0) {
-                              return Center(
-                                child: TextButton(
-                                  onPressed: () => setState(
-                                    () => _shown += MessagesController.pageSize,
+                    : Focus(
+                        canRequestFocus: false,
+                        skipTraversal: true,
+                        onKeyEvent: DeviceCapabilities.isTv ? _tvReadKey : null,
+                        child: ListView.builder(
+                          controller: controller,
+                          padding: const EdgeInsets.fromLTRB(
+                            AppSpace.md,
+                            AppSpace.sm,
+                            AppSpace.md,
+                            AppSpace.md,
+                          ),
+                          itemCount:
+                              shown.length + (all.length > _shown ? 1 : 0),
+                          itemBuilder: (context, index) {
+                            if (all.length > _shown) {
+                              if (index == 0) {
+                                return Center(
+                                  child: TextButton(
+                                    onPressed: () => setState(
+                                      () =>
+                                          _shown += MessagesController.pageSize,
+                                    ),
+                                    child: const Text('Earlier messages'),
                                   ),
-                                  child: const Text('Earlier messages'),
-                                ),
-                              );
+                                );
+                              }
+                              index -= 1;
                             }
-                            index -= 1;
-                          }
-                          final message = shown[index];
-                          final previous = index > 0 ? shown[index - 1] : null;
-                          return _Bubble(
-                            message: message,
-                            grouped:
-                                previous != null &&
-                                previous.outgoing == message.outgoing &&
-                                message.at.difference(previous.at).inMinutes <
-                                    5,
-                            onRetry: () => unawaited(messages.retry(message)),
-                          );
-                        },
+                            final message = shown[index];
+                            final previous = index > 0
+                                ? shown[index - 1]
+                                : null;
+                            return _Bubble(
+                              message: message,
+                              grouped:
+                                  previous != null &&
+                                  previous.outgoing == message.outgoing &&
+                                  message.at.difference(previous.at).inMinutes <
+                                      5,
+                              working: _working.contains(message.key),
+                              onRetry: () => unawaited(messages.retry(message)),
+                              onDelete: message.status == MessageStatus.sending
+                                  ? null
+                                  : () => unawaited(_deleteForMe(message)),
+                              onUnsend: MessagesController.canUnsend(message)
+                                  ? () => unawaited(_unsend(message))
+                                  : null,
+                              onActions: () => unawaited(_showActions(message)),
+                            );
+                          },
+                        ),
                       ),
               ),
             ),
@@ -460,14 +749,20 @@ class _ChatHeader extends StatelessWidget {
   const _ChatHeader({
     required this.peer,
     required this.status,
+    this.muted = false,
     this.onBack,
     this.onOpenFriend,
+    this.onOpenOptions,
   });
 
+  /// As this account sees them: a nickname replaces their name, never their
+  /// handle, which shows below it.
   final SocialPerson peer;
   final String? status;
+  final bool muted;
   final VoidCallback? onBack;
   final VoidCallback? onOpenFriend;
+  final VoidCallback? onOpenOptions;
 
   @override
   Widget build(BuildContext context) {
@@ -494,7 +789,7 @@ class _ChatHeader extends StatelessWidget {
                 ),
               ),
               Text(
-                status ?? '@${peer.handle}',
+                status ?? ['@${peer.handle}', if (muted) 'Muted'].join(' · '),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -527,6 +822,12 @@ class _ChatHeader extends StatelessWidget {
                 tooltip: 'About ${peer.label}',
                 onPressed: onOpenFriend,
                 icon: Icon(ReelishIcons.info, color: GlassTheme.muted),
+              ),
+            if (onOpenOptions != null)
+              IconButton(
+                tooltip: 'Conversation options',
+                onPressed: onOpenOptions,
+                icon: Icon(ReelishIcons.moreVertical, color: GlassTheme.muted),
               ),
           ],
         ),
@@ -575,6 +876,10 @@ class _Bubble extends StatelessWidget {
     required this.message,
     required this.grouped,
     required this.onRetry,
+    this.working = false,
+    this.onDelete,
+    this.onUnsend,
+    this.onActions,
   });
 
   final ChatMessage message;
@@ -582,6 +887,42 @@ class _Bubble extends StatelessWidget {
   /// Close to the one before, from the same side: less space between.
   final bool grouped;
   final VoidCallback onRetry;
+
+  /// Being deleted or unsent: dimmed until Reelish answers.
+  final bool working;
+
+  /// Delete for this account; null while it is still sending.
+  final VoidCallback? onDelete;
+
+  /// Unsend for both people; null when it cannot be unsent.
+  final VoidCallback? onUnsend;
+
+  /// The message's actions: long press on a phone, Select on TV.
+  final VoidCallback? onActions;
+
+  /// Windows: the text stays selectable, and its right-click menu has the
+  /// usual Copy and Select all, then Unsend and Delete.
+  Widget _menu(BuildContext context, EditableTextState state) {
+    void run(VoidCallback action) {
+      ContextMenuController.removeAny();
+      state.hideToolbar();
+      action();
+    }
+
+    return AdaptiveTextSelectionToolbar.buttonItems(
+      anchors: state.contextMenuAnchors,
+      buttonItems: [
+        ...state.contextMenuButtonItems,
+        if (onUnsend case final unsend?)
+          ContextMenuButtonItem(label: 'Unsend', onPressed: () => run(unsend)),
+        if (onDelete case final delete?)
+          ContextMenuButtonItem(
+            label: 'Delete for you',
+            onPressed: () => run(delete),
+          ),
+      ],
+    );
+  }
 
   String get _statusLabel => switch (message.status) {
     MessageStatus.sending => 'Sending',
@@ -594,29 +935,53 @@ class _Bubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final mine = message.outgoing;
     final failed = message.status == MessageStatus.failed;
+    final unsent = message.unsent;
+    final retryable = failed && message.error != 'not_friends';
+    final phone = !DeviceCapabilities.usesTvLayout;
+    final textStyle = TextStyle(
+      // White on the accent fill; theme text on a surface.
+      color: mine ? Colors.white : GlassTheme.textPrimary,
+      fontSize: AppTextSize.body,
+      height: 1.35,
+    );
     final maxWidth = MediaQuery.sizeOf(context).width * .78;
     final bubble = Container(
       constraints: BoxConstraints(maxWidth: maxWidth.clamp(200, 560)),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: mine ? GlassTheme.primary : GlassTheme.elevatedSurface,
+        // An unsent message keeps its place, as a quiet outline.
+        color: unsent
+            ? Colors.transparent
+            : mine
+            ? GlassTheme.primary
+            : GlassTheme.elevatedSurface,
         borderRadius: BorderRadius.only(
           topLeft: const Radius.circular(18),
           topRight: const Radius.circular(18),
           bottomLeft: Radius.circular(mine ? 18 : 6),
           bottomRight: Radius.circular(mine ? 6 : 18),
         ),
-        border: mine ? null : Border.all(color: GlassTheme.border),
+        border: mine && !unsent ? null : Border.all(color: GlassTheme.border),
       ),
-      child: SelectableText(
-        message.text,
-        style: TextStyle(
-          // White on the accent fill; theme text on a surface.
-          color: mine ? Colors.white : GlassTheme.textPrimary,
-          fontSize: AppTextSize.body,
-          height: 1.35,
-        ),
-      ),
+      child: unsent
+          ? Text(
+              mine ? 'You unsent a message' : 'Message unsent',
+              style: TextStyle(
+                color: GlassTheme.muted,
+                fontSize: AppTextSize.body,
+                fontStyle: FontStyle.italic,
+                height: 1.35,
+              ),
+            )
+          : phone
+          // A phone's long press opens the message's actions (Copy among
+          // them) rather than selecting text.
+          ? Text(message.text, style: textStyle)
+          : SelectableText(
+              message.text,
+              contextMenuBuilder: _menu,
+              style: textStyle,
+            ),
     );
     final meta = Row(
       mainAxisSize: MainAxisSize.min,
@@ -628,7 +993,7 @@ class _Bubble extends StatelessWidget {
             fontSize: AppTextSize.caption,
           ),
         ),
-        if (mine) ...[
+        if (mine && !unsent) ...[
           const SizedBox(width: 4),
           Icon(
             switch (message.status) {
@@ -661,25 +1026,43 @@ class _Bubble extends StatelessWidget {
           : CrossAxisAlignment.start,
       children: [bubble, const SizedBox(height: 3), meta],
     );
-    if (failed && message.error != 'not_friends') {
-      body = DeviceCapabilities.usesTvLayout
-          ? TvFocusable(
-              onSelect: onRetry,
-              focusScale: 1.02,
-              semanticLabel: 'Retry sending',
-              child: body,
-            )
-          : InkWell(
-              onTap: onRetry,
-              borderRadius: BorderRadius.circular(18),
-              child: body,
-            );
+    if (phone) {
+      // Tap retries a failed message, as before; long press: its actions.
+      body = InkWell(
+        onTap: retryable ? onRetry : null,
+        onLongPress: onActions,
+        borderRadius: BorderRadius.circular(18),
+        child: body,
+      );
+    } else if (retryable) {
+      // TV and Windows: Select or a click retries, as before.
+      body = TvFocusable(
+        onSelect: onRetry,
+        focusScale: 1.02,
+        semanticLabel: 'Retry sending',
+        child: body,
+      );
+    } else if (DeviceCapabilities.isTv &&
+        onActions != null &&
+        message.status != MessageStatus.sending) {
+      // The remote cannot long press text: Select offers the actions.
+      body = TvFocusable(
+        onSelect: onActions,
+        focusScale: 1.02,
+        semanticLabel: 'Message options',
+        child: body,
+      );
+    } else if (unsent && onDelete != null && !DeviceCapabilities.isTv) {
+      // Windows: no text to right click; the placeholder offers Delete.
+      body = GestureDetector(onSecondaryTap: onDelete, child: body);
     }
+    if (working) body = Opacity(opacity: .5, child: body);
     return Semantics(
       label: [
         mine ? 'You' : 'Them',
+        if (unsent) 'unsent',
         messageTime(message.at),
-        if (mine) _statusLabel,
+        if (mine && !unsent) _statusLabel,
       ].where((part) => part.isNotEmpty).join(', '),
       child: Padding(
         padding: EdgeInsets.only(top: grouped ? 2 : AppSpace.sm),

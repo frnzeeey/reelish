@@ -508,7 +508,7 @@ class _HeroText extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'SPOTLIGHT',
+          'REELISH SPOTLIGHT',
           style: TextStyle(
             color: GlassTheme.coralBright,
             fontSize: 11,

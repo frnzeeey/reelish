@@ -19,6 +19,7 @@ import '../../widgets/settings/settings_components.dart';
 import '../../widgets/social/social_widgets.dart';
 import '../../messaging/message_models.dart';
 import '../../messaging/messages_controller.dart';
+import 'conversation_options_screen.dart';
 import 'friend_collection_screen.dart';
 import 'friends_privacy_screen.dart';
 import 'messages_screen.dart';
@@ -40,7 +41,8 @@ void openSocialPage(
   ),
 );
 
-/// Opens a conversation; its info button opens the friend's page.
+/// Opens a conversation; its info button opens the friend's page, and its
+/// options button the conversation's options.
 void openChat(
   BuildContext context,
   Conversation conversation, {
@@ -62,6 +64,46 @@ void openChat(
         onBack: back,
       ),
     ),
+    // Deleting the conversation leaves the chat too.
+    onOpenOptions: () => openConversationOptions(
+      context,
+      conversation,
+      messages: messages,
+      afterDelete: back,
+    ),
+  ),
+);
+
+/// A conversation's options (nickname, mute, delete). From a list it also
+/// links to the friend's page.
+void openConversationOptions(
+  BuildContext context,
+  Conversation conversation, {
+  MessagesController? messages,
+  FriendsController? friends,
+  bool withFriendPage = false,
+  VoidCallback? afterDelete,
+}) => openSocialPage(
+  context,
+  (back) => ConversationOptionsScreen(
+    conversation: conversation,
+    messages: messages,
+    onBack: back,
+    onOpenFriend: withFriendPage
+        ? () => openSocialPage(
+            context,
+            (back) => FriendScreen(
+              person: conversation.peer,
+              friends: friends,
+              messages: messages,
+              onBack: back,
+            ),
+          )
+        : null,
+    onDeleted: () {
+      back();
+      afterDelete?.call();
+    },
   ),
 );
 
@@ -77,6 +119,13 @@ void openMessages(
     onBack: back,
     openChat: (conversation) =>
         openChat(context, conversation, messages: messages, friends: friends),
+    openOptions: (conversation) => openConversationOptions(
+      context,
+      conversation,
+      messages: messages,
+      friends: friends,
+      withFriendPage: true,
+    ),
   ),
 );
 
@@ -356,11 +405,19 @@ class _FriendsScreenState extends State<FriendsScreen> {
           for (final conversation in conversations.take(3))
             ConversationTile(
               conversation: conversation,
+              messages: _messages,
               onTap: () => openChat(
                 context,
                 conversation,
                 messages: _messages,
                 friends: _friends,
+              ),
+              onOptions: () => openConversationOptions(
+                context,
+                conversation,
+                messages: _messages,
+                friends: _friends,
+                withFriendPage: true,
               ),
             ),
           SettingsTile(
