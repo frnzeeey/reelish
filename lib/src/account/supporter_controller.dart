@@ -36,6 +36,11 @@ enum SupporterPerk {
   /// colour (lib/src/theme/profile_styles.dart). Only its owner sees the
   /// card, so, like [appThemes], there is nothing for the server to enforce.
   profileStyles,
+
+  /// The Spotlight's exclusive animations (lib/src/spotlight/). Seen only on
+  /// this account's own Home, so, like [appThemes], a cosmetic the server has
+  /// nothing to enforce.
+  spotlightMotion,
 }
 
 /// The Founder's own perks: the Founder Collection's cosmetics, which no

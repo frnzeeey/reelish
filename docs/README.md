@@ -47,6 +47,7 @@ search the generated references below: every file, class and function in
 | [Entitlements](backend/entitlements.md) | Free, Supporter and Founder: one rule for every supporter perk, and how to add one |
 | [Supporters](backend/supporters.md) | The Supporter Badge: Buy Me a Coffee webhooks, supporter codes, reviews, setup |
 | [App themes](features/supporter-themes.md) | Supporter app themes: the accent and profile they set, entitlement, saving, rendering |
+| [Spotlight animations](features/spotlight-animations.md) | The Home Spotlight's six animation presets (two free, four for Supporters): how they move on phone and Windows, the perk, saving, adding one |
 | [App icons](features/app-icons.md) | Launcher icon switching, the free and supporter icons, and their assets |
 | [Launch screen](features/launch-screen.md) | The system and Flutter splash on each platform, and the Founder's Sovereign Crest splash |
 | [Profile card and viewing statistics](features/profile-card.md) | The profile card's backgrounds, colour and effects (free and supporter), and the private viewing statistics |

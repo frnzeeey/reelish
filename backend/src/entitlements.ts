@@ -26,7 +26,8 @@ export type SupporterPerk =
   | 'app_themes'
   | 'app_icons'
   | 'avatar_frames'
-  | 'profile_styles';
+  | 'profile_styles'
+  | 'spotlight_motion';
 
 /**
  * The Founder's own perks: the Founder Collection's cosmetics (a theme, a
@@ -50,6 +51,7 @@ const refusals: Record<SupporterPerk, string> = {
   app_icons: 'The supporter icons are for Reelish Supporters.',
   avatar_frames: 'Avatar frames are for Reelish Supporters.',
   profile_styles: 'Cinematic profile cards are for Reelish Supporters.',
+  spotlight_motion: 'The exclusive Spotlight animations are for Reelish Supporters.',
 };
 
 /** The account's entitlement, read fresh: a refund or a new secret applies at once. */

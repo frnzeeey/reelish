@@ -29,6 +29,9 @@ import '../widgets/tv/tv_focus.dart';
 
 import 'account_settings_screen.dart';
 import 'app_icon_settings_screen.dart';
+import 'spotlight_experience_screen.dart';
+import '../platform/device_capabilities.dart';
+import '../spotlight/spotlight_motion_controller.dart';
 import 'help_support_screen.dart';
 import 'notification_settings_screen.dart';
 import 'recommendation_settings_screen.dart';
@@ -324,6 +327,33 @@ class AppearanceSettingsScreen extends StatelessWidget {
           ],
         ),
       ),
+      // Phone and Windows: TV Home has no Spotlight (its hero follows focus).
+      if (!DeviceCapabilities.isTv)
+        AnimatedBuilder(
+          animation: SpotlightMotionController.instance,
+          builder: (context, _) => SettingsSection(
+            label: 'SPOTLIGHT',
+            children: [
+              SettingsTile(
+                icon: ReelishIcons.sparkle,
+                title: 'Spotlight Experience',
+                description: 'How the Spotlight on Home moves',
+                value: SpotlightMotionController.instance.value.label,
+                onTap: () => Navigator.of(context).push(
+                  AppPageRoute<void>(
+                    context: context,
+                    builder: (context) => Scaffold(
+                      backgroundColor: GlassTheme.background,
+                      body: SpotlightExperienceScreen(
+                        onBack: () => Navigator.of(context).pop(),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       // Android phones and tablets: Windows embeds its icon in the
       // executable, and Android TV shows the banner.
       if (AppIconService.supported)

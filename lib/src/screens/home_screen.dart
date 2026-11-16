@@ -64,7 +64,6 @@ import '../widgets/crash_report_consent_dialog.dart';
 import '../widgets/discovery_prompt_card.dart';
 import '../widgets/app_update_flow.dart';
 import '../widgets/category_chip.dart';
-import '../widgets/top_lit_edge.dart';
 import '../widgets/glass_box.dart';
 import '../widgets/media_card.dart';
 import '../widgets/recommendation_feedback_sheet.dart';
@@ -96,9 +95,13 @@ import 'watch_party/party_launcher.dart';
 import '../watch_party/party_links.dart';
 import '../watch_party/party_models.dart';
 import '../widgets/brand_logo.dart';
-import '../widgets/avatar_frame.dart';
+import '../theme/avatar_frames.dart';
 import '../widgets/profile_avatar.dart';
 import '../widgets/artwork_image.dart';
+import '../widgets/liquid_glass.dart';
+import '../spotlight/spotlight_deck.dart';
+import '../spotlight/spotlight_motion.dart';
+import '../spotlight/spotlight_motion_controller.dart';
 import '../widgets/ambient_backdrop.dart';
 
 /// One independently loaded single-request list (Trending, search). Its
@@ -143,7 +146,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   /// switching pages; made on first use.
   UniversalSearchController? _universalSearchController;
   PlaybackAvailability? _playbackAvailability;
-  final _spotlightController = PageController();
+
+  /// Made again (at the same page) when the Spotlight animation changes how
+  /// wide a card is ([SpotlightMotionStyle.viewportFraction]).
+  late PageController _spotlightController = SpotlightDeck.controllerFor(
+    SpotlightMotion.fallback.style,
+  );
+  final _spotlightMotion = SpotlightMotionController.instance;
   final _homeScrollController = ScrollController();
   final ValueNotifier<int> _spotlightPageValue = ValueNotifier(0);
 
@@ -312,6 +321,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     PartyLinks.pending.addListener(_openPartyLink);
     WidgetsBinding.instance.addPostFrameCallback((_) => _openPartyLink());
     unawaited(PartyLinks.start());
+    _spotlightMotion.addListener(_onSpotlightMotionChanged);
+    unawaited(_spotlightMotion.load());
     _startSpotlightTimer();
     _start();
     unawaited(_loadFavorites());
@@ -371,7 +382,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       }
       _spotlightController.animateToPage(
         _spotlightPage + 1,
-        duration: const Duration(milliseconds: 480),
+        duration: const Duration(milliseconds: 650),
         curve: Curves.easeInOutCubic,
       );
     });
@@ -1460,10 +1471,29 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _spotlightPageValue.value = page;
   }
 
+  /// Another Spotlight animation was chosen (or the perk changed).
+  void _onSpotlightMotionChanged() {
+    if (mounted) setState(() {});
+  }
+
+  /// The controller for [style], made again at the same page when the card
+  /// width changes; the old one is let go after the frame that replaces it.
+  PageController _spotlightControllerFor(SpotlightMotionStyle style) {
+    final current = _spotlightController;
+    if (current.viewportFraction == style.viewportFraction) return current;
+    _spotlightController = SpotlightDeck.controllerFor(
+      style,
+      page: _spotlightPage,
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) => current.dispose());
+    return _spotlightController;
+  }
+
   @override
   void dispose() {
     ProgressSync.revision.removeListener(_onProgressSynced);
     WidgetsBinding.instance.removeObserver(this);
+    _spotlightMotion.removeListener(_onSpotlightMotionChanged);
     _spotlightTimer?.cancel();
     _spotlightController.dispose();
     _homeScrollController.dispose();
@@ -1856,129 +1886,46 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     },
   );
 
-  /// The app icon in the accent colour; it changes with the accent.
-  Widget _brandMark() => ListenableBuilder(
+  /// The top of Home on a phone, in order of importance from the right:
+  /// the profile (your own avatar in an accent ring), Search (the main
+  /// action, at full contrast) and Join a watch party (quieter, sharing
+  /// Search's capsule), with the Reelish mark on the left. Its own row above
+  /// the Spotlight, so it lines up with nothing that moves: the Spotlight's
+  /// cards turn, scale and lift with its animation.
+  Widget _brandHeader() => ListenableBuilder(
+    // The ring, capsule and mark follow the accent and theme as they change.
     listenable: widget.accentSettings,
-    builder: (context, _) => Container(
-      width: 40,
-      height: 40,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(13),
-        // A dark drop for lift, under the accent glow.
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: .28),
-            blurRadius: 12,
-            offset: const Offset(0, 2),
+    builder: (context, _) => Padding(
+      padding: const EdgeInsets.fromLTRB(18, 10, 16, 10),
+      child: Row(
+        children: [
+          const _HeaderMark(),
+          const SizedBox(width: 12),
+          // The capsule takes the room it needs, and no more than there is:
+          // with large text its label shortens rather than overflowing.
+          Expanded(
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: _HeaderActions(
+                onJoinParty: () => Navigator.push(
+                  context,
+                  AppPageRoute<void>(
+                    context: context,
+                    builder: (_) => const JoinPartyScreen(),
+                  ),
+                ),
+                onSearch: _openSearch,
+              ),
+            ),
           ),
-          BoxShadow(color: GlassTheme.coralGlow, blurRadius: 18),
+          const SizedBox(width: 10),
+          // The profile at the top right, where streaming apps keep it; the
+          // dock stays for the main places.
+          _HeaderProfile(onOpen: () => _openProfile(context)),
         ],
       ),
-      foregroundDecoration: const TopLitEdge(radius: 13),
-      // Keyed by the accent: a const icon would never rebuild with it.
-      child: AccentAppIcon(key: ValueKey(GlassTheme.accent.id), size: 40),
     ),
   );
-
-  Widget _brandHeader({bool spotlight = false}) {
-    final transitionDuration = MediaQuery.disableAnimationsOf(context)
-        ? Duration.zero
-        : const Duration(milliseconds: 220);
-    return Padding(
-      padding: spotlight
-          ? const EdgeInsets.fromLTRB(35, 26, 35, 12)
-          : const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      child: AnimatedSwitcher(
-        duration: transitionDuration,
-        switchInCurve: Curves.easeOutCubic,
-        switchOutCurve: Curves.easeInCubic,
-        transitionBuilder: (child, animation) {
-          // New header content rises in; the outgoing content reverses down.
-          final position = Tween<Offset>(
-            begin: const Offset(0, .12),
-            end: Offset.zero,
-          ).animate(animation);
-          return FadeTransition(
-            opacity: animation,
-            child: SlideTransition(position: position, child: child),
-          );
-        },
-        child: Row(
-          key: const ValueKey('brand-header'),
-          children: [
-            // Over the Spotlight the icon stands alone, leaving the
-            // artwork room; it is still read out as Reelish.
-            if (spotlight) ...[
-              Semantics(label: 'Reelish', image: true, child: _brandMark()),
-              const Spacer(),
-            ] else ...[
-              _brandMark(),
-              const SizedBox(width: 10),
-              // Letters about a third of the icon's height, so neither
-              // outweighs the other. On a narrow phone the wordmark
-              // shrinks, so the buttons beside it keep their full size.
-              const Expanded(
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: ReelishWordmark(height: 16, lifted: true),
-                  ),
-                ),
-              ),
-            ],
-            IconButton(
-              tooltip: 'Join a watch party',
-              onPressed: () => Navigator.push(
-                context,
-                AppPageRoute<void>(
-                  context: context,
-                  builder: (_) => const JoinPartyScreen(),
-                ),
-              ),
-              style: IconButton.styleFrom(
-                backgroundColor: Colors.black.withValues(alpha: .38),
-                foregroundColor: Colors.white,
-                side: BorderSide(color: Colors.white.withValues(alpha: .14)),
-              ),
-              icon: const Icon(ReelishIcons.people),
-            ),
-            const SizedBox(width: 8),
-            IconButton(
-              tooltip: 'Search',
-              onPressed: _openSearch,
-              // Dark glass like the details back button, so it stays
-              // visible over bright artwork.
-              style: IconButton.styleFrom(
-                backgroundColor: Colors.black.withValues(alpha: .38),
-                foregroundColor: Colors.white,
-                side: BorderSide(color: Colors.white.withValues(alpha: .14)),
-              ),
-              icon: const Icon(ReelishIcons.search),
-            ),
-            const SizedBox(width: 8),
-            // The profile at the top right, where streaming apps keep
-            // it; the dock stays for the main places.
-            IconButton(
-              tooltip: 'Profile',
-              onPressed: () => _openProfile(context),
-              padding: const EdgeInsets.all(4),
-              icon: Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: .22),
-                  ),
-                ),
-                padding: const EdgeInsets.all(2),
-                child: const AvatarFrameRim(child: MyProfileAvatar(size: 36)),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _filtersAndSearch() {
     return Padding(
@@ -2496,30 +2443,52 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   /// The Spotlight's height: its full size on a tall phone, and short enough
   /// on a small or landscape screen to leave room for what is below it.
+  /// The header has its own row above it, so the card is that much shorter
+  /// than when the header sat over its artwork, and what follows still
+  /// starts where it did.
   double _spotlightHeight(BuildContext context) =>
-      (MediaQuery.sizeOf(context).height * .6).clamp(300.0, 483.0);
+      (MediaQuery.sizeOf(context).height * .6 - _headerRoom).clamp(
+        300.0,
+        483.0 - _headerRoom,
+      );
+
+  /// What the header row adds above the Spotlight: 68 px (the 48 px
+  /// profile button, 10 px above and below) and the 2 px gap under it, less
+  /// the 8 px gap the card kept before.
+  static const _headerRoom = 62.0;
 
   Widget _featuredCarousel(List<MediaItem> items) {
     final height = _spotlightHeight(context);
-    return Stack(
+    // The chosen animation (Settings › Appearance), or Minimal Motion when
+    // the system asks for reduced motion.
+    final style = SpotlightDeck.styleFor(context, _spotlightMotion.value);
+    return Column(
       children: [
+        // Above the cards, not over them: the header stays put while the
+        // cards turn, scale and lift, whichever animation is chosen.
+        _brandHeader(),
         Padding(
-          padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+          padding: const EdgeInsets.fromLTRB(14, 2, 14, 0),
           child: Column(
             children: [
               SizedBox(
                 height: height,
-                child: PageView.builder(
-                  controller: _spotlightController,
+                child: SpotlightDeck(
+                  controller: _spotlightControllerFor(style),
+                  style: style,
                   itemCount: items.length > 1 ? null : items.length,
                   onPageChanged: _onSpotlightPageChanged,
+                  // A swipe starts the wait for the next turn again, so it
+                  // never moves on just after the person moved it.
+                  onUserScroll: _startSpotlightTimer,
                   itemBuilder: (context, page) => _featured(
                     items[page % items.length],
                     imageCacheHeight:
                         (height * MediaQuery.devicePixelRatioOf(context))
                             .round(),
-                    // At its shortest the title and actions take the space.
-                    showDescription: height >= 340,
+                    // At its shortest the title and actions take the space
+                    // (the header no longer takes the card's top).
+                    showDescription: height >= 340 - _headerRoom,
                   ),
                 ),
               ),
@@ -2551,12 +2520,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ],
           ),
         ),
-        Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          child: _brandHeader(spotlight: true),
-        ),
       ],
     );
   }
@@ -2571,12 +2534,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       fit: StackFit.expand,
       children: [
         if (item.background.isNotEmpty)
-          ArtworkImage.network(
-            item.background,
-            fit: BoxFit.cover,
-            cacheHeight: imageCacheHeight,
-            errorBuilder: (_, _, _) =>
-                ColoredBox(color: GlassTheme.elevatedSurface),
+          // Zoomed by the Spotlight animation as the card comes into focus;
+          // the same decoded image throughout.
+          SpotlightZoom(
+            child: ArtworkImage.network(
+              item.background,
+              fit: BoxFit.cover,
+              cacheHeight: imageCacheHeight,
+              errorBuilder: (_, _, _) =>
+                  ColoredBox(color: GlassTheme.elevatedSurface),
+            ),
           )
         else
           ColoredBox(color: GlassTheme.elevatedSurface),
@@ -2604,151 +2571,168 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           bottom: 22,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            // Each line appears as the card comes into focus, in order
+            // (SpotlightReveal; together unless the animation staggers them).
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                // Dark glass with the brighter accent, as on the details page,
-                // so the label keeps its contrast on any artwork: it sits
-                // where the shade is clear, and at .8 every accent keeps
-                // 4.5:1 even over white (at .38 it fell to about 1:1).
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: .8),
-                  borderRadius: BorderRadius.circular(30),
-                  border: Border.all(
-                    color: GlassTheme.primary.withValues(alpha: .45),
+              SpotlightReveal(
+                order: 0,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
                   ),
-                ),
-                child: Text(
-                  'REELISH SPOTLIGHT',
-                  style: TextStyle(
-                    color: GlassTheme.coralBright,
-                    fontSize: 10,
-                    letterSpacing: 1.5,
-                    fontWeight: FontWeight.w800,
+                  // Dark glass with the brighter accent, as on the details page,
+                  // so the label keeps its contrast on any artwork: it sits
+                  // where the shade is clear, and at .8 every accent keeps
+                  // 4.5:1 even over white (at .38 it fell to about 1:1).
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: .8),
+                    borderRadius: BorderRadius.circular(30),
+                    border: Border.all(
+                      color: GlassTheme.primary.withValues(alpha: .45),
+                    ),
+                  ),
+                  child: Text(
+                    'REELISH SPOTLIGHT',
+                    style: TextStyle(
+                      color: GlassTheme.coralBright,
+                      fontSize: 10,
+                      letterSpacing: 1.5,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
               ),
               const SizedBox(height: 11),
-              Text(
-                item.name,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                // Not the page text, which is dark on a light theme.
-                style: TextStyle(
-                  color: GlassTheme.onArtwork,
-                  fontSize: 35,
-                  height: 1.02,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -1.1,
+              SpotlightReveal(
+                order: 1,
+                child: Text(
+                  item.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  // Not the page text, which is dark on a light theme.
+                  style: TextStyle(
+                    color: GlassTheme.onArtwork,
+                    fontSize: 35,
+                    height: 1.02,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -1.1,
+                  ),
                 ),
               ),
               const SizedBox(height: 8),
               // The rating as on the cards and the other interfaces: the
               // theme star, then the score.
-              Text.rich(
-                TextSpan(
-                  children: [
-                    TextSpan(
-                      text: [
-                        item.year,
-                        item.type == 'series' ? 'Series' : 'Movie',
-                      ].where((value) => value.isNotEmpty).join('  ·  '),
-                    ),
-                    if (item.rating.isNotEmpty) ...[
-                      const TextSpan(text: '  ·  '),
-                      WidgetSpan(
-                        alignment: PlaceholderAlignment.middle,
-                        child: Icon(
-                          ReelishIcons.starFilled,
-                          size: 15,
-                          color: GlassTheme.primary,
-                        ),
+              SpotlightReveal(
+                order: 2,
+                child: Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(
+                        text: [
+                          item.year,
+                          item.type == 'series' ? 'Series' : 'Movie',
+                        ].where((value) => value.isNotEmpty).join('  ·  '),
                       ),
-                      TextSpan(text: ' ${item.rating}'),
+                      if (item.rating.isNotEmpty) ...[
+                        const TextSpan(text: '  ·  '),
+                        WidgetSpan(
+                          alignment: PlaceholderAlignment.middle,
+                          child: Icon(
+                            ReelishIcons.starFilled,
+                            size: 15,
+                            color: GlassTheme.primary,
+                          ),
+                        ),
+                        TextSpan(text: ' ${item.rating}'),
+                      ],
                     ],
-                  ],
-                ),
-                style: const TextStyle(
-                  color: Color(0xC7FFFFFF),
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
+                  ),
+                  style: const TextStyle(
+                    color: Color(0xC7FFFFFF),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
               if (showDescription && item.description.isNotEmpty) ...[
                 const SizedBox(height: 8),
-                Text(
-                  item.description,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Color(0xC7FFFFFF),
-                    height: 1.35,
-                    fontSize: 13,
+                SpotlightReveal(
+                  order: 3,
+                  child: Text(
+                    item.description,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Color(0xC7FFFFFF),
+                      height: 1.35,
+                      fontSize: 13,
+                    ),
                   ),
                 ),
               ],
               const SizedBox(height: 15),
               // On a narrow phone, or with "In My list" or large text, the
               // two buttons shrink to fit instead of overflowing.
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Row(
-                  children: [
-                    FilledButton.icon(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: GlassTheme.primary,
-                        foregroundColor: GlassTheme.background,
-                        shape: const StadiumBorder(),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 22,
-                          vertical: 15,
+              SpotlightReveal(
+                order: 4,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Row(
+                    children: [
+                      FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: GlassTheme.primary,
+                          foregroundColor: GlassTheme.background,
+                          shape: const StadiumBorder(),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 22,
+                            vertical: 15,
+                          ),
+                        ),
+                        onPressed: () => _showDetails(item),
+                        icon: const Icon(ReelishIcons.info),
+                        label: const Text(
+                          'Details',
+                          style: TextStyle(fontWeight: FontWeight.w800),
                         ),
                       ),
-                      onPressed: () => _showDetails(item),
-                      icon: const Icon(ReelishIcons.info),
-                      label: const Text(
-                        'Details',
-                        style: TextStyle(fontWeight: FontWeight.w800),
+                      const SizedBox(width: 10),
+                      // As on the details page, it says when the title is
+                      // already saved.
+                      Builder(
+                        builder: (context) {
+                          final saved = _favoriteKeys.contains(
+                            _favoriteKey(item),
+                          );
+                          return OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: saved
+                                  ? GlassTheme.primary
+                                  : Colors.white,
+                              shape: const StadiumBorder(),
+                              side: BorderSide(
+                                color: saved
+                                    ? GlassTheme.primary.withValues(alpha: .55)
+                                    : Colors.white.withValues(alpha: .35),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 19,
+                                vertical: 15,
+                              ),
+                            ),
+                            onPressed: () => _toggleFavoriteAndSay(item),
+                            icon: Icon(
+                              saved ? ReelishIcons.check : ReelishIcons.add,
+                              size: 19,
+                            ),
+                            label: Text(saved ? 'On My list' : 'My list'),
+                          );
+                        },
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    // As on the details page, it says when the title is
-                    // already saved.
-                    Builder(
-                      builder: (context) {
-                        final saved = _favoriteKeys.contains(
-                          _favoriteKey(item),
-                        );
-                        return OutlinedButton.icon(
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: saved
-                                ? GlassTheme.primary
-                                : Colors.white,
-                            shape: const StadiumBorder(),
-                            side: BorderSide(
-                              color: saved
-                                  ? GlassTheme.primary.withValues(alpha: .55)
-                                  : Colors.white.withValues(alpha: .35),
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 19,
-                              vertical: 15,
-                            ),
-                          ),
-                          onPressed: () => _toggleFavoriteAndSay(item),
-                          icon: Icon(
-                            saved ? ReelishIcons.check : ReelishIcons.add,
-                            size: 19,
-                          ),
-                          label: Text(saved ? 'On My list' : 'My list'),
-                        );
-                      },
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -3212,6 +3196,143 @@ class _RowHeading extends StatelessWidget {
       fontSize: 19,
       fontWeight: FontWeight.w800,
       letterSpacing: -.35,
+    ),
+  );
+}
+
+/// The Reelish mark on its own (logo_icon.png), in the page's text colour:
+/// part of the bar rather than an app tile floating on it. Read out as
+/// "Reelish".
+class _HeaderMark extends StatelessWidget {
+  const _HeaderMark();
+
+  @override
+  Widget build(BuildContext context) {
+    const mark = ReelishMark(height: 26);
+    // The artwork is white: on a light theme's page it takes the page ink.
+    if (!GlassTheme.isLight) return mark;
+    return ColorFiltered(
+      colorFilter: ColorFilter.mode(GlassTheme.textPrimary, BlendMode.srcIn),
+      child: mark,
+    );
+  }
+}
+
+/// Join a watch party (labelled, quieter) and Search (the main action, at
+/// full contrast) in one capsule, rather than a circle each.
+class _HeaderActions extends StatelessWidget {
+  const _HeaderActions({required this.onJoinParty, required this.onSearch});
+
+  final VoidCallback onJoinParty;
+  final VoidCallback onSearch;
+
+  static const height = 44.0;
+
+  @override
+  Widget build(BuildContext context) => LiquidGlass(
+    // The dock's glass: a top-lit body, a curved sheen, an inner rim and a
+    // lit edge, over one small backdrop blur.
+    quality: LiquidGlassQuality.balanced,
+    blurSigma: 9,
+    opacity: .82,
+    borderRadius: height / 2,
+    elevation: .8,
+    child: SizedBox(
+      height: height,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(
+            child: TextButton.icon(
+              onPressed: onJoinParty,
+              style: TextButton.styleFrom(
+                minimumSize: const Size(48, height),
+                fixedSize: const Size.fromHeight(height),
+                padding: const EdgeInsets.fromLTRB(14, 0, 12, 0),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                foregroundColor: GlassTheme.muted,
+                shape: const StadiumBorder(),
+              ),
+              icon: const Icon(ReelishIcons.people, size: 20),
+              label: const Text(
+                'Join party',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: AppTextSize.label,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+          Container(width: 1, height: 18, color: GlassTheme.border),
+          IconButton(
+            tooltip: 'Search',
+            onPressed: onSearch,
+            style: IconButton.styleFrom(
+              fixedSize: const Size(48, height),
+              minimumSize: const Size(48, height),
+              padding: EdgeInsets.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              foregroundColor: GlassTheme.textPrimary,
+              shape: const StadiumBorder(),
+            ),
+            icon: const Icon(ReelishIcons.search, size: 20),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+/// The account's own avatar (photo, preset, Trakt picture or initial) in one
+/// ring, so it reads as you rather than as one more button: the accent's, or
+/// a supporter's equipped frame colour (the rim AvatarFrameRim would draw),
+/// never both. 44 px, as tall as the capsule beside it.
+class _HeaderProfile extends StatelessWidget {
+  const _HeaderProfile({required this.onOpen});
+
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) => IconButton(
+    tooltip: 'Profile',
+    onPressed: onOpen,
+    style: IconButton.styleFrom(
+      fixedSize: const Size.square(48),
+      minimumSize: const Size.square(48),
+      padding: EdgeInsets.zero,
+      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      shape: const CircleBorder(),
+    ),
+    icon: ListenableBuilder(
+      listenable: AvatarFrames.instance,
+      builder: (context, avatar) {
+        final frame = AvatarFrameStyle.byId(AvatarFrames.instance.equipped);
+        return Container(
+          padding: const EdgeInsets.all(2),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: frame == null
+                  ? [GlassTheme.coralBright, GlassTheme.primary]
+                  : [frame.rim, frame.rim],
+            ),
+          ),
+          // A thin gap of page between the ring and the avatar.
+          child: Container(
+            padding: const EdgeInsets.all(2),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: GlassTheme.background,
+            ),
+            child: avatar,
+          ),
+        );
+      },
+      child: const MyProfileAvatar(size: 36),
     ),
   );
 }

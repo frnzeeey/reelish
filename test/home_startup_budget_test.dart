@@ -3,6 +3,11 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:onfeed/src/spotlight/spotlight_deck.dart';
+import 'package:onfeed/src/widgets/brand_logo.dart';
+import 'package:onfeed/src/widgets/avatar_frame.dart';
+import 'package:onfeed/src/theme/reelish_icons.dart';
+import 'package:onfeed/src/widgets/liquid_glass.dart';
 import 'package:onfeed/src/screens/search/search_cards.dart';
 import 'package:onfeed/src/screens/search/universal_search_screen.dart';
 import 'package:http/http.dart' as http;
@@ -262,6 +267,106 @@ void main() {
     await disposeHome(tester);
   });
 
+  testWidgets(
+    'the header: the mark, a labelled Join party and Search in one glass '
+    'capsule, '
+    'then the profile; above the Spotlight',
+    (tester) async {
+      await pumpHome(tester);
+      await settle(tester, rounds: 40);
+      final deck = tester.getRect(find.byType(SpotlightDeck));
+      Rect button(String tip) => tester.getRect(
+        find
+            .ancestor(
+              of: find.byTooltip(tip),
+              matching: find.byType(IconButton),
+            )
+            .first,
+      );
+      // Labelled, so it says what it does at a glance.
+      final party = tester.getRect(
+        find
+            .ancestor(
+              of: find.text('Join party'),
+              matching: find.byType(TextButton),
+            )
+            .first,
+      );
+      final search = button('Search');
+      final profile = button('Profile');
+      // Clear of the cards, which move with the Spotlight animation, and in
+      // one row.
+      for (final control in [party, search, profile]) {
+        expect(control.bottom, lessThanOrEqualTo(deck.top));
+        expect(control.center.dy, closeTo(profile.center.dy, .5));
+      }
+      // Search and Join a watch party share one capsule, side by side;
+      // the profile stands apart at the right.
+      final capsule = find.ancestor(
+        of: find.byTooltip('Search'),
+        // One piece of liquid glass, as the dock.
+        matching: find.byType(LiquidGlass),
+      );
+      expect(capsule, findsOneWidget);
+      expect(
+        find.descendant(of: capsule.first, matching: find.text('Join party')),
+        findsOneWidget,
+      );
+      expect(search.left, greaterThan(party.left));
+      expect(profile.left, greaterThan(search.right));
+      // The bare mark, not the app tile.
+      expect(find.byType(ReelishMark), findsWidgets);
+      expect(
+        find.ancestor(
+          of: find.byType(ReelishMark).first,
+          matching: find.byType(AccentAppIcon),
+        ),
+        findsNothing,
+      );
+      final mark = tester.getRect(find.byType(ReelishMark).first);
+      expect(mark.bottom, lessThanOrEqualTo(deck.top));
+
+      // On the page's 18 px grid, like the chips, titles and rows below.
+      final width =
+          tester.view.physicalSize.width / tester.view.devicePixelRatio;
+      final ring = tester.getRect(
+        find
+            .descendant(
+              of: find
+                  .ancestor(
+                    of: find.byTooltip('Profile'),
+                    matching: find.byType(IconButton),
+                  )
+                  .first,
+              matching: find.byType(Container),
+            )
+            .first,
+      );
+      expect(mark.left, 18);
+      expect(ring.right, width - 18);
+      // One height for the capsule and the avatar, on one centre line.
+      final glass = tester.getRect(capsule);
+      expect(glass.height, 44);
+      expect(ring.height, glass.height);
+      expect(mark.center.dy, closeTo(glass.center.dy, .5));
+      expect(ring.center.dy, closeTo(glass.center.dy, .5));
+      // The capsule's icons match; hierarchy comes from colour and label.
+      expect(
+        tester.getSize(find.byIcon(ReelishIcons.people).first),
+        tester.getSize(find.byIcon(ReelishIcons.search).first),
+      );
+      // One ring around the avatar: no frame rim inside it.
+      expect(
+        find.descendant(
+          of: find.byTooltip('Profile'),
+          matching: find.byType(AvatarFrameRim),
+        ),
+        findsNothing,
+      );
+      await disposeHome(tester);
+    },
+  );
+
   testWidgets('the Spotlight says when its title is on My list', (
     tester,
   ) async {
@@ -272,7 +377,8 @@ void main() {
         .map((t) => t.data)
         .firstWhere((d) => d != null && d.startsWith('Movie '))!;
 
-    await tester.tap(find.text('My list'));
+    // The shown card's: its neighbour peeks out but takes no taps.
+    await tester.tap(find.text('My list').hitTestable());
     await settle(tester, rounds: 10);
     expect(find.text('On My list'), findsOneWidget);
     expect(find.text('$spotlightTitle saved to your list'), findsOneWidget);
@@ -290,7 +396,8 @@ void main() {
 
     await tester.tap(find.text('On My list'));
     await settle(tester, rounds: 10);
-    expect(find.text('My list'), findsOneWidget);
+    expect(find.text('On My list'), findsNothing);
+    expect(find.text('My list').hitTestable(), findsOneWidget);
     expect(find.text('$spotlightTitle removed from your list'), findsOneWidget);
     await disposeHome(tester);
   });

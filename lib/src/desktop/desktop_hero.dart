@@ -10,10 +10,14 @@ import '../widgets/poster_image.dart';
 import 'desktop_widgets.dart';
 import '../widgets/brand_logo.dart';
 import '../widgets/artwork_image.dart';
+import '../spotlight/spotlight_motion.dart';
+import '../spotlight/spotlight_motion_controller.dart';
 
 /// The featured titles at the top of desktop Home: one full-bleed backdrop
 /// with the title, synopsis and actions on its left, and every Spotlight
-/// title in a rail along its foot, the one shown first and widest. Rotates
+/// title in a rail along its foot, the one shown first and widest. The
+/// backdrop and the title change with the chosen Spotlight animation
+/// (SpotlightMotionController; Settings › Appearance). Rotates
 /// every 8 s while Home is shown and pauses while the pointer is over it or
 /// the keyboard or gamepad focus is inside it; a card in the rail shows its
 /// title at once.
@@ -26,9 +30,14 @@ class DesktopHero extends StatefulWidget {
     required this.isFavorite,
     required this.onToggleFavorite,
     this.logoOf,
+    this.motion,
   });
 
   final List<MediaItem> items;
+
+  /// The chosen Spotlight animation; [SpotlightMotionController.instance]
+  /// when null.
+  final SpotlightMotionController? motion;
 
   /// A title's logo artwork URL, or '' for none; the name is drawn as text
   /// until a logo has loaded, and instead of one that fails.
@@ -79,9 +88,18 @@ class _DesktopHeroState extends State<DesktopHero> {
 
   static String _key(MediaItem item) => '${item.type}:${item.id}';
 
+  late final SpotlightMotionController _motion =
+      widget.motion ?? SpotlightMotionController.instance;
+
+  void _motionChanged() {
+    if (mounted) setState(() {});
+  }
+
   @override
   void initState() {
     super.initState();
+    _motion.addListener(_motionChanged);
+    unawaited(_motion.load());
     _schedule();
     _loadLogos();
   }
@@ -117,6 +135,7 @@ class _DesktopHeroState extends State<DesktopHero> {
 
   @override
   void dispose() {
+    _motion.removeListener(_motionChanged);
     _timer?.cancel();
     _rail.dispose();
     super.dispose();
@@ -163,6 +182,12 @@ class _DesktopHeroState extends State<DesktopHero> {
     if (widget.items.isEmpty) return const SizedBox.shrink();
     final item = widget.items[_index];
     final rail = widget.items.length > 1;
+    final backdropKey = ValueKey('${item.type}:${item.id}');
+    // Reduced motion: the plain fade (desktopMotion also shortens it to
+    // nothing).
+    final style = MediaQuery.disableAnimationsOf(context)
+        ? SpotlightMotion.minimal.style
+        : _motion.value.style;
     return LayoutBuilder(
       builder: (context, constraints) {
         final viewport = MediaQuery.sizeOf(context);
@@ -210,8 +235,14 @@ class _DesktopHeroState extends State<DesktopHero> {
                   AnimatedSwitcher(
                     duration: desktopMotion(context, 700),
                     switchInCurve: DesktopSurfaces.curve,
+                    transitionBuilder: (child, animation) =>
+                        style.backdropTransition(
+                          child,
+                          animation,
+                          incoming: child.key == backdropKey,
+                        ),
                     child: _Backdrop(
-                      key: ValueKey('${item.type}:${item.id}'),
+                      key: backdropKey,
                       item: item,
                       width: width,
                       railShare: railHeight / height,
@@ -235,7 +266,7 @@ class _DesktopHeroState extends State<DesktopHero> {
                         opacity: animation,
                         child: SlideTransition(
                           position: Tween(
-                            begin: const Offset(0, .04),
+                            begin: Offset(0, style.textRise),
                             end: Offset.zero,
                           ).animate(animation),
                           child: child,
