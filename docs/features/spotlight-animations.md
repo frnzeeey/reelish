@@ -32,8 +32,14 @@ focused poster and never rotates, so the setting is not shown on TV.
   turn all drive the same frames. There is no controller or timer per card,
   so rapid swipes cannot start overlapping transitions. Each card works out
   its frame once per tick. Inside the card, only the zoom and reveal
-  wrappers rebuild. The card content (artwork, buttons) is built once and
-  sits behind a `RepaintBoundary`.
+  wrappers rebuild. The card content (artwork, buttons) is built once:
+  - The same widgets always wrap it, with only their values changing. A
+    shadow or fade added mid-swipe once made Flutter rebuild each card
+    three times per swipe; a test now checks that each card is created
+    once.
+  - A neighbour is dimmed by a page-coloured overlay, not made transparent.
+    Transparency drew the whole card off-screen every frame. On the solid
+    page the two look the same.
 - **The one ticker of its own** is Floating's 6 s bob, created only while
   that preset shows and disposed when it changes. Tickers pause off screen.
 - **Neighbours.** A card counts as shown when it is more than half in the

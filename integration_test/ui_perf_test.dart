@@ -41,8 +41,11 @@ import 'package:onfeed/src/widgets/artwork_image.dart';
 import 'package:onfeed/src/widgets/liquid_glass.dart';
 import 'package:onfeed/src/widgets/media_card.dart';
 import 'package:onfeed/src/widgets/soft_glass_dock.dart';
+import 'package:onfeed/src/spotlight/spotlight_deck.dart';
+import 'package:onfeed/src/spotlight/spotlight_motion.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../test/support/fake_account.dart' show fakeSpotlightMotion;
 import 'app_smoke_test.dart' show pumpUntil;
 
 const _artwork = String.fromEnvironment('PERF_ARTWORK');
@@ -218,6 +221,9 @@ void main() {
     );
     final accent = AccentSettingsController();
     await accent.load();
+    // A supporter's Spotlight, so every animation can be measured (an
+    // offline fake account: nothing leaves the device).
+    final motion = await fakeSpotlightMotion();
     await tester.pumpWidget(
       MaterialApp(
         debugShowCheckedModeBanner: false,
@@ -227,6 +233,7 @@ void main() {
           tmdbService: tmdb,
           updateChecker: () async =>
               const UpdateCheckResult(UpdateCheckStatus.upToDate),
+          spotlightMotion: motion,
         ),
       ),
     );
@@ -240,6 +247,29 @@ void main() {
     final recorder = _Recorder();
     final results = <String>[];
     final home = _scrollable(AxisDirection.down).first;
+
+    // The Spotlight, in every animation: three flings each way, then a
+    // rest (Floating keeps moving while it shows).
+    final spotlight = find.byType(SpotlightDeck);
+    for (final preset in SpotlightMotion.values) {
+      await motion.select(preset);
+      await idle(tester, 1);
+      results.add(
+        await recorder.measure(tester, 'spotlight ${preset.id}', () async {
+          for (var i = 0; i < 3; i++) {
+            await tester.fling(spotlight, const Offset(-300, 0), 1800);
+            await idle(tester, .9);
+          }
+          for (var i = 0; i < 3; i++) {
+            await tester.fling(spotlight, const Offset(300, 0), 1800);
+            await idle(tester, .9);
+          }
+          await idle(tester, 2);
+        }),
+      );
+    }
+    await motion.select(SpotlightMotion.fallback);
+    await idle(tester, 1);
 
     results.add(
       await recorder.measure(tester, 'home fling down/up', () async {
@@ -305,6 +335,36 @@ void main() {
     for (final r in results) {
       // ignore: avoid_print
       print('PERF $r');
+    }
+
+    // Holds still at Home's top in each Spotlight animation, at rest and
+    // mid-turn, printing SHOT <name> first, so a host watching the log can
+    // capture the screen (adb exec-out screencap -p).
+    await tester.tap(find.descendant(of: dock, matching: find.text('Home')));
+    await idle(tester, 1.5);
+    for (var i = 0; i < 4; i++) {
+      await tester.fling(
+        _scrollable(AxisDirection.down).first,
+        const Offset(0, 900),
+        3000,
+      );
+      await idle(tester, .6);
+    }
+    for (final preset in SpotlightMotion.values) {
+      await motion.select(preset);
+      await idle(tester, 1.5);
+      // ignore: avoid_print
+      print('SHOT spotlight_${preset.id}');
+      await idle(tester, 3);
+      final turn = await tester.startGesture(tester.getCenter(spotlight));
+      await turn.moveBy(const Offset(-60, 0));
+      await turn.moveBy(const Offset(-60, 0));
+      await idle(tester, .5);
+      // ignore: avoid_print
+      print('SHOT spotlight_${preset.id}_turning');
+      await idle(tester, 3);
+      await turn.up();
+      await idle(tester, 1.5);
     }
   });
 }

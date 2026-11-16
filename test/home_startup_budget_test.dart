@@ -4,6 +4,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:onfeed/src/spotlight/spotlight_deck.dart';
+import 'package:onfeed/src/spotlight/spotlight_motion.dart';
+import 'package:onfeed/src/spotlight/spotlight_motion_controller.dart';
+
+import 'support/fake_account.dart';
 import 'package:onfeed/src/widgets/brand_logo.dart';
 import 'package:onfeed/src/widgets/avatar_frame.dart';
 import 'package:onfeed/src/theme/reelish_icons.dart';
@@ -108,8 +112,11 @@ void main() {
     WidgetTester tester, {
     // Saved before Home opens: watch history, My list.
     Future<void> Function()? seed,
+    Size size = const Size(430, 915),
+    // The Spotlight animation; the app-wide controller when null.
+    SpotlightMotionController? motion,
   }) async {
-    tester.view.physicalSize = const Size(430, 915);
+    tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
     urls = [];
     client = MockClient((request) async {
@@ -140,6 +147,7 @@ void main() {
           tmdbService: tmdb,
           updateChecker: () async =>
               const UpdateCheckResult(UpdateCheckStatus.upToDate),
+          spotlightMotion: motion,
         ),
       ),
     );
@@ -366,6 +374,30 @@ void main() {
       await disposeHome(tester);
     },
   );
+
+  for (final preset in SpotlightMotion.values) {
+    testWidgets(
+      '${preset.label}: a small phone with large text lays out without '
+      'overflow, header and Spotlight both',
+      (tester) async {
+        final motion = (await tester.runAsync(fakeSpotlightMotion))!;
+        await tester.runAsync(() => motion.select(preset));
+        expect(motion.value, preset);
+        tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        await pumpHome(tester, size: const Size(360, 640), motion: motion);
+        await settle(tester, rounds: 40);
+        // A turn, as a swipe would, then rest on the next card.
+        await tester.drag(find.byType(SpotlightDeck), const Offset(-200, 0));
+        await settle(tester, rounds: 30);
+        // An overflow anywhere is reported as an exception.
+        expect(tester.takeException(), isNull);
+        expect(find.text('Join party'), findsOneWidget);
+        expect(find.byTooltip('Profile'), findsOneWidget);
+        await disposeHome(tester);
+      },
+    );
+  }
 
   testWidgets('the Spotlight says when its title is on My list', (
     tester,

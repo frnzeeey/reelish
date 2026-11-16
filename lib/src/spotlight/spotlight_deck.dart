@@ -242,8 +242,7 @@ class _SpotlightCardState extends State<_SpotlightCard> {
     // rebuilt as it comes and goes.
     final content = ValueListenableBuilder<bool>(
       valueListenable: _shown,
-      // Laid out and painted once; moved as a whole.
-      child: RepaintBoundary(child: widget.child),
+      child: widget.child,
       builder: (context, shown, child) => GestureDetector(
         // A neighbour's content ignores taps, so the card itself takes
         // them; the shown card leaves them to its content.
@@ -261,37 +260,53 @@ class _SpotlightCardState extends State<_SpotlightCard> {
       child: ValueListenableBuilder<SpotlightCardFrame>(
         valueListenable: _frame,
         child: content,
-        builder: (context, frame, child) {
-          var card = child!;
+        // Always the same three widgets around the card, only their values
+        // changing: a widget added or dropped mid-swipe would rebuild the
+        // whole card (artwork, text, buttons) each time.
+        builder: (context, frame, card) {
           final emphasis = frame.emphasis.clamp(0.0, 1.0);
-          if (widget.style.lifted && emphasis > .01) {
-            card = DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: radius,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: .42 * emphasis),
-                    blurRadius: 28,
-                    offset: Offset(0, 14 * emphasis),
-                  ),
-                  // A restrained glow in the accent around the shown card.
-                  BoxShadow(
-                    color: GlassTheme.primary.withValues(alpha: .16 * emphasis),
-                    blurRadius: 24,
-                    spreadRadius: -6,
-                  ),
-                ],
-              ),
-              child: card,
-            );
-          }
-          card = Transform(
+          final lifted = widget.style.lifted && emphasis > .01;
+          // Faded toward the page colour by an overlay, not made
+          // see-through: transparency draws the card off-screen first, every
+          // frame. On the page's solid colour the two look the same.
+          final dim = 1 - frame.opacity.clamp(0.0, 1.0);
+          return Transform(
             transform: frame.transform,
             alignment: Alignment.center,
-            child: card,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: radius,
+                boxShadow: lifted
+                    ? [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: .42 * emphasis),
+                          blurRadius: 28,
+                          offset: Offset(0, 14 * emphasis),
+                        ),
+                        // A restrained glow in the accent around the shown
+                        // card.
+                        BoxShadow(
+                          color: GlassTheme.primary.withValues(
+                            alpha: .16 * emphasis,
+                          ),
+                          blurRadius: 24,
+                          spreadRadius: -6,
+                        ),
+                      ]
+                    : null,
+              ),
+              child: DecoratedBox(
+                position: DecorationPosition.foreground,
+                decoration: BoxDecoration(
+                  borderRadius: radius,
+                  color: dim > .005
+                      ? GlassTheme.background.withValues(alpha: dim)
+                      : null,
+                ),
+                child: card,
+              ),
+            ),
           );
-          final opacity = frame.opacity.clamp(0.0, 1.0);
-          return opacity >= 1 ? card : Opacity(opacity: opacity, child: card);
         },
       ),
     );

@@ -95,9 +95,8 @@ import 'watch_party/party_launcher.dart';
 import '../watch_party/party_links.dart';
 import '../watch_party/party_models.dart';
 import '../widgets/brand_logo.dart';
-import '../theme/avatar_frames.dart';
-import '../widgets/profile_avatar.dart';
 import '../widgets/artwork_image.dart';
+import '../widgets/home_profile_button.dart';
 import '../widgets/liquid_glass.dart';
 import '../spotlight/spotlight_deck.dart';
 import '../spotlight/spotlight_motion.dart';
@@ -122,11 +121,16 @@ class HomeScreen extends StatefulWidget {
     required this.accentSettings,
     this.tmdbService,
     this.updateChecker,
+    @visibleForTesting this.spotlightMotion,
   });
 
   final AccentSettingsController accentSettings;
   final TmdbService? tmdbService;
   final Future<UpdateCheckResult> Function()? updateChecker;
+
+  /// The Spotlight animation; [SpotlightMotionController.instance] when null.
+  /// Device tests pass one whose account has the supporter perk.
+  final SpotlightMotionController? spotlightMotion;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -152,7 +156,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   late PageController _spotlightController = SpotlightDeck.controllerFor(
     SpotlightMotion.fallback.style,
   );
-  final _spotlightMotion = SpotlightMotionController.instance;
+  late final SpotlightMotionController _spotlightMotion =
+      widget.spotlightMotion ?? SpotlightMotionController.instance;
   final _homeScrollController = ScrollController();
   final ValueNotifier<int> _spotlightPageValue = ValueNotifier(0);
 
@@ -1921,7 +1926,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           const SizedBox(width: 10),
           // The profile at the top right, where streaming apps keep it; the
           // dock stays for the main places.
-          _HeaderProfile(onOpen: () => _openProfile(context)),
+          HomeProfileButton(onOpen: () => _openProfile(context)),
         ],
       ),
     ),
@@ -3281,58 +3286,6 @@ class _HeaderActions extends StatelessWidget {
           ),
         ],
       ),
-    ),
-  );
-}
-
-/// The account's own avatar (photo, preset, Trakt picture or initial) in one
-/// ring, so it reads as you rather than as one more button: the accent's, or
-/// a supporter's equipped frame colour (the rim AvatarFrameRim would draw),
-/// never both. 44 px, as tall as the capsule beside it.
-class _HeaderProfile extends StatelessWidget {
-  const _HeaderProfile({required this.onOpen});
-
-  final VoidCallback onOpen;
-
-  @override
-  Widget build(BuildContext context) => IconButton(
-    tooltip: 'Profile',
-    onPressed: onOpen,
-    style: IconButton.styleFrom(
-      fixedSize: const Size.square(48),
-      minimumSize: const Size.square(48),
-      padding: EdgeInsets.zero,
-      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      shape: const CircleBorder(),
-    ),
-    icon: ListenableBuilder(
-      listenable: AvatarFrames.instance,
-      builder: (context, avatar) {
-        final frame = AvatarFrameStyle.byId(AvatarFrames.instance.equipped);
-        return Container(
-          padding: const EdgeInsets.all(2),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: frame == null
-                  ? [GlassTheme.coralBright, GlassTheme.primary]
-                  : [frame.rim, frame.rim],
-            ),
-          ),
-          // A thin gap of page between the ring and the avatar.
-          child: Container(
-            padding: const EdgeInsets.all(2),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: GlassTheme.background,
-            ),
-            child: avatar,
-          ),
-        );
-      },
-      child: const MyProfileAvatar(size: 36),
     ),
   );
 }

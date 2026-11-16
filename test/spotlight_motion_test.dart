@@ -355,6 +355,59 @@ void main() {
       },
     );
 
+    testWidgets("a swipe never rebuilds a card's content, in any preset", (
+      tester,
+    ) async {
+      for (final motion in SpotlightMotion.values) {
+        final controller = SpotlightDeck.controllerFor(motion.style);
+        // Creations per card: a card's content is made when it first shows,
+        // never again while it stays.
+        final created = <int, int>{};
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Center(
+                child: SizedBox(
+                  width: 400,
+                  height: 300,
+                  child: SpotlightDeck(
+                    controller: controller,
+                    style: motion.style,
+                    itemCount: 3,
+                    itemBuilder: (context, index) => _CountsCreation(
+                      onCreate: () =>
+                          created[index] = (created[index] ?? 0) + 1,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        // Across the fade and shadow thresholds, and back.
+        final gesture = await tester.startGesture(
+          tester.getCenter(find.byType(SpotlightDeck)),
+        );
+        for (var i = 0; i < 6; i++) {
+          await gesture.moveBy(const Offset(-30, 0));
+          await tester.pump(const Duration(milliseconds: 16));
+        }
+        for (var i = 0; i < 6; i++) {
+          await gesture.moveBy(const Offset(30, 0));
+          await tester.pump(const Duration(milliseconds: 16));
+        }
+        await gesture.up();
+        await tester.pump(const Duration(milliseconds: 500));
+        expect(
+          created.values.every((count) => count == 1),
+          isTrue,
+          reason: '${motion.label}: $created',
+        );
+        await tester.pumpWidget(const SizedBox());
+        controller.dispose();
+      }
+    });
+
     testWidgets('reduced motion shows Minimal Motion', (tester) async {
       late SpotlightMotionStyle shown;
       await tester.pumpWidget(
@@ -468,4 +521,26 @@ void main() {
       expect(find.text('Spotlight Experience'), findsNothing);
     });
   });
+}
+
+/// Counts how often it is created: a card's content made again means it was
+/// thrown away and rebuilt.
+class _CountsCreation extends StatefulWidget {
+  const _CountsCreation({required this.onCreate});
+
+  final VoidCallback onCreate;
+
+  @override
+  State<_CountsCreation> createState() => _CountsCreationState();
+}
+
+class _CountsCreationState extends State<_CountsCreation> {
+  @override
+  void initState() {
+    super.initState();
+    widget.onCreate();
+  }
+
+  @override
+  Widget build(BuildContext context) => const ColoredBox(color: Colors.teal);
 }
