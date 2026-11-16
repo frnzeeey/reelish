@@ -174,6 +174,19 @@ class MessagesController extends ChangeNotifier {
   Timer? _outboxTimer;
   bool _disposed = false;
 
+  /// Tests: completes once every frame received so far has been handled
+  /// (saved), however slow the machine.
+  @visibleForTesting
+  Future<void> get framesHandled async {
+    for (;;) {
+      // Lets the socket's stream deliver what was added to it.
+      await Future<void>.delayed(Duration.zero);
+      final current = _frames;
+      await current;
+      if (identical(current, _frames)) return;
+    }
+  }
+
   MessagesConnection get connection => _connection;
   bool get loaded => _loaded && _userId == _account.userId;
   int get maxChars => _maxChars;

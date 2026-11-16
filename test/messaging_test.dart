@@ -95,7 +95,17 @@ Map<String, Object?> _event(
   'at': 5000 + seq,
 };
 
-Future<void> settle() => Future<void>.delayed(const Duration(milliseconds: 40));
+/// Controllers made by the current test.
+final _live = <MessagesController>[];
+
+/// Lets timers run, then waits until every frame each controller received
+/// has been handled: a fixed delay alone fails on a slow machine.
+Future<void> settle() async {
+  await Future<void>.delayed(const Duration(milliseconds: 40));
+  for (final controller in [..._live]) {
+    await controller.framesHandled;
+  }
+}
 
 /// Waits (up to 5 s) for [condition].
 Future<void> eventually(bool Function() condition) async {
@@ -319,11 +329,15 @@ void main() {
         lifecycle: false,
       );
       addTearDown(made.dispose);
+      _live.add(made);
       await made.ensureLoaded();
       return made;
     }
 
-    setUp(() => sockets = []);
+    setUp(() {
+      sockets = [];
+      _live.clear();
+    });
 
     Future<FakeSocket> connected(MessagesController messages) async {
       messages.attach();
@@ -346,6 +360,7 @@ void main() {
 
       socket.receive(_event(7, 'a1', text: 'Hello there'));
       await settle();
+      await eventually(() => socket.of('ack').isNotEmpty);
       expect(socket.of('ack').single['seq'], 7);
       // On disk before the acknowledgement: a fresh store reads it.
       final disk = MessageStore(directory: () async => root);
@@ -371,7 +386,7 @@ void main() {
       await settle();
       expect(messages.messagesOf(conv).map((m) => m.id), ['a1', 'a2']);
       expect(messages.unread, 2);
-      expect(socket.of('ack').last['seq'], 2);
+      await eventually(() => socket.of('ack').lastOrNull?['seq'] == 2);
     });
 
     test('acknowledges a batch once, after all of it is saved', () async {
@@ -434,7 +449,7 @@ void main() {
           messages.messagesOf(conv).single.status,
           MessageStatus.delivered,
         );
-        expect(socket.of('ack').last['seq'], 3);
+        await eventually(() => socket.of('ack').lastOrNull?['seq'] == 3);
 
         // A restart: history and an empty outbox come back from disk.
         final again = await controller();
@@ -898,6 +913,7 @@ void main() {
         lifecycle: false,
       );
       addTearDown(other.dispose);
+      _live.add(other);
       await other.ensureLoaded();
       expect(other.messagesOf(conv), isEmpty);
       expect((await other.load(conv)).map((m) => m.id), ['a3']);

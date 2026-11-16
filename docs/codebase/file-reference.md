@@ -60,7 +60,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/intro_skip/skip_segments.dart`](#libsrcintro_skipskip_segmentsdart) | Shared | 215 | Intro and outro timestamps for one TV episode, read from IntroDB's `GET /segments`, and the rules that decide whether they may be used for the stream that is playing. |
 | [`lib/src/messaging/message_models.dart`](#libsrcmessagingmessage_modelsdart) | Shared | 335 | Private messages as the app keeps them: one message, one conversation and the delivery states. |
 | [`lib/src/messaging/message_store.dart`](#libsrcmessagingmessage_storedart) | Shared | 255 | This device's copy of an account's private messages: the only lasting copy, since Reelish deletes a message once every device of the recipient has it. |
-| [`lib/src/messaging/messages_controller.dart`](#libsrcmessagingmessages_controllerdart) | Shared | 1271 | Private messages for the signed-in account: the conversations on this device, the outbox, and the connection to the account's mailbox on the Reelish API (backend/src/messaging/). |
+| [`lib/src/messaging/messages_controller.dart`](#libsrcmessagingmessages_controllerdart) | Shared | 1284 | Private messages for the signed-in account: the conversations on this device, the outbox, and the connection to the account's mailbox on the Reelish API (backend/src/messaging/). |
 | [`lib/src/models/app_update.dart`](#libsrcmodelsapp_updatedart) | Shared | 257 | A newer GitHub release that has a downloadable APK. |
 | [`lib/src/models/content_advisory.dart`](#libsrcmodelscontent_advisorydart) | Shared | 288 | What the player's advisory says about a title, from TMDB's age ratings. |
 | [`lib/src/models/episode_context.dart`](#libsrcmodelsepisode_contextdart) | Shared | 143 | The playing episode within its series: the single source of truth for episode navigation (the episode panel, Previous/Next, and auto-play). |
@@ -1103,7 +1103,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/messaging/messages_controller.dart
 
-**Source:** [`lib/src/messaging/messages_controller.dart`](../../lib/src/messaging/messages_controller.dart) · **Platform:** Shared · **Lines:** 1271
+**Source:** [`lib/src/messaging/messages_controller.dart`](../../lib/src/messaging/messages_controller.dart) · **Platform:** Shared · **Lines:** 1284
 
 **Purpose:** Private messages for the signed-in account: the conversations on this device, the outbox, and the connection to the account's mailbox on the Reelish API (backend/src/messaging/).
 
