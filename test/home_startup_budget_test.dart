@@ -276,9 +276,8 @@ void main() {
   });
 
   testWidgets(
-    'the header: the mark, a labelled Join party and Search in one glass '
-    'capsule, '
-    'then the profile; above the Spotlight',
+    'the header: the mark, a labelled Join party pill and a round Search, '
+    'each its own glass, then the profile; above the Spotlight',
     (tester) async {
       await pumpHome(tester);
       await settle(tester, rounds: 40);
@@ -308,17 +307,21 @@ void main() {
         expect(control.bottom, lessThanOrEqualTo(deck.top));
         expect(control.center.dy, closeTo(profile.center.dy, .5));
       }
-      // Search and Join a watch party share one capsule, side by side;
-      // the profile stands apart at the right.
-      final capsule = find.ancestor(
+      // Join a watch party and Search are each their own piece of the
+      // dock's liquid glass, side by side; the profile stands at the right.
+      final searchGlass = find.ancestor(
         of: find.byTooltip('Search'),
-        // One piece of liquid glass, as the dock.
         matching: find.byType(LiquidGlass),
       );
-      expect(capsule, findsOneWidget);
+      final partyGlass = find.ancestor(
+        of: find.text('Join party'),
+        matching: find.byType(LiquidGlass),
+      );
+      expect(searchGlass, findsOneWidget);
+      expect(partyGlass, findsOneWidget);
       expect(
-        find.descendant(of: capsule.first, matching: find.text('Join party')),
-        findsOneWidget,
+        find.descendant(of: searchGlass, matching: find.text('Join party')),
+        findsNothing,
       );
       expect(search.left, greaterThan(party.left));
       expect(profile.left, greaterThan(search.right));
@@ -352,13 +355,19 @@ void main() {
       );
       expect(mark.left, 18);
       expect(ring.right, width - 18);
-      // One height for the capsule and the avatar, on one centre line.
-      final glass = tester.getRect(capsule);
-      expect(glass.height, 44);
-      expect(ring.height, glass.height);
-      expect(mark.center.dy, closeTo(glass.center.dy, .5));
-      expect(ring.center.dy, closeTo(glass.center.dy, .5));
-      // The capsule's icons match; hierarchy comes from colour and label.
+      // One height for the pill, the circle and the avatar, on one centre
+      // line, an even 8 px apart.
+      final pill = tester.getRect(partyGlass);
+      final circle = tester.getRect(searchGlass);
+      expect(pill.height, 44);
+      expect(circle.size, const Size.square(44));
+      expect(ring.height, pill.height);
+      expect(circle.left - pill.right, 8);
+      expect(ring.left - circle.right, 8);
+      expect(mark.center.dy, closeTo(pill.center.dy, .5));
+      expect(circle.center.dy, closeTo(pill.center.dy, .5));
+      expect(ring.center.dy, closeTo(pill.center.dy, .5));
+      // The two actions' icons match; hierarchy comes from colour and label.
       expect(
         tester.getSize(find.byIcon(ReelishIcons.people).first),
         tester.getSize(find.byIcon(ReelishIcons.search).first),

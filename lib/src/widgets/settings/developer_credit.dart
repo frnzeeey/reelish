@@ -26,7 +26,7 @@ class DeveloperCreditFooter extends StatelessWidget {
           const Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              ReelishPrimaryLogo(height: 32),
+              ReelishMark(height: 32),
               SizedBox(width: AppSpace.sm),
               Flexible(child: _Credit()),
             ],

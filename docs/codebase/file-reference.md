@@ -98,7 +98,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/screens/first_run_consent_screen.dart`](#libsrcscreensfirst_run_consent_screendart) | Shared | 271 | First-launch screen where the viewer reads and accepts the privacy policy and terms of use; remembers the acceptance. |
 | [`lib/src/screens/genre_onboarding_screen.dart`](#libsrcscreensgenre_onboarding_screendart) | Shared | 327 | The genre step: "What do you love watching?". |
 | [`lib/src/screens/help_support_screen.dart`](#libsrcscreenshelp_support_screendart) | Shared | 782 | Help & Support in Settings: answers (FAQ, troubleshooting), a bug report and feedback form that sends to the Reelish API, and links to app information. |
-| [`lib/src/screens/home_screen.dart`](#libsrcscreenshome_screendart) | Shared | 3297 | Home and the app's orchestration: phone tabs, and the TV and Windows shells; owns the catalog wiring, the play flow (`_openItem`: providers, source choice, player) and details navigation. |
+| [`lib/src/screens/home_screen.dart`](#libsrcscreenshome_screendart) | Shared | 3312 | Home and the app's orchestration: phone tabs, and the TV and Windows shells; owns the catalog wiring, the play flow (`_openItem`: providers, source choice, player) and details navigation. |
 | [`lib/src/screens/installed_provider_screen.dart`](#libsrcscreensinstalled_provider_screendart) | Shared | 417 | Details of one installed provider: what its manifest declares, whether it can work on this device and why, its running and listed versions, its last failure, what any provider can do, and its on/off switch. |
 | [`lib/src/screens/legal_information_screen.dart`](#libsrcscreenslegal_information_screendart) | Shared | 551 | Shows the privacy policy, terms of use and third-party notices. |
 | [`lib/src/screens/library_screen.dart`](#libsrcscreenslibrary_screendart) | Shared | 629 | The phone library tab: continue watching, My list and watch history from local storage. |
@@ -186,7 +186,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/social/friends_controller.dart`](#libsrcsocialfriends_controllerdart) | Shared | 609 | Friends: the list, requests both ways and every action on another person (add, accept, decline, cancel, remove, block, unblock, report). |
 | [`lib/src/social/recommendations_controller.dart`](#libsrcsocialrecommendations_controllerdart) | Shared | 390 | Recommendations: titles friends sent this account (the inbox) and sending one to friends. |
 | [`lib/src/social/social_controller.dart`](#libsrcsocialsocial_controllerdart) | Shared | 417 | Friends: the signed-in account's social profile (handle, friend code, what friends see) and its privacy settings. |
-| [`lib/src/spotlight/spotlight_deck.dart`](#libsrcspotlightspotlight_deckdart) | Shared | 436 | The phone Spotlight's carousel: a PageView whose cards a `SpotlightMotionStyle` places by their distance from the centre. |
+| [`lib/src/spotlight/spotlight_deck.dart`](#libsrcspotlightspotlight_deckdart) | Shared | 439 | The phone Spotlight's carousel: a PageView whose cards a `SpotlightMotionStyle` places by their distance from the centre. |
 | [`lib/src/spotlight/spotlight_motion.dart`](#libsrcspotlightspotlight_motiondart) | Shared | 410 | The Spotlight's animation presets: what each one is called, whether it is a supporter perk (SupporterPerk.spotlightMotion), and how it moves. |
 | [`lib/src/spotlight/spotlight_motion_controller.dart`](#libsrcspotlightspotlight_motion_controllerdart) | Shared | 92 | The Spotlight animation chosen on this device, and the one in effect. |
 | [`lib/src/spotlight/spotlight_preview.dart`](#libsrcspotlightspotlight_previewdart) | Shared | 186 | A small Spotlight that shows how a preset moves: the real SpotlightDeck on made-up cards (colour fields standing in for artwork), turning every few seconds. |
@@ -1699,7 +1699,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/screens/home_screen.dart
 
-**Source:** [`lib/src/screens/home_screen.dart`](../../lib/src/screens/home_screen.dart) · **Platform:** Shared · **Lines:** 3297 · **Branches on:** isTv, isDesktop, usesTvLayout, TorrentSupport
+**Source:** [`lib/src/screens/home_screen.dart`](../../lib/src/screens/home_screen.dart) · **Platform:** Shared · **Lines:** 3312 · **Branches on:** isTv, isDesktop, usesTvLayout, TorrentSupport
 
 **Purpose:** Home and the app's orchestration: phone tabs, and the TV and Windows shells; owns the catalog wiring, the play flow (`_openItem`: providers, source choice, player) and details navigation.
 
@@ -3101,7 +3101,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/spotlight/spotlight_deck.dart
 
-**Source:** [`lib/src/spotlight/spotlight_deck.dart`](../../lib/src/spotlight/spotlight_deck.dart) · **Platform:** Shared · **Lines:** 436
+**Source:** [`lib/src/spotlight/spotlight_deck.dart`](../../lib/src/spotlight/spotlight_deck.dart) · **Platform:** Shared · **Lines:** 439
 
 **Purpose:** The phone Spotlight's carousel: a PageView whose cards a `SpotlightMotionStyle` places by their distance from the centre.
 

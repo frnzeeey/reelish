@@ -1893,8 +1893,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   /// The top of Home on a phone, in order of importance from the right:
   /// the profile (your own avatar in an accent ring), Search (the main
-  /// action, at full contrast) and Join a watch party (quieter, sharing
-  /// Search's capsule), with the Reelish mark on the left. Its own row above
+  /// action, at full contrast) and Join a watch party (quieter, labelled),
+  /// each its own piece of glass, with the Reelish mark on the left. Its own
+  /// row above
   /// the Spotlight, so it lines up with nothing that moves: the Spotlight's
   /// cards turn, scale and lift with its animation.
   Widget _brandHeader() => ListenableBuilder(
@@ -1906,8 +1907,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         children: [
           const _HeaderMark(),
           const SizedBox(width: 12),
-          // The capsule takes the room it needs, and no more than there is:
-          // with large text its label shortens rather than overflowing.
+          // The actions take the room they need, and no more than there is:
+          // with large text the party label shortens rather than overflowing.
           Expanded(
             child: Align(
               alignment: Alignment.centerRight,
@@ -1923,7 +1924,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ),
             ),
           ),
-          const SizedBox(width: 10),
+          // With the profile button's 2 px of margin around its ring, the
+          // same 8 px as between the two pieces of glass.
+          const SizedBox(width: _HeaderActions.gap - 2),
           // The profile at the top right, where streaming apps keep it; the
           // dock stays for the main places.
           HomeProfileButton(onOpen: () => _openProfile(context)),
@@ -3219,7 +3222,7 @@ class _HeaderMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const mark = ReelishMark(height: 26);
+    const mark = ReelishMark(height: 32);
     // The artwork is white: on a light theme's page it takes the page ink.
     if (!GlassTheme.isLight) return mark;
     return ColorFiltered(
@@ -3229,8 +3232,9 @@ class _HeaderMark extends StatelessWidget {
   }
 }
 
-/// Join a watch party (labelled, quieter) and Search (the main action, at
-/// full contrast) in one capsule, rather than a circle each.
+/// Join a watch party (a labelled pill, quieter) and Search (a circle, the
+/// main action, at full contrast): two pieces of the dock's glass, as tall
+/// as the profile ring beside them and spaced as it is.
 class _HeaderActions extends StatelessWidget {
   const _HeaderActions({required this.onJoinParty, required this.onSearch});
 
@@ -3239,59 +3243,70 @@ class _HeaderActions extends StatelessWidget {
 
   static const height = 44.0;
 
-  @override
-  Widget build(BuildContext context) => LiquidGlass(
-    // The dock's glass: a top-lit body, a curved sheen, an inner rim and a
-    // lit edge, over one small backdrop blur.
+  /// The space between the pill, the circle and the profile ring.
+  static const gap = 8.0;
+
+  /// The dock's glass: a top-lit body, a curved sheen, an inner rim and a
+  /// lit edge, over one small backdrop blur.
+  static Widget _glass(Widget child) => LiquidGlass(
     quality: LiquidGlassQuality.balanced,
     blurSigma: 9,
     opacity: .82,
     borderRadius: height / 2,
     elevation: .8,
-    child: SizedBox(
-      height: height,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Flexible(
-            child: TextButton.icon(
-              onPressed: onJoinParty,
-              style: TextButton.styleFrom(
-                minimumSize: const Size(48, height),
-                fixedSize: const Size.fromHeight(height),
-                padding: const EdgeInsets.fromLTRB(14, 0, 12, 0),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                foregroundColor: GlassTheme.muted,
-                shape: const StadiumBorder(),
-              ),
-              icon: const Icon(ReelishIcons.people, size: 20),
-              label: const Text(
-                'Join party',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: AppTextSize.label,
-                  fontWeight: FontWeight.w600,
-                ),
+    child: SizedBox(height: height, child: child),
+  );
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Flexible(
+        child: _glass(
+          TextButton.icon(
+            onPressed: onJoinParty,
+            style: TextButton.styleFrom(
+              minimumSize: const Size(48, height),
+              fixedSize: const Size.fromHeight(height),
+              // An even pill: the label sits as far from the end as the
+              // icon does from the start.
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              foregroundColor: GlassTheme.muted,
+              shape: const StadiumBorder(),
+            ),
+            icon: const Icon(ReelishIcons.people, size: 20),
+            label: const Text(
+              'Join party',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: AppTextSize.label,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
-          Container(width: 1, height: 18, color: GlassTheme.border),
+        ),
+      ),
+      const SizedBox(width: gap),
+      SizedBox(
+        width: height,
+        child: _glass(
           IconButton(
             tooltip: 'Search',
             onPressed: onSearch,
             style: IconButton.styleFrom(
-              fixedSize: const Size(48, height),
-              minimumSize: const Size(48, height),
+              fixedSize: const Size.square(height),
+              minimumSize: const Size.square(height),
               padding: EdgeInsets.zero,
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               foregroundColor: GlassTheme.textPrimary,
-              shape: const StadiumBorder(),
+              shape: const CircleBorder(),
             ),
             icon: const Icon(ReelishIcons.search, size: 20),
           ),
-        ],
+        ),
       ),
-    ),
+    ],
   );
 }
