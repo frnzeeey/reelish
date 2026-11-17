@@ -706,7 +706,9 @@ void main() {
         // The friend's own name is kept, not overwritten.
         expect(conversation.peer.displayName, 'Ana');
 
-        // Restarted offline: the settings were saved with the list.
+        // Restarted offline: the settings were saved with the list (written
+        // just before the acknowledgement).
+        await eventually(() => socket.of('ack').lastOrNull?['seq'] == 1);
         final again = await controller();
         expect(again.prefsOf(conv).muted, isTrue);
         expect(again.prefsOf(conv).nickname, 'Annie');
@@ -931,6 +933,10 @@ void main() {
       socket.receive(_event(1, 'a1'));
       socket.receive(_event(2, 'a2'));
       await settle();
+      // The conversation list is written just before the acknowledgement,
+      // not with each frame: wait for it, or a slow machine reads the list
+      // below before it exists.
+      await eventually(() => socket.of('ack').lastOrNull?['seq'] == 2);
       first.detach();
 
       final again = await controller();
