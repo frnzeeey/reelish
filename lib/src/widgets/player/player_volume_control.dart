@@ -5,6 +5,7 @@ import '../../theme/reelish_icons.dart';
 import '../../theme/design_tokens.dart';
 import '../../theme/glass_theme.dart';
 import 'player_controls.dart';
+import '../reelish_slider.dart';
 
 /// The Windows player's volume: a speaker button that mutes and unmutes,
 /// and a slider with the level that slides out while the pointer is over
@@ -125,9 +126,12 @@ class _PlayerVolumeControlState extends State<PlayerVolumeControl> {
                               child: Semantics(
                                 container: true,
                                 label: 'Volume',
-                                child: Slider(
+                                // Not Material's Slider: see ReelishSlider.
+                                child: ReelishSlider(
                                   value: volume.clamp(0, 1),
                                   divisions: 20,
+                                  thumbRadius: 6,
+                                  overlayRadius: 14,
                                   semanticFormatterCallback: (value) =>
                                       '${(value * 100).round()}%',
                                   onChangeStart: (_) =>

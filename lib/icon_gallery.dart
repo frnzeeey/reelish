@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 
 import 'src/theme/glass_theme.dart';
 import 'src/theme/reelish_icons.dart';
+import 'src/widgets/reelish_slider.dart';
 
 void main() => runApp(const IconGalleryApp());
 
@@ -77,7 +78,8 @@ class _IconGalleryScreenState extends State<IconGalleryScreen> {
                 Text('${_size.round()} px', style: TextStyle(color: ink)),
                 SizedBox(
                   width: 220,
-                  child: Slider(
+                  child: ReelishSlider(
+                    label: 'Icon size',
                     value: _size,
                     min: 12,
                     max: 72,

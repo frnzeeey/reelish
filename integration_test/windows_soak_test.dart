@@ -34,6 +34,11 @@ void main() {
     'opening and closing the player does not grow memory',
     (tester) async {
       SharedPreferences.setMockInitialValues({});
+      // Accessibility on, as with a screen reader or any UI Automation
+      // client on Windows: Flutter's semantics tree used to keep each
+      // closed player alive through Material's Slider (ReelishSlider), and
+      // that only shows with semantics on.
+      final semantics = tester.ensureSemantics();
       final files = await tester.runAsync(
         () => Directory.systemTemp.createTemp('reelish-soak-'),
       );
@@ -115,10 +120,14 @@ void main() {
       }
       // ignore: avoid_print
       print('SOAK_PLAYER rss_mb baseline=$baseline after_each=$samples');
-      // Measured on Windows: +~85 MB over the first ~13 cycles (HLS variant
-      // buffers, allocator), then ~0.7 MB per cycle. A leaked decoder, its
-      // frame buffers or the video texture would add tens of MB per cycle.
+      // Measured on Windows with semantics on (2026-11-20, 60 cycles): about
+      // +90 MB over the first 10 cycles (HLS variant buffers, allocator),
+      // then about 0.5 MB per cycle with drops back as memory is freed.
+      // Before ReelishSlider each closed player stayed alive: about 1.5 MB
+      // per cycle and never back. A leaked decoder, its frame buffers or the
+      // video texture would add tens of MB per cycle.
       expect(samples.last - baseline, lessThan(150));
+      semantics.dispose();
     },
     timeout: const Timeout(Duration(minutes: 10)),
   );

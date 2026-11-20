@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:onfeed/src/widgets/reelish_slider.dart';
 import 'package:onfeed/src/screens/app_information_screens.dart';
 import 'package:onfeed/src/screens/credits_screen.dart';
 import 'package:onfeed/src/screens/legal_information_screen.dart';
@@ -225,7 +226,7 @@ void main() {
 
     await tester.tap(find.text('Custom'));
     await tester.pumpAndSettle();
-    await tester.drag(find.byType(Slider).first, const Offset(80, 0));
+    await tester.drag(find.byType(ReelishSlider).first, const Offset(80, 0));
     await tester.tap(find.text('Use color'));
     await tester.pumpAndSettle();
     expect(accent.value.isCustom, isTrue);

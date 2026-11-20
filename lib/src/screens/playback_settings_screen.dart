@@ -36,6 +36,7 @@ import 'help_support_screen.dart';
 import 'notification_settings_screen.dart';
 import 'recommendation_settings_screen.dart';
 import 'subtitle_addons_screen.dart';
+import '../widgets/reelish_slider.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({
@@ -818,16 +819,17 @@ class _GradientSlider extends StatelessWidget {
       SliderTheme(
         data: SliderTheme.of(context).copyWith(
           trackHeight: 10,
-          trackShape: _GradientTrackShape(colors),
           thumbColor: Colors.white,
           thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
           overlayColor: Colors.white24,
         ),
         child: TvSliderNavigation(
-          child: Slider(
+          child: ReelishSlider(
+            label: label,
             value: value.clamp(min, max).toDouble(),
             min: min,
             max: max,
+            trackColors: colors,
             semanticFormatterCallback: (value) => max > 1
                 ? '${value.round()} degrees'
                 : '${(value * 100).round()} percent',
@@ -837,39 +839,6 @@ class _GradientSlider extends StatelessWidget {
       ),
     ],
   );
-}
-
-class _GradientTrackShape extends RoundedRectSliderTrackShape {
-  const _GradientTrackShape(this.colors);
-
-  final List<Color> colors;
-
-  @override
-  void paint(
-    PaintingContext context,
-    Offset offset, {
-    required RenderBox parentBox,
-    required SliderThemeData sliderTheme,
-    required Animation<double> enableAnimation,
-    required TextDirection textDirection,
-    required Offset thumbCenter,
-    Offset? secondaryOffset,
-    bool isDiscrete = false,
-    bool isEnabled = false,
-    double additionalActiveTrackHeight = 2,
-  }) {
-    final rect = getPreferredRect(
-      parentBox: parentBox,
-      offset: offset,
-      sliderTheme: sliderTheme,
-      isEnabled: isEnabled,
-      isDiscrete: isDiscrete,
-    );
-    context.canvas.drawRRect(
-      RRect.fromRectAndRadius(rect, Radius.circular(rect.height / 2)),
-      Paint()..shader = LinearGradient(colors: colors).createShader(rect),
-    );
-  }
 }
 
 class PlaybackSettingsScreen extends StatelessWidget {
@@ -1496,7 +1465,8 @@ class PlaybackSettingsScreen extends StatelessWidget {
         ),
       Expanded(
         child: TvSliderNavigation(
-          child: Slider(
+          child: ReelishSlider(
+            label: label,
             value: value.clamp(min, max).toDouble(),
             min: min,
             max: max,

@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:onfeed/src/theme/reelish_icons.dart';
 import 'package:onfeed/src/models/stream_source.dart';
+import 'package:onfeed/src/widgets/reelish_slider.dart';
 import 'package:onfeed/src/widgets/player/gesture_touch_layer.dart';
 import 'package:onfeed/src/widgets/player/player_controls.dart';
 import 'package:onfeed/src/widgets/player/player_lock_overlay.dart';
@@ -852,7 +853,7 @@ void main() {
       );
       expect(find.text('60%'), findsOneWidget);
 
-      final slider = find.byType(Slider);
+      final slider = find.byType(ReelishSlider);
       await tester.drag(slider, const Offset(-200, 0));
       await tester.pumpAndSettle();
       expect(changes.where((change) => !change.$2), isNotEmpty);

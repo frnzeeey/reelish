@@ -5,6 +5,7 @@ import '../../theme/reelish_icons.dart';
 
 import '../../models/playback_settings.dart';
 import '../tv/tv_focus.dart';
+import '../reelish_slider.dart';
 
 /// A compact panel at the top of the player for moving subtitles while they
 /// stay in view. Changes apply live through [onChanged]; [onCommit] is called
@@ -91,7 +92,9 @@ class SubtitlePositionPanel extends StatelessWidget {
                       ),
                       Expanded(
                         child: TvSliderNavigation(
-                          child: Slider(
+                          // Not Material's Slider: see ReelishSlider.
+                          child: ReelishSlider(
+                            label: 'Subtitle position',
                             focusNode: sliderFocusNode,
                             value: value,
                             min: PlaybackSettings.subtitlePositionMin,

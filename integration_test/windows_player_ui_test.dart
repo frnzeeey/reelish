@@ -21,6 +21,7 @@ import 'package:onfeed/src/screens/player_screen.dart';
 import 'package:onfeed/src/services/playback_settings_controller.dart';
 import 'package:onfeed/src/services/storage_service.dart';
 import 'package:onfeed/src/theme/glass_theme.dart';
+import 'package:onfeed/src/widgets/reelish_slider.dart';
 import 'package:onfeed/src/widgets/player/player_volume_control.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:video_player/video_player.dart';
@@ -434,7 +435,7 @@ void main() {
       // Dragging the slider to about half: the engine follows, and playback
       // goes on in the same player from where it was.
       final before = playing.value.position;
-      final slider = find.byType(Slider);
+      final slider = find.byType(ReelishSlider);
       // From the thumb at the right end (100%), left by a third of the
       // track; a press in the middle would jump straight to 50%.
       final width = tester.getSize(slider).width;

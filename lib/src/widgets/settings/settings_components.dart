@@ -5,6 +5,7 @@ import '../../theme/design_tokens.dart';
 import '../../theme/glass_theme.dart';
 import '../tv/tv_focus.dart';
 import 'tmdb_attribution.dart';
+import '../reelish_slider.dart';
 
 /// Shared measurements for every settings page, so sub-screens line up.
 abstract final class SettingsMetrics {
@@ -662,13 +663,15 @@ class SettingsSliderTile extends StatelessWidget {
             height: 1.4,
           ),
         ),
+        // ReelishSlider, not Slider (docs/playback/memory.md); the value
+        // shows in the label above instead of a bubble.
         TvSliderNavigation(
-          child: Slider(
+          child: ReelishSlider(
+            label: title,
             value: value.clamp(min, max).toDouble(),
             min: min,
             max: max,
             divisions: divisions,
-            label: valueLabel,
             onChanged: onChanged,
           ),
         ),
