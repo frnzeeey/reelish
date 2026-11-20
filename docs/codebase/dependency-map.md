@@ -116,19 +116,19 @@ graph LR
   screens_search["screens/search"] -->|17| theme["theme"]
   screens_search["screens/search"] -->|4| widgets["widgets"]
   screens_search["screens/search"] -->|2| widgets_tv["widgets/tv"]
-  screens_social["screens/social"] -->|3| account["account"]
+  screens_social["screens/social"] -->|6| account["account"]
   screens_social["screens/social"] -->|10| messaging["messaging"]
   screens_social["screens/social"] -->|1| models["models"]
   screens_social["screens/social"] -->|2| navigation["navigation"]
-  screens_social["screens/social"] -->|5| platform["platform"]
+  screens_social["screens/social"] -->|6| platform["platform"]
   screens_social["screens/social"] -->|1| screens_watch_party["screens/watch_party"]
-  screens_social["screens/social"] -->|10| social["social"]
-  screens_social["screens/social"] -->|18| theme["theme"]
-  screens_social["screens/social"] -->|4| widgets["widgets"]
+  screens_social["screens/social"] -->|12| social["social"]
+  screens_social["screens/social"] -->|20| theme["theme"]
+  screens_social["screens/social"] -->|6| widgets["widgets"]
   screens_social["screens/social"] -->|1| widgets_collections["widgets/collections"]
   screens_social["screens/social"] -->|6| widgets_settings["widgets/settings"]
-  screens_social["screens/social"] -->|3| widgets_social["widgets/social"]
-  screens_social["screens/social"] -->|3| widgets_tv["widgets/tv"]
+  screens_social["screens/social"] -->|4| widgets_social["widgets/social"]
+  screens_social["screens/social"] -->|4| widgets_tv["widgets/tv"]
   screens_tv["screens/tv"] -->|3| collections["collections"]
   screens_tv["screens/tv"] -->|1| discovery["discovery"]
   screens_tv["screens/tv"] -->|6| models["models"]
@@ -267,7 +267,7 @@ graph LR
 | `screens` | `account` (31), `analytics` (3), `app` (1), `collections` (1), `desktop` (7), `diagnostics` (3), `discovery` (8), `intro_skip` (1), `messaging` (1), `models` (29), `navigation` (12), `notifications` (4), `platform` (21), `screens/collections` (1), `screens/search` (3), `screens/social` (3), `screens/tv` (3), `screens/watch_party` (3), `search` (3), `services` (45), `social` (3), `spotlight` (7), `support` (3), `theme` (81), `viewmodels` (3), `watch_party` (3), `widgets` (47), `widgets/collections` (1), `widgets/player` (4), `widgets/plugin_library` (18), `widgets/plugin_manager` (4), `widgets/settings` (20), `widgets/social` (1), `widgets/tv` (8), `wrapped` (3) |
 | `screens/collections` | `collections` (3), `models` (1), `navigation` (1), `services` (1), `theme` (3), `viewmodels` (1), `widgets` (3), `widgets/collections` (2) |
 | `screens/search` | `discovery` (2), `models` (5), `navigation` (1), `platform` (3), `search` (9), `theme` (17), `widgets` (4), `widgets/tv` (2) |
-| `screens/social` | `account` (3), `messaging` (10), `models` (1), `navigation` (2), `platform` (5), `screens/watch_party` (1), `social` (10), `theme` (18), `widgets` (4), `widgets/collections` (1), `widgets/settings` (6), `widgets/social` (3), `widgets/tv` (3) |
+| `screens/social` | `account` (6), `messaging` (10), `models` (1), `navigation` (2), `platform` (6), `screens/watch_party` (1), `social` (12), `theme` (20), `widgets` (6), `widgets/collections` (1), `widgets/settings` (6), `widgets/social` (4), `widgets/tv` (4) |
 | `screens/tv` | `collections` (3), `discovery` (1), `models` (6), `navigation` (2), `screens/social` (1), `screens/watch_party` (1), `services` (5), `theme` (11), `viewmodels` (5), `watch_party` (1), `widgets` (7), `widgets/collections` (2), `widgets/settings` (1), `widgets/tv` (7) |
 | `screens/watch_party` | `account` (5), `desktop` (2), `models` (1), `navigation` (2), `platform` (3), `screens` (1), `theme` (16), `watch_party` (9), `widgets` (9), `widgets/settings` (3), `widgets/tv` (1), `widgets/watch_party` (1) |
 | `search` | `analytics` (2), `discovery` (2), `models` (4), `services` (2) |
@@ -295,23 +295,23 @@ The files imported by the most other `lib/` files. A change to one of these reac
 
 | File | Imported by (lib files) | Imported by (tests) |
 |---|---|---|
-| [`lib/src/theme/glass_theme.dart`](../../lib/src/theme/glass_theme.dart) | 127 | 53 |
+| [`lib/src/theme/glass_theme.dart`](../../lib/src/theme/glass_theme.dart) | 128 | 54 |
 | [`lib/src/theme/reelish_icons.dart`](../../lib/src/theme/reelish_icons.dart) | 110 | 12 |
-| [`lib/src/theme/design_tokens.dart`](../../lib/src/theme/design_tokens.dart) | 80 | 2 |
+| [`lib/src/theme/design_tokens.dart`](../../lib/src/theme/design_tokens.dart) | 81 | 2 |
 | [`lib/src/models/media_item.dart`](../../lib/src/models/media_item.dart) | 59 | 58 |
-| [`lib/src/platform/device_capabilities.dart`](../../lib/src/platform/device_capabilities.dart) | 58 | 30 |
+| [`lib/src/platform/device_capabilities.dart`](../../lib/src/platform/device_capabilities.dart) | 59 | 30 |
+| [`lib/src/account/account_controller.dart`](../../lib/src/account/account_controller.dart) | 30 | 33 |
 | [`lib/src/services/storage_service.dart`](../../lib/src/services/storage_service.dart) | 30 | 41 |
 | [`lib/src/widgets/settings/settings_components.dart`](../../lib/src/widgets/settings/settings_components.dart) | 30 | 3 |
-| [`lib/src/account/account_controller.dart`](../../lib/src/account/account_controller.dart) | 29 | 33 |
-| [`lib/src/widgets/tv/tv_focus.dart`](../../lib/src/widgets/tv/tv_focus.dart) | 27 | 8 |
+| [`lib/src/widgets/tv/tv_focus.dart`](../../lib/src/widgets/tv/tv_focus.dart) | 28 | 8 |
 | [`lib/src/account/account_api.dart`](../../lib/src/account/account_api.dart) | 23 | 32 |
+| [`lib/src/widgets/artwork_image.dart`](../../lib/src/widgets/artwork_image.dart) | 21 | 5 |
 | [`lib/src/navigation/app_transitions.dart`](../../lib/src/navigation/app_transitions.dart) | 20 | 1 |
-| [`lib/src/widgets/artwork_image.dart`](../../lib/src/widgets/artwork_image.dart) | 20 | 5 |
 | [`lib/src/models/stream_source.dart`](../../lib/src/models/stream_source.dart) | 19 | 21 |
 | [`lib/src/account/backend_config.dart`](../../lib/src/account/backend_config.dart) | 18 | 1 |
 | [`lib/src/watch_party/party_models.dart`](../../lib/src/watch_party/party_models.dart) | 17 | 7 |
-| [`lib/src/account/profile_controller.dart`](../../lib/src/account/profile_controller.dart) | 14 | 11 |
-| [`lib/src/account/supporter_controller.dart`](../../lib/src/account/supporter_controller.dart) | 13 | 11 |
+| [`lib/src/account/profile_controller.dart`](../../lib/src/account/profile_controller.dart) | 15 | 11 |
+| [`lib/src/account/supporter_controller.dart`](../../lib/src/account/supporter_controller.dart) | 14 | 11 |
 | [`lib/src/analytics/analytics_service.dart`](../../lib/src/analytics/analytics_service.dart) | 13 | 5 |
 | [`lib/src/models/episode_progress.dart`](../../lib/src/models/episode_progress.dart) | 13 | 14 |
 | [`lib/src/widgets/glass_button.dart`](../../lib/src/widgets/glass_button.dart) | 13 | 1 |
@@ -328,7 +328,7 @@ Each third-party package imported by `lib/`, A–Z, with the files that import i
 | Package | Imported by |
 |---|---|
 | `crypto` | `src/account/profile_controller.dart`, `src/services/github_update_service.dart`, `src/services/provider_plugin_service.dart` |
-| `flutter` | 219 files, including `icon_gallery.dart`, `main.dart`, `src/account/account_badges.dart`, `src/account/account_controller.dart`, `src/account/avatar_frames.dart`, `src/account/avatar_image.dart` |
+| `flutter` | 220 files, including `icon_gallery.dart`, `main.dart`, `src/account/account_badges.dart`, `src/account/account_controller.dart`, `src/account/avatar_frames.dart`, `src/account/avatar_image.dart` |
 | `flutter_cache_manager` | `src/widgets/artwork_image.dart` |
 | `flutter_go_torrent_streamer` | `src/services/torrent_source_preparer.dart`, `src/widgets/player/custom_video_player.dart` |
 | `flutter_js` | `src/services/provider_fetch_bridge.dart`, `src/services/provider_runner.dart` |

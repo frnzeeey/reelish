@@ -1,12 +1,17 @@
-// Friends: the list, requests waiting both ways, a friend's page and the
-// people blocked. Opened from Profile on phone, TV and Windows; TV and
-// Windows put adding and requests beside the list, phones stack them. Every
-// action is decided by the server (backend/src/social/friends.ts).
+// Friends, the body of Together: your people as faces and a list, requests
+// waiting both ways, messages, what friends sent, a friend's page and the
+// people blocked (docs/features/together.md). Together and Friends opened from
+// Profile are this one page on phone, TV and Windows; TV and Windows put
+// movie night and what friends share beside the people. Every action is
+// decided by the server (backend/src/social/friends.ts).
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../account/account_api.dart';
+import '../../account/account_controller.dart';
+import '../../account/profile_controller.dart';
 import '../../navigation/app_transitions.dart';
 import '../../platform/device_capabilities.dart';
 import '../../social/friends_controller.dart';
@@ -15,7 +20,6 @@ import '../../social/social_controller.dart';
 import '../../theme/design_tokens.dart';
 import '../../theme/glass_theme.dart';
 import '../../theme/reelish_icons.dart';
-import '../../widgets/notice_card.dart';
 import '../../widgets/settings/settings_components.dart';
 import '../../widgets/social/social_widgets.dart';
 import '../../messaging/message_models.dart';
@@ -25,6 +29,7 @@ import 'friend_collection_screen.dart';
 import 'friends_privacy_screen.dart';
 import 'messages_screen.dart';
 import 'messages_split_view.dart';
+import 'together_sections.dart';
 
 /// Opens a page over the current one in a Scaffold, as Profile opens its
 /// pages; [page] gets a Back callback.
@@ -184,36 +189,6 @@ void _show(BuildContext context, String message) =>
       ?..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(message)));
 
-/// Two columns where there is a remote or a mouse and room for them.
-Widget _columns(List<Widget> left, List<Widget> right) => LayoutBuilder(
-  builder: (context, constraints) {
-    if (!DeviceCapabilities.usesTvLayout || constraints.maxWidth < 720) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [...left, ...right],
-      );
-    }
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: left,
-          ),
-        ),
-        const SizedBox(width: AppSpace.lg),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: right,
-          ),
-        ),
-      ],
-    );
-  },
-);
-
 class FriendsScreen extends StatefulWidget {
   const FriendsScreen({
     super.key,
@@ -223,7 +198,8 @@ class FriendsScreen extends StatefulWidget {
     this.messages,
     this.onBack,
     this.title = 'Friends',
-    this.leading = const [],
+    this.movieNight,
+    this.greet = false,
     this.bottomClearance = 20,
   });
 
@@ -231,9 +207,12 @@ class FriendsScreen extends StatefulWidget {
   /// the navigation.
   final String title;
 
-  /// Sections above Friends' own, shown whether Friends is on or off (the
-  /// Together page's Watch Party).
-  final List<Widget> leading;
+  /// Together's Movie night, shown whether Friends is on or off.
+  final Widget? movieNight;
+
+  /// Together greets the viewer by name under the title; Friends shows the
+  /// handle there.
+  final bool greet;
 
   /// Space below the page, for the phone dock.
   final double bottomClearance;
@@ -374,24 +353,32 @@ class _FriendsScreenState extends State<FriendsScreen> {
     ]),
     builder: (context, _) {
       final profile = _social.profile;
+      final movieNight = widget.movieNight;
       final List<Widget> body;
       if (profile != null) {
         body = [_on(profile)];
       } else if (_social.known) {
-        body = [_off()];
+        body = [?movieNight, _off()];
       } else if (_social.failed) {
-        body = [_retry()];
+        body = [?movieNight, _retry()];
       } else {
-        body = const [_Spinner()];
+        body = [?movieNight, const _Spinner()];
       }
+      final name = ProfileController.instance.nameOr(
+        AccountController.instance.username,
+      );
       final page = SettingsPage(
         title: widget.title,
-        subtitle: profile == null ? null : '@${profile.handle}',
+        subtitle: widget.greet
+            ? '${greetingFor(DateTime.now())}, $name'
+            : profile == null
+            ? null
+            : '@${profile.handle}',
         icon: ReelishIcons.people,
         onBack: widget.onBack,
         footer: null,
         bottomClearance: widget.bottomClearance,
-        children: [...widget.leading, ...body],
+        children: body,
       );
       // Pull to refresh where there is touch; a remote or mouse reloads
       // when the page opens or the app comes back.
@@ -441,6 +428,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
     final incoming = _friends.incoming;
     final outgoing = _friends.outgoing;
     final friends = _friends.friends;
+    final watching = _friends.watching;
     final recommended = _recommendations.items;
     final unread = _social.counts.unread;
     final conversations = _messages.conversations;
@@ -453,134 +441,176 @@ class _FriendsScreenState extends State<FriendsScreen> {
         incoming.isEmpty &&
         conversations.isEmpty &&
         waitingMessages == 0;
-    final left = <Widget>[
+    Widget gap(Widget child) => Padding(
+      padding: const EdgeInsets.only(bottom: SettingsMetrics.sectionGap),
+      child: child,
+    );
+
+    // People first: the faces, then the two things you do with them most.
+    final top = <Widget>[
       if (_friends.failed && _friends.loaded)
         const _Note(
           'Reelish could not be reached: this is the list from your last '
           'visit.',
         ),
       if (newcomer)
-        const Padding(
-          padding: EdgeInsets.only(bottom: SettingsMetrics.sectionGap),
-          child: NoticeCard(
-            icon: ReelishIcons.people,
-            title: 'Bring your people in',
-            message:
-                'Add friends by their code or @handle. Then message them, '
-                'send them titles and watch together.',
+        gap(
+          WelcomeCard(
+            friendCode: profile.formattedCode,
+            onAdd: () => unawaited(_add()),
+            onCopyCode: () => unawaited(_copyCode(profile)),
+          ),
+        )
+      else ...[
+        if (friends.isNotEmpty || watching.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppSpace.sm),
+            child: FriendsStrip(
+              friends: friends,
+              watching: watching,
+              onOpen: _openFromStrip,
+              onAdd: () => unawaited(_add()),
+            ),
+          ),
+        gap(
+          TogetherShortcuts(
+            newMessages: unreadMessages + waitingMessages,
+            onMessages: _openMessages,
           ),
         ),
-      // Someone waiting on an answer comes first.
-      if (incoming.isNotEmpty)
-        SettingsSection(
-          label: 'REQUESTS · ${incoming.length}',
-          children: [
-            for (final person in incoming)
-              PersonTile(
-                person: person,
-                subtitle: 'Wants to be friends',
-                enabled: !_friends.isWorking(person.handle),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      tooltip: 'Decline',
-                      onPressed: _friends.isWorking(person.handle)
-                          ? null
-                          : () => unawaited(_decline(person)),
-                      icon: Icon(ReelishIcons.close, color: GlassTheme.muted),
-                    ),
-                    IconButton.filled(
-                      tooltip: 'Accept',
-                      onPressed: _friends.isWorking(person.handle)
-                          ? null
-                          : () => unawaited(
-                              _run(
-                                _friends.accept(person),
-                                'You and @${person.handle} are now friends',
+      ],
+    ];
+
+    final movieNight = widget.movieNight == null
+        ? null
+        : gap(widget.movieNight!);
+    // Someone waiting on an answer comes first.
+    final requests = incoming.isEmpty
+        ? null
+        : SettingsSection(
+            label: 'REQUESTS · ${incoming.length}',
+            children: [
+              for (final person in incoming)
+                PersonTile(
+                  person: person,
+                  subtitle: 'Wants to be friends',
+                  enabled: !_friends.isWorking(person.handle),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        tooltip: 'Decline',
+                        onPressed: _friends.isWorking(person.handle)
+                            ? null
+                            : () => unawaited(_decline(person)),
+                        icon: Icon(ReelishIcons.close, color: GlassTheme.muted),
+                      ),
+                      IconButton.filled(
+                        tooltip: 'Accept',
+                        onPressed: _friends.isWorking(person.handle)
+                            ? null
+                            : () => unawaited(
+                                _run(
+                                  _friends.accept(person),
+                                  'You and @${person.handle} are now friends',
+                                ),
                               ),
-                            ),
-                      icon: const Icon(ReelishIcons.check),
-                    ),
-                  ],
+                        icon: const Icon(ReelishIcons.check),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-          ],
-        ),
-      // Messages need a friend: hidden until there is something to read.
-      if (!newcomer)
-        SettingsSection(
-          label: unreadMessages > 0
-              ? 'MESSAGES · $unreadMessages NEW'
-              : 'MESSAGES',
-          children: [
-            for (final conversation in conversations.take(3))
-              ConversationTile(
-                conversation: conversation,
-                messages: _messages,
-                onTap: () => openChat(
-                  context,
-                  conversation,
+            ],
+          );
+
+    // Messages need a friend: shown once there is something to read. Until
+    // then the shortcut at the top is the way in.
+    final messages = conversations.isEmpty && waitingMessages == 0
+        ? null
+        : SettingsSection(
+            label: unreadMessages > 0
+                ? 'MESSAGES · $unreadMessages NEW'
+                : 'MESSAGES',
+            children: [
+              for (final conversation in conversations.take(3))
+                ConversationTile(
+                  conversation: conversation,
                   messages: _messages,
-                  friends: _friends,
+                  onTap: () => openChat(
+                    context,
+                    conversation,
+                    messages: _messages,
+                    friends: _friends,
+                  ),
+                  onOptions: () => openConversationOptions(
+                    context,
+                    conversation,
+                    messages: _messages,
+                    friends: _friends,
+                    withFriendPage: true,
+                  ),
                 ),
-                onOptions: () => openConversationOptions(
-                  context,
-                  conversation,
-                  messages: _messages,
-                  friends: _friends,
-                  withFriendPage: true,
+              SettingsTile(
+                icon: ReelishIcons.chat,
+                title: 'All messages',
+                description: waitingMessages > 0
+                    ? (waitingMessages == 1
+                          ? '1 new message is waiting'
+                          : '$waitingMessages new messages are waiting')
+                    : null,
+                onTap: _openMessages,
+              ),
+            ],
+          );
+
+    // What friends sent, as posters to pick from.
+    final discoveries = gap(
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TogetherHeading(
+            label: unread > 0
+                ? 'SHARED DISCOVERIES · $unread NEW'
+                : 'SHARED DISCOVERIES',
+            actionLabel: 'See all',
+            onAction: _openRecommendations,
+          ),
+          if (recommended.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              child: Text(
+                "When a friend sends you a title, it lands here. Send one "
+                "from any title's page with Recommend.",
+                style: TextStyle(
+                  color: GlassTheme.muted,
+                  fontSize: AppTextSize.label,
+                  height: 1.4,
                 ),
               ),
-            SettingsTile(
-              icon: ReelishIcons.chat,
-              title: conversations.isEmpty ? 'Messages' : 'All messages',
-              description: waitingMessages > 0
-                  ? (waitingMessages == 1
-                        ? '1 new message is waiting'
-                        : '$waitingMessages new messages are waiting')
-                  : conversations.isEmpty
-                  ? 'Private messages with friends. Open a friend to start.'
-                  : null,
-              onTap: _openMessages,
+            )
+          else
+            DiscoveriesRow(
+              items: recommended.take(12).toList(),
+              onOpen: (item) => openRecommendation(_recommendations, item),
             ),
-          ],
-        ),
-      if (_friends.watching.isNotEmpty)
-        SettingsSection(
-          label: 'WATCHING NOW',
-          children: [
-            for (final now in _friends.watching)
-              PersonTile(
-                person: now.person,
-                subtitle: 'Watching ${now.label}',
-                onTap: () {
-                  final open = SocialTitles.open;
-                  if (open != null) unawaited(open(now.media));
-                },
-              ),
-          ],
-        ),
-      if (recommended.isNotEmpty)
-        SettingsSection(
-          label: unread > 0
-              ? 'RECOMMENDED TO YOU · $unread NEW'
-              : 'RECOMMENDED TO YOU',
-          children: [
-            for (final item in recommended.take(3))
-              RecommendationTile(
-                item: item,
-                onOpen: () => openRecommendation(_recommendations, item),
-              ),
-            SettingsTile(
-              icon: ReelishIcons.send,
-              title: 'All recommendations',
-              onTap: _openRecommendations,
-            ),
-          ],
-        ),
-      SettingsSection(
-        label: 'ADD A FRIEND',
+        ],
+      ),
+    );
+
+    // Your people: adding someone, your code to give out, and everyone.
+    final Widget? people;
+    if (newcomer) {
+      people = null;
+    } else if (!_friends.loaded && _friends.loading) {
+      people = const _Spinner();
+    } else if (!_friends.loaded && _friends.failed) {
+      people = _retry();
+    } else {
+      final count = _social.counts.friends > friends.length
+          ? _social.counts.friends
+          : friends.length;
+      people = SettingsSection(
+        label: friends.isEmpty ? 'YOUR PEOPLE' : 'YOUR PEOPLE · $count',
         children: [
           SettingsTile(
             icon: ReelishIcons.personAdd,
@@ -591,88 +621,134 @@ class _FriendsScreenState extends State<FriendsScreen> {
             icon: ReelishIcons.hash,
             title: 'Your friend code',
             value: profile.formattedCode,
-            description: 'Share it so friends can add you',
-            onTap: _openPrivacy,
+            description: 'Tap to copy, and send it so friends can add you',
+            onTap: () => unawaited(_copyCode(profile)),
+            trailing: DeviceCapabilities.isTv
+                ? null
+                : Icon(ReelishIcons.copy, color: GlassTheme.muted, size: 20),
           ),
-        ],
-      ),
-      if (outgoing.isNotEmpty)
-        SettingsSection(
-          label: 'SENT',
-          children: [
-            for (final person in outgoing)
-              PersonTile(
-                person: person,
-                subtitle: 'Waiting for an answer',
-                enabled: !_friends.isWorking(person.handle),
-                trailing: TextButton(
-                  onPressed: _friends.isWorking(person.handle)
-                      ? null
-                      : () => unawaited(
-                          _run(_friends.cancel(person), 'Request cancelled'),
-                        ),
-                  child: const Text('Cancel'),
-                ),
-              ),
-          ],
-        ),
-    ];
-    final right = <Widget>[
-      if (!_friends.loaded && _friends.loading)
-        const _Spinner()
-      else if (!_friends.loaded && _friends.failed)
-        _retry()
-      else
-        SettingsSection(
-          label: friends.isEmpty
-              ? 'FRIENDS'
-              : 'FRIENDS · ${_social.counts.friends > friends.length ? _social.counts.friends : friends.length}',
-          description: friends.isEmpty
-              ? 'No friends yet. Share your friend code, or add someone by '
-                    'theirs under Add a friend.'
-              : null,
-          children: [
-            for (final person in friends)
-              PersonTile(
-                person: person,
-                subtitle: person.since == null
-                    ? null
-                    : 'Friends since ${_date(person.since!)}',
-                onTap: () => _openFriend(person),
-              ),
-            if (_friends.hasMore)
-              SettingsTile(
-                icon: ReelishIcons.arrowDown,
-                title: _friends.loadingMore ? 'Loading…' : 'Show more',
-                enabled: !_friends.loadingMore,
-                onTap: () => unawaited(_friends.loadMore()),
-              ),
-          ],
-        ),
-      SettingsSection(
-        children: [
-          if (recommended.isEmpty)
-            SettingsTile(
-              icon: ReelishIcons.send,
-              title: 'Recommendations',
-              description: 'Titles friends send you',
-              onTap: _openRecommendations,
+          for (final person in friends)
+            PersonTile(
+              person: person,
+              subtitle: person.since == null
+                  ? null
+                  : 'Friends since ${_date(person.since!)}',
+              onTap: () => _openFriend(person),
             ),
-          SettingsTile(
-            icon: ReelishIcons.blocked,
-            title: 'Blocked people',
-            onTap: _openBlocked,
-          ),
-          SettingsTile(
-            icon: ReelishIcons.shield,
-            title: 'Friends & privacy',
-            description: 'Your handle, what friends see, who can find you',
-            onTap: _openPrivacy,
-          ),
+          if (_friends.hasMore)
+            SettingsTile(
+              icon: ReelishIcons.arrowDown,
+              title: _friends.loadingMore ? 'Loading…' : 'Show more',
+              enabled: !_friends.loadingMore,
+              onTap: () => unawaited(_friends.loadMore()),
+            ),
         ],
-      ),
-    ];
-    return _columns(left, right);
+      );
+    }
+    final sent = outgoing.isEmpty
+        ? null
+        : SettingsSection(
+            label: 'SENT',
+            children: [
+              for (final person in outgoing)
+                PersonTile(
+                  person: person,
+                  subtitle: 'Waiting for an answer',
+                  enabled: !_friends.isWorking(person.handle),
+                  trailing: TextButton(
+                    onPressed: _friends.isWorking(person.handle)
+                        ? null
+                        : () => unawaited(
+                            _run(_friends.cancel(person), 'Request cancelled'),
+                          ),
+                    child: const Text('Cancel'),
+                  ),
+                ),
+            ],
+          );
+    // Settings for the people side, last and quieter.
+    final privacy = SettingsSection(
+      label: 'PRIVACY AND PEOPLE',
+      children: [
+        SettingsTile(
+          icon: ReelishIcons.shield,
+          title: 'Friends & privacy',
+          description: 'Your handle, what friends see, who can find you',
+          onTap: _openPrivacy,
+        ),
+        SettingsTile(
+          icon: ReelishIcons.blocked,
+          title: 'Blocked people',
+          onTap: _openBlocked,
+        ),
+      ],
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // TV and Windows with room: movie night and what friends share
+        // beside the people themselves.
+        final wide =
+            DeviceCapabilities.usesTvLayout && constraints.maxWidth >= 720;
+        if (!wide) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ...top,
+              ?movieNight,
+              ?requests,
+              ?messages,
+              discoveries,
+              ?people,
+              ?sent,
+              privacy,
+            ],
+          );
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ...top,
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [?movieNight, ?messages, discoveries],
+                  ),
+                ),
+                const SizedBox(width: AppSpace.lg),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [?requests, ?people, ?sent, privacy],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// A friend in the strip: what they are watching now, when they share it
+  /// (as the Watching now row did), else their page.
+  void _openFromStrip(SocialPerson person) {
+    final open = SocialTitles.open;
+    for (final now in _friends.watching) {
+      if (now.person.handle == person.handle && open != null) {
+        unawaited(open(now.media));
+        return;
+      }
+    }
+    _openFriend(person);
+  }
+
+  Future<void> _copyCode(SocialProfile profile) async {
+    await Clipboard.setData(ClipboardData(text: profile.formattedCode));
+    if (mounted) _show(context, 'Friend code copied');
   }
 }
 

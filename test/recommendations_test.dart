@@ -448,13 +448,13 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('RECOMMENDED TO YOU · 2 NEW'), findsOneWidget);
-      expect(find.text('From @ben'), findsOneWidget);
+      expect(find.text('SHARED DISCOVERIES · 2 NEW'), findsOneWidget);
+      expect(find.text('from @ben'), findsWidgets);
       expect(find.text('“Watch it”'), findsNWidgets(3));
-      await tester.tap(find.text('Dune a (2021)'));
+      await tester.tap(find.text('Dune a'));
       await tester.pumpAndSettle();
       expect(opened, ['438631']);
-      expect(find.text('RECOMMENDED TO YOU · 1 NEW'), findsOneWidget);
+      expect(find.text('SHARED DISCOVERIES · 1 NEW'), findsOneWidget);
     });
 
     testWidgets('the full inbox marks everything read and can remove', (

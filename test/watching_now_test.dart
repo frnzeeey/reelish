@@ -12,6 +12,7 @@ import 'package:onfeed/src/account/session_store.dart';
 import 'package:onfeed/src/models/media_item.dart';
 import 'package:onfeed/src/screens/social/friends_privacy_screen.dart';
 import 'package:onfeed/src/screens/social/friends_screen.dart';
+import 'package:onfeed/src/screens/social/together_sections.dart';
 import 'package:onfeed/src/social/activity_publisher.dart';
 import 'package:onfeed/src/social/friends_controller.dart';
 import 'package:onfeed/src/social/recommendations_controller.dart';
@@ -387,9 +388,10 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('WATCHING NOW'), findsOneWidget);
-    expect(find.text('@ben · Watching Dark · S1 E3'), findsOneWidget);
-    await tester.tap(find.text('@ben · Watching Dark · S1 E3'));
+    // In the friends strip: ringed, with what they watch under the name.
+    expect(find.byType(FriendsStrip), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp('watching Dark')), findsOneWidget);
+    await tester.tap(find.text('Dark · S1 E3'));
     expect(opened, ['series:70523']);
   });
 

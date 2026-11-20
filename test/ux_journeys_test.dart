@@ -453,7 +453,8 @@ void main() {
       await pumpHome(tester, size: const Size(600, 844));
       await tester.tap(find.text('Together'));
       await settle(tester, rounds: 10);
-      expect(find.text('WATCH PARTY'), findsOneWidget);
+      expect(find.text('Movie night'), findsOneWidget);
+      expect(find.text('Join with a code'), findsOneWidget);
       await tester.tap(find.text('Settings').last);
       await settle(tester, rounds: 10);
       final plugins = find.widgetWithText(SettingsTile, 'Plugins');

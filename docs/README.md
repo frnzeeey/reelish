@@ -38,6 +38,7 @@ search the generated references below: every file, class and function in
 | [Feature index](features/feature-index.md) | Every feature mapped to its code, data and tests |
 | [Caching](features/caching.md) | TMDB response and artwork caches: policies, decision, measurements |
 | [Universal Search](features/universal-search.md) | Movies, series, people and collections in one search: requests, ranking, filters, provider sources, cost |
+| [Together](features/together.md) | The social home: audit, what the data supports, sections, where every feature went, states, look |
 | [Watch Party](features/watch-party.md) | Reliability audit, how actions reach the room, presence and reconnection, reactions, chat, invitation links, cost |
 | [Plugin Manager](features/plugin-manager.md) | Provider audit, collection and provider pages, compatibility, source trust, update check, security |
 | [Reelish Wrapped](features/wrapped.md) | The yearly recap: data sources, counting rules, personality rules, coverage, story, share cards and export, privacy, cost |

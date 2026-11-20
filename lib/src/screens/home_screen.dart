@@ -322,6 +322,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _providerPlugins.addListener(_onPluginChange);
     PartyPlayerLauncher.open = _openPartyTitle;
     SocialTitles.open = _showDetails;
+    TogetherActions.findTitle = _findTitleToHost;
     // A tapped alert, including the one that launched the app: after the
     // first frame, when a page can be pushed.
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1399,6 +1400,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       );
 
   /// Phone: Universal Search over Home. TV and Windows show it as a page.
+  /// Together's Movie night: search, where a title's page starts a
+  /// party. The phone opens it over the page; TV and Windows go to Search.
+  void _findTitleToHost() {
+    if (DeviceCapabilities.usesTvLayout) {
+      _onTvDestinationChanged(TvDestination.search);
+    } else {
+      _openSearch();
+    }
+  }
+
   void _openSearch() => unawaited(
     Navigator.push(
       context,
@@ -1515,6 +1526,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       PartyPlayerLauncher.open = null;
     }
     if (SocialTitles.open == _showDetails) SocialTitles.open = null;
+    if (TogetherActions.findTitle == _findTitleToHost) {
+      TogetherActions.findTitle = null;
+    }
     if (AlertRoutes.open == _openAlert) AlertRoutes.open = null;
     if (WrappedLauncher.open == _openWrapped) WrappedLauncher.open = null;
     PartyLinks.pending.removeListener(_openPartyLink);

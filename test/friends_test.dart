@@ -11,6 +11,8 @@ import 'package:onfeed/src/account/account_controller.dart';
 import 'package:onfeed/src/account/session_store.dart';
 import 'package:onfeed/src/platform/device_capabilities.dart';
 import 'package:onfeed/src/screens/social/friends_screen.dart';
+import 'package:onfeed/src/screens/social/together_sections.dart';
+import 'package:onfeed/src/widgets/social/social_widgets.dart';
 import 'package:onfeed/src/social/friends_controller.dart';
 import 'package:onfeed/src/social/social_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -356,7 +358,7 @@ void main() {
       await tester.tap(find.byTooltip('Accept'));
       await tester.pumpAndSettle();
       expect(find.text('REQUESTS · 1'), findsNothing);
-      expect(find.text('FRIENDS · 2'), findsOneWidget);
+      expect(find.text('YOUR PEOPLE · 2'), findsOneWidget);
 
       await tester.tap(find.text('Add by code or @handle'));
       await tester.pumpAndSettle();
@@ -463,9 +465,41 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Bring your people in'), findsOneWidget);
       expect(find.text('MESSAGES'), findsNothing);
-      // One way to add a friend, not two.
-      expect(find.text('Add by code or @handle'), findsOneWidget);
-      expect(find.text('Add a friend'), findsNothing);
+      // The welcome holds the one way to add a friend and the code to give
+      // out; Your people waits until there is someone in it.
+      expect(find.text('Add a friend'), findsOneWidget);
+      expect(find.textContaining('Copy your code'), findsOneWidget);
+      expect(find.text('Add by code or @handle'), findsNothing);
+      expect(find.textContaining('YOUR PEOPLE'), findsNothing);
+      // Still there: what friends send, and the people settings.
+      expect(find.text('SHARED DISCOVERIES'), findsOneWidget);
+      expect(find.text('Blocked people'), findsOneWidget);
+    });
+
+    testWidgets('people first: faces at the top, Messages one tap away', (
+      tester,
+    ) async {
+      _tall(tester);
+      final (friends, social) = await _controllers(server);
+      await tester.pumpWidget(_app(friends, social));
+      await tester.pumpAndSettle();
+      // The friend's face leads the page, before any section.
+      final strip = find.byType(FriendsStrip);
+      expect(strip, findsOneWidget);
+      expect(
+        find.descendant(of: strip, matching: find.byType(PersonAvatar)),
+        findsOneWidget,
+      );
+      expect(
+        tester.getTopLeft(strip).dy,
+        lessThan(tester.getTopLeft(find.text('REQUESTS · 1')).dy),
+      );
+      expect(find.widgetWithText(FilledButton, 'Messages'), findsOneWidget);
+      // The settings for the people side come last.
+      expect(
+        tester.getTopLeft(find.text('PRIVACY AND PEOPLE')).dy,
+        greaterThan(tester.getTopLeft(find.text('YOUR PEOPLE · 1')).dy),
+      );
     });
 
     testWidgets('a request waiting on an answer comes first', (tester) async {
@@ -476,7 +510,11 @@ void main() {
       expect(find.text('Bring your people in'), findsNothing);
       expect(
         tester.getTopLeft(find.text('REQUESTS · 1')).dy,
-        lessThan(tester.getTopLeft(find.text('MESSAGES')).dy),
+        lessThan(tester.getTopLeft(find.text('SHARED DISCOVERIES')).dy),
+      );
+      expect(
+        tester.getTopLeft(find.text('REQUESTS · 1')).dy,
+        lessThan(tester.getTopLeft(find.text('YOUR PEOPLE · 1')).dy),
       );
     });
 
@@ -487,17 +525,15 @@ void main() {
         final (friends, social) = await _controllers(server);
         await tester.pumpWidget(_app(friends, social));
         await tester.pumpAndSettle();
-        final add = tester.getTopLeft(find.text('ADD A FRIEND'));
-        final list = tester.getTopLeft(find.textContaining('FRIENDS ·'));
-        expect(list.dx, greaterThan(add.dx));
-        // A request waiting on an answer leads the left column, level with
-        // the list; Messages follows it.
+        // What friends share on the left; the people on the right, a
+        // request waiting on an answer first, level with it.
+        final shared = tester.getTopLeft(find.text('SHARED DISCOVERIES'));
         final requests = tester.getTopLeft(find.text('REQUESTS · 1'));
-        final messages = tester.getTopLeft(find.text('MESSAGES'));
-        expect(requests.dx, add.dx);
-        expect(list.dy, requests.dy);
-        expect(messages.dx, add.dx);
-        expect(messages.dy, greaterThan(requests.dy));
+        final people = tester.getTopLeft(find.text('YOUR PEOPLE · 1'));
+        expect(requests.dx, greaterThan(shared.dx));
+        expect(requests.dy, shared.dy);
+        expect(people.dx, requests.dx);
+        expect(people.dy, greaterThan(requests.dy));
         expect(tester.takeException(), isNull);
       },
       variant: TargetPlatformVariant.only(TargetPlatform.windows),
@@ -517,9 +553,9 @@ void main() {
       final (friends, social) = await _controllers(server);
       await tester.pumpWidget(_app(friends, social));
       await tester.pumpAndSettle();
-      final add = tester.getTopLeft(find.text('ADD A FRIEND'));
-      final list = tester.getTopLeft(find.textContaining('FRIENDS ·'));
-      expect(list.dx, greaterThan(add.dx));
+      final shared = tester.getTopLeft(find.text('SHARED DISCOVERIES'));
+      final people = tester.getTopLeft(find.text('YOUR PEOPLE · 1'));
+      expect(people.dx, greaterThan(shared.dx));
       final accept = find.byTooltip('Accept');
       Focus.of(
         tester.element(
