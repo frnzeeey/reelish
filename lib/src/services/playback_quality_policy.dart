@@ -76,8 +76,7 @@ abstract final class PlaybackQualityPolicy {
       final map = await _channel.invokeMapMethod<String, Object?>(
         'videoCapabilities',
       );
-      int? positive(Object? value) =>
-          value is int && value > 0 ? value : null;
+      int? positive(Object? value) => value is int && value > 0 ? value : null;
       return VideoDeviceLimits(
         maxDecodeHeight: positive(map?['maxDecodeHeight']),
         displayHeight: positive(map?['displayMaxHeight']),
