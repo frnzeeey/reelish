@@ -301,7 +301,7 @@ The files imported by the most other `lib/` files. A change to one of these reac
 | [`lib/src/models/media_item.dart`](../../lib/src/models/media_item.dart) | 59 | 58 |
 | [`lib/src/platform/device_capabilities.dart`](../../lib/src/platform/device_capabilities.dart) | 58 | 30 |
 | [`lib/src/services/storage_service.dart`](../../lib/src/services/storage_service.dart) | 30 | 41 |
-| [`lib/src/widgets/settings/settings_components.dart`](../../lib/src/widgets/settings/settings_components.dart) | 30 | 2 |
+| [`lib/src/widgets/settings/settings_components.dart`](../../lib/src/widgets/settings/settings_components.dart) | 30 | 3 |
 | [`lib/src/account/account_controller.dart`](../../lib/src/account/account_controller.dart) | 29 | 33 |
 | [`lib/src/widgets/tv/tv_focus.dart`](../../lib/src/widgets/tv/tv_focus.dart) | 27 | 8 |
 | [`lib/src/account/account_api.dart`](../../lib/src/account/account_api.dart) | 23 | 32 |

@@ -2,16 +2,18 @@
 //
 //   flutter test integration_test -d <device-id>
 //
-// Covers launch, the Plugins tab and the Plugin Library. Playback is not
+// Covers launch, Plugins (the Windows sidebar; Settings on the phone) and
+// the Plugin Library. Playback is not
 // covered: it depends on third-party providers and live streams, which would
 // make this test flaky.
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:onfeed/main.dart' as app;
 import 'package:onfeed/src/desktop/desktop_shell.dart';
+import 'package:onfeed/src/widgets/settings/settings_components.dart';
 import 'package:onfeed/src/widgets/soft_glass_dock.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -33,7 +35,7 @@ Future<void> pumpUntil(
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('launch, Plugins tab and Plugin Library', (tester) async {
+  testWidgets('launch, Plugins and Plugin Library', (tester) async {
     // Skip the first-run legal screen; it is covered by widget tests.
     final preferences = await SharedPreferences.getInstance();
     await preferences.setBool('reelish.legal.documentsAccepted.v1', true);
@@ -48,15 +50,30 @@ void main() {
     final navigation = find.byType(desktop ? DesktopShell : SoftGlassDock);
     await pumpUntil(tester, navigation);
 
-    final pluginsLabel = find.descendant(
-      of: navigation,
-      matching: find.text('Plugins'),
-    );
-    await tester.tap(
-      desktop && pluginsLabel.evaluate().isEmpty
-          ? find.byTooltip('Plugins').first
-          : pluginsLabel.first,
-    );
+    if (desktop) {
+      final pluginsLabel = find.descendant(
+        of: navigation,
+        matching: find.text('Plugins'),
+      );
+      await tester.tap(
+        pluginsLabel.evaluate().isEmpty
+            ? find.byTooltip('Plugins').first
+            : pluginsLabel.first,
+      );
+    } else {
+      // The phone keeps Plugins in Settings, under Playback.
+      await tester.tap(
+        find.descendant(of: navigation, matching: find.text('Settings')),
+      );
+      await tester.pumpAndSettle();
+      final plugins = find.widgetWithText(SettingsTile, 'Plugins');
+      await tester.scrollUntilVisible(
+        plugins,
+        200,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.tap(plugins);
+    }
     await pumpUntil(tester, find.text('Browse Reelish Plugins'));
     // An icon button on phones and TVs; a labelled button on the Windows
     // Plugins page.

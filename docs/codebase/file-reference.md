@@ -4556,7 +4556,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Imported by:** `src/desktop/desktop_settings_page.dart`, `src/desktop/desktop_update_section.dart`, `src/screens/account_settings_screen.dart`, `src/screens/app_icon_settings_screen.dart`, `src/screens/app_information_screens.dart`, `src/screens/avatar_frames_screen.dart`, `src/screens/credits_screen.dart`, `src/screens/help_support_screen.dart`, `src/screens/home_screen.dart`, `src/screens/legal_information_screen.dart`, `src/screens/notification_settings_screen.dart`, `src/screens/playback_settings_screen.dart`, `src/screens/profile_screen.dart`, `src/screens/profile_stats_screen.dart`, `src/screens/profile_style_screen.dart`, `src/screens/recommendation_settings_screen.dart`, `src/screens/social/conversation_options_screen.dart`, `src/screens/social/friend_collection_screen.dart`, `src/screens/social/friends_privacy_screen.dart`, `src/screens/social/friends_screen.dart`, `src/screens/social/messages_screen.dart`, `src/screens/social/together_screen.dart`, `src/screens/spotlight_experience_screen.dart`, `src/screens/subtitle_addons_screen.dart`, `src/screens/supporters_screen.dart`, `src/screens/watch_party/create_party_screen.dart`, `src/screens/watch_party/join_party_screen.dart`, `src/screens/watch_party/waiting_room_screen.dart`, `src/widgets/soft_glass_dock.dart`, `src/wrapped/wrapped_screen.dart`
 
-**Tests importing it:** `test/settings_ui_test.dart`, `test/ux_journeys_test.dart`
+**Tests importing it:** `integration_test/app_smoke_test.dart`, `test/settings_ui_test.dart`, `test/ux_journeys_test.dart`
 
 ## lib/src/widgets/settings/tmdb_attribution.dart
 
