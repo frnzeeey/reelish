@@ -56,6 +56,7 @@ search the generated references below: every file, class and function in
 | [Avatar frames API](backend/frames.md) | Who may wear which frame, cross-device sync, limited-edition collecting, Watch Party |
 | [Trakt profile](features/trakt-profile.md) | The Trakt username and avatar on every device: storage, refresh, failures, cost |
 | [Icon system](design/icon-system.md) | Reelish's own icons: design rules, solid forms, how to add one, the gallery |
+| [Brand identity and guidelines](brand/Reelish_Brand_Identity_and_Guidelines.md) | Brand strategy, audit findings, logo, palette with contrast, type, voice, ecosystem, guidelines and open decisions (Word and PDF beside it) |
 | [Content advisory](features/content-advisory.md) | The age rating card at playback start: TMDB coverage, sourcing rules, behaviour |
 | [Crash reporting](features/crash-reporting.md) | Opt-in Crashlytics on Android, the Windows error log, what is reported, testing, symbols |
 | [UX redesign plan](REELISH_UX_REDESIGN_PLAN.md) | Audit, feature inventory, proposed navigation and the phased redesign roadmap |

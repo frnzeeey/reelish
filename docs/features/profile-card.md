@@ -20,7 +20,7 @@ it, and the app theme, the accent across the app and the player are untouched.
 | Colour | Standard (the theme's light, else the app accent) or any of the app's accent presets | Everyone |
 | | A colour of one's own (hue and vividness) | Supporters and the Founder |
 | Effect | None | Everyone |
-| | Drift (lights wander, 24 s loop), Sheen (a light passes every 9 s) | Supporters and the Founder |
+| | Drift (lights wander, 18 s loop), Sheen (a light passes every 9 s) | Supporters and the Founder |
 
 The card's colour lights its avatar ring (when no frame is worn), the edit
 button, the counts, the "Add a display name" link and a glow on the background.
@@ -123,7 +123,12 @@ white text above 12:1 and every preset colour above 4.5:1 on its base. An
 effect is its own layer in its own `RepaintBoundary`, with one controller. It
 stops under reduced motion, in the background, on a covered page (TickerMode),
 when the card is scrolled out of view, and always on TV hardware, where the card
-stays still.
+stays still. When it starts again (back on screen, back in the app) the layer rebuilds:
+built while still, Drift holds a frozen frame and Sheen draws nothing, so an
+effect that only restarted its controller stayed frozen or blank once the page
+had rebuilt meanwhile (fixed 2026-11-20, `test/profile_card_effect_test.dart`).
+The same day both effects were made visible: Drift's lights at 30 % and 20 %
+of the card colour (were 16 % and 10 %), Sheen's band at 16 % white (was 7 %).
 
 ## Viewing statistics
 

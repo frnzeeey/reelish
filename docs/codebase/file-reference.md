@@ -273,7 +273,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/widgets/poster_image.dart`](#libsrcwidgetsposter_imagedart) | Shared | 47 | The poster placeholder tile and the fade-in used when a poster image arrives. |
 | [`lib/src/widgets/profile_avatar.dart`](#libsrcwidgetsprofile_avatardart) | Shared | 193 | The user's avatar as chosen in their profile: their Trakt picture, their photo, a preset, or the first letter of their name on the accent. |
 | [`lib/src/widgets/profile_avatar_picker.dart`](#libsrcwidgetsprofile_avatar_pickerdart) | Shared | 168 | The avatar choices for the signed-in profile, shared by the account screen and the profile page's avatar sheet. |
-| [`lib/src/widgets/profile_card_backdrop.dart`](#libsrcwidgetsprofile_card_backdropdart) | Shared | 511 | Draws the profile card's chosen background and its animated accent (lib/src/theme/profile_styles.dart), all in code: no images, nothing to download or cache. |
+| [`lib/src/widgets/profile_card_backdrop.dart`](#libsrcwidgetsprofile_card_backdropdart) | Shared | 523 | Draws the profile card's chosen background and its animated accent (lib/src/theme/profile_styles.dart), all in code: no images, nothing to download or cache. |
 | [`lib/src/widgets/provider_installer_modal.dart`](#libsrcwidgetsprovider_installer_modaldart) | Shared | 183 | The sheet for installing a provider repository from a manifest URL. |
 | [`lib/src/widgets/provider_search_dialog.dart`](#libsrcwidgetsprovider_search_dialogdart) | Shared | 93 | "Searching providers…" while a play request looks for a stream. |
 | [`lib/src/widgets/recommendation_feedback_sheet.dart`](#libsrcwidgetsrecommendation_feedback_sheetdart) | Shared | 158 | Phone: the sheet a long press on a recommended title opens, saying why it was recommended and offering Not interested, Already watched and More like this. |
@@ -3346,7 +3346,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Imported by:** `src/account/profile_controller.dart`, `src/screens/profile_screen.dart`, `src/screens/profile_style_screen.dart`, `src/widgets/profile_card_backdrop.dart`, `src/widgets/sovereign_laurel.dart`
 
-**Tests importing it:** `test/profile_customization_test.dart`
+**Tests importing it:** `test/profile_card_effect_test.dart`, `test/profile_customization_test.dart`
 
 ## lib/src/theme/reelish_icons.dart
 
@@ -4516,7 +4516,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/widgets/profile_card_backdrop.dart
 
-**Source:** [`lib/src/widgets/profile_card_backdrop.dart`](../../lib/src/widgets/profile_card_backdrop.dart) · **Platform:** Shared · **Lines:** 511 · **Branches on:** isTv
+**Source:** [`lib/src/widgets/profile_card_backdrop.dart`](../../lib/src/widgets/profile_card_backdrop.dart) · **Platform:** Shared · **Lines:** 523 · **Branches on:** isTv
 
 **Purpose:** Draws the profile card's chosen background and its animated accent (lib/src/theme/profile_styles.dart), all in code: no images, nothing to download or cache.
 
@@ -4528,7 +4528,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Imported by:** `src/screens/profile_screen.dart`, `src/screens/profile_style_screen.dart`
 
-**Tests importing it:** `test/profile_customization_test.dart`
+**Tests importing it:** `test/profile_card_effect_test.dart`, `test/profile_customization_test.dart`
 
 ## lib/src/widgets/provider_installer_modal.dart
 
