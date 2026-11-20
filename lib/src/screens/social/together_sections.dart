@@ -95,19 +95,24 @@ class FriendsStrip extends StatelessWidget {
         4;
     return SizedBox(
       height: height,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        clipBehavior: Clip.none,
-        padding: const EdgeInsets.symmetric(horizontal: AppSpace.xxs),
-        children: [
-          for (final person in ordered)
-            _PersonBubble(
-              person: person,
-              caption: now[person.handle]?.label,
-              onTap: () => onOpen(person),
-            ),
-          _AddBubble(onTap: onAdd),
-        ],
+      // One group, so Left and Right on a TV remote move along the row
+      // instead of jumping to whatever lies nearest that way on the page.
+      child: FocusTraversalGroup(
+        policy: ReadingOrderTraversalPolicy(),
+        child: ListView(
+          scrollDirection: Axis.horizontal,
+          clipBehavior: Clip.none,
+          padding: const EdgeInsets.symmetric(horizontal: AppSpace.xxs),
+          children: [
+            for (final person in ordered)
+              _PersonBubble(
+                person: person,
+                caption: now[person.handle]?.label,
+                onTap: () => onOpen(person),
+              ),
+            _AddBubble(onTap: onAdd),
+          ],
+        ),
       ),
     );
   }
@@ -436,20 +441,24 @@ class DiscoveriesRow extends StatelessWidget {
         4;
     return SizedBox(
       height: height,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        clipBehavior: Clip.none,
-        children: [
-          for (final item in items)
-            Padding(
-              padding: const EdgeInsets.only(right: AppSpace.sm),
-              child: _DiscoveryPoster(
-                item: item,
-                width: width,
-                onTap: () => onOpen(item),
+      // One group, as in the friends strip: Left and Right stay in the row.
+      child: FocusTraversalGroup(
+        policy: ReadingOrderTraversalPolicy(),
+        child: ListView(
+          scrollDirection: Axis.horizontal,
+          clipBehavior: Clip.none,
+          children: [
+            for (final item in items)
+              Padding(
+                padding: const EdgeInsets.only(right: AppSpace.sm),
+                child: _DiscoveryPoster(
+                  item: item,
+                  width: width,
+                  onTap: () => onOpen(item),
+                ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }

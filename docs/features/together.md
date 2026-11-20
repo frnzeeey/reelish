@@ -94,3 +94,20 @@ with the theme's accent; people are avatars, not rows; the privacy rows sit
 last and quieter. The brief's palette (terracotta `#D17B5B` on `#211D1B`) is
 close to the Living Room theme's (`#BA725A` on `#14110E`, from the emblem);
 the page shows whichever theme is in use and changes no theme's colours.
+
+## TV remote and verification
+
+On TV the friends strip and the Shared discoveries posters are each one
+focus group (`FocusTraversalGroup`), so Left and Right move along the row.
+Without it, Left from a face jumped to a poster lower on the page and focus
+started on Messages, past the strip.
+
+`integration_test/together_layout_test.dart` draws the page with a full set
+of data (friends, two watching now, a request each way, discoveries with
+notes) in the real engine and the app's fonts, on a 360 dp phone, a phone
+at 200 % text, Windows at 1280 and 1920 px, and TV, failing on any
+overflow; with `--dart-define=SAVE_SHOTS=<folder>` it saves each layout as
+a picture. On TV it then plays a remote session with key presses only:
+along the strip and back, down through Messages and Movie night into the
+posters, across to the people and down to Blocked people. It runs on
+Windows (`flutter test integration_test/together_layout_test.dart -d windows`).

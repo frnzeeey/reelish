@@ -364,13 +364,15 @@ class _FriendsScreenState extends State<FriendsScreen> {
       } else {
         body = [?movieNight, const _Spinner()];
       }
-      final name = ProfileController.instance.nameOr(
-        AccountController.instance.username,
-      );
+      // The viewer's own name, never the app's: with neither a chosen name
+      // nor a Trakt username, the greeting stands alone.
+      final name =
+          ProfileController.instance.displayName ??
+          AccountController.instance.username;
       final page = SettingsPage(
         title: widget.title,
         subtitle: widget.greet
-            ? '${greetingFor(DateTime.now())}, $name'
+            ? [greetingFor(DateTime.now()), ?name].join(', ')
             : profile == null
             ? null
             : '@${profile.handle}',
