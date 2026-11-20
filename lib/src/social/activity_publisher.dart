@@ -107,6 +107,10 @@ class ActivityPublisher {
     if (userId == null || userId == _checkedFor) return;
     _checkedFor = userId;
     unawaited(_clearLeftover(userId));
+    // Whether this account shares is otherwise known only once a social
+    // page has been opened: a title played straight from Home would never
+    // be shared. The saved answer first, then the server's if stale.
+    unawaited(_social.refreshIfStale().catchError((Object _) {}));
   }
 
   Future<void> _clearLeftover(String userId) async {
@@ -141,9 +145,12 @@ class ActivityPublisher {
   bool get sharing => _social.profile?.shareActivity == true;
 
   /// A session for a player opening [item], or null when nothing would be
-  /// shared (sharing off, signed out, or not a TMDB title).
+  /// shared (sharing known to be off, signed out, or not a TMDB title).
+  /// While the answer is still on its way, the session waits for it before
+  /// publishing anything (see [_publish]).
   ActivitySession? sessionFor(MediaItem item, {int? season, int? episode}) {
-    if (!sharing || _account.userId == null) return null;
+    if (_account.userId == null) return null;
+    if (_social.known && !sharing) return null;
     final card = cardOf(item);
     if (card == null) return null;
     card.remove('year');
@@ -163,8 +170,24 @@ class ActivityPublisher {
     _clearTimer = null;
     if (state.key == _sentKey && _published) return;
     _pending = state;
+    if (!sharing) {
+      // Not known yet: publish once the answer says sharing is on. Known and
+      // off: nothing is sent.
+      if (!_social.known) unawaited(_publishOnceKnown());
+      return;
+    }
     if (!_cooling) _sendPending();
   }
+
+  Future<void>? _waitingForAnswer;
+
+  Future<void> _publishOnceKnown() => _waitingForAnswer ??= _social
+      .refreshIfStale()
+      .catchError((Object _) {})
+      .whenComplete(() {
+        _waitingForAnswer = null;
+        if (sharing && _pending != null && !_cooling) _sendPending();
+      });
 
   void _sendPending() {
     final state = _pending;

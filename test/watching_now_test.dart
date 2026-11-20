@@ -166,10 +166,14 @@ void main() {
     // and fires the publisher's timers.
     late ActivityPublisher publisher;
 
-    Future<void> start(WidgetTester tester, {bool sharing = true}) async {
+    Future<void> start(
+      WidgetTester tester, {
+      bool sharing = true,
+      bool known = true,
+    }) async {
       server.sharing = sharing;
       final parts = await _parts(server);
-      await parts.social.refresh();
+      if (known) await parts.social.refresh();
       server.requests.clear();
       publisher = ActivityPublisher(
         account: parts.account,
@@ -195,6 +199,35 @@ void main() {
       expect(publisher.sessionFor(_dune), isNull);
       await wait(tester, const Duration(minutes: 2));
       expect(server.requests, isEmpty);
+    });
+
+    // A title played straight from Home, before any social page has loaded
+    // whether this account shares: it used to be dropped.
+    testWidgets('sharing not known yet: published once the answer is on', (
+      tester,
+    ) async {
+      await start(tester, known: false);
+      final session = publisher.sessionFor(_dune);
+      expect(session, isNotNull);
+      session!.playing();
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 50)),
+      );
+      await tester.pump();
+      expect(server.activity.single.method, 'PUT');
+      await wait(tester, const Duration(minutes: 1));
+    });
+
+    testWidgets('sharing not known yet and then off: nothing is sent', (
+      tester,
+    ) async {
+      await start(tester, sharing: false, known: false);
+      publisher.sessionFor(_dune)?.playing();
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 50)),
+      );
+      await wait(tester, const Duration(minutes: 2));
+      expect(server.activity, isEmpty);
     });
 
     testWidgets("a title that is not TMDB's is never published", (
@@ -356,6 +389,55 @@ void main() {
       // before the connection dropped.
       expect(server.activity.map((r) => r.method), ['PUT', 'DELETE']);
     });
+  });
+
+  testWidgets('an open page sees friends start watching within a minute', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 3600);
+    tester.view.devicePixelRatio = 2.5;
+    addTearDown(tester.view.reset);
+    final parts = await _parts(server);
+    final navigator = GlobalKey<NavigatorState>();
+    await tester.pumpWidget(
+      MaterialApp(
+        navigatorKey: navigator,
+        home: Scaffold(
+          body: FriendsScreen(
+            social: parts.social,
+            friends: FriendsController(
+              account: parts.account,
+              api: parts.api,
+              social: parts.social,
+            ),
+            recommendations: RecommendationsController(
+              account: parts.account,
+              api: parts.api,
+              social: parts.social,
+            ),
+            onBack: () {},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    int reads() => server.requests
+        .where((r) => r.path == '/social/activity' && r.method == 'GET')
+        .length;
+    final first = reads();
+    await tester.pump(const Duration(seconds: 61));
+    await tester.pumpAndSettle();
+    expect(reads(), first + 1, reason: 'read again after a minute');
+
+    // Covered by another page: no more reads.
+    navigator.currentState!.push(
+      MaterialPageRoute<void>(builder: (_) => const Scaffold()),
+    );
+    await tester.pumpAndSettle();
+    final covered = reads();
+    await tester.pump(const Duration(seconds: 61));
+    await tester.pumpAndSettle();
+    expect(reads(), covered);
   });
 
   testWidgets('Friends page: who is watching what, and it opens', (

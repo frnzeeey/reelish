@@ -244,9 +244,15 @@ class _FriendsScreenState extends State<FriendsScreen> {
   late final MessagesController _messages =
       widget.messages ?? MessagesController.instance;
 
-  /// Reads again on return to the app after a while away; nothing polls.
+  /// Reads again on return to the app after a while away.
   late final AppLifecycleListener _lifecycle;
   DateTime _loadedAt = DateTime.now();
+
+  /// What friends are watching changes while the page is open; it is read
+  /// again this often while the page shows and the app is in front (friends'
+  /// apps send it at most once a minute).
+  static const watchingEvery = Duration(minutes: 1);
+  Timer? _watchingTimer;
 
   @override
   void initState() {
@@ -261,10 +267,24 @@ class _FriendsScreenState extends State<FriendsScreen> {
       },
     );
     unawaited(_reload());
+    _watchingTimer = Timer.periodic(watchingEvery, (_) => _refreshWatching());
+  }
+
+  /// Only while this page is what the viewer sees: not under another page,
+  /// not a hidden tab (TickerMode), not with the app in the background.
+  void _refreshWatching() {
+    if (!mounted || !_social.enabled) return;
+    // Null before the platform has reported a state: in front.
+    final state = WidgetsBinding.instance.lifecycleState;
+    if (state != null && state != AppLifecycleState.resumed) return;
+    if (!TickerMode.valuesOf(context).enabled) return;
+    if (ModalRoute.of(context)?.isCurrent == false) return;
+    unawaited(_friends.loadWatching());
   }
 
   @override
   void dispose() {
+    _watchingTimer?.cancel();
     _lifecycle.dispose();
     super.dispose();
   }

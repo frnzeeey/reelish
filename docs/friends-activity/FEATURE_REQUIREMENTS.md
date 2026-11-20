@@ -87,7 +87,14 @@ recommendations and shared collections stay useful when nobody is watching;
   (the remaining running time plus 15 minutes, at most 4 hours), so a crash
   or lost connection cannot leave it showing.
 - Friends see it on the Friends page ("Watching now · 5 min"), fetched when
-  the page opens or is refreshed. No live connection, no history.
+  the page opens or is refreshed, and again every minute while the page is
+  on screen with the app in front (the publisher sends at most once a
+  minute). No live connection, no history.
+- Whether an account shares is loaded when it signs in, so a title played
+  straight from Home is published too; a player that opens before the
+  answer arrives waits for it, and sends nothing if sharing is off.
+  (Before 2026-11-20 it was known only after a social page had been opened,
+  so such titles were never shared.)
 
 ## F6. Privacy settings
 
