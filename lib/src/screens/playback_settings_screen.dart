@@ -338,7 +338,9 @@ class AppearanceSettingsScreen extends StatelessWidget {
                       _AccentChoice(
                         accent: controller.accent.isCustom
                             ? controller.accent
-                            : AccentPalette.custom(GlassTheme.coral.primary),
+                            : AccentPalette.custom(
+                                GlassTheme.defaultAccent.primary,
+                              ),
                         selected: ownAccent && controller.accent.isCustom,
                         width: itemWidth,
                         swatch: controller.accent.isCustom

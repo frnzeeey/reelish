@@ -5,7 +5,9 @@ text, borders, glass), the accent, and the profile card's lights, avatar ring
 and ornament. Settings > Appearance offers three collections:
 
 - **REELISH**, free to everyone: Living Room, the Reelish look and the
-  default, and Classic, the original coral-on-black look with any accent.
+  default, and Classic, Reelish black with any accent: green until one is
+  picked (`GlassTheme.defaultAccent`; coral before it, and a saved coral
+  stays).
 - **SUPPORTER THEMES**, for accounts with the supporter perks (supporters, and
   the Founder).
 - **FOUNDER COLLECTION**, the Founder's own (below).

@@ -104,7 +104,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/screens/library_screen.dart`](#libsrcscreenslibrary_screendart) | Shared | 569 | The phone library tab: continue watching, My list and watch history from local storage. |
 | [`lib/src/screens/media_details_screen.dart`](#libsrcscreensmedia_details_screendart) | Shared | 932 | The phone details page for a movie or series, with seasons, episodes and playback. |
 | [`lib/src/screens/notification_settings_screen.dart`](#libsrcscreensnotification_settings_screendart) | Shared | 394 | Settings → Notifications: one switch for all alerts on this device, then what to be told about (new episodes, My list updates, people and collections followed, reminders, messages), how (as they happen or as a daily or weekly summary, with quiet hours), who and what is followed, and the alerts shown lately. |
-| [`lib/src/screens/playback_settings_screen.dart`](#libsrcscreensplayback_settings_screendart) | Shared | 1882 | Settings, Appearance and Playback settings screens for phone and TV; Windows reuses their sub-pages. |
+| [`lib/src/screens/playback_settings_screen.dart`](#libsrcscreensplayback_settings_screendart) | Shared | 1884 | Settings, Appearance and Playback settings screens for phone and TV; Windows reuses their sub-pages. |
 | [`lib/src/screens/player_screen.dart`](#libsrcscreensplayer_screendart) | Shared | 89 | The route that hosts `CustomVideoPlayer` for one title and source. |
 | [`lib/src/screens/plugin_collection_screen.dart`](#libsrcscreensplugin_collection_screendart) | Shared | 808 | Manage one installed provider repository ("collection"): where it comes from and how far it is trusted, code waiting for review with its version change, an update check, and every provider it lists with its device compatibility and switch. |
 | [`lib/src/screens/plugin_details_screen.dart`](#libsrcscreensplugin_details_screendart) | Shared | 626 | A plugin-library repository's details page, from which it can be installed. |
@@ -147,7 +147,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/search/search_models.dart`](#libsrcsearchsearch_modelsdart) | Shared | 355 | What Universal Search finds besides titles (people and movie collections), a person's and a collection's page, and the filters. |
 | [`lib/src/search/search_ranking.dart`](#libsrcsearchsearch_rankingdart) | Shared | 78 | How closely a title or a name matches what was typed. |
 | [`lib/src/search/universal_search_controller.dart`](#libsrcsearchuniversal_search_controllerdart) | Shared | 652 | Universal Search orchestration: what was typed, the chosen category and filters, and the results organised by kind. |
-| [`lib/src/services/accent_settings_controller.dart`](#libsrcservicesaccent_settings_controllerdart) | Shared | 158 | The app's look on this device: the accent colour and an app theme (the free Living Room look by default, the supporter themes for accounts with the perk). |
+| [`lib/src/services/accent_settings_controller.dart`](#libsrcservicesaccent_settings_controllerdart) | Shared | 159 | The app's look on this device: the accent colour and an app theme (the free Living Room look by default, the supporter themes for accounts with the perk). |
 | [`lib/src/services/app_metadata.dart`](#libsrcservicesapp_metadatadart) | Shared | 19 | Version and build details for the running app. |
 | [`lib/src/services/github_update_service.dart`](#libsrcservicesgithub_update_servicedart) | Shared | 1079 | Update checks against GitHub Releases (throttled across launches) and verified downloads of the release asset: the APK, handed to Android's package installer, or the Windows installer or ZIP, checked against its SHA-256. |
 | [`lib/src/services/media_catalog_rules.dart`](#libsrcservicesmedia_catalog_rulesdart) | Shared | 166 | Genre ids and the filtering and freshness rules shared by every Home row. |
@@ -196,7 +196,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/support/support_service.dart`](#libsrcsupportsupport_servicedart) | Shared | 234 | Help & Support plumbing: where to reach the developer, the diagnostic summary a report carries (shown to the viewer before sending), and the submission to the Reelish API. |
 | [`lib/src/theme/avatar_frames.dart`](#libsrcthemeavatar_framesdart) | Shared | 311 | The avatar frame collection: how each frame looks, by the stable id the Reelish API stores (backend/src/frames.ts lists the same ids and decides who may wear which). |
 | [`lib/src/theme/design_tokens.dart`](#libsrcthemedesign_tokensdart) | Shared | 208 | Reelish's design tokens: the spacing, radius, type, icon and motion steps every interface draws from. |
-| [`lib/src/theme/glass_theme.dart`](#libsrcthemeglass_themedart) | Shared | 490 | Colours, accent palettes, typography and the Material themes for phone and TV/Windows. |
+| [`lib/src/theme/glass_theme.dart`](#libsrcthemeglass_themedart) | Shared | 494 | Colours, accent palettes, typography and the Material themes for phone and TV/Windows. |
 | [`lib/src/theme/profile_styles.dart`](#libsrcthemeprofile_stylesdart) | Shared | 376 | The profile card's own look: a background, a colour and an animated accent, chosen in Profile > Profile card and seen only by the card's owner. |
 | [`lib/src/theme/reelish_icons.dart`](#libsrcthemereelish_iconsdart) | Shared | 457 | GENERATED by tool/icons/build.mjs from tool/icons/icons.mjs. |
 | [`lib/src/theme/supporter_themes.dart`](#libsrcthemesupporter_themesdart) | Shared | 633 | App themes for Reelish Supporters (Settings > Appearance). |
@@ -1800,7 +1800,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/screens/playback_settings_screen.dart
 
-**Source:** [`lib/src/screens/playback_settings_screen.dart`](../../lib/src/screens/playback_settings_screen.dart) · **Platform:** Shared · **Lines:** 1882 · **Branches on:** isTv, TargetPlatform.windows, TargetPlatform.android, TorrentSupport
+**Source:** [`lib/src/screens/playback_settings_screen.dart`](../../lib/src/screens/playback_settings_screen.dart) · **Platform:** Shared · **Lines:** 1884 · **Branches on:** isTv, TargetPlatform.windows, TargetPlatform.android, TorrentSupport
 
 **Purpose:** Settings, Appearance and Playback settings screens for phone and TV; Windows reuses their sub-pages.
 
@@ -2500,7 +2500,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/services/accent_settings_controller.dart
 
-**Source:** [`lib/src/services/accent_settings_controller.dart`](../../lib/src/services/accent_settings_controller.dart) · **Platform:** Shared · **Lines:** 158
+**Source:** [`lib/src/services/accent_settings_controller.dart`](../../lib/src/services/accent_settings_controller.dart) · **Platform:** Shared · **Lines:** 159
 
 **Purpose:** The app's look on this device: the accent colour and an app theme (the free Living Room look by default, the supporter themes for accounts with the perk).
 
@@ -3266,7 +3266,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/theme/glass_theme.dart
 
-**Source:** [`lib/src/theme/glass_theme.dart`](../../lib/src/theme/glass_theme.dart) · **Platform:** Shared · **Lines:** 490
+**Source:** [`lib/src/theme/glass_theme.dart`](../../lib/src/theme/glass_theme.dart) · **Platform:** Shared · **Lines:** 494
 
 **Purpose:** Colours, accent palettes, typography and the Material themes for phone and TV/Windows.
 

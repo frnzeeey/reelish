@@ -99,7 +99,7 @@ void main() {
       playback = PlaybackSettingsController();
     });
     tearDown(() {
-      GlassTheme.setAccent(GlassTheme.coral);
+      GlassTheme.setAccent(GlassTheme.defaultAccent);
       accent.dispose();
       playback.dispose();
     });

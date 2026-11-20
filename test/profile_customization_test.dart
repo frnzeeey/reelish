@@ -177,7 +177,7 @@ Future<void> _apply(WidgetTester tester) async {
 }
 
 void main() {
-  tearDown(() => GlassTheme.setAccent(GlassTheme.coral));
+  tearDown(() => GlassTheme.setAccent(GlassTheme.defaultAccent));
 
   group('The catalog', () {
     test('ids are unique and only Cinematic is for supporters', () {

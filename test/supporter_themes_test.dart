@@ -94,7 +94,7 @@ double _contrast(Color a, Color b) {
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
-    GlassTheme.setAccent(GlassTheme.coral);
+    GlassTheme.setAccent(GlassTheme.defaultAccent);
     GlassTheme.setSurfaces(ThemeSurfaces.classic);
   });
 
@@ -311,7 +311,7 @@ void main() {
       });
       final (appearance, _) = await _appearance(['free']);
       expect(appearance.theme, isNull);
-      expect(appearance.value, GlassTheme.coral);
+      expect(appearance.value, GlassTheme.green);
       expect(GlassTheme.surfaces, ThemeSurfaces.classic);
     });
 

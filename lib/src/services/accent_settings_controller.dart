@@ -33,7 +33,7 @@ class AccentSettingsController extends ChangeNotifier {
   static const _themeAccentKey = 'onfeed.appearance.theme_accent';
   final StorageService _storage;
   final SupporterController _supporters;
-  AccentPalette _accent = GlassTheme.coral;
+  AccentPalette _accent = GlassTheme.defaultAccent;
   String? _themeId;
   bool _themeAccent = true;
 
@@ -78,8 +78,9 @@ class AccentSettingsController extends ChangeNotifier {
 
   Future<void> load() async {
     final id = await _storage.readSetting(_key);
-    // A preset id, or `custom:rrggbb`; anything else falls back to coral.
-    _accent = AccentPalette.fromId(id) ?? GlassTheme.coral;
+    // A preset id, or `custom:rrggbb`; anything else is the default (green).
+    // A saved coral stays coral.
+    _accent = AccentPalette.fromId(id) ?? GlassTheme.defaultAccent;
     // Retired theme ids open as the theme that replaced them. No value at
     // all means no theme was ever chosen: the Reelish look. Classic chosen
     // in the picker is saved as '' and stays Classic.

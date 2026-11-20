@@ -48,7 +48,7 @@ void main() {
   }
 
   group('AccentAppIcon', () {
-    tearDown(() => GlassTheme.setAccent(GlassTheme.coral));
+    tearDown(() => GlassTheme.setAccent(GlassTheme.defaultAccent));
 
     test('a theme shows its own icon', () {
       expect(AccentAppIcon.assetFor('theme:living_room'), BrandAssets.appIcon);

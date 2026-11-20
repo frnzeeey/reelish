@@ -200,7 +200,7 @@ void main() {
   ) async {
     final accent = AccentSettingsController();
     addTearDown(accent.dispose);
-    addTearDown(() => GlassTheme.setAccent(GlassTheme.coral));
+    addTearDown(() => GlassTheme.setAccent(GlassTheme.defaultAccent));
     await _pump(
       tester,
       Scaffold(
@@ -221,7 +221,7 @@ void main() {
     // Cancel leaves the accent alone.
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
-    expect(accent.value, same(GlassTheme.coral));
+    expect(accent.value, same(GlassTheme.green));
 
     await tester.tap(find.text('Custom'));
     await tester.pumpAndSettle();

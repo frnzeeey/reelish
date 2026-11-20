@@ -17,7 +17,7 @@ relative to the repository root.
 | Windows UI | `lib/src/desktop/` | `DesktopShell`, `DesktopHero`, desktop pages, `DesktopDetailsScreen`, `DesktopSettingsPage`, `DesktopPluginsPage` |
 | Player UI | `lib/src/widgets/player/` | Shared by all platforms: `CustomVideoPlayer`, `PlayerControlsOverlay`, `PlayerProgressBar`, `ReelishPausedOverlay`, lock overlay, sheets |
 | Platform glue | `lib/src/platform/` | `DeviceCapabilities`, `DesktopWindow`/`DesktopShortcuts`, `DesktopGamepad`, `windows_installation.dart` |
-| Theme | `lib/src/theme/glass_theme.dart` | `GlassTheme.dark` / `.tv`, accent palettes (coral `#FF4D6D` default) |
+| Theme | `lib/src/theme/glass_theme.dart` | `GlassTheme.dark` / `.tv`, accent palettes (green `#42CFA0` is `GlassTheme.defaultAccent`, Classic's until one is picked; the free Living Room theme is the default look) |
 
 State is mostly ViewModels + services, but `home_screen.dart` still owns
 much orchestration (catalog wiring, `_openItem`, `_showDetails`, the three

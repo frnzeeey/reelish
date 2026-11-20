@@ -83,14 +83,18 @@ abstract final class GlassTheme {
     dark: Color(0xFF74839C),
   );
 
+  /// The accent of Classic until one is picked: green. Coral, the accent
+  /// before it, stays a preset; a saved coral is kept.
+  static const defaultAccent = green;
+
   /// The presets in the order they are offered: the default first, then
-  /// round the colour wheel, then the neutral.
+  /// round the colour wheel from coral, then the neutral.
   static const accents = [
+    green,
     coral,
     orange,
     amber,
     lime,
-    green,
     teal,
     blue,
     indigo,
@@ -98,7 +102,7 @@ abstract final class GlassTheme {
     rose,
     slate,
   ];
-  static AccentPalette _accent = coral;
+  static AccentPalette _accent = defaultAccent;
   static AccentPalette get accent => _accent;
   static void setAccent(AccentPalette value) => _accent = value;
 

@@ -12,7 +12,7 @@ double _contrast(Color a, Color b) {
 }
 
 void main() {
-  tearDown(() => GlassTheme.setAccent(GlassTheme.coral));
+  tearDown(() => GlassTheme.setAccent(GlassTheme.defaultAccent));
 
   test('preset ids are unique and every preset reads on the background', () {
     final ids = GlassTheme.accents.map((accent) => accent.id).toSet();
@@ -65,8 +65,29 @@ void main() {
     }
   });
 
-  test('the controller restores a saved custom accent and falls back to '
+  test('green is the default, first among the presets; a saved coral stays '
       'coral', () async {
+    expect(GlassTheme.defaultAccent, same(GlassTheme.green));
+    expect(GlassTheme.accents.first, same(GlassTheme.green));
+    // Classic chosen, no accent picked: green.
+    SharedPreferences.setMockInitialValues({'onfeed.appearance.theme': ''});
+    final classic = AccentSettingsController();
+    await classic.load();
+    expect(classic.theme, isNull);
+    expect(classic.value, same(GlassTheme.green));
+    expect(GlassTheme.primary, GlassTheme.green.primary);
+    // Coral picked before: kept.
+    SharedPreferences.setMockInitialValues({
+      'onfeed.appearance.theme': '',
+      'onfeed.appearance.accent': 'coral',
+    });
+    final coral = AccentSettingsController();
+    await coral.load();
+    expect(coral.value, same(GlassTheme.coral));
+  });
+
+  test('the controller restores a saved custom accent and falls back to '
+      'green', () async {
     final custom = AccentPalette.custom(const Color(0xFF8E44AD));
     SharedPreferences.setMockInitialValues({});
     final writer = AccentSettingsController();
@@ -79,8 +100,9 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     final fresh = AccentSettingsController();
     await fresh.load();
-    // The picked accent is coral; a fresh device shows Living Room's own.
-    expect(fresh.accent, same(GlassTheme.coral));
+    // The picked accent is the default, green; a fresh device shows Living
+    // Room's own.
+    expect(fresh.accent, same(GlassTheme.green));
     expect(fresh.theme, SupporterTheme.livingRoom);
     expect(fresh.value.primary, SupporterTheme.livingRoom.primary);
   });

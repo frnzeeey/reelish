@@ -1,6 +1,6 @@
 ---
 name: ui-refinement
-description: Visual and interaction work on Reelish's phone, TV or Windows interface — layout, spacing, typography, cards, hover/focus states, motion, responsiveness — within the existing coral glass design system. Use for UI polish, redesign of a screen, overflow/clipping bugs, or animation changes.
+description: Visual and interaction work on Reelish's phone, TV or Windows interface — layout, spacing, typography, cards, hover/focus states, motion, responsiveness — within the existing glass design system. Use for UI polish, redesign of a screen, overflow/clipping bugs, or animation changes.
 argument-hint: "[screen or platform]"
 ---
 
@@ -19,8 +19,8 @@ touch or keyboard use.
 
 ## Codebase context
 - Tokens: `GlassTheme` (`lib/src/theme/glass_theme.dart`): background
-  `0xFF0B0B0F`, surfaces, accent palettes (coral `#FF4D6D` default; the
-  user can change it, so read `GlassTheme.primary`, never hard-code coral),
+  `0xFF0B0B0F`, surfaces, accent palettes (green `#42CFA0` default, `GlassTheme.defaultAccent`; the
+  user can change it, so read `GlassTheme.primary`, never hard-code an accent),
   Montserrat font, and `warning`/`danger` status colours. Spacing, radius,
   type scale, icon sizes and motion durations/curves are in `AppSpace`,
   `AppRadius`, `AppTextSize`/`AppType`, `AppIcon` and `AppMotion`

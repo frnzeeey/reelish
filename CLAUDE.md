@@ -41,7 +41,7 @@ the interface once per launch:
   and the page colours follow the user's theme: read `GlassTheme.primary`,
   `.background`, `.surface`, `.elevatedSurface`, `.textPrimary`, `.muted`,
   `.border` and `.glassTint` (getters, so not in `const` expressions); never
-  hard-code coral or a surface colour (`docs/features/supporter-themes.md`).
+  hard-code an accent or a surface colour (`docs/features/supporter-themes.md`).
   Themes include a light one, so interface text is `textPrimary`, not
   `Colors.white`; white is only for text on artwork, video or an accent
   fill, and artwork scrims use `GlassTheme.artworkScrim`. The player's chrome
@@ -63,7 +63,7 @@ the interface once per launch:
   section, on all three interfaces.
 - The default look is the free Living Room theme (the emblem's terracotta,
   sand and cream; `SupporterTheme.standard`) for anyone who never chose a
-  theme; Classic is the original coral look. See
+  theme; Classic is Reelish black with an accent, green (`GlassTheme.defaultAccent`) until one is picked. See
   `docs/REELISH_UX_REDESIGN_PLAN.md` for the redesign in progress.
 
 ## Accounts, the Reelish API and Watch Party

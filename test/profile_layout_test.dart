@@ -154,7 +154,7 @@ void main() {
         'assets/fonts/Montserrat-$weight.ttf',
     ]);
   });
-  tearDown(() => GlassTheme.setAccent(GlassTheme.coral));
+  tearDown(() => GlassTheme.setAccent(GlassTheme.defaultAccent));
 
   group('Identity, Personalize and Account', () {
     testWidgets('every part once, and nothing repeated', (tester) async {

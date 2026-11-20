@@ -227,7 +227,7 @@ void main() {
     GlassTheme.setAccent(ivory.accent);
     GlassTheme.setSurfaces(ivory.surfaces);
     addTearDown(() {
-      GlassTheme.setAccent(GlassTheme.coral);
+      GlassTheme.setAccent(GlassTheme.defaultAccent);
       GlassTheme.setSurfaces(ThemeSurfaces.classic);
     });
     await openSheet(tester, theme: GlassTheme.player(tv: false));
