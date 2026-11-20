@@ -273,8 +273,8 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `DesktopRowArrow` | Widget | [`desktop_widgets.dart:907`](../../lib/src/desktop/desktop_widgets.dart#L907) | extends StatelessWidget | Windows | 1 lib file |  |
 | `DesktopRowNotice` | Widget | [`desktop_widgets.dart:1038`](../../lib/src/desktop/desktop_widgets.dart#L1038) | extends StatelessWidget | Windows | 1 lib file |  |
 | `DesktopSectionTitle` | Widget | [`desktop_widgets.dart:658`](../../lib/src/desktop/desktop_widgets.dart#L658) | extends StatelessWidget | Windows | 4 lib files | A row heading in the desktop interface. |
-| `DesktopSettingsPage` | Widget | [`desktop_settings_page.dart:70`](../../lib/src/desktop/desktop_settings_page.dart#L70) | extends StatefulWidget | Windows | 1 lib file, 1 test file | Settings on Windows: the categories of the phone and TV Settings list on the left, the chosen one beside them, so a change and its effect are on screen together. |
-| `_DesktopSettingsPageState` | Widget state | [`desktop_settings_page.dart:90`](../../lib/src/desktop/desktop_settings_page.dart#L90) | extends State<DesktopSettingsPage> | Windows | its own file |  |
+| `DesktopSettingsPage` | Widget | [`desktop_settings_page.dart:66`](../../lib/src/desktop/desktop_settings_page.dart#L66) | extends StatefulWidget | Windows | 1 lib file, 1 test file | Settings on Windows: the categories of the phone and TV Settings list on the left, the chosen one beside them, so a change and its effect are on screen together. |
+| `_DesktopSettingsPageState` | Widget state | [`desktop_settings_page.dart:86`](../../lib/src/desktop/desktop_settings_page.dart#L86) | extends State<DesktopSettingsPage> | Windows | its own file |  |
 | `DesktopSettingsSection` | Enum | [`desktop_settings_page.dart:20`](../../lib/src/desktop/desktop_settings_page.dart#L20) |  | Windows | 1 test file | The settings pages a Windows Settings category shows. |
 | `DesktopShell` | Widget | [`desktop_shell.dart:38`](../../lib/src/desktop/desktop_shell.dart#L38) | extends StatefulWidget | Windows | 1 lib file, 4 test files | The Windows interface's frame: a compact icon rail on the left and the selected page beside it. |
 | `_DesktopShellState` | Widget state | [`desktop_shell.dart:62`](../../lib/src/desktop/desktop_shell.dart#L62) | extends State<DesktopShell> | Windows | its own file |  |
@@ -452,7 +452,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `_GradientSlider` | Widget | [`playback_settings_screen.dart:785`](../../lib/src/screens/playback_settings_screen.dart#L785) | extends StatelessWidget | Shared | its own file | A labelled slider whose track is a gradient of `colors`. |
 | `_GradientTrackShape` | Class | [`playback_settings_screen.dart:840`](../../lib/src/screens/playback_settings_screen.dart#L840) | extends RoundedRectSliderTrackShape | Shared | its own file |  |
 | `_Grid` | Widget | [`avatar_frames_screen.dart:323`](../../lib/src/screens/avatar_frames_screen.dart#L323) | extends StatelessWidget | Shared | its own file | A collection's frames, in even columns. |
-| `_GroupLabel` | Widget | [`desktop_settings_page.dart:245`](../../lib/src/desktop/desktop_settings_page.dart#L245) | extends StatelessWidget | Windows | its own file |  |
+| `_GroupLabel` | Widget | [`desktop_settings_page.dart:241`](../../lib/src/desktop/desktop_settings_page.dart#L241) | extends StatelessWidget | Windows | its own file |  |
 
 ## H
 
@@ -881,10 +881,10 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 |---|---|---|---|---|---|---|
 | `_RailContents` | Widget | [`desktop_shell.dart:400`](../../lib/src/desktop/desktop_shell.dart#L400) | extends StatelessWidget | Windows | its own file |  |
 | `_RailItem` | Widget | [`tv_home_shell.dart:351`](../../lib/src/screens/tv/tv_home_shell.dart#L351) | extends StatefulWidget | Android TV | its own file |  |
-| `_RailItem` | Widget | [`desktop_settings_page.dart:271`](../../lib/src/desktop/desktop_settings_page.dart#L271) | extends StatefulWidget | Windows | its own file | A category in the rail; Enter or a click shows it. |
+| `_RailItem` | Widget | [`desktop_settings_page.dart:267`](../../lib/src/desktop/desktop_settings_page.dart#L267) | extends StatefulWidget | Windows | its own file | A category in the rail; Enter or a click shows it. |
 | `_RailItemState` | Widget state | [`tv_home_shell.dart:372`](../../lib/src/screens/tv/tv_home_shell.dart#L372) | extends State<_RailItem> | Android TV | its own file |  |
-| `_RailItemState` | Widget state | [`desktop_settings_page.dart:288`](../../lib/src/desktop/desktop_settings_page.dart#L288) | extends State<_RailItem> | Windows | its own file |  |
-| `_RailTitle` | Widget | [`desktop_settings_page.dart:217`](../../lib/src/desktop/desktop_settings_page.dart#L217) | extends StatelessWidget | Windows | its own file |  |
+| `_RailItemState` | Widget state | [`desktop_settings_page.dart:284`](../../lib/src/desktop/desktop_settings_page.dart#L284) | extends State<_RailItem> | Windows | its own file |  |
+| `_RailTitle` | Widget | [`desktop_settings_page.dart:213`](../../lib/src/desktop/desktop_settings_page.dart#L213) | extends StatelessWidget | Windows | its own file |  |
 | `_RankedCard` | Widget | [`desktop_top_ten.dart:307`](../../lib/src/desktop/desktop_top_ten.dart#L307) | extends StatefulWidget | Windows | its own file | One ranked title: the outlined numeral, with the poster card over its right edge. |
 | `_RankedCardState` | Widget state | [`desktop_top_ten.dart:331`](../../lib/src/desktop/desktop_top_ten.dart#L331) | extends State<_RankedCard> | Windows | its own file |  |
 | `_RankMetrics` | Class | [`desktop_top_ten.dart:93`](../../lib/src/desktop/desktop_top_ten.dart#L93) |  | Windows | its own file | Sizes of a ranked card, from the poster width the other rows use, so Top 10 lines up with them at every window size and display scale. |

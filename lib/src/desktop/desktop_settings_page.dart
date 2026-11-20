@@ -23,11 +23,7 @@ enum DesktopSettingsSection {
     'Display name, avatar and Trakt sign-in',
     ReelishIcons.account,
   ),
-  appearance(
-    'Appearance',
-    'Accent color for highlights and controls',
-    ReelishIcons.palette,
-  ),
+  appearance('Appearance', 'Theme and accent color', ReelishIcons.palette),
   notifications(
     'Notifications',
     'Alerts when new episodes are out',

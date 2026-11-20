@@ -105,7 +105,7 @@ class SettingsScreen extends StatelessWidget {
             builder: (context, _) => SettingsTile(
               icon: ReelishIcons.palette,
               title: 'Appearance',
-              description: 'Accent color for highlights and controls',
+              description: 'Theme and accent color',
               value: accentSettings.value.label,
               onTap: onAppearanceSettings,
             ),
