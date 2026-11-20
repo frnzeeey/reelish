@@ -326,7 +326,7 @@ class ProfileCardEffect extends StatefulWidget {
   final Color color;
 
   static Duration periodOf(ProfileEffect effect) => switch (effect) {
-    ProfileEffect.drift => const Duration(seconds: 24),
+    ProfileEffect.drift => const Duration(seconds: 18),
     _ => const Duration(seconds: 9),
   };
 
@@ -409,13 +409,24 @@ class _ProfileCardEffectState extends State<ProfileCardEffect>
       _onScreen &&
       !MediaQuery.disableAnimationsOf(context);
 
-  /// Runs or stops the controller. A covered page also stops it: its ticker
+  /// Whether the last build drew a moving effect; null before the first.
+  bool? _builtMoving;
+
+  /// Runs or stops the controller, and rebuilds when that changes what the
+  /// card draws: built while still, Drift holds a frozen frame and Sheen
+  /// draws nothing, so starting the controller alone would never show
+  /// (after scrolling back to the card, or returning to the app, once the
+  /// page had rebuilt meanwhile). A covered page also stops it: its ticker
   /// is muted by TickerMode.
   void _update() {
-    if (_moving) {
+    final moving = _moving;
+    if (moving) {
       if (!_controller.isAnimating) _controller.repeat();
     } else if (_controller.isAnimating) {
       _controller.stop();
+    }
+    if (_builtMoving != null && _builtMoving != moving && mounted) {
+      setState(() {});
     }
   }
 
@@ -429,8 +440,9 @@ class _ProfileCardEffectState extends State<ProfileCardEffect>
 
   @override
   Widget build(BuildContext context) {
-    if (widget.effect == ProfileEffect.none) return const SizedBox.shrink();
     final moving = _moving;
+    _builtMoving = moving;
+    if (widget.effect == ProfileEffect.none) return const SizedBox.shrink();
     // Still, Drift rests where it starts; Sheen shows nothing.
     if (!moving && widget.effect == ProfileEffect.sheen) {
       return const SizedBox.shrink();
@@ -474,14 +486,14 @@ class _EffectPainter extends CustomPainter {
           rect,
           Alignment(-.55 + .45 * math.sin(a), -.5 + .35 * math.cos(a)),
           longest * .5,
-          color.withValues(alpha: .16),
+          color.withValues(alpha: .30),
         );
         _light(
           canvas,
           rect,
           Alignment(.6 + .35 * math.cos(2 * a), .55 + .3 * math.sin(a)),
           longest * .45,
-          color.withValues(alpha: .1),
+          color.withValues(alpha: .20),
         );
       case ProfileEffect.sheen:
         // A diagonal band crosses during the first fifth of the cycle; the
@@ -497,7 +509,7 @@ class _EffectPainter extends CustomPainter {
               end: Alignment(-1 + x * 2 + .5, 1),
               colors: [
                 Colors.white.withValues(alpha: 0),
-                Colors.white.withValues(alpha: .07),
+                Colors.white.withValues(alpha: .16),
                 Colors.white.withValues(alpha: 0),
               ],
             ).createShader(rect),
