@@ -114,6 +114,14 @@ Playback audit (2026-11-13, static review of v1.33.1; findings await review):
 | [Audit: test strategy](playback-audit/PLAYBACK_TEST_STRATEGY.md) | Existing coverage, gaps, fake-engine harness, device and stress tests |
 | [Audit: remediation roadmap](playback-audit/PLAYBACK_REMEDIATION_ROADMAP.md) | Phased fixes with dependencies, risks and definitions of done |
 
+Playback audit (2026-11-20, runtime investigation on Windows; follows the one above):
+
+| Page | What it covers |
+|---|---|
+| [Playback audit](REELISH_PLAYBACK_AUDIT.md) | Windows audio track names from real media, root causes, findings PB-16 to PB-21, status of PB-01 to PB-15 |
+| [Implementation plan](REELISH_PLAYBACK_IMPLEMENTATION_PLAN.md) | Steps, files, risks, tests and acceptance criteria for the fixes |
+| [Final report](REELISH_PLAYBACK_FINAL_REPORT.md) | What changed, measurements before and after, tests run, limits |
+
 ## Backend
 
 | Page | What it covers |

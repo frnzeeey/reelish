@@ -149,8 +149,43 @@ class FakeVideoPlayerPlatform extends VideoPlayerPlatform {
     bool preventsDisplaySleep,
   ) async {}
 
+  /// The audio tracks every player reports; null when the engine has no
+  /// audio track support (the default). The track marked selected plays
+  /// until the session switches.
+  List<VideoAudioTrack>? audioTracks;
+
+  /// Every audio switch the session asked for, by track id.
+  final List<String> audioSelections = [];
+
+  final Map<int, String> _selectedAudio = {};
+
   @override
-  bool isAudioTrackSupportAvailable() => false;
+  bool isAudioTrackSupportAvailable() => audioTracks != null;
+
+  @override
+  Future<List<VideoAudioTrack>> getAudioTracks(int playerId) async {
+    final tracks = audioTracks ?? const <VideoAudioTrack>[];
+    final playing =
+        _selectedAudio[playerId] ??
+        tracks.where((track) => track.isSelected).firstOrNull?.id;
+    return [
+      for (final track in tracks)
+        VideoAudioTrack(
+          id: track.id,
+          label: track.label,
+          language: track.language,
+          isSelected: track.id == playing,
+          codec: track.codec,
+          channelCount: track.channelCount,
+        ),
+    ];
+  }
+
+  @override
+  Future<void> selectAudioTrack(int playerId, String trackId) async {
+    audioSelections.add(trackId);
+    _selectedAudio[playerId] = trackId;
+  }
 
   @override
   bool isVideoTrackSupportAvailable() => false;

@@ -10,6 +10,8 @@ import 'package:video_player_media_kit/src/media_kit_video_player.dart';
 
 export 'package:video_player_media_kit/src/media_kit_video_player.dart'
     show MediaKitVideoPlayer, EmbeddedSubtitleTrack;
+export 'package:video_player_media_kit/src/mpv_audio_track_info.dart'
+    show MpvAudioTrackInfo;
 
 /// {@template video_player_media_kit}
 ///

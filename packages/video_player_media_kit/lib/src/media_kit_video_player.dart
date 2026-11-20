@@ -13,6 +13,8 @@ import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:video_player_platform_interface/video_player_platform_interface.dart';
 
+import 'mpv_audio_track_info.dart';
+
 // https://github.com/dart-lang/linter/issues/1381
 // ignore_for_file: close_sinks
 
@@ -28,6 +30,9 @@ class MediaKitVideoPlayer extends VideoPlayerPlatform {
 
   /// libmpv's `aid` per player, as last observed.
   final _selectedAudio = HashMap<int, String>();
+
+  /// libmpv's audio metadata per player, from its observed `track-list`.
+  final _audioInfo = HashMap<int, Map<String, MpvAudioTrackInfo>>();
   final _completers = HashMap<int, Completer<void>>();
   final _videoControllers = HashMap<int, VideoController>();
   final _streamControllers = HashMap<int, StreamController<VideoEvent>>();
@@ -70,6 +75,7 @@ class MediaKitVideoPlayer extends VideoPlayerPlatform {
     }
 
     _players.clear();
+    _audioInfo.clear();
     _completers.clear();
     _videoControllers.clear();
     _streamControllers.clear();
@@ -88,6 +94,7 @@ class MediaKitVideoPlayer extends VideoPlayerPlatform {
 
     _players.remove(textureId);
     _selectedAudio.remove(textureId);
+    _audioInfo.remove(textureId);
     _completers.remove(textureId);
     _videoControllers.remove(textureId);
     _streamControllers.remove(textureId);
@@ -188,6 +195,15 @@ class MediaKitVideoPlayer extends VideoPlayerPlatform {
       unawaited(
         platform.observeProperty('aid', (value) async {
           _selectedAudio[textureId] = value;
+        }).catchError((Object _) {}),
+      );
+      // The whole track list, for what media_kit's track model leaves out
+      // (flags, channel layout, HLS variant). Replaced on every change,
+      // so a new file never shows the previous one's metadata.
+      unawaited(
+        platform.observeProperty('track-list', (value) async {
+          if (!_players.containsKey(textureId)) return;
+          _audioInfo[textureId] = MpvAudioTrackInfo.parseTrackList(value);
         }).catchError((Object _) {}),
       );
     }
@@ -356,6 +372,12 @@ class MediaKitVideoPlayer extends VideoPlayerPlatform {
 
   @override
   bool isAudioTrackSupportAvailable() => true;
+
+  /// libmpv's extra audio metadata for player [playerId], by track id,
+  /// as last observed. Empty for an unknown player or before libmpv has
+  /// listed the tracks.
+  Map<String, MpvAudioTrackInfo> audioTrackInfo(int playerId) =>
+      _audioInfo[playerId] ?? const {};
 
   /// The shared instance, for the embedded-subtitle API below, which
   /// package:video_player's platform interface does not cover.

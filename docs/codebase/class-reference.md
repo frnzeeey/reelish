@@ -95,8 +95,8 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `_Attached` | Mixin | [`messages_screen.dart:66`](../../lib/src/screens/social/messages_screen.dart#L66) | extends StatefulWidget> | Shared | its own file | Keeps the connection open while the widget is on screen. |
 | `AudioSwitchCheck` | Class | [`audio_switch_check.dart:27`](../../lib/src/widgets/player/audio_switch_check.dart#L27) |  | Shared | 1 lib file, 2 test files | Watches the player after an audio switch until playback has clearly gone on, or clearly stopped. |
 | `AudioSwitchSample` | Class | [`audio_switch_check.dart:4`](../../lib/src/widgets/player/audio_switch_check.dart#L4) |  | Shared | 1 lib file, 2 test files | One look at the player after an audio switch. |
-| `AudioTrackLabel` | Class | [`audio_track_sheet.dart:40`](../../lib/src/widgets/player/audio_track_sheet.dart#L40) |  | Shared | 2 lib files, 1 test file | How an audio track is named, from what the stream says about it and nothing else: a language name when the stream gives a language, the stream's own title when it adds something ("Commentary"), and "Audio track N" when the stream gives neither. |
-| `AudioTrackSheet` | Class | [`audio_track_sheet.dart:9`](../../lib/src/widgets/player/audio_track_sheet.dart#L9) |  | Shared | 2 lib files, 1 test file | Picks an audio track. |
+| `AudioTrackLabel` | Class | [`audio_track_sheet.dart:49`](../../lib/src/widgets/player/audio_track_sheet.dart#L49) |  | Shared | 2 lib files, 2 test files | How an audio track is named, from what the stream says about it and nothing else: a language name when the stream gives a language, the stream's own title when it adds something ("Commentary"), its codec and channels when it gives neither ("DTS · 5.1"), and "Audio track N" only when the stream says nothing at all. |
+| `AudioTrackSheet` | Class | [`audio_track_sheet.dart:11`](../../lib/src/widgets/player/audio_track_sheet.dart#L11) |  | Shared | 2 lib files, 1 test file | Picks an audio track. |
 | `AvailabilityState` | Enum | [`playback_availability.dart:26`](../../lib/src/search/playback_availability.dart#L26) |  | Shared | 1 lib file, 1 test file |  |
 | `_AvatarChoice` | Widget | [`profile_avatar_picker.dart:93`](../../lib/src/widgets/profile_avatar_picker.dart#L93) | extends StatefulWidget | Shared | its own file | One avatar in the picker: an accent ring marks the chosen one, and a white ring the focused one (keyboard, gamepad and D-pad). |
 | `_AvatarChoiceState` | Widget state | [`profile_avatar_picker.dart:112`](../../lib/src/widgets/profile_avatar_picker.dart#L112) | extends State<_AvatarChoice> | Shared | its own file |  |
@@ -162,7 +162,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `CatalogPageFetcher` | Typedef | [`paged_feed_controller.dart:35`](../../lib/src/services/paged_feed_controller.dart#L35) | = Future<CatalogPage> Function( int page, | Shared | its own file only |  |
 | `_Categories` | Widget | [`universal_search_view.dart:451`](../../lib/src/screens/search/universal_search_view.dart#L451) | extends StatelessWidget | Shared | its own file |  |
 | `CategoryChip` | Widget | [`category_chip.dart:4`](../../lib/src/widgets/category_chip.dart#L4) | extends StatelessWidget | Shared | 3 lib files, 1 test file |  |
-| `_CategoryRow` | Widget | [`player_settings_sheet.dart:471`](../../lib/src/widgets/player/player_settings_sheet.dart#L471) | extends StatelessWidget | Shared | its own file | A category on the root page (or a link on a category page): its icon, name and current value, and a chevron. |
+| `_CategoryRow` | Widget | [`player_settings_sheet.dart:484`](../../lib/src/widgets/player/player_settings_sheet.dart#L484) | extends StatelessWidget | Shared | its own file | A category on the root page (or a link on a category page): its icon, name and current value, and a chevron. |
 | `_CenterControls` | Widget | [`player_controls.dart:410`](../../lib/src/widgets/player/player_controls.dart#L410) | extends StatelessWidget | Shared | its own file |  |
 | `_ChatHeader` | Widget | [`messages_screen.dart:768`](../../lib/src/screens/social/messages_screen.dart#L768) | extends StatelessWidget | Shared | its own file |  |
 | `ChatMessage` | Class | [`message_models.dart:50`](../../lib/src/messaging/message_models.dart#L50) |  | Shared | 3 lib files, 2 test files | One message in a conversation. |
@@ -592,7 +592,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `_Months` | Widget | [`profile_stats_screen.dart:359`](../../lib/src/screens/profile_stats_screen.dart#L359) | extends StatelessWidget | Shared | its own file | Finished movies and episodes in each of the last months, as columns. |
 | `_MotionTile` | Widget | [`spotlight_experience_screen.dart:191`](../../lib/src/screens/spotlight_experience_screen.dart#L191) | extends StatelessWidget | Shared | its own file | A preset in the list: choosing it previews it. |
 | `MovieNightCard` | Widget | [`together_sections.dart:296`](../../lib/src/screens/social/together_sections.dart#L296) | extends StatelessWidget | Shared | 1 lib file | Movie night: join a party with a code, or pick a title to host one. |
-| `MpvPlayerEngine` | Service type | [`player_engine.dart:57`](../../lib/src/services/player_engine.dart#L57) | implements PlayerEngine | Shared | 1 lib file, 5 test files |  |
+| `MpvPlayerEngine` | Service type | [`player_engine.dart:57`](../../lib/src/services/player_engine.dart#L57) | implements PlayerEngine | Shared | 1 lib file, 6 test files |  |
 | `MyProfileAvatar` | Widget | [`profile_avatar.dart:12`](../../lib/src/widgets/profile_avatar.dart#L12) | extends StatelessWidget | Shared | 5 lib files | The signed-in person's avatar, as their profile sets it on this device; redrawn when they change it or another account signs in. |
 
 ## N
@@ -635,7 +635,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 
 | Type | Role | Declared in | Relations | Platform | Named in | Summary |
 |---|---|---|---|---|---|---|
-| `_Page` | Enum | [`player_settings_sheet.dart:144`](../../lib/src/widgets/player/player_settings_sheet.dart#L144) |  | Shared | its own file |  |
+| `_Page` | Enum | [`player_settings_sheet.dart:152`](../../lib/src/widgets/player/player_settings_sheet.dart#L152) |  | Shared | its own file |  |
 | `_Page` | Widget | [`desktop_shell.dart:169`](../../lib/src/desktop/desktop_shell.dart#L169) | extends StatelessWidget | Windows | its own file |  |
 | `PagedFeedController` | Notifier / controller | [`paged_feed_controller.dart:137`](../../lib/src/services/paged_feed_controller.dart#L137) | extends ChangeNotifier | Shared | 8 lib files, 5 test files | The pages of one home row: what is loaded, whether more exist, and the guards that keep requests for it from piling up. |
 | `PagedFeedState` | Service type | [`paged_feed_controller.dart:60`](../../lib/src/services/paged_feed_controller.dart#L60) |  | Shared | its own file only |  |
@@ -668,7 +668,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `PartyDesktopFrame` | Widget | [`party_desktop.dart:18`](../../lib/src/screens/watch_party/party_desktop.dart#L18) | extends StatelessWidget | Shared | 3 lib files | A Windows party page: Back and the title over a centred column no wider than `maxWidth`, on the page background with a soft accent glow. |
 | `PartyDesktopPoster` | Widget | [`party_desktop.dart:118`](../../lib/src/screens/watch_party/party_desktop.dart#L118) | extends StatelessWidget | Shared | 1 lib file | The title's poster, large, with a soft shadow; a quiet tile without one. |
 | `PartyEndReason` | Enum | [`watch_party_controller.dart:90`](../../lib/src/watch_party/watch_party_controller.dart#L90) |  | Shared | 1 lib file, 1 test file | Why this device is no longer in the party. |
-| `_PartyHandle` | Class | [`custom_video_player.dart:3955`](../../lib/src/widgets/player/custom_video_player.dart#L3955) | implements PartyPlayerHandle | Shared | its own file | The player as watch party sync sees it. |
+| `_PartyHandle` | Class | [`custom_video_player.dart:4017`](../../lib/src/widgets/player/custom_video_player.dart#L4017) | implements PartyPlayerHandle | Shared | its own file | The player as watch party sync sees it. |
 | `PartyHostingForSupporters` | Widget | [`create_party_screen.dart:558`](../../lib/src/screens/watch_party/create_party_screen.dart#L558) | extends StatelessWidget | Shared | 2 test files | Hosting is a Supporter privilege: what it offers, and that joining is not. |
 | `PartyHowItWorks` | Widget | [`party_widgets.dart:333`](../../lib/src/screens/watch_party/party_widgets.dart#L333) | extends StatelessWidget | Shared | 1 lib file | Three short steps: what a watch party does. |
 | `PartyLinks` | Class | [`party_links.dart:11`](../../lib/src/watch_party/party_links.dart#L11) |  | Shared | 1 lib file, 1 test file |  |
@@ -705,7 +705,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `_Pill` | Widget | [`account_settings_screen.dart:511`](../../lib/src/screens/account_settings_screen.dart#L511) | extends StatelessWidget | Shared | its own file |  |
 | `_PillButton` | Widget | [`player_controls.dart:869`](../../lib/src/widgets/player/player_controls.dart#L869) | extends StatelessWidget | Shared | its own file |  |
 | `_PinToggle` | Widget | [`desktop_shell.dart:702`](../../lib/src/desktop/desktop_shell.dart#L702) | extends StatelessWidget | Windows | its own file | Keeps the rail open beside the page, or lets it close again. |
-| `PlayableSource` | Model | [`playable_source.dart:6`](../../lib/src/models/playable_source.dart#L6) |  | Shared | 3 lib files, 5 test files | Fully prepared input for an engine. |
+| `PlayableSource` | Model | [`playable_source.dart:6`](../../lib/src/models/playable_source.dart#L6) |  | Shared | 3 lib files, 6 test files | Fully prepared input for an engine. |
 | `PlaybackAvailability` | Notifier / controller | [`playback_availability.dart:95`](../../lib/src/search/playback_availability.dart#L95) | extends ChangeNotifier | Shared | 4 lib files, 2 test files |  |
 | `PlaybackCoordinator` | Service type | [`playback_coordinator.dart:272`](../../lib/src/services/playback_coordinator.dart#L272) |  | Shared | 1 lib file, 2 test files | Owns candidate identity, ranking and the bounded source-attempt policy independently of widget rendering. |
 | `PlaybackDiagnostics` | Class | [`playback_diagnostics.dart:16`](../../lib/src/diagnostics/playback_diagnostics.dart#L16) |  | Shared | 1 lib file, 1 test file |  |
@@ -727,9 +727,9 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `PlayerControlsLayout` | Class | [`player_controls.dart:222`](../../lib/src/widgets/player/player_controls.dart#L222) |  | Shared | 2 lib files, 2 test files | Where the controls' bars sit, shared with the pause screen so its text is placed against the real controls rather than guessed sizes. |
 | `PlayerControlsOverlay` | Widget | [`player_controls.dart:30`](../../lib/src/widgets/player/player_controls.dart#L30) | extends StatelessWidget | Shared | 1 lib file, 4 test files | The playback controls drawn over the video. |
 | `PlayerEngine` | Service type | [`player_engine.dart:17`](../../lib/src/services/player_engine.dart#L17) |  | Shared | 2 lib files | Common controller boundary. |
-| `PlayerEngineBootstrap` | Service type | [`player_engine.dart:252`](../../lib/src/services/player_engine.dart#L252) |  | Shared | 1 lib file, 3 test files | Selects the default engine at launch. |
+| `PlayerEngineBootstrap` | Service type | [`player_engine.dart:252`](../../lib/src/services/player_engine.dart#L252) |  | Shared | 1 lib file, 4 test files | Selects the default engine at launch. |
 | `PlayerEngineFactory` | Service type | [`player_engine.dart:209`](../../lib/src/services/player_engine.dart#L209) |  | Shared | 1 lib file, 4 test files |  |
-| `PlayerEngineGate` | Service type | [`player_engine.dart:149`](../../lib/src/services/player_engine.dart#L149) |  | Shared | 1 lib file, 4 test files | Keeps engines from switching under a live player. |
+| `PlayerEngineGate` | Service type | [`player_engine.dart:149`](../../lib/src/services/player_engine.dart#L149) |  | Shared | 1 lib file, 5 test files | Keeps engines from switching under a live player. |
 | `PlayerEngineId` | Enum | [`player_engine.dart:13`](../../lib/src/services/player_engine.dart#L13) |  | Shared | 2 lib files, 2 test files |  |
 | `PlayerErrorPanel` | Widget | [`player_controls.dart:1247`](../../lib/src/widgets/player/player_controls.dart#L1247) | extends StatelessWidget | Shared | 1 lib file, 1 test file | The error state: a plain-language title, a short reason and the recovery actions that make sense. |
 | `PlayerIconButton` | Widget | [`player_controls.dart:799`](../../lib/src/widgets/player/player_controls.dart#L799) | extends StatelessWidget | Shared | 2 lib files | A round, touch-friendly (48 dp) icon control. |
@@ -744,9 +744,9 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `PlayerScreen` | Widget | [`player_screen.dart:14`](../../lib/src/screens/player_screen.dart#L14) | extends StatelessWidget | Shared | 1 lib file, 6 test files |  |
 | `PlayerSeekFeedback` | Widget | [`player_controls.dart:990`](../../lib/src/widgets/player/player_controls.dart#L990) | extends StatefulWidget | Shared | 1 lib file, 1 test file | Double-tap seek feedback: a soft translucent region on the tapped side with the accumulated seconds. |
 | `_PlayerSeekFeedbackState` | Widget state | [`player_controls.dart:999`](../../lib/src/widgets/player/player_controls.dart#L999) | extends State<PlayerSeekFeedback> | Shared | its own file |  |
-| `PlayerSettings` | Class | [`player_settings_sheet.dart:15`](../../lib/src/widgets/player/player_settings_sheet.dart#L15) |  | Shared | 1 lib file, 1 test file |  |
-| `PlayerSettingsSheet` | Widget | [`player_settings_sheet.dart:72`](../../lib/src/widgets/player/player_settings_sheet.dart#L72) | extends StatefulWidget | Shared | 1 lib file, 1 test file | Playback settings: a root page of categories, each showing its current value, and a page per category with the choices the stream really has. |
-| `_PlayerSettingsSheetState` | Widget state | [`player_settings_sheet.dart:146`](../../lib/src/widgets/player/player_settings_sheet.dart#L146) | extends State<PlayerSettingsSheet> | Shared | its own file |  |
+| `PlayerSettings` | Class | [`player_settings_sheet.dart:17`](../../lib/src/widgets/player/player_settings_sheet.dart#L17) |  | Shared | 1 lib file, 1 test file |  |
+| `PlayerSettingsSheet` | Widget | [`player_settings_sheet.dart:74`](../../lib/src/widgets/player/player_settings_sheet.dart#L74) | extends StatefulWidget | Shared | 1 lib file, 1 test file | Playback settings: a root page of categories, each showing its current value, and a page per category with the choices the stream really has. |
+| `_PlayerSettingsSheetState` | Widget state | [`player_settings_sheet.dart:154`](../../lib/src/widgets/player/player_settings_sheet.dart#L154) | extends State<PlayerSettingsSheet> | Shared | its own file |  |
 | `PlayerSheetFrame` | Widget | [`player_sheet.dart:11`](../../lib/src/widgets/player/player_sheet.dart#L11) | extends StatelessWidget | Shared | 5 lib files | Shared frame for the player's selection sheets: a drag handle, icon and title, then a scrollable list. |
 | `PlayerSheetOption` | Widget | [`player_sheet.dart:126`](../../lib/src/widgets/player/player_sheet.dart#L126) | extends StatelessWidget | Shared | 4 lib files | One selectable row. |
 | `PlayerStatusView` | Widget | [`player_controls.dart:1175`](../../lib/src/widgets/player/player_controls.dart#L1175) | extends StatelessWidget | Shared | 1 lib file | Shown while no video frame is available yet: a back button plus either a quiet progress state or a recoverable error. |
@@ -973,7 +973,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `_SeasonPicker` | Widget | [`desktop_details_screen.dart:994`](../../lib/src/desktop/desktop_details_screen.dart#L994) | extends StatelessWidget | Windows | its own file |  |
 | `_SectionHeading` | Widget | [`plugins_screen.dart:360`](../../lib/src/screens/plugins_screen.dart#L360) | extends StatelessWidget | Shared | its own file |  |
 | `_SectionLabel` | Widget | [`subtitle_picker_sheet.dart:190`](../../lib/src/widgets/player/subtitle_picker_sheet.dart#L190) | extends StatelessWidget | Shared | its own file |  |
-| `_SectionLabel` | Widget | [`player_settings_sheet.dart:558`](../../lib/src/widgets/player/player_settings_sheet.dart#L558) | extends StatelessWidget | Shared | its own file |  |
+| `_SectionLabel` | Widget | [`player_settings_sheet.dart:571`](../../lib/src/widgets/player/player_settings_sheet.dart#L571) | extends StatelessWidget | Shared | its own file |  |
 | `_SectionTitle` | Widget | [`universal_search_view.dart:482`](../../lib/src/screens/search/universal_search_view.dart#L482) | extends StatelessWidget | Shared | its own file |  |
 | `SecureSessionStore` | Class | [`session_store.dart:123`](../../lib/src/account/session_store.dart#L123) | implements SessionStore | Shared | 1 lib file |  |
 | `SeedCandidates` | Class | [`discovery_engine.dart:89`](../../lib/src/discovery/discovery_engine.dart#L89) |  | Shared | 1 lib file, 1 test file | TMDB's recommendations for one seed title, in TMDB's order. |
@@ -1100,8 +1100,8 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `StreamNormalizer` | Service type | [`stream_normalizer.dart:15`](../../lib/src/services/stream_normalizer.dart#L15) |  | Shared | 1 lib file, 1 test file | Converts provider-specific JSON shapes into Reelish's canonical source. |
 | `StreamSelectorSheet` | Widget | [`stream_selector_sheet.dart:15`](../../lib/src/widgets/player/stream_selector_sheet.dart#L15) | extends StatefulWidget | Shared | 2 lib files, 1 test file | Lists playable sources. |
 | `_StreamSelectorSheetState` | Widget state | [`stream_selector_sheet.dart:73`](../../lib/src/widgets/player/stream_selector_sheet.dart#L73) | extends State<StreamSelectorSheet> | Shared | its own file |  |
-| `StreamSource` | Model | [`stream_source.dart:47`](../../lib/src/models/stream_source.dart#L47) |  | Shared | 15 lib files, 19 test files |  |
-| `StreamType` | Enum | [`stream_type.dart:1`](../../lib/src/models/stream_type.dart#L1) |  | Shared | 5 lib files, 6 test files |  |
+| `StreamSource` | Model | [`stream_source.dart:47`](../../lib/src/models/stream_source.dart#L47) |  | Shared | 15 lib files, 20 test files |  |
+| `StreamType` | Enum | [`stream_type.dart:1`](../../lib/src/models/stream_type.dart#L1) |  | Shared | 5 lib files, 7 test files |  |
 | `StreamTypeDetection` | Extension | [`stream_type.dart:3`](../../lib/src/models/stream_type.dart#L3) | on StreamType | Shared | 1 lib file |  |
 | `StreamValidator` | Service type | [`stream_validator.dart:5`](../../lib/src/services/stream_validator.dart#L5) |  | Shared | 2 lib files | Cheap source checks before native player open. |
 | `_StretchToAspect` | Class | [`liquid_glass.dart:450`](../../lib/src/widgets/liquid_glass.dart#L450) | extends GradientTransform | Shared | its own file | Keeps radial gradients proportional on long, thin surfaces. |

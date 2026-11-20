@@ -3,6 +3,8 @@
 // changes them, organised in categories.
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
+import 'package:video_player_media_kit/video_player_media_kit.dart'
+    show MpvAudioTrackInfo;
 
 import '../../models/stream_source.dart';
 import '../../platform/device_capabilities.dart';
@@ -77,11 +79,15 @@ class PlayerSettingsSheet extends StatefulWidget {
     this.videoTracks = const [],
     this.audioTracks = const [],
     this.alternateEngine,
+    this.audioInfo = const {},
   });
   final PlayerSettings value;
   final List<SubtitleTrack> subtitles;
   final List<VideoTrack> videoTracks;
   final List<VideoAudioTrack> audioTracks;
+
+  /// libmpv's extra audio metadata by track id (empty on Media3).
+  final Map<String, MpvAudioTrackInfo> audioInfo;
 
   /// Name of the other playback engine, when it can open this stream.
   final String? alternateEngine;
@@ -96,6 +102,7 @@ class PlayerSettingsSheet extends StatefulWidget {
     List<VideoTrack> videoTracks = const [],
     List<VideoAudioTrack> audioTracks = const [],
     String? alternateEngine,
+    Map<String, MpvAudioTrackInfo> audioInfo = const {},
   ]) => showModalBottomSheet<PlayerSettings>(
     context: context,
     backgroundColor: Colors.transparent,
@@ -106,6 +113,7 @@ class PlayerSettingsSheet extends StatefulWidget {
       videoTracks: videoTracks,
       audioTracks: audioTracks,
       alternateEngine: alternateEngine,
+      audioInfo: audioInfo,
     ),
   );
 
@@ -225,8 +233,12 @@ class _PlayerSettingsSheetState extends State<PlayerSettingsSheet> {
       children: [
         for (final (index, track) in widget.audioTracks.indexed)
           PlayerSheetOption(
-            title: AudioTrackLabel.title(track, index),
-            detail: AudioTrackLabel.detail(widget.audioTracks, index),
+            title: AudioTrackLabel.title(track, index, widget.audioInfo),
+            detail: AudioTrackLabel.detail(
+              widget.audioTracks,
+              index,
+              widget.audioInfo,
+            ),
             selected: identical(track, _currentAudio),
             trailing: 'Playing',
             onTap: () => _apply(_value.copyWith(audioTrackId: track.id)),
@@ -353,6 +365,7 @@ class _PlayerSettingsSheetState extends State<PlayerSettingsSheet> {
                 : AudioTrackLabel.title(
                     audio,
                     widget.audioTracks.indexOf(audio),
+                    widget.audioInfo,
                   ),
             onTap: () => _open(_Page.audio),
           ),

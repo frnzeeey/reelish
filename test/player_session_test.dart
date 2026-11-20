@@ -19,7 +19,7 @@ import 'package:onfeed/src/screens/player_screen.dart';
 import 'package:onfeed/src/services/playback_settings_controller.dart';
 import 'package:onfeed/src/services/storage_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:video_player/video_player.dart';
+import 'package:video_player/video_player.dart' hide VideoAudioTrack;
 import 'package:video_player_platform_interface/video_player_platform_interface.dart';
 
 import 'support/fake_video_player_platform.dart';
@@ -181,6 +181,48 @@ void main() {
 
     expect(engine.live, isEmpty);
     expect(engine.players, hasLength(1));
+  });
+
+  // PB-19 (docs/REELISH_PLAYBACK_AUDIT.md). The test device's language is
+  // English and the preferred audio language is "device".
+  _testSession(
+    'opening keeps a playing track already in the preferred language',
+    (tester) async {
+      // As on an HLS stream with the audio inside each variant: the first
+      // English track belongs to another variant than the playing one.
+      engine.audioTracks = const [
+        VideoAudioTrack(
+          id: '1',
+          label: null,
+          language: 'en',
+          isSelected: false,
+        ),
+        VideoAudioTrack(id: '6', label: null, language: 'en', isSelected: true),
+      ];
+      engine.onCreate = (player) => player.initialize();
+      await openPlayer(tester, sources: const [_first]);
+      await advance(tester);
+
+      expect(showsVideo(), isTrue);
+      expect(engine.audioSelections, isEmpty);
+      await closePlayer(tester);
+    },
+  );
+
+  _testSession('opening still switches to the preferred language', (
+    tester,
+  ) async {
+    engine.audioTracks = const [
+      VideoAudioTrack(id: '1', label: null, language: 'ja', isSelected: true),
+      VideoAudioTrack(id: '2', label: null, language: 'en', isSelected: false),
+    ];
+    engine.onCreate = (player) => player.initialize();
+    await openPlayer(tester, sources: const [_first]);
+    await advance(tester);
+
+    expect(showsVideo(), isTrue);
+    expect(engine.audioSelections, ['2']);
+    await closePlayer(tester);
   });
 }
 

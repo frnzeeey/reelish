@@ -233,9 +233,9 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/widgets/media_card.dart`](#libsrcwidgetsmedia_carddart) | Shared | 478 | A movie or series poster on the phone and tablet interface: the artwork at its true 2:3 shape, with the title and one line of details beneath it, so nothing covers the poster but the My list heart and, on Continue watching, a thin progress line along its foot. |
 | [`lib/src/widgets/notice_card.dart`](#libsrcwidgetsnotice_carddart) | Shared | 84 | A notice in the flow of a page: an icon tile, a title, a line of help and an optional action. |
 | [`lib/src/widgets/player/audio_switch_check.dart`](#libsrcwidgetsplayeraudio_switch_checkdart) | Shared | 76 | Confirms that playback goes on after libmpv switches the audio track. |
-| [`lib/src/widgets/player/audio_track_sheet.dart`](#libsrcwidgetsplayeraudio_track_sheetdart) | Shared | 120 | Picks an audio track. |
+| [`lib/src/widgets/player/audio_track_sheet.dart`](#libsrcwidgetsplayeraudio_track_sheetdart) | Shared | 283 | Picks an audio track. |
 | [`lib/src/widgets/player/content_advisory_overlay.dart`](#libsrcwidgetsplayercontent_advisory_overlaydart) | Shared | 246 | The age rating and content advisory shown briefly when a title starts. |
-| [`lib/src/widgets/player/custom_video_player.dart`](#libsrcwidgetsplayercustom_video_playerdart) | Shared | 4043 | The player session for every platform: engine and source attempts, controls, subtitles, audio and video tracks, resume and progress saving, and episode switching. |
+| [`lib/src/widgets/player/custom_video_player.dart`](#libsrcwidgetsplayercustom_video_playerdart) | Shared | 4105 | The player session for every platform: engine and source attempts, controls, subtitles, audio and video tracks, resume and progress saving, and episode switching. |
 | [`lib/src/widgets/player/episode_panel.dart`](#libsrcwidgetsplayerepisode_paneldart) | Shared | 839 | Lists a series' episodes by season, with thumbnails, runtimes, synopses and the viewer's progress. |
 | [`lib/src/widgets/player/external_cue_clock.dart`](#libsrcwidgetsplayerexternal_cue_clockdart) | Shared | 199 | The text of the downloaded subtitle cue that should be on screen, kept in step with the player's own clock. |
 | [`lib/src/widgets/player/gesture_touch_layer.dart`](#libsrcwidgetsplayergesture_touch_layerdart) | Shared | 100 | Touch handling for the video area. |
@@ -247,7 +247,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/widgets/player/player_marquee_text.dart`](#libsrcwidgetsplayerplayer_marquee_textdart) | Shared | 144 | Single-line text that slowly scrolls when it does not fit: a pause, a scroll to the end, another pause, then it starts over. |
 | [`lib/src/widgets/player/player_pip.dart`](#libsrcwidgetsplayerplayer_pipdart) | Shared | 86 | Picture in picture on Android, through the `onfeed/player` channel: the active player reports its state, so leaving the app continues its video in a small window with a play/pause button, and hears when that window opens and closes. |
 | [`lib/src/widgets/player/player_progress_bar.dart`](#libsrcwidgetsplayerplayer_progress_bardart) | Shared | 361 | Reelish's seek bar: thin while idle, emphasized while scrubbing, with a time bubble above the thumb. |
-| [`lib/src/widgets/player/player_settings_sheet.dart`](#libsrcwidgetsplayerplayer_settings_sheetdart) | Shared | 576 | The player's settings: the values a session can change (speed, quality, audio track, subtitles and their timing, picture fit), and the sheet that changes them, organised in categories. |
+| [`lib/src/widgets/player/player_settings_sheet.dart`](#libsrcwidgetsplayerplayer_settings_sheetdart) | Shared | 589 | The player's settings: the values a session can change (speed, quality, audio track, subtitles and their timing, picture fit), and the sheet that changes them, organised in categories. |
 | [`lib/src/widgets/player/player_sheet.dart`](#libsrcwidgetsplayerplayer_sheetdart) | Shared | 229 | The shared frame and option rows for the player's selection sheets. |
 | [`lib/src/widgets/player/player_volume_control.dart`](#libsrcwidgetsplayerplayer_volume_controldart) | Shared | 163 | The Windows player's volume: a speaker button that mutes and unmutes, and a slider with the level that slides out while the pointer is over the control or keyboard focus is inside it. |
 | [`lib/src/widgets/player/skip_segment_button.dart`](#libsrcwidgetsplayerskip_segment_buttondart) | Shared | 87 | The Skip intro / Skip outro button the player shows while a segment from IntroDB plays. |
@@ -1227,7 +1227,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Imported by:** `src/services/playback_coordinator.dart`, `src/services/player_engine.dart`, `src/services/source_preparer.dart`
 
-**Tests importing it:** `integration_test/audio_track_switch_test.dart`, `integration_test/libmpv_playback_test.dart`, `integration_test/media3_audio_track_test.dart`, `integration_test/windows_playback_test.dart`, `test/playback_reliability_test.dart`
+**Tests importing it:** `integration_test/audio_track_metadata_test.dart`, `integration_test/audio_track_switch_test.dart`, `integration_test/libmpv_playback_test.dart`, `integration_test/media3_audio_track_test.dart`, `integration_test/windows_playback_test.dart`, `test/playback_reliability_test.dart`
 
 ## lib/src/models/playback_settings.dart
 
@@ -1305,7 +1305,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Imported by:** `src/models/playable_source.dart`, `src/screens/home_screen.dart`, `src/screens/player_screen.dart`, `src/search/playback_availability.dart`, `src/services/playback_coordinator.dart`, `src/services/playback_source_policy.dart`, `src/services/provider_plugin_service.dart`, `src/services/source_preparer.dart`, `src/services/storage_service.dart`, `src/services/stream_discovery.dart`, `src/services/stream_normalizer.dart`, `src/services/stream_validator.dart`, `src/services/subtitle_addon_service.dart`, `src/services/subtitle_loader.dart`, `src/services/torrent_source_preparer.dart`, `src/widgets/player/custom_video_player.dart`, `src/widgets/player/player_settings_sheet.dart`, `src/widgets/player/stream_selector_sheet.dart`, `src/widgets/player/subtitle_picker_sheet.dart`
 
-**Tests importing it:** `integration_test/audio_track_switch_test.dart`, `integration_test/libmpv_playback_test.dart`, `integration_test/media3_audio_track_test.dart`, `integration_test/player_long_session_test.dart`, `integration_test/windows_playback_test.dart`, `integration_test/windows_player_ui_test.dart`, `integration_test/windows_soak_test.dart`, `integration_test/windows_torrent_test.dart`, `test/intro_skip_player_test.dart`, `test/playback_pipeline_test.dart`, `test/playback_reliability_test.dart`, `test/playback_settings_test.dart`, `test/player_session_test.dart`, `test/player_settings_sheet_test.dart`, `test/player_ui_test.dart`, `test/stream_discovery_test.dart`, `test/stream_source_test.dart`, `test/subtitles_test.dart`, `test/torrent_source_preparer_test.dart`, `test/universal_search_screens_test.dart`, `test/universal_search_test.dart`
+**Tests importing it:** `integration_test/audio_track_metadata_test.dart`, `integration_test/audio_track_switch_test.dart`, `integration_test/libmpv_playback_test.dart`, `integration_test/media3_audio_track_test.dart`, `integration_test/player_long_session_test.dart`, `integration_test/windows_playback_test.dart`, `integration_test/windows_player_ui_test.dart`, `integration_test/windows_soak_test.dart`, `integration_test/windows_torrent_test.dart`, `test/intro_skip_player_test.dart`, `test/playback_pipeline_test.dart`, `test/playback_reliability_test.dart`, `test/playback_settings_test.dart`, `test/player_session_test.dart`, `test/player_settings_sheet_test.dart`, `test/player_ui_test.dart`, `test/stream_discovery_test.dart`, `test/stream_source_test.dart`, `test/subtitles_test.dart`, `test/torrent_source_preparer_test.dart`, `test/universal_search_screens_test.dart`, `test/universal_search_test.dart`
 
 ## lib/src/models/stream_type.dart
 
@@ -1319,7 +1319,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Imported by:** `src/models/playable_source.dart`, `src/models/stream_source.dart`, `src/services/playback_coordinator.dart`, `src/services/player_engine.dart`, `src/services/stream_normalizer.dart`
 
-**Tests importing it:** `integration_test/audio_track_switch_test.dart`, `integration_test/libmpv_playback_test.dart`, `integration_test/media3_audio_track_test.dart`, `integration_test/windows_playback_test.dart`, `test/playback_pipeline_test.dart`, `test/playback_reliability_test.dart`
+**Tests importing it:** `integration_test/audio_track_metadata_test.dart`, `integration_test/audio_track_switch_test.dart`, `integration_test/libmpv_playback_test.dart`, `integration_test/media3_audio_track_test.dart`, `integration_test/windows_playback_test.dart`, `test/playback_pipeline_test.dart`, `test/playback_reliability_test.dart`
 
 ## lib/src/models/subtitle_addon.dart
 
@@ -2717,7 +2717,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Imported by:** `main.dart`, `src/services/playback_coordinator.dart`, `src/widgets/player/custom_video_player.dart`
 
-**Tests importing it:** `integration_test/audio_track_switch_test.dart`, `integration_test/libmpv_playback_test.dart`, `integration_test/media3_audio_track_test.dart`, `integration_test/player_long_session_test.dart`, `integration_test/windows_playback_test.dart`, `test/playback_pipeline_test.dart`, `test/playback_reliability_test.dart`
+**Tests importing it:** `integration_test/audio_track_metadata_test.dart`, `integration_test/audio_track_switch_test.dart`, `integration_test/libmpv_playback_test.dart`, `integration_test/media3_audio_track_test.dart`, `integration_test/player_long_session_test.dart`, `integration_test/windows_playback_test.dart`, `test/playback_pipeline_test.dart`, `test/playback_reliability_test.dart`
 
 ## lib/src/services/plugin_compatibility.dart
 
@@ -3867,7 +3867,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/widgets/player/audio_track_sheet.dart
 
-**Source:** [`lib/src/widgets/player/audio_track_sheet.dart`](../../lib/src/widgets/player/audio_track_sheet.dart) · **Platform:** Shared · **Lines:** 120
+**Source:** [`lib/src/widgets/player/audio_track_sheet.dart`](../../lib/src/widgets/player/audio_track_sheet.dart) · **Platform:** Shared · **Lines:** 283
 
 **Purpose:** Picks an audio track.
 
@@ -3879,7 +3879,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Imported by:** `src/widgets/player/custom_video_player.dart`, `src/widgets/player/player_settings_sheet.dart`
 
-**Tests importing it:** `test/audio_tracks_test.dart`
+**Tests importing it:** `integration_test/audio_track_metadata_test.dart`, `test/audio_tracks_test.dart`
 
 ## lib/src/widgets/player/content_advisory_overlay.dart
 
@@ -3899,7 +3899,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/widgets/player/custom_video_player.dart
 
-**Source:** [`lib/src/widgets/player/custom_video_player.dart`](../../lib/src/widgets/player/custom_video_player.dart) · **Platform:** Shared · **Lines:** 4043 · **Branches on:** isTv, isDesktop, usesTvLayout, TargetPlatform.windows, TargetPlatform.android, TorrentSupport
+**Source:** [`lib/src/widgets/player/custom_video_player.dart`](../../lib/src/widgets/player/custom_video_player.dart) · **Platform:** Shared · **Lines:** 4105 · **Branches on:** isTv, isDesktop, usesTvLayout, TargetPlatform.windows, TargetPlatform.android, TorrentSupport
 
 **Purpose:** The player session for every platform: engine and source attempts, controls, subtitles, audio and video tracks, resume and progress saving, and episode switching.
 
@@ -4097,7 +4097,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/widgets/player/player_settings_sheet.dart
 
-**Source:** [`lib/src/widgets/player/player_settings_sheet.dart`](../../lib/src/widgets/player/player_settings_sheet.dart) · **Platform:** Shared · **Lines:** 576 · **Branches on:** usesTvLayout
+**Source:** [`lib/src/widgets/player/player_settings_sheet.dart`](../../lib/src/widgets/player/player_settings_sheet.dart) · **Platform:** Shared · **Lines:** 589 · **Branches on:** usesTvLayout
 
 **Purpose:** The player's settings: the values a session can change (speed, quality, audio track, subtitles and their timing, picture fit), and the sheet that changes them, organised in categories.
 

@@ -297,6 +297,10 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
   List<VideoTrack> _videoTracks = [];
   List<VideoAudioTrack> _audioTracks = [];
 
+  /// libmpv's extra metadata for [_audioTracks], by track id (flags,
+  /// channel layout, HLS variant); empty on Media3.
+  Map<String, MpvAudioTrackInfo> _audioInfo = const {};
+
   /// The audio language the viewer picked in this session. A reopened player
   /// (another source, a reconnect, the other engine) plays it ahead of the
   /// language preferences.
@@ -311,9 +315,45 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
   /// means the switch failed it (see [_audioSwitchFailedSource]).
   ({String url, String? previousLanguage})? _unconfirmedAudioSwitch;
 
-  /// The audio tracks the viewer can choose between.
+  /// The audio tracks the viewer can choose between: every track, less the
+  /// copies of the playing audio in an HLS stream's other variants
+  /// ([AudioTrackLabel.choices]).
   List<VideoAudioTrack> get _audioChoices =>
-      _audioLockedSources.contains(_source?.url) ? const [] : _audioTracks;
+      _audioLockedSources.contains(_source?.url)
+      ? const []
+      : AudioTrackLabel.choices(_audioTracks, _audioInfo);
+
+  /// The audio tracks for the debug log: ids, languages, codecs, layouts and
+  /// flags as the engine reported them. No titles or URLs.
+  String _describeAudioTracks() {
+    final offered = _audioChoices.map((track) => track.id).toSet();
+    String describe(VideoAudioTrack track) {
+      final info = _audioInfo[track.id];
+      return [
+        '${track.id}${track.isSelected ? '*' : ''}',
+        track.language ?? '-',
+        track.codec ?? '-',
+        info?.channelLayout ?? '${track.channelCount ?? '-'}ch',
+        if (info?.isDefault == true) 'default',
+        if (info?.isForced == true) 'forced',
+        if (info?.visualImpaired == true) 'ad',
+        if (info?.hearingImpaired == true) 'hi',
+        if (!offered.contains(track.id)) 'variant-copy',
+      ].join('/');
+    }
+
+    return 'tracks=${_audioTracks.length} offered=${offered.length} '
+        'engine=${_engine.id.name} ${_audioTracks.map(describe).join(' ')}';
+  }
+
+  /// libmpv's extra audio metadata for the newest player, when libmpv is
+  /// the engine. Read with the track list, so the two describe one file.
+  Map<String, MpvAudioTrackInfo> _readAudioInfo() {
+    if (_engine.id != PlayerEngineId.mediaKit) return const {};
+    final mpv = MediaKitVideoPlayer.shared;
+    final id = mpv?.activePlayerId;
+    return id == null ? const {} : mpv!.audioTrackInfo(id);
+  }
 
   /// Counts audio switches, so a late answer about an older one is dropped.
   int _audioRequest = 0;
@@ -628,6 +668,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
     _source = source;
     _videoTracks = [];
     _audioTracks = [];
+    _audioInfo = const {};
     _selectedVideoTrack = null;
     // A new source keeps an OpenSubtitles choice (same title) and a provider
     // subtitle the new source also offers. Embedded tracks belong to the
@@ -710,9 +751,16 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
           final tracks = c.isAudioTrackSupportAvailable()
               ? await c.getAudioTracks()
               : <VideoAudioTrack>[];
-          if (generation == _initializationGeneration) _audioTracks = tracks;
+          if (generation == _initializationGeneration) {
+            _audioTracks = tracks;
+            _audioInfo = _readAudioInfo();
+            PlaybackLog.log('Audio', _describeAudioTracks());
+          }
         } catch (_) {
-          if (generation == _initializationGeneration) _audioTracks = [];
+          if (generation == _initializationGeneration) {
+            _audioTracks = [];
+            _audioInfo = const {};
+          }
         }
       }
 
@@ -2032,7 +2080,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
     await _refreshAudioTracks(controller);
     if (!mounted || _audioChoices.length < 2) return;
     final id = await _withSheet(
-      () => AudioTrackSheet.show(context, _audioChoices),
+      () => AudioTrackSheet.show(context, _audioChoices, info: _audioInfo),
     );
     if (id == null || !mounted || !identical(controller, _controller)) return;
     await _selectAudioTrack(controller, id);
@@ -2052,7 +2100,10 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
       );
       if (!mounted || !identical(controller, _controller)) return;
       if (request != null && request != _audioRequest) return;
-      setState(() => _audioTracks = tracks);
+      setState(() {
+        _audioTracks = tracks;
+        _audioInfo = _readAudioInfo();
+      });
     } catch (_) {
       // Keep the last list; a closed or slow engine changes nothing here.
     }
@@ -2075,6 +2126,11 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
         .firstOrNull;
     final previousLanguage = _chosenAudioLanguage;
     if (byViewer) _chosenAudioLanguage = AudioTrackLabel.language(track);
+    PlaybackLog.log(
+      'Audio',
+      'select id=$id from=${previous?.id ?? 'none'} '
+          '${byViewer ? 'viewer' : 'preference'} engine=${_engine.id.name}',
+    );
     final request = ++_audioRequest;
     // Media3 answers once ExoPlayer reports the new track (it waits up to
     // 5 s itself), libmpv at once; either way the engine is asked after.
@@ -2446,6 +2502,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
         _videoTracks,
         _audioChoices,
         alternate == null ? null : _engineName(alternate.id),
+        _audioInfo,
       ),
     );
     if (result == null || !mounted) return;
@@ -2677,15 +2734,20 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
             : _playback.preferredAudioLanguage,
         _playback.secondaryAudioLanguage,
       ].where((language) => language.isNotEmpty);
-      final track = languages
-          .map(
-            (language) => _audioTracks
-                .where((entry) => entry.language?.isNotEmpty == true)
-                .where((entry) => _languageMatches(entry.language!, language))
-                .firstOrNull,
-          )
-          .nonNulls
-          .firstOrNull;
+      // The first preferred language any track speaks decides. When the
+      // playing track already speaks it, it stays: switching to another
+      // track in that language gains nothing, and on HLS it can move the
+      // audio to another variant (a second download).
+      VideoAudioTrack? track;
+      for (final language in languages) {
+        final matches = _audioChoices
+            .where((entry) => entry.language?.isNotEmpty == true)
+            .where((entry) => _languageMatches(entry.language!, language))
+            .toList();
+        if (matches.isEmpty) continue;
+        if (!matches.any((entry) => entry.isSelected)) track = matches.first;
+        break;
+      }
       if (track != null) {
         await _selectAudioTrack(
           controller,

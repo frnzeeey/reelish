@@ -307,7 +307,7 @@ The files imported by the most other `lib/` files. A change to one of these reac
 | [`lib/src/account/account_api.dart`](../../lib/src/account/account_api.dart) | 23 | 32 |
 | [`lib/src/widgets/artwork_image.dart`](../../lib/src/widgets/artwork_image.dart) | 21 | 5 |
 | [`lib/src/navigation/app_transitions.dart`](../../lib/src/navigation/app_transitions.dart) | 20 | 1 |
-| [`lib/src/models/stream_source.dart`](../../lib/src/models/stream_source.dart) | 19 | 21 |
+| [`lib/src/models/stream_source.dart`](../../lib/src/models/stream_source.dart) | 19 | 22 |
 | [`lib/src/account/backend_config.dart`](../../lib/src/account/backend_config.dart) | 18 | 1 |
 | [`lib/src/watch_party/party_models.dart`](../../lib/src/watch_party/party_models.dart) | 17 | 7 |
 | [`lib/src/account/profile_controller.dart`](../../lib/src/account/profile_controller.dart) | 15 | 11 |
