@@ -23,6 +23,8 @@ import android.content.Intent
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.content.pm.Signature
+import android.media.MediaCodecList
+import android.net.ConnectivityManager
 import android.net.Uri
 import android.provider.MediaStore
 import android.provider.Settings
@@ -199,6 +201,7 @@ class ReelishActivity : FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, deviceChannelName).setMethodCallHandler { call, result ->
             when (call.method) {
                 "capabilities" -> result.success(deviceCapabilities())
+                "videoCapabilities" -> result.success(videoCapabilities())
                 else -> result.notImplemented()
             }
         }
@@ -454,6 +457,65 @@ class ReelishActivity : FlutterActivity() {
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
                     packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
                 ),
+        )
+    }
+
+    /**
+     * What the device can play and show, for the playback quality target:
+     * the tallest 16:9 size a hardware decoder supports (H.264, HEVC, VP9 or
+     * AV1; software decoders claim sizes they cannot keep up with), the
+     * tallest display mode (a 4K TV draws its interface at 1080p, so the
+     * window size understates it), and whether the network is metered.
+     * Zero means unknown.
+     */
+    private fun videoCapabilities(): Map<String, Any> {
+        val types = setOf("video/avc", "video/hevc", "video/x-vnd.on2.vp9", "video/av01")
+        var maxDecode = 0
+        try {
+            for (info in MediaCodecList(MediaCodecList.REGULAR_CODECS).codecInfos) {
+                if (info.isEncoder) continue
+                val hardware = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    info.isHardwareAccelerated
+                } else {
+                    !info.name.startsWith("OMX.google.") && !info.name.startsWith("c2.android.")
+                }
+                if (!hardware) continue
+                for (type in info.supportedTypes) {
+                    if (type.lowercase() !in types) continue
+                    val caps = info.getCapabilitiesForType(type).videoCapabilities ?: continue
+                    for (height in intArrayOf(2160, 1440, 1080, 720)) {
+                        if (caps.isSizeSupported(height * 16 / 9, height)) {
+                            if (height > maxDecode) maxDecode = height
+                            break
+                        }
+                    }
+                }
+            }
+        } catch (_: Exception) {
+            maxDecode = 0
+        }
+        var displayHeight = 0
+        try {
+            @Suppress("DEPRECATION")
+            val display = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) this.display else windowManager.defaultDisplay
+            if (display != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                for (mode in display.supportedModes) {
+                    val shortSide = minOf(mode.physicalWidth, mode.physicalHeight)
+                    if (shortSide > displayHeight) displayHeight = shortSide
+                }
+            }
+        } catch (_: Exception) {
+            displayHeight = 0
+        }
+        val metered = try {
+            getSystemService(ConnectivityManager::class.java)?.isActiveNetworkMetered ?: false
+        } catch (_: Exception) {
+            false
+        }
+        return mapOf(
+            "maxDecodeHeight" to maxDecode,
+            "displayMaxHeight" to displayHeight,
+            "metered" to metered,
         )
     }
 

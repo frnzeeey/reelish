@@ -49,6 +49,7 @@ import '../services/tmdb_service.dart';
 import '../services/plugin_library_repository.dart';
 import '../services/provider_plugin_service.dart';
 import '../services/playback_settings_controller.dart';
+import '../services/playback_quality_policy.dart';
 import '../app/app_services.dart';
 import '../services/accent_settings_controller.dart';
 import '../theme/design_tokens.dart';
@@ -1120,8 +1121,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           allowedPluginIds: playback.allowedProviderIds,
           allowTorrents: allowTorrents,
         );
+        // Read while the providers search; it takes milliseconds.
+        final quality = await PlaybackQualityPolicy.resolve(
+          playback.preferredVideoHeight,
+        );
         source = await unlessCancelled<StreamSource?>(
-          discovery.startingSource(),
+          discovery.startingSource(quality: quality),
         );
         if (searchCancelled.isCompleted) {
           discovery.cancel();
@@ -1151,10 +1156,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             dismissSearchDialog();
             // Providers still searching add their sources to the open sheet;
             // slower ones were otherwise never offered here.
+            // The best by the quality target is preselected; the list keeps
+            // the order the providers answered in.
+            final preferred = available.reduce(
+              (a, b) =>
+                  (a.isTorrent != b.isTorrent
+                          ? (a.isTorrent ? 1 : -1)
+                          : quality.rank(a).compareTo(quality.rank(b))) <=
+                      0
+                  ? a
+                  : b,
+            );
             source = await StreamSelectorSheet.show(
               presentationContext ?? context,
               available,
-              available.first,
+              preferred,
               updates: discovery.updates,
               finished: discovery.finished,
             );

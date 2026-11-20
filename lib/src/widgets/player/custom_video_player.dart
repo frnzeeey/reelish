@@ -29,6 +29,8 @@ import '../../services/stream_discovery.dart';
 import '../../services/perf_timeline.dart';
 import '../../services/playback_metrics.dart';
 import '../../services/playback_coordinator.dart';
+import '../../services/playback_quality_policy.dart';
+import '../../services/source_quality.dart';
 import '../../services/player_engine.dart';
 import '../../services/playback_source_policy.dart';
 import '../../services/video_quality_selector.dart';
@@ -525,6 +527,15 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
     }
     _sources = List.of(widget.sources);
     _playbackCoordinator.replaceCandidates(_sources);
+    // Fallbacks prefer the resolution tier this device and connection suit;
+    // ready long before a first failure.
+    unawaited(
+      PlaybackQualityPolicy.resolve(_playback.preferredVideoHeight).then((
+        target,
+      ) {
+        if (mounted) _playbackCoordinator.quality ??= target;
+      }),
+    );
     _party = PartyPlayerSync.forTitle(
       id: widget.item.id,
       type: widget.item.type,
@@ -720,6 +731,14 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
             '(${DateTime.now().difference(_playerStartedAt).inMilliseconds}ms '
             'since screen open) type=${playable.streamType.name} '
             'engine=${attemptEngine.id.name}',
+      );
+      // What the provider claimed against what the engine opened: claims are
+      // never verified before playing (docs/playback/quality-prioritization.md).
+      PlaybackLog.log(
+        'Quality',
+        'claimed=${SourceQuality.claimedHeight(source) ?? '?'}p '
+            'actual=${c.value.size.height.round()}p '
+            'target=${_playbackCoordinator.quality?.height ?? '?'}p',
       );
       _metrics.opened(attemptClock.elapsed);
       _metrics.sourceType(
@@ -1102,7 +1121,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
       return;
     }
 
-    _playbackCoordinator.recordFailure(failedCandidate);
+    _playbackCoordinator.recordFailure(failedCandidate, kind: failure.kind);
     final alternative = failure.canTryAnotherSource
         ? _playbackCoordinator.nextAfterFailure(failedCandidate)
         : null;

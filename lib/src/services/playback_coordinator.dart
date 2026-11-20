@@ -8,6 +8,7 @@ import '../models/stream_source.dart';
 import '../models/stream_type.dart';
 import '../models/playable_source.dart';
 import 'source_preparer.dart';
+import 'source_quality.dart';
 import 'player_engine.dart';
 
 enum PlaybackFailureKind {
@@ -366,22 +367,42 @@ class PlaybackCoordinator {
   bool wasAttempted(StreamSource source) =>
       _attemptedSources.contains(sourceKey(source));
 
+  /// The resolution to prefer when choosing the next candidate, or null to
+  /// leave resolution out of the ranking.
+  QualityTarget? quality;
+
   /// Records that [source] failed on every engine tried. Provider failures in
   /// this session lower that provider's later candidates. Idempotent.
-  void recordFailure(StreamSource source) {
+  ///
+  /// A [kind] of [PlaybackFailureKind.decoder] or
+  /// [PlaybackFailureKind.rendering] on a source claiming 1440p or more
+  /// means the device could not show that size: [quality] drops below it,
+  /// so other sources of the same size are not tried first.
+  void recordFailure(StreamSource source, {PlaybackFailureKind? kind}) {
     if (!_failedSources.add(sourceKey(source))) return;
     final provider = source.providerName;
     if (provider.isNotEmpty) {
       _providerFailures[provider] = (_providerFailures[provider] ?? 0) + 1;
     }
+    final target = quality;
+    final height = SourceQuality.claimedHeight(source);
+    if (target != null &&
+        height != null &&
+        height >= 1440 &&
+        (kind == PlaybackFailureKind.decoder ||
+            kind == PlaybackFailureKind.rendering)) {
+      quality = target.below(height);
+    }
   }
 
   /// The best untried candidate after [failed], or null when the automatic
-  /// budget is spent. Ranking is deterministic: a different provider first,
-  /// providers that already failed this session last, direct streams before
-  /// torrents (which need metadata before they can start), and recognized
-  /// stream types before unknown ones. Ties keep discovery order, which
-  /// already reflects provider priority and response time.
+  /// budget is spent. Ranking is deterministic: providers that failed twice
+  /// this session last; then, with a [quality] target, the resolution tier
+  /// ([QualityTarget.rank]); then a different provider first, providers that
+  /// already failed lower, direct streams before torrents (which need
+  /// metadata before they can start), and recognized stream types before
+  /// unknown ones. Ties keep discovery order, which already reflects
+  /// provider priority and response time.
   StreamSource? nextAfterFailure(StreamSource failed) {
     if (attemptedCount >= maxAutomaticAttempts) return null;
     final candidates = _candidates
@@ -400,6 +421,9 @@ class PlaybackCoordinator {
       return value;
     }
 
+    final target = quality;
+    bool demoted(StreamSource source) =>
+        (_providerFailures[source.providerName] ?? 0) >= 2;
     final ranked =
         [
           for (var index = 0; index < candidates.length; index++)
@@ -409,6 +433,16 @@ class PlaybackCoordinator {
               index: index,
             ),
         ]..sort((a, b) {
+          final byDemotion = (demoted(a.source) ? 1 : 0).compareTo(
+            demoted(b.source) ? 1 : 0,
+          );
+          if (byDemotion != 0) return byDemotion;
+          if (target != null) {
+            final byTier = target
+                .rank(a.source)
+                .compareTo(target.rank(b.source));
+            if (byTier != 0) return byTier;
+          }
           final byScore = b.score.compareTo(a.score);
           return byScore != 0 ? byScore : a.index.compareTo(b.index);
         });

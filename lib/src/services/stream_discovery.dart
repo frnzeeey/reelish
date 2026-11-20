@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../models/stream_source.dart';
+import 'source_quality.dart';
 
 /// Owns one progressive provider lookup and its results for one playback request.
 class StreamDiscovery {
@@ -28,10 +29,21 @@ class StreamDiscovery {
   /// The source to start playback with. Usually [firstSource]; when that is a
   /// torrent, which needs metadata before playback can start, a direct stream
   /// arriving within [grace] is preferred. Direct first results never wait.
+  ///
+  /// With a [quality] target, the best-ranked source found so far starts
+  /// (direct streams before torrents, then [QualityTarget.rank]). When it is
+  /// not at the target, a source that is may still arrive: the wait lasts at
+  /// most [qualityGrace] from the first result, ends as soon as one arrives
+  /// or the lookup finishes, and then the best source found plays.
   Future<StreamSource?> startingSource({
     Duration grace = const Duration(seconds: 2),
+    QualityTarget? quality,
+    Duration qualityGrace = const Duration(seconds: 3),
   }) async {
     final first = await firstSource;
+    if (quality != null && first != null) {
+      return _bestWithin(quality, qualityGrace);
+    }
     if (first == null || !first.isTorrent) return first;
     final direct = _sources.where((source) => !source.isTorrent).firstOrNull;
     if (direct != null) return direct;
@@ -45,6 +57,35 @@ class StreamDiscovery {
       // Discovery finished without a direct stream.
       return first;
     }
+  }
+
+  /// The best source by [quality], waiting up to [wait] for an ideal one.
+  Future<StreamSource> _bestWithin(QualityTarget quality, Duration wait) async {
+    int compare(StreamSource a, StreamSource b) {
+      if (a.isTorrent != b.isTorrent) return a.isTorrent ? 1 : -1;
+      return quality.rank(a).compareTo(quality.rank(b));
+    }
+
+    StreamSource best() => _sources.reduce((a, b) => compare(b, a) < 0 ? b : a);
+    bool ideal(StreamSource source) =>
+        !source.isTorrent && quality.isIdeal(source);
+
+    if (ideal(best()) || _completed) return best();
+    final done = Completer<void>();
+    final subscription = _updates.stream.listen(
+      (source) {
+        if (ideal(source) && !done.isCompleted) done.complete();
+      },
+      onDone: () {
+        if (!done.isCompleted) done.complete();
+      },
+    );
+    try {
+      await done.future.timeout(wait, onTimeout: () {});
+    } finally {
+      await subscription.cancel();
+    }
+    return best();
   }
 
   Future<void> get finished => _finished.future;

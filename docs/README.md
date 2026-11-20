@@ -101,6 +101,7 @@ search the generated references below: every file, class and function in
 | [Playback lifecycle](playback/playback-lifecycle.md) | The player session: opening, playing, subtitles, episodes, closing |
 | [Provider integration](playback/provider-integration.md) | Repositories, script approval, the QuickJS sandbox, discovery |
 | [Player engines](playback/platform-player-engines.md) | Media3 and libmpv, selection, the engine gate, torrents |
+| [Quality prioritization](playback/quality-prioritization.md) | Choosing sources by resolution: what Reelish can know, the device target, ranking, fallback, platform limits |
 | [Audio tracks](playback/audio-tracks.md) | Dual audio: discovery, naming, switching, engine support and limits |
 | [Troubleshooting](playback/troubleshooting.md) | Symptoms mapped to code and logs |
 | [Player memory](playback/memory.md) | Measuring memory over repeated opens; the semantics leak and PlayerSlider |

@@ -98,13 +98,13 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/screens/first_run_consent_screen.dart`](#libsrcscreensfirst_run_consent_screendart) | Shared | 271 | First-launch screen where the viewer reads and accepts the privacy policy and terms of use; remembers the acceptance. |
 | [`lib/src/screens/genre_onboarding_screen.dart`](#libsrcscreensgenre_onboarding_screendart) | Shared | 327 | The genre step: "What do you love watching?". |
 | [`lib/src/screens/help_support_screen.dart`](#libsrcscreenshelp_support_screendart) | Shared | 782 | Help & Support in Settings: answers (FAQ, troubleshooting), a bug report and feedback form that sends to the Reelish API, and links to app information. |
-| [`lib/src/screens/home_screen.dart`](#libsrcscreenshome_screendart) | Shared | 3318 | Home and the app's orchestration: phone tabs, and the TV and Windows shells; owns the catalog wiring, the play flow (`_openItem`: providers, source choice, player) and details navigation. |
+| [`lib/src/screens/home_screen.dart`](#libsrcscreenshome_screendart) | Shared | 3334 | Home and the app's orchestration: phone tabs, and the TV and Windows shells; owns the catalog wiring, the play flow (`_openItem`: providers, source choice, player) and details navigation. |
 | [`lib/src/screens/installed_provider_screen.dart`](#libsrcscreensinstalled_provider_screendart) | Shared | 417 | Details of one installed provider: what its manifest declares, whether it can work on this device and why, its running and listed versions, its last failure, what any provider can do, and its on/off switch. |
 | [`lib/src/screens/legal_information_screen.dart`](#libsrcscreenslegal_information_screendart) | Shared | 551 | Shows the privacy policy, terms of use and third-party notices. |
 | [`lib/src/screens/library_screen.dart`](#libsrcscreenslibrary_screendart) | Shared | 569 | The phone library tab: continue watching, My list and watch history from local storage. |
 | [`lib/src/screens/media_details_screen.dart`](#libsrcscreensmedia_details_screendart) | Shared | 932 | The phone details page for a movie or series, with seasons, episodes and playback. |
 | [`lib/src/screens/notification_settings_screen.dart`](#libsrcscreensnotification_settings_screendart) | Shared | 394 | Settings → Notifications: one switch for all alerts on this device, then what to be told about (new episodes, My list updates, people and collections followed, reminders, messages), how (as they happen or as a daily or weekly summary, with quiet hours), who and what is followed, and the alerts shown lately. |
-| [`lib/src/screens/playback_settings_screen.dart`](#libsrcscreensplayback_settings_screendart) | Shared | 1854 | Settings, Appearance and Playback settings screens for phone and TV; Windows reuses their sub-pages. |
+| [`lib/src/screens/playback_settings_screen.dart`](#libsrcscreensplayback_settings_screendart) | Shared | 1859 | Settings, Appearance and Playback settings screens for phone and TV; Windows reuses their sub-pages. |
 | [`lib/src/screens/player_screen.dart`](#libsrcscreensplayer_screendart) | Shared | 89 | The route that hosts `CustomVideoPlayer` for one title and source. |
 | [`lib/src/screens/plugin_collection_screen.dart`](#libsrcscreensplugin_collection_screendart) | Shared | 808 | Manage one installed provider repository ("collection"): where it comes from and how far it is trusted, code waiting for review with its version change, an update check, and every provider it lists with its device compatibility and switch. |
 | [`lib/src/screens/plugin_details_screen.dart`](#libsrcscreensplugin_details_screendart) | Shared | 626 | A plugin-library repository's details page, from which it can be installed. |
@@ -124,7 +124,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/screens/social/conversation_options_screen.dart`](#libsrcscreenssocialconversation_options_screendart) | Shared | 326 | One conversation's options for the signed-in account: a nickname for the friend, mute, and deleting the conversation. |
 | [`lib/src/screens/social/friend_collection_screen.dart`](#libsrcscreenssocialfriend_collection_screendart) | Shared | 323 | A friend's shared collection, read-only: its titles as poster cards that open the title's details. |
 | [`lib/src/screens/social/friends_privacy_screen.dart`](#libsrcscreenssocialfriends_privacy_screendart) | Shared | 643 | Friends & privacy: turning Friends on or off, the handle and friend code, what friends see and who can find the account. |
-| [`lib/src/screens/social/friends_screen.dart`](#libsrcscreenssocialfriends_screendart) | Shared | 1269 | Friends, the body of Together: your people as faces and a list, requests waiting both ways, messages, what friends sent, a friend's page and the people blocked (docs/features/together.md). |
+| [`lib/src/screens/social/friends_screen.dart`](#libsrcscreenssocialfriends_screendart) | Shared | 1289 | Friends, the body of Together: your people as faces and a list, requests waiting both ways, messages, what friends sent, a friend's page and the people blocked (docs/features/together.md). |
 | [`lib/src/screens/social/messages_screen.dart`](#libsrcscreenssocialmessages_screendart) | Shared | 1186 | Private messages with friends: the conversation list and a conversation. |
 | [`lib/src/screens/social/messages_split_view.dart`](#libsrcscreenssocialmessages_split_viewdart) | Shared | 152 | Messages on Windows with room for both: the conversation list on the left and the open conversation beside it, instead of one replacing the other. |
 | [`lib/src/screens/social/together_screen.dart`](#libsrcscreenssocialtogether_screendart) | Shared | 122 | Together: the social home of Reelish, a place in the navigation on phone, Android TV and Windows. |
@@ -156,8 +156,9 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/services/network_target_policy.dart`](#libsrcservicesnetwork_target_policydart) | Shared | 332 | The network destination policy for provider requests and streams: public addresses only, header checks, and connections pinned to the validated address. |
 | [`lib/src/services/paged_feed_controller.dart`](#libsrcservicespaged_feed_controllerdart) | Shared | 497 | The pages of one home row: what is loaded, whether more exist, and the guards that keep requests for it from piling up. |
 | [`lib/src/services/perf_timeline.dart`](#libsrcservicesperf_timelinedart) | Shared | 37 | Development-only milestones measured from process start, for spotting regressions in startup, browsing and playback. |
-| [`lib/src/services/playback_coordinator.dart`](#libsrcservicesplayback_coordinatordart) | Shared | 437 | Owns candidate identity, ranking and the bounded source-attempt policy independently of widget rendering. |
+| [`lib/src/services/playback_coordinator.dart`](#libsrcservicesplayback_coordinatordart) | Shared | 471 | Owns candidate identity, ranking and the bounded source-attempt policy independently of widget rendering. |
 | [`lib/src/services/playback_metrics.dart`](#libsrcservicesplayback_metricsdart) | Shared | 232 | One player session's timings and failures. |
+| [`lib/src/services/playback_quality_policy.dart`](#libsrcservicesplayback_quality_policydart) | Shared | 101 | Turns the Preferred video quality setting into a QualityTarget for this device and connection (docs/playback/quality-prioritization.md). |
 | [`lib/src/services/playback_settings_controller.dart`](#libsrcservicesplayback_settings_controllerdart) | Shared | 43 | Loads, holds and saves the playback settings. |
 | [`lib/src/services/playback_source_policy.dart`](#libsrcservicesplayback_source_policydart) | Shared | 11 | Applies provider and torrent playback preferences to a returned source. |
 | [`lib/src/services/player_engine.dart`](#libsrcservicesplayer_enginedart) | Shared | 274 | Common controller boundary. |
@@ -173,8 +174,9 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/services/provider_runner.dart`](#libsrcservicesprovider_runnerdart) | Shared | 281 | Runs provider scripts on a background isolate. |
 | [`lib/src/services/provider_script_cache.dart`](#libsrcservicesprovider_script_cachedart) | Shared | 61 | In-memory cache of provider scripts for this app session. |
 | [`lib/src/services/source_preparer.dart`](#libsrcservicessource_preparerdart) | Shared | 70 | Validates a source, its headers and its destination before an engine opens it. |
+| [`lib/src/services/source_quality.dart`](#libsrcservicessource_qualitydart) | Shared | 87 | Resolution for choosing between provider sources: what each source claims, and how sources rank against a quality target (docs/playback/ quality-prioritization.md). |
 | [`lib/src/services/storage_service.dart`](#libsrcservicesstorage_servicedart) | Shared | 1110 | Local storage on SharedPreferences: watch history and per-episode progress, My list, provider repositories, cached manifests, settings and remembered subtitles. |
-| [`lib/src/services/stream_discovery.dart`](#libsrcservicesstream_discoverydart) | Shared | 105 | Owns one progressive provider lookup and its results for one playback request. |
+| [`lib/src/services/stream_discovery.dart`](#libsrcservicesstream_discoverydart) | Shared | 146 | Owns one progressive provider lookup and its results for one playback request. |
 | [`lib/src/services/stream_normalizer.dart`](#libsrcservicesstream_normalizerdart) | Shared | 32 | Converts provider-specific JSON shapes into Reelish's canonical source. |
 | [`lib/src/services/stream_validator.dart`](#libsrcservicesstream_validatordart) | Shared | 23 | Cheap source checks before native player open. |
 | [`lib/src/services/subtitle_addon_service.dart`](#libsrcservicessubtitle_addon_servicedart) | Shared | 400 | Installed Stremio subtitle addons and their searches: every enabled, compatible addon is asked for `subtitles/{type}/{id}.json` in parallel, and each addon's results are reported as they arrive. |
@@ -185,7 +187,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/services/update_config.dart`](#libsrcservicesupdate_configdart) | Shared | 119 | Settings for the GitHub Releases based Android updater. |
 | [`lib/src/services/video_quality_selector.dart`](#libsrcservicesvideo_quality_selectordart) | Shared | 14 | Chooses the best available video height for a preferred resolution. |
 | [`lib/src/services/windows_update_controller.dart`](#libsrcserviceswindows_update_controllerdart) | Windows | 445 | Checks, downloads, verifies and hands over Windows updates. |
-| [`lib/src/social/activity_publisher.dart`](#libsrcsocialactivity_publisherdart) | Shared | 231 | Watching now: tells friends what this account is playing, only while its owner shares activity and never during a Watch Party (the player creates no session then). |
+| [`lib/src/social/activity_publisher.dart`](#libsrcsocialactivity_publisherdart) | Shared | 254 | Watching now: tells friends what this account is playing, only while its owner shares activity and never during a Watch Party (the player creates no session then). |
 | [`lib/src/social/friends_controller.dart`](#libsrcsocialfriends_controllerdart) | Shared | 609 | Friends: the list, requests both ways and every action on another person (add, accept, decline, cancel, remove, block, unblock, report). |
 | [`lib/src/social/recommendations_controller.dart`](#libsrcsocialrecommendations_controllerdart) | Shared | 390 | Recommendations: titles friends sent this account (the inbox) and sending one to friends. |
 | [`lib/src/social/social_controller.dart`](#libsrcsocialsocial_controllerdart) | Shared | 417 | Friends: the signed-in account's social profile (handle, friend code, what friends see) and its privacy settings. |
@@ -235,7 +237,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/widgets/player/audio_switch_check.dart`](#libsrcwidgetsplayeraudio_switch_checkdart) | Shared | 76 | Confirms that playback goes on after libmpv switches the audio track. |
 | [`lib/src/widgets/player/audio_track_sheet.dart`](#libsrcwidgetsplayeraudio_track_sheetdart) | Shared | 283 | Picks an audio track. |
 | [`lib/src/widgets/player/content_advisory_overlay.dart`](#libsrcwidgetsplayercontent_advisory_overlaydart) | Shared | 246 | The age rating and content advisory shown briefly when a title starts. |
-| [`lib/src/widgets/player/custom_video_player.dart`](#libsrcwidgetsplayercustom_video_playerdart) | Shared | 4105 | The player session for every platform: engine and source attempts, controls, subtitles, audio and video tracks, resume and progress saving, and episode switching. |
+| [`lib/src/widgets/player/custom_video_player.dart`](#libsrcwidgetsplayercustom_video_playerdart) | Shared | 4124 | The player session for every platform: engine and source attempts, controls, subtitles, audio and video tracks, resume and progress saving, and episode switching. |
 | [`lib/src/widgets/player/episode_panel.dart`](#libsrcwidgetsplayerepisode_paneldart) | Shared | 839 | Lists a series' episodes by season, with thumbnails, runtimes, synopses and the viewer's progress. |
 | [`lib/src/widgets/player/external_cue_clock.dart`](#libsrcwidgetsplayerexternal_cue_clockdart) | Shared | 199 | The text of the downloaded subtitle cue that should be on screen, kept in step with the player's own clock. |
 | [`lib/src/widgets/player/gesture_touch_layer.dart`](#libsrcwidgetsplayergesture_touch_layerdart) | Shared | 100 | Touch handling for the video area. |
@@ -1304,9 +1306,9 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Imports (project):** `src/models/stream_type.dart`
 
-**Imported by:** `src/models/playable_source.dart`, `src/screens/home_screen.dart`, `src/screens/player_screen.dart`, `src/search/playback_availability.dart`, `src/services/playback_coordinator.dart`, `src/services/playback_source_policy.dart`, `src/services/provider_plugin_service.dart`, `src/services/source_preparer.dart`, `src/services/storage_service.dart`, `src/services/stream_discovery.dart`, `src/services/stream_normalizer.dart`, `src/services/stream_validator.dart`, `src/services/subtitle_addon_service.dart`, `src/services/subtitle_loader.dart`, `src/services/torrent_source_preparer.dart`, `src/widgets/player/custom_video_player.dart`, `src/widgets/player/player_settings_sheet.dart`, `src/widgets/player/stream_selector_sheet.dart`, `src/widgets/player/subtitle_picker_sheet.dart`
+**Imported by:** `src/models/playable_source.dart`, `src/screens/home_screen.dart`, `src/screens/player_screen.dart`, `src/search/playback_availability.dart`, `src/services/playback_coordinator.dart`, `src/services/playback_source_policy.dart`, `src/services/provider_plugin_service.dart`, `src/services/source_preparer.dart`, `src/services/source_quality.dart`, `src/services/storage_service.dart`, `src/services/stream_discovery.dart`, `src/services/stream_normalizer.dart`, `src/services/stream_validator.dart`, `src/services/subtitle_addon_service.dart`, `src/services/subtitle_loader.dart`, `src/services/torrent_source_preparer.dart`, `src/widgets/player/custom_video_player.dart`, `src/widgets/player/player_settings_sheet.dart`, `src/widgets/player/stream_selector_sheet.dart`, `src/widgets/player/subtitle_picker_sheet.dart`
 
-**Tests importing it:** `integration_test/audio_track_metadata_test.dart`, `integration_test/audio_track_switch_test.dart`, `integration_test/libmpv_playback_test.dart`, `integration_test/media3_audio_track_test.dart`, `integration_test/player_long_session_test.dart`, `integration_test/windows_playback_test.dart`, `integration_test/windows_player_ui_test.dart`, `integration_test/windows_soak_test.dart`, `integration_test/windows_torrent_test.dart`, `test/intro_skip_player_test.dart`, `test/playback_pipeline_test.dart`, `test/playback_reliability_test.dart`, `test/playback_settings_test.dart`, `test/player_session_test.dart`, `test/player_settings_sheet_test.dart`, `test/player_ui_test.dart`, `test/stream_discovery_test.dart`, `test/stream_source_test.dart`, `test/subtitles_test.dart`, `test/torrent_source_preparer_test.dart`, `test/universal_search_screens_test.dart`, `test/universal_search_test.dart`
+**Tests importing it:** `integration_test/audio_track_metadata_test.dart`, `integration_test/audio_track_switch_test.dart`, `integration_test/libmpv_playback_test.dart`, `integration_test/media3_audio_track_test.dart`, `integration_test/player_long_session_test.dart`, `integration_test/windows_playback_test.dart`, `integration_test/windows_player_ui_test.dart`, `integration_test/windows_soak_test.dart`, `integration_test/windows_torrent_test.dart`, `test/intro_skip_player_test.dart`, `test/playback_pipeline_test.dart`, `test/playback_quality_test.dart`, `test/playback_reliability_test.dart`, `test/playback_settings_test.dart`, `test/player_session_test.dart`, `test/player_settings_sheet_test.dart`, `test/player_ui_test.dart`, `test/stream_discovery_test.dart`, `test/stream_source_test.dart`, `test/subtitles_test.dart`, `test/torrent_source_preparer_test.dart`, `test/universal_search_screens_test.dart`, `test/universal_search_test.dart`
 
 ## lib/src/models/stream_type.dart
 
@@ -1706,13 +1708,13 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/screens/home_screen.dart
 
-**Source:** [`lib/src/screens/home_screen.dart`](../../lib/src/screens/home_screen.dart) · **Platform:** Shared · **Lines:** 3318 · **Branches on:** isTv, isDesktop, usesTvLayout, TorrentSupport
+**Source:** [`lib/src/screens/home_screen.dart`](../../lib/src/screens/home_screen.dart) · **Platform:** Shared · **Lines:** 3334 · **Branches on:** isTv, isDesktop, usesTvLayout, TorrentSupport
 
 **Purpose:** Home and the app's orchestration: phone tabs, and the TV and Windows shells; owns the catalog wiring, the play flow (`_openItem`: providers, source choice, player) and details navigation.
 
 **Declares:** `_HeaderActions` (Widget), `_HeaderMark` (Widget), `_HomeFeed` (Class), `HomeScreen` (Widget), `_HomeScreenState` (Widget state), `_RowHeading` (Widget)
 
-**Imports (project):** `src/account/account_api.dart`, `src/account/account_badges.dart`, `src/account/account_controller.dart`, `src/account/avatar_frames.dart`, `src/account/backend_config.dart`, `src/account/discovery_preferences_sync.dart`, `src/account/profile_controller.dart`, `src/account/progress_sync.dart`, `src/account/supporter_controller.dart`, `src/analytics/analytics_events.dart`, `src/analytics/analytics_service.dart`, `src/app/app_services.dart`, `src/collections/collection_store.dart`, `src/desktop/desktop_details_screen.dart`, `src/desktop/desktop_pages.dart`, `src/desktop/desktop_plugins_page.dart`, `src/desktop/desktop_provider_search.dart`, `src/desktop/desktop_settings_page.dart`, `src/desktop/desktop_shell.dart`, `src/discovery/discovery_controller.dart`, `src/discovery/discovery_preferences.dart`, `src/models/app_update.dart`, `src/models/episode_context.dart`, `src/models/episode_progress.dart`, `src/models/media_details.dart`, `src/models/media_item.dart`, `src/models/resume_summary.dart`, `src/models/stream_source.dart`, `src/navigation/app_transitions.dart`, `src/notifications/episode_alerts.dart`, `src/platform/device_capabilities.dart`, `src/screens/genre_onboarding_screen.dart`, `src/screens/library_screen.dart`, `src/screens/media_details_screen.dart`, `src/screens/notification_settings_screen.dart`, `src/screens/playback_settings_screen.dart`, `src/screens/player_screen.dart`, `src/screens/plugins_screen.dart`, `src/screens/profile_screen.dart`, `src/screens/search/search_detail_screens.dart`, `src/screens/search/universal_search_screen.dart`, `src/screens/search/universal_search_view.dart`, `src/screens/social/together_screen.dart`, `src/screens/tv/tv_details_screen.dart`, `src/screens/tv/tv_home_shell.dart`, `src/screens/tv/tv_pages.dart`, `src/screens/watch_party/create_party_screen.dart`, `src/screens/watch_party/join_party_screen.dart`, `src/screens/watch_party/party_launcher.dart`, `src/search/playback_availability.dart`, `src/search/search_models.dart`, `src/search/universal_search_controller.dart`, `src/services/accent_settings_controller.dart`, `src/services/media_catalog_rules.dart`, `src/services/paged_feed_controller.dart`, `src/services/perf_timeline.dart`, `src/services/playback_settings_controller.dart`, `src/services/plugin_library_repository.dart`, `src/services/provider_plugin_service.dart`, `src/services/storage_service.dart`, `src/services/stream_discovery.dart`, `src/services/tmdb_service.dart`, `src/services/torrent_source_preparer.dart`, `src/social/recommendations_controller.dart`, `src/social/social_controller.dart`, `src/spotlight/spotlight_deck.dart`, `src/spotlight/spotlight_motion.dart`, `src/spotlight/spotlight_motion_controller.dart`, `src/theme/design_tokens.dart`, `src/theme/glass_theme.dart`, `src/theme/reelish_icons.dart`, `src/viewmodels/home_view_model.dart`, `src/watch_party/party_links.dart`, `src/watch_party/party_models.dart`, `src/widgets/ambient_backdrop.dart`, `src/widgets/analytics_consent_dialog.dart`, `src/widgets/app_update_flow.dart`, `src/widgets/artwork_image.dart`, `src/widgets/brand_logo.dart`, `src/widgets/category_chip.dart`, `src/widgets/collections/collection_actions.dart`, `src/widgets/crash_report_consent_dialog.dart`, `src/widgets/discovery_prompt_card.dart`, `src/widgets/empty_state.dart`, `src/widgets/glass_box.dart`, `src/widgets/home_profile_button.dart`, `src/widgets/liquid_glass.dart`, `src/widgets/media_card.dart`, `src/widgets/notice_card.dart`, `src/widgets/player/custom_video_player.dart`, `src/widgets/player/episode_panel.dart`, `src/widgets/player/stream_selector_sheet.dart`, `src/widgets/provider_installer_modal.dart`, `src/widgets/provider_search_dialog.dart`, `src/widgets/recommendation_feedback_sheet.dart`, `src/widgets/settings/settings_components.dart`, `src/widgets/settings/tmdb_attribution.dart`, `src/widgets/social/share_dialog.dart`, `src/widgets/soft_glass_dock.dart`, `src/widgets/tv/tv_focus.dart`, `src/wrapped/wrapped_screen.dart`, `src/wrapped/wrapped_service.dart`
+**Imports (project):** `src/account/account_api.dart`, `src/account/account_badges.dart`, `src/account/account_controller.dart`, `src/account/avatar_frames.dart`, `src/account/backend_config.dart`, `src/account/discovery_preferences_sync.dart`, `src/account/profile_controller.dart`, `src/account/progress_sync.dart`, `src/account/supporter_controller.dart`, `src/analytics/analytics_events.dart`, `src/analytics/analytics_service.dart`, `src/app/app_services.dart`, `src/collections/collection_store.dart`, `src/desktop/desktop_details_screen.dart`, `src/desktop/desktop_pages.dart`, `src/desktop/desktop_plugins_page.dart`, `src/desktop/desktop_provider_search.dart`, `src/desktop/desktop_settings_page.dart`, `src/desktop/desktop_shell.dart`, `src/discovery/discovery_controller.dart`, `src/discovery/discovery_preferences.dart`, `src/models/app_update.dart`, `src/models/episode_context.dart`, `src/models/episode_progress.dart`, `src/models/media_details.dart`, `src/models/media_item.dart`, `src/models/resume_summary.dart`, `src/models/stream_source.dart`, `src/navigation/app_transitions.dart`, `src/notifications/episode_alerts.dart`, `src/platform/device_capabilities.dart`, `src/screens/genre_onboarding_screen.dart`, `src/screens/library_screen.dart`, `src/screens/media_details_screen.dart`, `src/screens/notification_settings_screen.dart`, `src/screens/playback_settings_screen.dart`, `src/screens/player_screen.dart`, `src/screens/plugins_screen.dart`, `src/screens/profile_screen.dart`, `src/screens/search/search_detail_screens.dart`, `src/screens/search/universal_search_screen.dart`, `src/screens/search/universal_search_view.dart`, `src/screens/social/together_screen.dart`, `src/screens/tv/tv_details_screen.dart`, `src/screens/tv/tv_home_shell.dart`, `src/screens/tv/tv_pages.dart`, `src/screens/watch_party/create_party_screen.dart`, `src/screens/watch_party/join_party_screen.dart`, `src/screens/watch_party/party_launcher.dart`, `src/search/playback_availability.dart`, `src/search/search_models.dart`, `src/search/universal_search_controller.dart`, `src/services/accent_settings_controller.dart`, `src/services/media_catalog_rules.dart`, `src/services/paged_feed_controller.dart`, `src/services/perf_timeline.dart`, `src/services/playback_quality_policy.dart`, `src/services/playback_settings_controller.dart`, `src/services/plugin_library_repository.dart`, `src/services/provider_plugin_service.dart`, `src/services/storage_service.dart`, `src/services/stream_discovery.dart`, `src/services/tmdb_service.dart`, `src/services/torrent_source_preparer.dart`, `src/social/recommendations_controller.dart`, `src/social/social_controller.dart`, `src/spotlight/spotlight_deck.dart`, `src/spotlight/spotlight_motion.dart`, `src/spotlight/spotlight_motion_controller.dart`, `src/theme/design_tokens.dart`, `src/theme/glass_theme.dart`, `src/theme/reelish_icons.dart`, `src/viewmodels/home_view_model.dart`, `src/watch_party/party_links.dart`, `src/watch_party/party_models.dart`, `src/widgets/ambient_backdrop.dart`, `src/widgets/analytics_consent_dialog.dart`, `src/widgets/app_update_flow.dart`, `src/widgets/artwork_image.dart`, `src/widgets/brand_logo.dart`, `src/widgets/category_chip.dart`, `src/widgets/collections/collection_actions.dart`, `src/widgets/crash_report_consent_dialog.dart`, `src/widgets/discovery_prompt_card.dart`, `src/widgets/empty_state.dart`, `src/widgets/glass_box.dart`, `src/widgets/home_profile_button.dart`, `src/widgets/liquid_glass.dart`, `src/widgets/media_card.dart`, `src/widgets/notice_card.dart`, `src/widgets/player/custom_video_player.dart`, `src/widgets/player/episode_panel.dart`, `src/widgets/player/stream_selector_sheet.dart`, `src/widgets/provider_installer_modal.dart`, `src/widgets/provider_search_dialog.dart`, `src/widgets/recommendation_feedback_sheet.dart`, `src/widgets/settings/settings_components.dart`, `src/widgets/settings/tmdb_attribution.dart`, `src/widgets/social/share_dialog.dart`, `src/widgets/soft_glass_dock.dart`, `src/widgets/tv/tv_focus.dart`, `src/wrapped/wrapped_screen.dart`, `src/wrapped/wrapped_service.dart`
 
 **Packages:** `flutter`
 
@@ -1802,7 +1804,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/screens/playback_settings_screen.dart
 
-**Source:** [`lib/src/screens/playback_settings_screen.dart`](../../lib/src/screens/playback_settings_screen.dart) · **Platform:** Shared · **Lines:** 1854 · **Branches on:** isTv, TargetPlatform.windows, TargetPlatform.android, TorrentSupport
+**Source:** [`lib/src/screens/playback_settings_screen.dart`](../../lib/src/screens/playback_settings_screen.dart) · **Platform:** Shared · **Lines:** 1859 · **Branches on:** isTv, TargetPlatform.windows, TargetPlatform.android, TorrentSupport
 
 **Purpose:** Settings, Appearance and Playback settings screens for phone and TV; Windows reuses their sub-pages.
 
@@ -2128,7 +2130,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/screens/social/friends_screen.dart
 
-**Source:** [`lib/src/screens/social/friends_screen.dart`](../../lib/src/screens/social/friends_screen.dart) · **Platform:** Shared · **Lines:** 1269 · **Branches on:** isTv, isDesktop, usesTvLayout
+**Source:** [`lib/src/screens/social/friends_screen.dart`](../../lib/src/screens/social/friends_screen.dart) · **Platform:** Shared · **Lines:** 1289 · **Branches on:** isTv, isDesktop, usesTvLayout
 
 **Purpose:** Friends, the body of Together: your people as faces and a list, requests waiting both ways, messages, what friends sent, a friend's page and the people blocked (docs/features/together.md).
 
@@ -2644,19 +2646,19 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/services/playback_coordinator.dart
 
-**Source:** [`lib/src/services/playback_coordinator.dart`](../../lib/src/services/playback_coordinator.dart) · **Platform:** Shared · **Lines:** 437
+**Source:** [`lib/src/services/playback_coordinator.dart`](../../lib/src/services/playback_coordinator.dart) · **Platform:** Shared · **Lines:** 471
 
 **Purpose:** Owns candidate identity, ranking and the bounded source-attempt policy independently of widget rendering.
 
 **Declares:** `EnginePreference` (Service type), `EngineStartTimeout` (Exception), `LinkRefreshBudget` (Service type), `PlaybackCoordinator` (Service type), `PlaybackFailure` (Service type), `PlaybackFailureKind` (Enum), `PlaybackLog` (Service type), `SourcePreparationException` (Exception)
 
-**Imports (project):** `src/models/playable_source.dart`, `src/models/stream_source.dart`, `src/models/stream_type.dart`, `src/services/player_engine.dart`, `src/services/source_preparer.dart`
+**Imports (project):** `src/models/playable_source.dart`, `src/models/stream_source.dart`, `src/models/stream_type.dart`, `src/services/player_engine.dart`, `src/services/source_preparer.dart`, `src/services/source_quality.dart`
 
 **Packages:** `flutter`, `video_player`
 
 **Imported by:** `src/diagnostics/playback_diagnostics.dart`, `src/services/playback_metrics.dart`, `src/widgets/player/custom_video_player.dart`, `src/widgets/player/external_cue_clock.dart`
 
-**Tests importing it:** `test/analytics_test.dart`, `test/crash_reporter_test.dart`, `test/playback_metrics_test.dart`, `test/playback_pipeline_test.dart`, `test/playback_reliability_test.dart`
+**Tests importing it:** `test/analytics_test.dart`, `test/crash_reporter_test.dart`, `test/playback_metrics_test.dart`, `test/playback_pipeline_test.dart`, `test/playback_quality_test.dart`, `test/playback_reliability_test.dart`
 
 ## lib/src/services/playback_metrics.dart
 
@@ -2673,6 +2675,22 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 **Imported by:** `src/widgets/player/custom_video_player.dart`
 
 **Tests importing it:** `test/analytics_test.dart`, `test/playback_metrics_test.dart`
+
+## lib/src/services/playback_quality_policy.dart
+
+**Source:** [`lib/src/services/playback_quality_policy.dart`](../../lib/src/services/playback_quality_policy.dart) · **Platform:** Shared · **Lines:** 101 · **Branches on:** TargetPlatform.windows, TargetPlatform.android
+
+**Purpose:** Turns the Preferred video quality setting into a QualityTarget for this device and connection (docs/playback/quality-prioritization.md).
+
+**Declares:** `PlaybackQualityPolicy` (Service type), `VideoDeviceLimits` (Service type)
+
+**Imports (project):** `src/services/source_quality.dart`
+
+**Packages:** `flutter`
+
+**Imported by:** `src/screens/home_screen.dart`, `src/widgets/player/custom_video_player.dart`
+
+**Tests importing it:** `test/playback_quality_test.dart`
 
 ## lib/src/services/playback_settings_controller.dart
 
@@ -2718,7 +2736,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Imported by:** `main.dart`, `src/services/playback_coordinator.dart`, `src/widgets/player/custom_video_player.dart`
 
-**Tests importing it:** `integration_test/audio_track_metadata_test.dart`, `integration_test/audio_track_switch_test.dart`, `integration_test/libmpv_playback_test.dart`, `integration_test/media3_audio_track_test.dart`, `integration_test/player_long_session_test.dart`, `integration_test/windows_playback_test.dart`, `test/playback_pipeline_test.dart`, `test/playback_reliability_test.dart`
+**Tests importing it:** `integration_test/audio_track_metadata_test.dart`, `integration_test/audio_track_switch_test.dart`, `integration_test/libmpv_playback_test.dart`, `integration_test/media3_audio_track_test.dart`, `integration_test/player_long_session_test.dart`, `integration_test/windows_playback_test.dart`, `test/playback_pipeline_test.dart`, `test/playback_quality_test.dart`, `test/playback_reliability_test.dart`
 
 ## lib/src/services/plugin_compatibility.dart
 
@@ -2898,6 +2916,20 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Tests importing it:** `test/playback_pipeline_test.dart`
 
+## lib/src/services/source_quality.dart
+
+**Source:** [`lib/src/services/source_quality.dart`](../../lib/src/services/source_quality.dart) · **Platform:** Shared · **Lines:** 87
+
+**Purpose:** Resolution for choosing between provider sources: what each source claims, and how sources rank against a quality target (docs/playback/ quality-prioritization.md).
+
+**Declares:** `QualityTarget` (Service type), `SourceQuality` (Service type)
+
+**Imports (project):** `src/models/stream_source.dart`
+
+**Imported by:** `src/services/playback_coordinator.dart`, `src/services/playback_quality_policy.dart`, `src/services/stream_discovery.dart`, `src/widgets/player/custom_video_player.dart`
+
+**Tests importing it:** `test/playback_quality_test.dart`
+
 ## lib/src/services/storage_service.dart
 
 **Source:** [`lib/src/services/storage_service.dart`](../../lib/src/services/storage_service.dart) · **Platform:** Shared · **Lines:** 1110 · **Branches on:** Platform.isWindows, Platform.isAndroid, TargetPlatform.windows
@@ -2916,19 +2948,19 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/services/stream_discovery.dart
 
-**Source:** [`lib/src/services/stream_discovery.dart`](../../lib/src/services/stream_discovery.dart) · **Platform:** Shared · **Lines:** 105
+**Source:** [`lib/src/services/stream_discovery.dart`](../../lib/src/services/stream_discovery.dart) · **Platform:** Shared · **Lines:** 146
 
 **Purpose:** Owns one progressive provider lookup and its results for one playback request.
 
 **Declares:** `StreamDiscovery` (Service type)
 
-**Imports (project):** `src/models/stream_source.dart`
+**Imports (project):** `src/models/stream_source.dart`, `src/services/source_quality.dart`
 
 **Packages:** `flutter`
 
 **Imported by:** `src/screens/home_screen.dart`, `src/screens/player_screen.dart`, `src/services/provider_plugin_service.dart`, `src/widgets/player/custom_video_player.dart`
 
-**Tests importing it:** `test/stream_discovery_test.dart`
+**Tests importing it:** `test/playback_quality_test.dart`, `test/stream_discovery_test.dart`
 
 ## lib/src/services/stream_normalizer.dart
 
@@ -3090,7 +3122,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/social/activity_publisher.dart
 
-**Source:** [`lib/src/social/activity_publisher.dart`](../../lib/src/social/activity_publisher.dart) · **Platform:** Shared · **Lines:** 231
+**Source:** [`lib/src/social/activity_publisher.dart`](../../lib/src/social/activity_publisher.dart) · **Platform:** Shared · **Lines:** 254
 
 **Purpose:** Watching now: tells friends what this account is playing, only while its owner shares activity and never during a Watch Party (the player creates no session then).
 
@@ -3900,13 +3932,13 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/widgets/player/custom_video_player.dart
 
-**Source:** [`lib/src/widgets/player/custom_video_player.dart`](../../lib/src/widgets/player/custom_video_player.dart) · **Platform:** Shared · **Lines:** 4105 · **Branches on:** isTv, isDesktop, usesTvLayout, TargetPlatform.windows, TargetPlatform.android, TorrentSupport
+**Source:** [`lib/src/widgets/player/custom_video_player.dart`](../../lib/src/widgets/player/custom_video_player.dart) · **Platform:** Shared · **Lines:** 4124 · **Branches on:** isTv, isDesktop, usesTvLayout, TargetPlatform.windows, TargetPlatform.android, TorrentSupport
 
 **Purpose:** The player session for every platform: engine and source attempts, controls, subtitles, audio and video tracks, resume and progress saving, and episode switching.
 
 **Declares:** `CustomVideoPlayer` (Widget), `_CustomVideoPlayerState` (Widget state), `EpisodeHandOff` (Class), `EpisodeSwitch` (Typedef), `_PartyHandle` (Class)
 
-**Imports (project):** `src/diagnostics/crash_reporter.dart`, `src/diagnostics/playback_diagnostics.dart`, `src/intro_skip/intro_outro_service.dart`, `src/intro_skip/skip_planner.dart`, `src/intro_skip/skip_segments.dart`, `src/models/content_advisory.dart`, `src/models/episode_context.dart`, `src/models/episode_progress.dart`, `src/models/media_details.dart`, `src/models/media_item.dart`, `src/models/playback_settings.dart`, `src/models/stream_source.dart`, `src/models/subtitle_language.dart`, `src/platform/desktop_window.dart`, `src/platform/device_capabilities.dart`, `src/services/network_target_policy.dart`, `src/services/perf_timeline.dart`, `src/services/playback_coordinator.dart`, `src/services/playback_metrics.dart`, `src/services/playback_settings_controller.dart`, `src/services/playback_source_policy.dart`, `src/services/player_engine.dart`, `src/services/storage_service.dart`, `src/services/stream_discovery.dart`, `src/services/subtitle_addon_service.dart`, `src/services/subtitle_loader.dart`, `src/services/torrent_source_preparer.dart`, `src/services/video_quality_selector.dart`, `src/social/activity_publisher.dart`, `src/theme/design_tokens.dart`, `src/theme/glass_theme.dart`, `src/watch_party/party_player_sync.dart`, `src/widgets/player/audio_switch_check.dart`, `src/widgets/player/audio_track_sheet.dart`, `src/widgets/player/content_advisory_overlay.dart`, `src/widgets/player/episode_panel.dart`, `src/widgets/player/external_cue_clock.dart`, `src/widgets/player/gesture_touch_layer.dart`, `src/widgets/player/party_activity.dart`, `src/widgets/player/party_badge.dart`, `src/widgets/player/paused_overlay.dart`, `src/widgets/player/player_controls.dart`, `src/widgets/player/player_lock_overlay.dart`, `src/widgets/player/player_pip.dart`, `src/widgets/player/player_settings_sheet.dart`, `src/widgets/player/skip_segment_button.dart`, `src/widgets/player/stall_watchdog.dart`, `src/widgets/player/stream_selector_sheet.dart`, `src/widgets/player/subtitle_picker_sheet.dart`, `src/widgets/player/subtitle_position_panel.dart`
+**Imports (project):** `src/diagnostics/crash_reporter.dart`, `src/diagnostics/playback_diagnostics.dart`, `src/intro_skip/intro_outro_service.dart`, `src/intro_skip/skip_planner.dart`, `src/intro_skip/skip_segments.dart`, `src/models/content_advisory.dart`, `src/models/episode_context.dart`, `src/models/episode_progress.dart`, `src/models/media_details.dart`, `src/models/media_item.dart`, `src/models/playback_settings.dart`, `src/models/stream_source.dart`, `src/models/subtitle_language.dart`, `src/platform/desktop_window.dart`, `src/platform/device_capabilities.dart`, `src/services/network_target_policy.dart`, `src/services/perf_timeline.dart`, `src/services/playback_coordinator.dart`, `src/services/playback_metrics.dart`, `src/services/playback_quality_policy.dart`, `src/services/playback_settings_controller.dart`, `src/services/playback_source_policy.dart`, `src/services/player_engine.dart`, `src/services/source_quality.dart`, `src/services/storage_service.dart`, `src/services/stream_discovery.dart`, `src/services/subtitle_addon_service.dart`, `src/services/subtitle_loader.dart`, `src/services/torrent_source_preparer.dart`, `src/services/video_quality_selector.dart`, `src/social/activity_publisher.dart`, `src/theme/design_tokens.dart`, `src/theme/glass_theme.dart`, `src/watch_party/party_player_sync.dart`, `src/widgets/player/audio_switch_check.dart`, `src/widgets/player/audio_track_sheet.dart`, `src/widgets/player/content_advisory_overlay.dart`, `src/widgets/player/episode_panel.dart`, `src/widgets/player/external_cue_clock.dart`, `src/widgets/player/gesture_touch_layer.dart`, `src/widgets/player/party_activity.dart`, `src/widgets/player/party_badge.dart`, `src/widgets/player/paused_overlay.dart`, `src/widgets/player/player_controls.dart`, `src/widgets/player/player_lock_overlay.dart`, `src/widgets/player/player_pip.dart`, `src/widgets/player/player_settings_sheet.dart`, `src/widgets/player/skip_segment_button.dart`, `src/widgets/player/stall_watchdog.dart`, `src/widgets/player/stream_selector_sheet.dart`, `src/widgets/player/subtitle_picker_sheet.dart`, `src/widgets/player/subtitle_position_panel.dart`
 
 **Packages:** `flutter`, `flutter_go_torrent_streamer`, `video_player`, `video_player_media_kit`
 

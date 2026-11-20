@@ -935,7 +935,7 @@ class PlaybackSettingsScreen extends StatelessWidget {
             ),
             _choiceRow(
               'Preferred video quality',
-              'Preferred resolution for new videos when the stream exposes selectable video tracks.',
+              'Which sources play first, and the quality inside streams that offer several. Auto prefers up to 4K where your screen and connection can use it, and falls back to lower resolutions.',
               _qualityLabel(settings.preferredVideoHeight),
               () async {
                 const heights = [0, 480, 720, 1080, 1440, 2160];
@@ -1705,7 +1705,12 @@ class PlaybackSettingsScreen extends StatelessWidget {
     _ => value,
   };
 
-  String _qualityLabel(int height) => height == 0 ? 'Auto' : '${height}p';
+  String _qualityLabel(int height) => switch (height) {
+    0 => 'Auto (up to 4K)',
+    2160 => '4K (2160p)',
+    480 => '480p (data saver)',
+    _ => '${height}p',
+  };
 
   String _skipModeLabel(SkipMode mode) => switch (mode) {
     SkipMode.auto => 'Skip automatically',
