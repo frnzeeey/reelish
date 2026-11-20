@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import '../../theme/reelish_icons.dart';
 
 import '../../platform/device_capabilities.dart';
+import '../../theme/design_tokens.dart';
 import '../../theme/glass_theme.dart';
 
 /// Shared timing for TV focus motion: quick enough to follow a held D-pad.
@@ -148,13 +149,7 @@ class _TvFocusableState extends State<TvFocusable> {
               decoration: BoxDecoration(
                 borderRadius: radius,
                 boxShadow: _focused
-                    ? [
-                        BoxShadow(
-                          color: GlassTheme.primary.withValues(alpha: .42),
-                          blurRadius: 22,
-                          spreadRadius: 1,
-                        ),
-                      ]
+                    ? AppShadow.glow(GlassTheme.primary)
                     : const [],
               ),
               foregroundDecoration: BoxDecoration(

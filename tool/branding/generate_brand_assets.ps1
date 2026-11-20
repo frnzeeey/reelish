@@ -3,17 +3,18 @@
 #   powershell -ExecutionPolicy Bypass -File tool/branding/generate_brand_assets.ps1
 #   dart run flutter_launcher_icons      # Android launcher icons (pubspec.yaml)
 #
+# Run tool/branding/generate_emblem_sources.ps1 first: it builds these
+# sources from the emblem, and the launcher foreground and monochrome layers.
+#
 # Sources (assets/icons/, 846 x 846 RGBA):
-#   reelish_icon.png  the app icon (coral tile, white mark)
-#   Primary_logo.png  the primary logo (mark over the wordmark), for splashes
-#   logo_icon.png     the mark alone (adaptive icon foreground, monochrome)
-#   word_logo.png     the wordmark alone
+#   reelish_emblem_icon.png   the app icon (the emblem on a charcoal tile)
+#   reelish_primary_logo.png  the primary logo (emblem over the wordmark), for
+#                             splashes
+#   reelish_wordmark.png      the wordmark alone
 #
 # Writes:
 #   tool/branding/launcher_background.png             adaptive icon background:
 #                                                     the icon's own gradient
-#   tool/branding/launcher_monochrome.png             themed icon: the mark,
-#                                                     shadow removed
 #   android/app/src/main/res/drawable-nodpi/reelish_splash.png   splash logo
 #   android/app/src/main/res/drawable-xhdpi/tv_banner.png        TV launcher
 #   windows/runner/resources/app_icon.ico             exe, window, taskbar,
@@ -45,9 +46,9 @@ function New-Canvas([int]$width, [int]$height) {
   return @($bitmap, $graphics)
 }
 
-$icon = Open-Png 'reelish_icon.png'
-$primary = Open-Png 'Primary_logo.png'
-$word = Open-Png 'word_logo.png'
+$icon = Open-Png 'reelish_emblem_icon.png'
+$primary = Open-Png 'reelish_primary_logo.png'
+$word = Open-Png 'reelish_wordmark.png'
 
 # --- Adaptive icon background: the icon's vertical gradient, sampled from a
 # column clear of the mark and the rounded corners.
@@ -65,46 +66,22 @@ $g.Dispose()
 $background.Save((Join-Path $PSScriptRoot 'launcher_background.png'), [System.Drawing.Imaging.ImageFormat]::Png)
 $background.Dispose()
 
-# --- Themed (monochrome) icon layer: the mark's white pixels only. Android
-# tints a monochrome layer by its alpha, so the mark's soft drop shadow would
-# otherwise show as a blurred halo.
-$mark = Open-Png 'logo_icon.png'
-$mono = New-Object System.Drawing.Bitmap($mark.Width, $mark.Height,
-  [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
-$rect = New-Object System.Drawing.Rectangle(0, 0, $mark.Width, $mark.Height)
-$source = $mark.LockBits($rect, [System.Drawing.Imaging.ImageLockMode]::ReadOnly,
-  [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
-$pixels = New-Object byte[] ($source.Stride * $mark.Height)
-[System.Runtime.InteropServices.Marshal]::Copy($source.Scan0, $pixels, 0, $pixels.Length)
-$mark.UnlockBits($source)
-for ($i = 0; $i -lt $pixels.Length; $i += 4) {
-  # BGRA. White mark pixels are bright; the shadow is dark.
-  $bright = [Math]::Min([Math]::Min($pixels[$i], $pixels[$i + 1]), $pixels[$i + 2])
-  $alpha = [int]($pixels[$i + 3] * [Math]::Max(0, ($bright - 160)) / 95)
-  $pixels[$i] = 255; $pixels[$i + 1] = 255; $pixels[$i + 2] = 255
-  $pixels[$i + 3] = [Byte][Math]::Min(255, $alpha)
-}
-$target = $mono.LockBits($rect, [System.Drawing.Imaging.ImageLockMode]::WriteOnly,
-  [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
-[System.Runtime.InteropServices.Marshal]::Copy($pixels, 0, $target.Scan0, $pixels.Length)
-$mono.UnlockBits($target)
-$mono.Save((Join-Path $PSScriptRoot 'launcher_monochrome.png'), [System.Drawing.Imaging.ImageFormat]::Png)
-$mono.Dispose(); $mark.Dispose()
+# The themed (monochrome) layer is written by generate_emblem_sources.ps1.
 
 # --- Android splash logo: the primary logo, unchanged.
-Copy-Item (Join-Path $icons 'Primary_logo.png') (Join-Path $res 'drawable-nodpi\reelish_splash.png') -Force
+Copy-Item (Join-Path $icons 'reelish_primary_logo.png') (Join-Path $res 'drawable-nodpi\reelish_splash.png') -Force
 
 # --- Android TV banner (320 x 180 at xhdpi): the app icon and the wordmark
-# on the app's dark background with a soft coral glow, as before.
+# on Living Room's warm charcoal with a soft terracotta glow.
 $canvas = New-Canvas 320 180
 $banner, $g = $canvas
-$g.Clear([System.Drawing.Color]::FromArgb(255, 11, 11, 15))
+$g.Clear([System.Drawing.Color]::FromArgb(255, 0x14, 0x11, 0x0E))
 $glow = New-Object System.Drawing.Drawing2D.GraphicsPath
 $glow.AddEllipse(-110, -80, 380, 340)
 $glowBrush = New-Object System.Drawing.Drawing2D.PathGradientBrush($glow)
 $glowBrush.CenterPoint = New-Object System.Drawing.PointF(72, 90)
-$glowBrush.CenterColor = [System.Drawing.Color]::FromArgb(70, 255, 77, 109)
-$glowBrush.SurroundColors = @([System.Drawing.Color]::FromArgb(0, 255, 77, 109))
+$glowBrush.CenterColor = [System.Drawing.Color]::FromArgb(70, 0xBA, 0x72, 0x5A)
+$glowBrush.SurroundColors = @([System.Drawing.Color]::FromArgb(0, 0xBA, 0x72, 0x5A))
 $g.FillPath($glowBrush, $glow)
 $glowBrush.Dispose(); $glow.Dispose()
 $g.DrawImage($icon, (New-Object System.Drawing.Rectangle(26, 44, 92, 92)))

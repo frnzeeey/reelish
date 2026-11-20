@@ -20,7 +20,9 @@ import '../../theme/reelish_icons.dart';
 import '../../viewmodels/library_view_model.dart';
 import '../../widgets/collections/collection_actions.dart';
 import '../../widgets/collections/collection_cover.dart';
+import '../../widgets/empty_state.dart';
 import '../../widgets/media_card.dart';
+import '../../widgets/notice_card.dart';
 
 /// The Library's Collections section.
 class CollectionsSection extends StatelessWidget {
@@ -172,8 +174,18 @@ class CollectionsSection extends StatelessWidget {
           if (tiles.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: _EmptyCollections(
-                onCreate: store.account == null ? null : () => _new(context),
+              child: NoticeCard(
+                icon: ReelishIcons.playlist,
+                title: 'Make your first collection',
+                message:
+                    'Group titles your way, such as Weekend movies or '
+                    'Childhood favourites. Add titles from any details page.',
+                action: store.account == null
+                    ? null
+                    : TextButton(
+                        onPressed: () => _new(context),
+                        child: const Text('Create'),
+                      ),
               ),
             )
           else
@@ -281,69 +293,6 @@ class _Tile extends StatelessWidget {
           ],
         ),
       ),
-    ),
-  );
-}
-
-class _EmptyCollections extends StatelessWidget {
-  const _EmptyCollections({this.onCreate});
-
-  final VoidCallback? onCreate;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    width: double.infinity,
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: GlassTheme.surface,
-      borderRadius: BorderRadius.circular(18),
-      border: Border.all(color: GlassTheme.border),
-    ),
-    child: Row(
-      children: [
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: GlassTheme.primary.withValues(alpha: .1),
-            borderRadius: BorderRadius.circular(13),
-          ),
-          child: Icon(
-            ReelishIcons.playlist,
-            size: 19,
-            color: GlassTheme.primary,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Make your first collection',
-                style: TextStyle(
-                  fontSize: AppTextSize.body,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Group titles your way, such as Weekend movies or Childhood '
-                'favourites. Add titles from any details page.',
-                style: TextStyle(
-                  color: GlassTheme.muted,
-                  fontSize: AppTextSize.label,
-                  height: 1.35,
-                ),
-              ),
-            ],
-          ),
-        ),
-        if (onCreate != null) ...[
-          const SizedBox(width: AppSpace.xs),
-          TextButton(onPressed: onCreate, child: const Text('Create')),
-        ],
-      ],
     ),
   );
 }
@@ -769,23 +718,8 @@ class _EmptyPage extends StatelessWidget {
   final String message;
 
   @override
-  Widget build(BuildContext context) => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 40, color: GlassTheme.primary),
-          const SizedBox(height: 12),
-          Text(
-            message,
-            textAlign: TextAlign.center,
-            style: TextStyle(color: GlassTheme.muted, height: 1.4),
-          ),
-        ],
-      ),
-    ),
-  );
+  Widget build(BuildContext context) =>
+      EmptyState(icon: icon, message: message);
 }
 
 String _count(int count, String noun) =>

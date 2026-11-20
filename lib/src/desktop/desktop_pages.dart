@@ -283,7 +283,7 @@ class _AddSourceBanner extends StatelessWidget {
 }
 
 /// Watch Party on Home: what it is, how to start one, and the way in with a
-/// code, which otherwise only Profile and Settings offer.
+/// code, which Together and Settings offer too.
 class _WatchTogetherRow extends StatelessWidget {
   const _WatchTogetherRow({super.key, required this.onJoin});
 

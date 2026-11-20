@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../theme/glass_theme.dart';
 import '../../theme/reelish_icons.dart';
 
 import 'player_controls.dart';
@@ -152,7 +153,7 @@ class _PlayerLockOverlayState extends State<PlayerLockOverlay> {
             label: 'Unlock controls',
             excludeSemantics: true,
             child: Material(
-              color: const Color(0xCC101015),
+              color: GlassTheme.playerSurfaces.background.withValues(alpha: .8),
               shape: const StadiumBorder(
                 side: BorderSide(color: Color(0x2EFFFFFF)),
               ),

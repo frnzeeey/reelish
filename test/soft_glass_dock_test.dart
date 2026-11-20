@@ -45,7 +45,7 @@ Future<List<int>> _pumpDock(WidgetTester tester, Size size) async {
 Rect _glass(WidgetTester tester) => tester.getRect(find.byType(LiquidGlass));
 
 void main() {
-  const labels = ['Home', 'Library', 'Plugins', 'Settings'];
+  const labels = ['Home', 'Library', 'Together', 'Settings'];
 
   testWidgets('a landscape phone has a short, centered dock', (tester) async {
     const size = Size(915, 412);
@@ -127,11 +127,38 @@ void main() {
     tester,
   ) async {
     await _pumpDock(tester, const Size(412, 915));
-    for (final label in ['Home', 'Library', 'Plugins', 'Settings']) {
+    for (final label in ['Home', 'Library', 'Together', 'Settings']) {
       final text = tester.widget<RichText>(
         find.descendant(of: find.text(label), matching: find.byType(RichText)),
       );
       expect(text.text.style?.fontFamily, GlassTheme.fontFamily, reason: label);
     }
+  });
+
+  testWidgets('Together shows what is new, and nothing when nothing is', (
+    tester,
+  ) async {
+    Future<void> pump(int count) => tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Align(
+            alignment: Alignment.bottomCenter,
+            child: SoftGlassDock(
+              selectedIndex: 0,
+              onSelected: (_) {},
+              togetherCount: count,
+            ),
+          ),
+        ),
+      ),
+    );
+    await pump(3);
+    expect(find.text('3'), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp('^Together, 3 new')), findsOneWidget);
+    await pump(120);
+    expect(find.text('99+'), findsOneWidget);
+    await pump(0);
+    expect(find.byType(Badge), findsNothing);
+    expect(find.bySemanticsLabel(RegExp('new')), findsNothing);
   });
 }

@@ -149,7 +149,8 @@ class _PanelSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Material(
-    color: const Color(0xF2141419),
+    // The theme's own dark surface: the player stays dark in every theme.
+    color: GlassTheme.playerSurfaces.surface.withValues(alpha: .95),
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(26),
       side: const BorderSide(color: Color(0x1FFFFFFF)),
@@ -651,8 +652,8 @@ class _EpisodeCardState extends State<_EpisodeCard> {
                             episode.overview,
                             maxLines: _expanded ? 8 : 2,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Color(0xB3FFFFFF),
+                            style: TextStyle(
+                              color: GlassTheme.playerSurfaces.textSecondary,
                               fontSize: 12.5,
                               height: 1.4,
                             ),

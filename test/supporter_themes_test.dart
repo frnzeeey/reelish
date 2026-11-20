@@ -197,6 +197,7 @@ void main() {
 
     test('each theme is the palette it was designed with', () {
       const spec = {
+        'living_room': (0xFFBA725A, 0xFF14110E, 0xFF1F1A16, 0xFF29221D),
         'velvet_cinema': (0xFFA78BFA, 0xFF0D0B14, 0xFF191522, 0xFF211B30),
         'aurora': (0xFF54D6C0, 0xFF071311, 0xFF10201E, 0xFF17302B),
         'obsidian_gold': (0xFFD6B36A, 0xFF0D0D0C, 0xFF191816, 0xFF24211B),
@@ -298,9 +299,10 @@ void main() {
     test('someone without the perk cannot set one', () async {
       final (appearance, _) = await _appearance(['free']);
       await appearance.setTheme('arctic');
-      expect(appearance.themeId, isNull);
-      expect(GlassTheme.primary, GlassTheme.coral.primary);
-      expect(GlassTheme.surfaces, ThemeSurfaces.classic);
+      // A fresh device has the Reelish look, and keeps it.
+      expect(appearance.themeId, 'living_room');
+      expect(GlassTheme.primary, SupporterTheme.livingRoom.primary);
+      expect(GlassTheme.surfaces, SupporterTheme.livingRoom.surfaces);
     });
 
     test('a theme saved on the device does nothing without the perk', () async {
@@ -376,8 +378,8 @@ void main() {
       () async {
         final (appearance, _) = await _appearance(['supporter']);
         expect(await appearance.setTheme('sovereign'), isFalse);
-        expect(appearance.themeId, isNull);
-        expect(GlassTheme.surfaces, ThemeSurfaces.classic);
+        expect(appearance.themeId, 'living_room');
+        expect(GlassTheme.surfaces, SupporterTheme.livingRoom.surfaces);
         // Their own themes still work.
         expect(await appearance.setTheme('aurora'), isTrue);
         expect(appearance.theme, SupporterTheme.aurora);
@@ -387,7 +389,7 @@ void main() {
     test('a free account cannot set Sovereign Edition either', () async {
       final (appearance, _) = await _appearance(['free']);
       expect(await appearance.setTheme('sovereign'), isFalse);
-      expect(appearance.theme, isNull);
+      expect(appearance.theme, SupporterTheme.livingRoom);
     });
 
     test(
@@ -438,7 +440,7 @@ void main() {
         final appearance = AccentSettingsController(supporters: supporters);
         await appearance.load();
         expect(await appearance.setTheme('sovereign'), isFalse);
-        expect(appearance.themeId, isNull);
+        expect(appearance.themeId, 'living_room');
       },
     );
 
@@ -476,6 +478,57 @@ void main() {
       expect(GlassTheme.primary, GlassTheme.blue.primary);
       expect(GlassTheme.surfaces, ThemeSurfaces.classic);
       expect(appearance.themeId, 'velvet_cinema');
+    });
+  });
+
+  group('Living Room, the Reelish look', () {
+    test('is the look of a device that never chose a theme', () async {
+      final (appearance, _) = await _appearance(['free']);
+      expect(appearance.theme, SupporterTheme.livingRoom);
+      expect(appearance.usesThemeAccent, isTrue);
+      expect(GlassTheme.primary, SupporterTheme.livingRoom.primary);
+      expect(
+        GlassTheme.background,
+        SupporterTheme.livingRoom.surfaces.background,
+      );
+    });
+
+    test('Classic chosen before stays Classic', () async {
+      SharedPreferences.setMockInitialValues({'onfeed.appearance.theme': ''});
+      final (appearance, _) = await _appearance(['free']);
+      expect(appearance.theme, isNull);
+      expect(GlassTheme.surfaces, ThemeSurfaces.classic);
+    });
+
+    test('an accent picked before it existed is kept on its pages', () async {
+      SharedPreferences.setMockInitialValues({
+        'onfeed.appearance.accent': GlassTheme.blue.id,
+      });
+      final (appearance, _) = await _appearance(['free']);
+      expect(appearance.theme, SupporterTheme.livingRoom);
+      expect(appearance.usesThemeAccent, isFalse);
+      expect(GlassTheme.primary, GlassTheme.blue.primary);
+      // Choosing the theme's own accent is kept after a restart.
+      await appearance.useThemeAccent();
+      final (again, _) = await _appearance(['free']);
+      expect(again.usesThemeAccent, isTrue);
+      expect(GlassTheme.primary, SupporterTheme.livingRoom.primary);
+    });
+
+    test('a supporter theme saved before stays', () async {
+      SharedPreferences.setMockInitialValues({
+        'onfeed.appearance.theme': 'aurora',
+      });
+      final (appearance, _) = await _appearance(['supporter']);
+      expect(appearance.theme, SupporterTheme.aurora);
+    });
+
+    test('is free: anyone can choose it again after Classic', () async {
+      final (appearance, _) = await _appearance(['free']);
+      await appearance.setTheme(null);
+      expect(appearance.theme, isNull);
+      expect(await appearance.setTheme('living_room'), isTrue);
+      expect(appearance.theme, SupporterTheme.livingRoom);
     });
   });
 
@@ -518,12 +571,12 @@ void main() {
       tester,
     ) async {
       final appearance = await show(tester, 'supporter');
-      expect(find.text('THEMES'), findsOneWidget);
+      expect(find.text('SUPPORTER THEMES'), findsOneWidget);
       await tester.tap(find.text('Arctic'));
       await tester.pumpAndSettle();
       // Nothing changes until the preview is confirmed.
       expect(find.byType(ThemePreview), findsOneWidget);
-      expect(appearance.theme, isNull);
+      expect(appearance.theme, SupporterTheme.livingRoom);
       // The preview is drawn in the theme's own Material theme.
       final preview = Theme.of(tester.element(find.byType(ThemePreview)));
       expect(
@@ -545,7 +598,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Close'));
       await tester.pumpAndSettle();
-      expect(appearance.theme, isNull);
+      expect(appearance.theme, SupporterTheme.livingRoom);
     });
 
     testWidgets('under a theme, the accent can go back to the theme\'s', (
@@ -576,10 +629,14 @@ void main() {
         find.bySemanticsLabel(RegExp('Aurora theme.*for Reelish Supporters')),
         findsOneWidget,
       );
-      // Classic is theirs, and in use.
+      // Living Room is theirs, and in use; Classic is theirs too.
+      expect(
+        find.bySemanticsLabel(RegExp('Living Room theme.*selected')),
+        findsOneWidget,
+      );
       expect(
         find.bySemanticsLabel(RegExp('Classic theme.*selected')),
-        findsOneWidget,
+        findsNothing,
       );
       await tester.tap(find.text('Aurora'));
       await tester.pumpAndSettle();
@@ -590,7 +647,7 @@ void main() {
       expect(find.text('Become a Supporter'), findsOneWidget);
       await tester.tap(find.text('Not now'));
       await tester.pumpAndSettle();
-      expect(appearance.themeId, isNull);
+      expect(appearance.themeId, 'living_room');
       // The accents stay free.
       await tester.scrollUntilVisible(
         find.text(GlassTheme.teal.label),
@@ -618,7 +675,7 @@ void main() {
       // Above the supporter themes, and not one of them.
       expect(
         tester.getTopLeft(find.text('FOUNDER COLLECTION')).dy,
-        lessThan(tester.getTopLeft(find.text('THEMES')).dy),
+        lessThan(tester.getTopLeft(find.text('SUPPORTER THEMES')).dy),
       );
       await tester.tap(find.text('Sovereign Edition'));
       await tester.pumpAndSettle();
@@ -676,7 +733,7 @@ void main() {
         await show(tester, 'supporter', size: const Size(1280, 1800));
         expect(
           tester.getTopLeft(find.text('Velvet Cinema')).dy,
-          tester.getTopLeft(find.text('Classic')).dy,
+          tester.getTopLeft(find.text('Aurora')).dy,
         );
         expect(tester.takeException(), isNull);
       },
@@ -799,6 +856,7 @@ void main() {
         await supporters.refresh();
         appearance = AccentSettingsController(supporters: supporters);
         await appearance.load();
+        await appearance.setTheme(null);
       });
       await showProfile(tester, appearance, account);
       expect(find.byType(SupporterThemeBackdrop), findsNothing);

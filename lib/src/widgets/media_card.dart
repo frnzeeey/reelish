@@ -263,13 +263,7 @@ class _MediaCardState extends State<MediaCard> {
     final raised = DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: radius,
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x73000000),
-            blurRadius: 14,
-            offset: Offset(0, 6),
-          ),
-        ],
+        boxShadow: AppShadow.raised,
       ),
       child: poster,
     );

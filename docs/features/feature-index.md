@@ -59,10 +59,15 @@ session); preferences in `PlaybackSettings`.
 ## Branding
 
 The app icon, splash logo and Reelish logos.
-**Sources:** four 846 × 846 PNGs in [`assets/icons/`](../../assets/icons):
-`reelish_icon.png` (the canonical app icon), `Primary_logo.png` (the
-splash logo), `logo_icon.png` (the mark) and `word_logo.png` (the
-wordmark); paths in `BrandAssets`
+**Sources:** the emblem, `reelish_app_emblem.png` in
+[`assets/icons/`](../../assets/icons) (846 × 846: a terracotta beam between
+cream and sand squares; its colours are the Living Room theme's).
+[`tool/branding/generate_emblem_sources.ps1`](../../tool/branding/generate_emblem_sources.ps1)
+builds from it `reelish_emblem_icon.png` (the canonical app icon, on warm
+charcoal), `reelish_primary_logo.png` (the splash logo),
+`reelish_wordmark.png` (the wordmark, "ISH" in terracotta) and the launcher
+foreground and monochrome layers, and `reelish_emblem_white.png` (the
+emblem in white, for colour tiles). Paths in `BrandAssets`
 ([`brand_logo.dart`](../../lib/src/widgets/brand_logo.dart)).
 **In the app:** `ReelishWordmark` and `ReelishMark` draw the logos without
 their transparent margins (phone Home header, Windows sidebar, the
@@ -72,7 +77,7 @@ the primary logo, or for the Founder the Sovereign Crest
 [`splash_art.dart`](../../lib/src/platform/splash_art.dart);
 [Launch screen](launch-screen.md)).
 **Platform icons:** [`tool/branding/generate_brand_assets.ps1`](../../tool/branding/generate_brand_assets.ps1)
-writes the adaptive-icon background and monochrome layer, the Android splash
+writes the adaptive-icon background, the Android splash
 drawable, the TV banner and the Windows `app_icon.ico`; then
 `dart run flutter_launcher_icons` (config in `pubspec.yaml`) writes the
 Android launcher icons.
@@ -100,7 +105,9 @@ card text from [`resume_summary.dart`](../../lib/src/models/resume_summary.dart)
 ## Details pages
 
 Synopsis, genres, runtime, cast, related titles, seasons and episodes, and
-Play/Episodes, My list actions.
+the actions, in the same order on every interface: Play (or Resume) and
+Start over, then Watch together, My list, Collections and Recommend (sends
+the title to friends, who find it under Recommended to you).
 **Entry:** `HomeScreen._showDetails`.
 **UI:** [`media_details_screen.dart`](../../lib/src/screens/media_details_screen.dart),
 [`tv_details_screen.dart`](../../lib/src/screens/tv/tv_details_screen.dart),

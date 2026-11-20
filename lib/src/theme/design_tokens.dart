@@ -142,6 +142,30 @@ abstract final class AppIcon {
   static const xl = 36.0;
 }
 
+/// Shadows by role, the values the screens already use most. Black shadows
+/// read on every theme because they sit under artwork and dark surfaces;
+/// [glow] takes the colour it lights with (usually the accent).
+abstract final class AppShadow {
+  /// A card raised off the page: posters, tiles.
+  static const raised = [
+    BoxShadow(color: Color(0x73000000), blurRadius: 14, offset: Offset(0, 6)),
+  ];
+
+  /// A panel floating over the page: dialogs, side panels, popovers.
+  static const floating = [
+    BoxShadow(color: Color(0x73000000), blurRadius: 32, offset: Offset(0, 14)),
+  ];
+
+  /// A soft light around something focused or chosen, in [color].
+  static List<BoxShadow> glow(Color color) => [
+    BoxShadow(
+      color: color.withValues(alpha: .42),
+      blurRadius: 22,
+      spreadRadius: 1,
+    ),
+  ];
+}
+
 /// Motion: durations by what moves and how far, and the curves to pair
 /// with them. Read a duration through [resolve] so the system's
 /// reduce-motion setting turns it off.

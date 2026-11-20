@@ -208,6 +208,15 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity-alias>
+        <!-- Coral, the colour of the original default icon. -->
+        <activity-alias android:name=".IconCoral" android:targetActivity=".ReelishActivity"
+            android:icon="@mipmap/ic_launcher_coral" android:roundIcon="@mipmap/ic_launcher_coral"
+            android:exported="true" android:enabled="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity-alias>
         <activity-alias android:name=".IconSlate" android:targetActivity=".ReelishActivity"
             android:icon="@mipmap/ic_launcher_slate" android:roundIcon="@mipmap/ic_launcher_slate"
             android:exported="true" android:enabled="false">

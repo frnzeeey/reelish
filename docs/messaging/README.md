@@ -32,7 +32,7 @@ flowchart LR
 | Daily count | D1 `social_counters.messages` (migration `0015_messages.sql`) | Next to the other social limits. Pruned by the existing daily cron. |
 | `MessagesController` | `lib/src/messaging/messages_controller.dart` | The conversations, the outbox, the socket and its lifecycle, acknowledgements and receipts; deleting, unsending and the per-account settings. |
 | `MessageStore` | `lib/src/messaging/message_store.dart` | Files on this device, per account. |
-| Screens | `lib/src/screens/social/messages_screen.dart`, `conversation_options_screen.dart` | Conversation list, chat, composer, message actions; a conversation's options (nickname, mute, delete). Opened from Friends (`friends_screen.dart`) and a friend's page. |
+| Screens | `lib/src/screens/social/messages_screen.dart`, `conversation_options_screen.dart` | Conversation list, chat, composer, message actions; a conversation's options (nickname, mute, delete). Opened from Together and Friends (`friends_screen.dart`) and a friend's page. On Windows from 900 px wide, `messages_split_view.dart` shows the list and the open chat side by side; Escape closes the chat before it leaves the page. |
 | Alerts | `lib/src/notifications/episode_check.dart`, `episode_alerts.dart` | "Messages from friends" in Settings › Notifications, folded into the episode check (Android background, Windows while open). |
 
 Nothing new was added for identity, profiles or friendships. Sessions,

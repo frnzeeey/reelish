@@ -1,10 +1,34 @@
 # App themes
 
-Accounts with the supporter perks (supporters, and the Founder) can choose an
-app theme in Settings > Appearance, under THEMES. A theme is a whole look: the
-colours of every page (background, surfaces, text, borders, glass), the accent,
-and the profile card's lights, avatar ring and ornament. Everyone else keeps
-Classic, the original Reelish look, with any accent colour they like.
+A theme is a whole look: the colours of every page (background, surfaces,
+text, borders, glass), the accent, and the profile card's lights, avatar ring
+and ornament. Settings > Appearance offers three collections:
+
+- **REELISH**, free to everyone: Living Room, the Reelish look and the
+  default, and Classic, the original coral-on-black look with any accent.
+- **SUPPORTER THEMES**, for accounts with the supporter perks (supporters, and
+  the Founder).
+- **FOUNDER COLLECTION**, the Founder's own (below).
+
+## Living Room, the Reelish look
+
+Living Room is built from the emblem's three colours
+(`assets/icons/reelish_app_emblem.png`): terracotta `#BA725A` is the accent
+(5:1 as text on the page), sand `#CAA76C` the profile card's answering light,
+and cream `#F4F0E5` the text, on warm charcoal (`#14110E` page, `#1F1A16`
+cards, `#29221D` raised) rather than cinema black. Captions are `#B4AA9C`
+(8:1). It is a `SupporterTheme` with `collection: ThemeCollection.reelish`,
+listed in `SupporterTheme.reelishCollection`; `mayUse` is always true.
+
+It is the default: `AccentSettingsController.load` uses
+`SupporterTheme.standard` when `onfeed.appearance.theme` has never been
+written. Choosing Classic saves an empty value, which stays Classic, so a choice
+is never overridden. Someone who picked an accent before Living Room existed
+keeps that accent on Living Room's pages until they choose the theme's own.
+A lapsed supporter whose saved theme no longer applies gets Classic and their
+accent, as before.
+
+## Supporter themes
 
 | Theme | Character | Profile ornament |
 |---|---|---|

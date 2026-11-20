@@ -408,8 +408,8 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                     details!.tagline,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white70,
+                    style: TextStyle(
+                      color: GlassTheme.onArtworkMuted,
                       fontStyle: FontStyle.italic,
                     ),
                   ),
@@ -422,13 +422,15 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                   Wrap(
                     spacing: 10,
                     runSpacing: 10,
+                    // Watching together leads, as on every interface;
+                    // Play stays in the bar at the foot.
                     children: [
+                      if (_offersParty(item)) _watchTogetherButton(item),
                       if (widget.onToggleFavorite != null) _myListButton(),
                       if (widget.onCollections case final collections?)
                         _collectionsButton(() => collections(context, item)),
                       if (widget.onShare case final share?)
                         _shareButton(() => share(context, item)),
-                      if (_offersParty(item)) _watchTogetherButton(item),
                     ],
                   ),
                 ],
@@ -440,8 +442,22 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
     );
   }
 
-  /// Styled as the Spotlight's My list button; it also says when the title
-  /// is already saved.
+  /// Every action over the artwork beside Play: smoked glass with a light
+  /// outline, in the colours that read on artwork whatever the theme;
+  /// [selected] (on My list) takes the accent, as the Spotlight's does.
+  ButtonStyle _actionStyle({bool selected = false}) => OutlinedButton.styleFrom(
+    foregroundColor: selected ? GlassTheme.primary : GlassTheme.onArtwork,
+    backgroundColor: Colors.black.withValues(alpha: .28),
+    shape: const StadiumBorder(),
+    side: BorderSide(
+      color: selected
+          ? GlassTheme.primary.withValues(alpha: .55)
+          : GlassTheme.onArtworkQuiet,
+    ),
+    padding: const EdgeInsets.symmetric(horizontal: 19, vertical: 13),
+  );
+
+  /// Whether Watch together can start a party for [item].
   bool _offersParty(MediaItem item) =>
       widget.onWatchTogether != null &&
       (item.type == 'series'
@@ -453,13 +469,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
   /// at once; a series asks which episode of the shown season, so it is
   /// ready once that season's episodes are listed.
   Widget _watchTogetherButton(MediaItem item) => OutlinedButton.icon(
-    style: OutlinedButton.styleFrom(
-      foregroundColor: Colors.white,
-      backgroundColor: Colors.black.withValues(alpha: .28),
-      shape: const StadiumBorder(),
-      side: BorderSide(color: Colors.white.withValues(alpha: .35)),
-      padding: const EdgeInsets.symmetric(horizontal: 19, vertical: 13),
-    ),
+    style: _actionStyle(),
     onPressed: item.type != 'series'
         ? () => widget.onWatchTogether!(context, PartyContent.fromItem(item)!)
         : _selectedSeason != null && _episodes.isNotEmpty
@@ -474,13 +484,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
 
   /// Collections, in the Watch together button's style.
   Widget _collectionsButton(VoidCallback onPressed) => OutlinedButton.icon(
-    style: OutlinedButton.styleFrom(
-      foregroundColor: Colors.white,
-      backgroundColor: Colors.black.withValues(alpha: .28),
-      shape: const StadiumBorder(),
-      side: BorderSide(color: Colors.white.withValues(alpha: .35)),
-      padding: const EdgeInsets.symmetric(horizontal: 19, vertical: 13),
-    ),
+    style: _actionStyle(),
     onPressed: onPressed,
     icon: const Icon(ReelishIcons.playlist, size: 19),
     label: const Text(
@@ -489,31 +493,19 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
     ),
   );
 
+  /// Sends the title to friends, who find it under Recommended to you.
   Widget _shareButton(VoidCallback onPressed) => OutlinedButton.icon(
-    style: OutlinedButton.styleFrom(
-      foregroundColor: Colors.white,
-      backgroundColor: Colors.black.withValues(alpha: .28),
-      shape: const StadiumBorder(),
-      side: BorderSide(color: Colors.white.withValues(alpha: .35)),
-      padding: const EdgeInsets.symmetric(horizontal: 19, vertical: 13),
-    ),
+    style: _actionStyle(),
     onPressed: onPressed,
     icon: const Icon(ReelishIcons.send, size: 19),
-    label: const Text('Share', style: TextStyle(fontWeight: FontWeight.w700)),
+    label: const Text(
+      'Recommend',
+      style: TextStyle(fontWeight: FontWeight.w700),
+    ),
   );
 
   Widget _myListButton() => OutlinedButton.icon(
-    style: OutlinedButton.styleFrom(
-      foregroundColor: _favorite ? GlassTheme.primary : Colors.white,
-      backgroundColor: Colors.black.withValues(alpha: .28),
-      shape: const StadiumBorder(),
-      side: BorderSide(
-        color: _favorite
-            ? GlassTheme.primary.withValues(alpha: .55)
-            : Colors.white.withValues(alpha: .35),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 19, vertical: 13),
-    ),
+    style: _actionStyle(selected: _favorite),
     // Kept enabled while saving, so a second tap is ignored rather than
     // falling through; the guard is in _toggleFavorite.
     onPressed: _toggleFavorite,

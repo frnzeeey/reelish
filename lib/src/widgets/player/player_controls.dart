@@ -1426,8 +1426,9 @@ class NextEpisodeCard extends StatelessWidget {
       label: countdown == null ? 'Dismiss' : 'Cancel auto-play',
       onPressed: onDismiss,
     );
+    // The theme's own dark surface: the player stays dark in every theme.
     return Material(
-      color: const Color(0xE6141419),
+      color: GlassTheme.playerSurfaces.surface.withValues(alpha: .9),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
         side: const BorderSide(color: _glassBorder),

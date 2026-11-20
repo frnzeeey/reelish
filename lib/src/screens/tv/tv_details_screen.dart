@@ -397,6 +397,18 @@ class _TvMediaDetailsScreenState extends State<TvMediaDetailsScreen> {
                 icon: const Icon(ReelishIcons.restart),
                 label: const Text('Start over'),
               ),
+            // Watching together leads the secondary actions, as on every
+            // interface; the remote reaches it right after Play.
+            if (widget.onWatchTogether != null &&
+                int.tryParse(widget.item.id) != null)
+              OutlinedButton.icon(
+                style: _actionStyle(filled: false),
+                onPressed: _isSeries && _episodes.isEmpty
+                    ? null
+                    : _watchTogether,
+                icon: const Icon(ReelishIcons.people),
+                label: const Text('Watch together'),
+              ),
             if (widget.onToggleFavorite != null)
               OutlinedButton.icon(
                 style: _actionStyle(filled: false),
@@ -416,17 +428,7 @@ class _TvMediaDetailsScreenState extends State<TvMediaDetailsScreen> {
                 style: _actionStyle(filled: false),
                 onPressed: () => share(context, item),
                 icon: const Icon(ReelishIcons.send),
-                label: const Text('Share'),
-              ),
-            if (widget.onWatchTogether != null &&
-                int.tryParse(widget.item.id) != null)
-              OutlinedButton.icon(
-                style: _actionStyle(filled: false),
-                onPressed: _isSeries && _episodes.isEmpty
-                    ? null
-                    : _watchTogether,
-                icon: const Icon(ReelishIcons.people),
-                label: const Text('Watch together'),
+                label: const Text('Recommend'),
               ),
             if (widget.onRemoveFromHistory != null)
               OutlinedButton.icon(

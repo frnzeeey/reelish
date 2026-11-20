@@ -175,6 +175,37 @@ void main() {
       );
     });
 
+    testWidgets('Friends has its own Together section, and the Supporters '
+        'page a row for everyone', (tester) async {
+      await _show(tester);
+      expect(find.text('TOGETHER'), findsOneWidget);
+      double top(String text) =>
+          tester.getTopLeft(find.text(text, skipOffstage: false)).dy;
+      // Friends sits under Together, above the account.
+      expect(top('Friends'), greaterThan(top('TOGETHER')));
+      expect(top('Friends & privacy'), lessThan(top('ACCOUNT')));
+      // Without a badge to tap, the row is the way in, and it says why.
+      expect(find.text('Reelish Supporters', skipOffstage: false), findsOne);
+      expect(
+        find.text(
+          'Support Reelish and unlock themes, icons and more',
+          skipOffstage: false,
+        ),
+        findsOne,
+      );
+    });
+
+    testWidgets('a supporter is thanked, not told what it unlocks', (
+      tester,
+    ) async {
+      await _show(tester, entitlement: 'supporter', badges: ['supporter']);
+      expect(find.text('Thank you', skipOffstage: false), findsOne);
+      expect(
+        find.textContaining('unlock themes', skipOffstage: false),
+        findsNothing,
+      );
+    });
+
     testWidgets('the theme tile names the theme in use', (tester) async {
       await _show(tester, entitlement: 'supporter', theme: 'aurora');
       expect(find.text('Aurora'), findsOneWidget);

@@ -57,7 +57,14 @@ the interface once per launch:
   TV rail and the Windows sidebar, and the page switches in `home_screen.dart`
   are exhaustive: a new value appears on both and needs a page for each
   (Profile is drawn with the avatar; the TV rail puts it first via
-  `tvRailOrder`). The phone uses its own dock tabs (`_selectTab`).
+  `tvRailOrder`). The phone uses its own dock tabs (`_selectTab`): Home,
+  Library, Together, Settings; on the phone Plugins opens from Settings.
+  Together (`together_screen.dart`) is the Friends page with a Watch Party
+  section, on all three interfaces.
+- The default look is the free Living Room theme (the emblem's terracotta,
+  sand and cream; `SupporterTheme.standard`) for anyone who never chose a
+  theme; Classic is the original coral look. See
+  `docs/REELISH_UX_REDESIGN_PLAN.md` for the redesign in progress.
 
 ## Accounts, the Reelish API and Watch Party
 
@@ -85,8 +92,8 @@ the interface once per launch:
   since the platform has no metadata. Supporter perks: hosting a Watch Party
   (enforced by `createParty`; joining stays open to everyone), app themes in Settings > Appearance
   (`supporter_themes.dart`, applied by `AccentSettingsController`: the page
-  colours, the accent and the profile card) and every launcher icon (`app_icon.dart`: Default
-  and Slate stay free; a supporter icon is applied only after a fresh server
+  colours, the accent and the profile card) and every launcher icon (`app_icon.dart`: Default,
+  Coral and Slate stay free; a supporter icon is applied only after a fresh server
   check). Docs: `docs/backend/supporters.md`,
   `docs/features/supporter-themes.md`, `docs/features/app-icons.md`.
 - **Environments:** `staging` and `production` in `backend/wrangler.toml`

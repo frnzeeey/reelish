@@ -9,7 +9,7 @@
   </foreground>
   <monochrome>
       <inset
-          android:drawable="@drawable/ic_launcher_monochrome"
+          android:drawable="@drawable/ic_launcher_monochrome_mark"
           android:inset="20%" />
   </monochrome>
 </adaptive-icon>

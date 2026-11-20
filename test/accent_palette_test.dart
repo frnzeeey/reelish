@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:onfeed/src/services/accent_settings_controller.dart';
 import 'package:onfeed/src/theme/glass_theme.dart';
+import 'package:onfeed/src/theme/supporter_themes.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 double _contrast(Color a, Color b) {
@@ -78,6 +79,9 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     final fresh = AccentSettingsController();
     await fresh.load();
-    expect(fresh.value, same(GlassTheme.coral));
+    // The picked accent is coral; a fresh device shows Living Room's own.
+    expect(fresh.accent, same(GlassTheme.coral));
+    expect(fresh.theme, SupporterTheme.livingRoom);
+    expect(fresh.value.primary, SupporterTheme.livingRoom.primary);
   });
 }

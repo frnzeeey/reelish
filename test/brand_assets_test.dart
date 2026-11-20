@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:onfeed/src/screens/splash_screen.dart';
 import 'package:onfeed/src/theme/glass_theme.dart';
+import 'package:onfeed/src/theme/supporter_themes.dart';
 import 'package:onfeed/src/widgets/brand_logo.dart';
 
 void main() {
@@ -49,8 +50,30 @@ void main() {
   group('AccentAppIcon', () {
     tearDown(() => GlassTheme.setAccent(GlassTheme.coral));
 
+    test('a theme shows its own icon', () {
+      expect(AccentAppIcon.assetFor('theme:living_room'), BrandAssets.appIcon);
+      expect(
+        AccentAppIcon.assetFor('theme:velvet_cinema'),
+        'assets/images/app_icons/royal_violet.png',
+      );
+      expect(
+        AccentAppIcon.assetFor('theme:sovereign'),
+        'assets/images/app_icons/sovereign_crest.png',
+      );
+      for (final theme in SupporterTheme.offered) {
+        expect(
+          AccentAppIcon.assetFor(theme.accent.id),
+          isNotNull,
+          reason: theme.id,
+        );
+      }
+    });
+
     test('every built-in accent has icon artwork of its colour', () async {
-      expect(AccentAppIcon.assetFor('coral'), BrandAssets.appIcon);
+      expect(
+        AccentAppIcon.assetFor('coral'),
+        'assets/images/app_icons/coral.png',
+      );
       for (final accent in GlassTheme.accents) {
         final asset = AccentAppIcon.assetFor(accent.id);
         expect(asset, isNotNull, reason: accent.id);
@@ -83,7 +106,16 @@ void main() {
           home: Center(child: AccentAppIcon(key: ValueKey('c'), size: 40)),
         ),
       );
-      expect(find.byType(ReelishMark), findsOneWidget);
+      // The white emblem on the colour, as the colour presets are drawn.
+      final mark = tester.widget<Image>(find.byType(Image));
+      expect(
+        (mark.image as ResizeImage).imageProvider,
+        isA<AssetImage>().having(
+          (a) => a.assetName,
+          'asset',
+          BrandAssets.whiteEmblem,
+        ),
+      );
       expect(find.bySemanticsLabel('Reelish'), findsOneWidget);
     });
   });

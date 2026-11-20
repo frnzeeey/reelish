@@ -32,6 +32,7 @@ class AppIconSwitcher(private val context: Context) {
             "orange" to ".IconOrange",
             "rose" to ".IconRose",
             "slate" to ".IconSlate",
+            "coral" to ".IconCoral",
             "teal" to ".IconTeal",
             "violet" to ".IconViolet",
             "royal_violet" to ".IconRoyalViolet",

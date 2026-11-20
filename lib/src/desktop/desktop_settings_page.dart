@@ -2,14 +2,12 @@ import 'package:flutter/material.dart';
 import '../theme/reelish_icons.dart';
 
 import '../account/account_controller.dart';
-import '../navigation/app_transitions.dart';
 import '../screens/account_settings_screen.dart';
 import '../screens/notification_settings_screen.dart';
 import '../screens/recommendation_settings_screen.dart';
 import '../screens/help_support_screen.dart';
 import '../screens/playback_settings_screen.dart';
 import '../screens/subtitle_addons_screen.dart';
-import '../screens/watch_party/join_party_screen.dart';
 import '../services/accent_settings_controller.dart';
 import '../services/playback_settings_controller.dart';
 import '../theme/design_tokens.dart';
@@ -165,19 +163,6 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
                             onTap: () => setState(() => _section = section),
                           ),
                         ),
-                      if (label == 'GENERAL')
-                        _RailItem.action(
-                          title: 'Join a watch party',
-                          description:
-                              'Enter a code to watch in sync with friends',
-                          icon: ReelishIcons.people,
-                          onTap: () => Navigator.of(context).push(
-                            AppPageRoute<void>(
-                              context: context,
-                              builder: (_) => const JoinPartyScreen(),
-                            ),
-                          ),
-                        ),
                     ],
                     // Who made Reelish, as under the phone and TV Settings.
                     const Padding(
@@ -282,31 +267,16 @@ class _GroupLabel extends StatelessWidget {
   );
 }
 
-/// A category in the rail; Enter or a click shows it. [action] rows open
-/// something over the window instead (the licenses).
+/// A category in the rail; Enter or a click shows it.
 class _RailItem extends StatefulWidget {
   const _RailItem({
-    required DesktopSettingsSection this.section,
+    required this.section,
     required this.selected,
     required this.onTap,
     this.value,
-  }) : title = null,
-       description = null,
-       icon = null;
+  });
 
-  const _RailItem.action({
-    required String this.title,
-    required String this.description,
-    required IconData this.icon,
-    required this.onTap,
-  }) : section = null,
-       selected = false,
-       value = null;
-
-  final DesktopSettingsSection? section;
-  final String? title;
-  final String? description;
-  final IconData? icon;
+  final DesktopSettingsSection section;
   final bool selected;
   final String? value;
   final VoidCallback onTap;
@@ -322,9 +292,9 @@ class _RailItemState extends State<_RailItem> {
   @override
   Widget build(BuildContext context) {
     final section = widget.section;
-    final title = section?.title ?? widget.title!;
-    final description = section?.description ?? widget.description!;
-    final icon = section?.icon ?? widget.icon!;
+    final title = section.title;
+    final description = section.description;
+    final icon = section.icon;
     final selected = widget.selected;
     final accent = GlassTheme.primary;
     final duration = desktopMotion(context, 160);
@@ -410,15 +380,6 @@ class _RailItemState extends State<_RailItem> {
                       ],
                     ),
                   ),
-                  if (section == null) ...[
-                    // Apart from a title cut to fit, so the two never touch.
-                    const SizedBox(width: 8),
-                    Icon(
-                      ReelishIcons.externalLink,
-                      size: 16,
-                      color: GlassTheme.muted,
-                    ),
-                  ],
                 ],
               ),
             ),

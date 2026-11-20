@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/reelish_icons.dart';
 
 import '../theme/glass_theme.dart';
+import 'count_badge.dart';
 import 'liquid_glass.dart';
 import 'settings/settings_components.dart';
 
@@ -19,15 +20,23 @@ class SoftGlassDock extends StatelessWidget {
     super.key,
     required this.selectedIndex,
     required this.onSelected,
+    this.togetherCount = 0,
   });
 
   final int selectedIndex;
   final ValueChanged<int> onSelected;
 
+  /// What is new in Together, shown on its tab; nothing at 0.
+  final int togetherCount;
+
+  /// The tab of Together, the people you watch with. Plugins, set up once
+  /// and seldom visited, lives in Settings.
+  static const togetherIndex = 2;
+
   static const _destinations = [
     (ReelishIcons.home, ReelishIcons.homeFilled, 'Home'),
     (ReelishIcons.bookmark, ReelishIcons.bookmarkFilled, 'Library'),
-    (ReelishIcons.plugin, ReelishIcons.pluginFilled, 'Plugins'),
+    (ReelishIcons.people, ReelishIcons.peopleFilled, 'Together'),
     (ReelishIcons.settings, ReelishIcons.settingsFilled, 'Settings'),
   ];
 
@@ -56,6 +65,7 @@ class SoftGlassDock extends StatelessWidget {
                   selectedIcon: _destinations[i].$2,
                   label: _destinations[i].$3,
                   selected: selectedIndex == i,
+                  count: i == togetherIndex ? togetherCount : 0,
                   iconSize: metrics.iconSize,
                   labelSize: metrics.labelSize,
                   maxLabelScale: metrics.maxLabelScale,
@@ -168,12 +178,16 @@ class _DockItem extends StatelessWidget {
     required this.labelSize,
     required this.maxLabelScale,
     required this.onTap,
+    this.count = 0,
   });
 
   final IconData icon;
   final IconData selectedIcon;
   final String label;
   final bool selected;
+
+  /// What is new behind the tab, as a badge on its icon; none at 0.
+  final int count;
   final double iconSize;
   final double labelSize;
   final double maxLabelScale;
@@ -184,10 +198,17 @@ class _DockItem extends StatelessWidget {
     final duration = MediaQuery.disableAnimationsOf(context)
         ? Duration.zero
         : const Duration(milliseconds: 160);
+    final icon = Icon(
+      selected ? selectedIcon : this.icon,
+      size: iconSize,
+      color: selected
+          ? GlassTheme.primary
+          : GlassTheme.textPrimary.withValues(alpha: .7),
+    );
     return Semantics(
       button: true,
       selected: selected,
-      label: label,
+      label: count > 0 ? '$label, $count new' : label,
       child: Tooltip(
         message: label,
         child: Material(
@@ -231,13 +252,7 @@ class _DockItem extends StatelessWidget {
                     scale: selected ? 1.08 : 1,
                     duration: duration,
                     curve: Curves.easeOutCubic,
-                    child: Icon(
-                      selected ? selectedIcon : icon,
-                      size: iconSize,
-                      color: selected
-                          ? GlassTheme.primary
-                          : GlassTheme.textPrimary.withValues(alpha: .7),
-                    ),
+                    child: CountBadge(count: count, child: icon),
                   ),
                   const SizedBox(height: 3),
                   AnimatedDefaultTextStyle(

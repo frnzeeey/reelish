@@ -8,6 +8,9 @@ enum TvDestination {
   series('Series', ReelishIcons.tv),
   search('Search', ReelishIcons.search),
   library('My library', ReelishIcons.bookmark),
+
+  /// Watch Party, messages and friends: the people you watch with.
+  together('Together', ReelishIcons.people),
   plugins('Plugins', ReelishIcons.plugin),
   settings('Settings', ReelishIcons.settings),
 

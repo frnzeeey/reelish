@@ -11,6 +11,7 @@ import '../theme/glass_theme.dart';
 import '../viewmodels/library_view_model.dart';
 import 'collections/collection_pages.dart';
 import '../widgets/media_card.dart';
+import '../widgets/notice_card.dart';
 import '../widgets/soft_glass_dock.dart';
 
 enum _LibraryFilter { all, continueWatching, favorites, collections }
@@ -478,11 +479,16 @@ class _MediaSection extends StatelessWidget {
         if (items.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: _LibraryEmptyState(
+            child: NoticeCard(
               title: emptyTitle,
               message: emptyMessage,
               icon: favorite ? ReelishIcons.heart : ReelishIcons.movieFilter,
-              onBrowse: onBrowse,
+              action: onBrowse == null
+                  ? null
+                  : TextButton(
+                      onPressed: onBrowse,
+                      child: const Text('Browse'),
+                    ),
             ),
           )
         else
@@ -557,72 +563,6 @@ class _MediaSection extends StatelessWidget {
               ),
             ),
           ),
-      ],
-    ),
-  );
-}
-
-class _LibraryEmptyState extends StatelessWidget {
-  const _LibraryEmptyState({
-    required this.title,
-    required this.message,
-    required this.icon,
-    this.onBrowse,
-  });
-
-  final String title;
-  final String message;
-  final IconData icon;
-  final VoidCallback? onBrowse;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    width: double.infinity,
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: GlassTheme.surface,
-      borderRadius: BorderRadius.circular(18),
-      border: Border.all(color: GlassTheme.border),
-    ),
-    child: Row(
-      children: [
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: GlassTheme.primary.withValues(alpha: .1),
-            borderRadius: BorderRadius.circular(13),
-          ),
-          child: Icon(icon, size: 19, color: GlassTheme.primary),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: AppTextSize.body,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                message,
-                style: TextStyle(
-                  color: GlassTheme.muted,
-                  fontSize: AppTextSize.label,
-                  height: 1.35,
-                ),
-              ),
-            ],
-          ),
-        ),
-        if (onBrowse != null) ...[
-          const SizedBox(width: AppSpace.xs),
-          TextButton(onPressed: onBrowse, child: const Text('Browse')),
-        ],
       ],
     ),
   );

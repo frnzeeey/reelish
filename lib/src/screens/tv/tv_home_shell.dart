@@ -7,8 +7,10 @@ import '../../theme/reelish_icons.dart';
 import '../../widgets/ambient_backdrop.dart';
 import '../../widgets/tv/tv_focus.dart';
 import '../../widgets/brand_logo.dart';
+import '../../widgets/count_badge.dart';
 import '../../widgets/avatar_frame.dart';
 import '../../widgets/profile_avatar.dart';
+import '../social/together_screen.dart';
 
 export '../../navigation/app_destination.dart';
 
@@ -316,7 +318,7 @@ class _TvNavigationRail extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(left: 6, bottom: 20),
+            padding: const EdgeInsets.only(left: 6, bottom: 16),
             // In the accent colour, as phone Home's (the coral icon for the
             // default accent); not read out, as before.
             child: ExcludeSemantics(
@@ -411,7 +413,9 @@ class _RailItemState extends State<_RailItem> {
           child: AnimatedContainer(
             duration: duration,
             curve: Curves.easeOutCubic,
-            height: 48,
+            // Nine places fit a 540 dp screen: 27 + 40 + 16 + 9 × (44 + 4)
+            // + 16 = 531.
+            height: 44,
             padding: const EdgeInsets.symmetric(horizontal: 14),
             decoration: BoxDecoration(
               color: _focused
@@ -430,6 +434,22 @@ class _RailItemState extends State<_RailItem> {
                   const SizedBox.square(
                     dimension: 24,
                     child: AvatarFrameRim(child: MyProfileAvatar(size: 24)),
+                  )
+                else if (widget.destination == TvDestination.together)
+                  // What is new with friends; inverted on the focused
+                  // item's accent fill so it still shows.
+                  TogetherUpdates(
+                    builder: (context, count) => CountBadge(
+                      count: count,
+                      inverted: _focused,
+                      child: Icon(
+                        widget.selected || _focused
+                            ? ReelishIcons.filled(widget.destination.icon)
+                            : widget.destination.icon,
+                        color: color,
+                        size: 24,
+                      ),
+                    ),
                   )
                 else
                   Icon(

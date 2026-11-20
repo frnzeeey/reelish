@@ -38,7 +38,7 @@ void main() {
     await tester.pump(const Duration(seconds: 6));
 
     expect(find.text('Home'), findsOneWidget);
-    expect(find.text('Plugins'), findsOneWidget);
+    expect(find.text('Together'), findsOneWidget);
     expect(find.text('Library'), findsOneWidget);
     expect(find.text('Settings'), findsOneWidget);
   });

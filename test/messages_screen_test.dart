@@ -17,6 +17,7 @@ import 'package:onfeed/src/messaging/messages_controller.dart';
 import 'package:onfeed/src/platform/device_capabilities.dart';
 import 'package:onfeed/src/screens/social/conversation_options_screen.dart';
 import 'package:onfeed/src/screens/social/messages_screen.dart';
+import 'package:onfeed/src/screens/social/messages_split_view.dart';
 import 'package:onfeed/src/social/friends_controller.dart';
 import 'package:onfeed/src/social/social_controller.dart';
 import 'package:onfeed/src/theme/reelish_icons.dart';
@@ -300,6 +301,78 @@ void main() {
     expect(opened?.id, conv);
     await done(tester);
   });
+
+  testWidgets(
+    'Windows: the chosen conversation opens beside the list',
+    (tester) async {
+      tester.view.physicalSize = const Size(1400, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final messages = await controller(tester);
+      var closed = false;
+      await tester.pumpWidget(
+        app(
+          MessagesSplitView(
+            messages: messages,
+            onBack: () {},
+            chat: (c, close) => ChatScreen(
+              conversation: c,
+              messages: messages,
+              onOpenOptions: () {
+                close();
+                closed = true;
+              },
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final socket = sockets.single;
+      socket.receive({'t': 'ready', 'serverTime': 1});
+      socket.receive({
+        't': 'event',
+        'seq': 1,
+        'kind': 'message',
+        'conv': conv,
+        'id': 'm1',
+        'out': false,
+        'peer': {'handle': 'ana', 'displayName': 'Ana', 'avatar': null},
+        'text': 'Popcorn ready?',
+        'at': DateTime.now().millisecondsSinceEpoch,
+      });
+      socket.receive({'t': 'synced', 'seq': 1});
+      await tester.pumpAndSettle();
+      expect(find.text('Choose a conversation'), findsOneWidget);
+      expect(find.byType(ChatScreen), findsNothing);
+      await tester.tap(find.text('Ana').first);
+      await tester.pumpAndSettle();
+      // The list stays; the chat is beside it, and its row is marked.
+      expect(find.byType(MessagesScreen), findsOneWidget);
+      expect(find.byType(ChatScreen), findsOneWidget);
+      expect(find.text('Choose a conversation'), findsNothing);
+      expect(
+        tester.widget<ConversationTile>(find.byType(ConversationTile)).selected,
+        isTrue,
+      );
+      // Escape, from the composer, closes the conversation first.
+      await tester.tap(find.byType(TextField));
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(find.byType(ChatScreen), findsNothing);
+      expect(find.byType(MessagesScreen), findsOneWidget);
+      await tester.tap(find.text('Ana').first);
+      await tester.pumpAndSettle();
+      expect(find.byType(ChatScreen), findsOneWidget);
+      // Closing the pane (as a delete does) empties it again.
+      await tester.tap(find.byTooltip('Conversation options'));
+      await tester.pumpAndSettle();
+      expect(closed, isTrue);
+      expect(find.byType(ChatScreen), findsNothing);
+      await done(tester);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
 
   testWidgets('says when offline, and keeps what was written', (tester) async {
     final messages = await controller(tester);

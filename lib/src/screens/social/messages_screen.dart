@@ -22,6 +22,7 @@ import '../../theme/design_tokens.dart';
 import '../../theme/glass_theme.dart';
 import '../../theme/reelish_icons.dart';
 import '../../widgets/settings/settings_components.dart';
+import '../../widgets/empty_state.dart';
 import '../../widgets/social/social_widgets.dart';
 import '../../widgets/tv/tv_focus.dart';
 
@@ -86,11 +87,15 @@ class MessagesScreen extends StatefulWidget {
     this.onBack,
     required this.openChat,
     this.openOptions,
+    this.selectedId,
   });
 
   /// [MessagesController.instance] when null.
   final MessagesController? messages;
   final VoidCallback? onBack;
+
+  /// The conversation open beside the list, marked in it.
+  final String? selectedId;
 
   /// Opens a conversation (the caller pushes [ChatScreen]).
   final void Function(Conversation conversation) openChat;
@@ -141,6 +146,7 @@ class _MessagesScreenState extends State<MessagesScreen>
                   ConversationTile(
                     conversation: conversation,
                     messages: messages,
+                    selected: conversation.id == widget.selectedId,
                     onTap: () => widget.openChat(conversation),
                     onOptions: widget.openOptions == null
                         ? null
@@ -173,10 +179,14 @@ class ConversationTile extends StatelessWidget {
     required this.onTap,
     this.messages,
     this.onOptions,
+    this.selected = false,
   });
 
   final Conversation conversation;
   final VoidCallback onTap;
+
+  /// The conversation open beside the list (Windows' side-by-side Messages).
+  final bool selected;
 
   /// [MessagesController.instance] when null.
   final MessagesController? messages;
@@ -221,7 +231,17 @@ class ConversationTile extends StatelessWidget {
         child: tile,
       );
     }
+    if (selected) {
+      tile = DecoratedBox(
+        decoration: BoxDecoration(
+          color: GlassTheme.primary.withValues(alpha: .12),
+          borderRadius: BorderRadius.circular(AppRadius.md),
+        ),
+        child: tile,
+      );
+    }
     return Semantics(
+      selected: selected,
       label: [
         person.label,
         if (unread > 0) '$unread unread',
@@ -842,32 +862,10 @@ class _EmptyChat extends StatelessWidget {
   final SocialPerson peer;
 
   @override
-  Widget build(BuildContext context) => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(AppSpace.xl),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          PersonAvatar(person: peer, size: 72),
-          const SizedBox(height: AppSpace.md),
-          Text(
-            'Say hello to ${peer.label}',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: GlassTheme.textPrimary,
-              fontSize: AppTextSize.title,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Only the two of you can read this conversation.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: GlassTheme.muted),
-          ),
-        ],
-      ),
-    ),
+  Widget build(BuildContext context) => EmptyState(
+    leading: PersonAvatar(person: peer, size: 72),
+    title: 'Say hello to ${peer.label}',
+    message: 'Only the two of you can read this conversation.',
   );
 }
 

@@ -12,7 +12,8 @@ and the Founder's Sovereign Crest version of it.
 | Windows | Nothing: the window stays hidden until Flutter's first frame (`flutter_window.cpp`) | none |
 | All | Flutter's `SplashView` inside `SplashGate` ([`splash_screen.dart`](../../lib/src/screens/splash_screen.dart)), while `_StartupScreen._initialize` restores local state | `SplashSpec.logoAsset`, at `SplashSpec.logoSize` (160 dp) |
 
-The background is `SplashSpec.background` (`#0B0B0F`) everywhere, fixed
+The background is `SplashSpec.background` (`#14110E`, Living Room's warm
+charcoal) everywhere, fixed
 rather than the theme's, because the system splash cannot follow a theme.
 On Android, Flutter's first frame continues the system splash exactly: it
 waits (at most 400 ms) for the artwork to decode, draws it at full opacity
@@ -27,7 +28,7 @@ For the Founder (`FounderPerk.founderSplash`,
 [Founder perks](../backend/entitlements.md#founder-perks)) the launch screen
 shows the Sovereign Crest, the [Founder Collection icon](app-icons.md#the-founder-collection)'s
 wreath, crown and gold mark, with a champagne-over-violet glow in place of
-the coral one. It follows the account, not the chosen icon or theme.
+the terracotta one. It follows the account, not the chosen icon or theme.
 
 The splash shows before any account is restored, so `SplashArtStore`
 ([`splash_art.dart`](../../lib/src/platform/splash_art.dart)) keeps the

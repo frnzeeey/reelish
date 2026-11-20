@@ -64,7 +64,10 @@ class AppIconPreset {
   static const defaultId = 'default';
 
   static const all = [
+    // The emblem since v1.39; the alias keeps the name every release used.
     AppIconPreset(defaultId, 'Default', AppIconGroup.free),
+    // The emblem on coral, the colour of the original default: still free.
+    AppIconPreset('coral', 'Coral', AppIconGroup.free),
     AppIconPreset('slate', 'Slate', AppIconGroup.free),
     // One per app theme, in the themes' order. The ids are launcher aliases,
     // the saved choice, so the first five keep the ids of the themes they

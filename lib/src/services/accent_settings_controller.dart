@@ -1,5 +1,6 @@
-// The app's look on this device: the accent colour, and for accounts with the
-// supporter perk, an app theme. A theme sets the colours of every screen
+// The app's look on this device: the accent colour and an app theme (the free
+// Living Room look by default, the supporter themes for accounts with the
+// perk). A theme sets the colours of every screen
 // (GlassTheme's page tokens and accent) and dresses the profile card; an
 // accent picked under a theme replaces only the theme's accent. Like the
 // accent it is a device setting, and it applies only while the signed-in
@@ -55,6 +56,7 @@ class AccentSettingsController extends ChangeNotifier {
   /// perk for the supporter themes, the Founder's own for the Founder
   /// Collection, which no donation unlocks.
   bool mayUse(SupporterTheme theme) => switch (theme.collection) {
+    ThemeCollection.reelish => true,
     ThemeCollection.supporter => _supporters.has(SupporterPerk.appThemes),
     ThemeCollection.founder => _supporters.hasFounderPerk(
       FounderPerk.founderThemes,
@@ -78,10 +80,19 @@ class AccentSettingsController extends ChangeNotifier {
     final id = await _storage.readSetting(_key);
     // A preset id, or `custom:rrggbb`; anything else falls back to coral.
     _accent = AccentPalette.fromId(id) ?? GlassTheme.coral;
-    // Retired theme ids open as the theme that replaced them.
+    // Retired theme ids open as the theme that replaced them. No value at
+    // all means no theme was ever chosen: the Reelish look. Classic chosen
+    // in the picker is saved as '' and stays Classic.
     final theme = await _storage.readSetting(_themeKey);
-    _themeId = SupporterTheme.byId(theme)?.id;
-    _themeAccent = await _storage.readSetting(_themeAccentKey) != '0';
+    _themeId = theme == null
+        ? SupporterTheme.standard.id
+        : SupporterTheme.byId(theme)?.id;
+    final themeAccent = await _storage.readSetting(_themeAccentKey);
+    // Someone who picked an accent before the Reelish look existed keeps
+    // it on the new pages, until they choose the theme's own.
+    _themeAccent = themeAccent == null
+        ? theme != null || id == null
+        : themeAccent != '0';
     _apply();
   }
 

@@ -451,6 +451,35 @@ void main() {
       expect(server.blocked, isEmpty);
     });
 
+    testWidgets('someone new is welcomed, not shown empty Messages', (
+      tester,
+    ) async {
+      _tall(tester);
+      server
+        ..friends = []
+        ..incoming = [];
+      final (friends, social) = await _controllers(server);
+      await tester.pumpWidget(_app(friends, social));
+      await tester.pumpAndSettle();
+      expect(find.text('Bring your people in'), findsOneWidget);
+      expect(find.text('MESSAGES'), findsNothing);
+      // One way to add a friend, not two.
+      expect(find.text('Add by code or @handle'), findsOneWidget);
+      expect(find.text('Add a friend'), findsNothing);
+    });
+
+    testWidgets('a request waiting on an answer comes first', (tester) async {
+      _tall(tester);
+      final (friends, social) = await _controllers(server);
+      await tester.pumpWidget(_app(friends, social));
+      await tester.pumpAndSettle();
+      expect(find.text('Bring your people in'), findsNothing);
+      expect(
+        tester.getTopLeft(find.text('REQUESTS · 1')).dy,
+        lessThan(tester.getTopLeft(find.text('MESSAGES')).dy),
+      );
+    });
+
     testWidgets(
       'Windows: adding and requests beside the list',
       (tester) async {
@@ -461,10 +490,14 @@ void main() {
         final add = tester.getTopLeft(find.text('ADD A FRIEND'));
         final list = tester.getTopLeft(find.textContaining('FRIENDS ·'));
         expect(list.dx, greaterThan(add.dx));
-        // Messages leads the left column, level with the list.
+        // A request waiting on an answer leads the left column, level with
+        // the list; Messages follows it.
+        final requests = tester.getTopLeft(find.text('REQUESTS · 1'));
         final messages = tester.getTopLeft(find.text('MESSAGES'));
+        expect(requests.dx, add.dx);
+        expect(list.dy, requests.dy);
         expect(messages.dx, add.dx);
-        expect(list.dy, messages.dy);
+        expect(messages.dy, greaterThan(requests.dy));
         expect(tester.takeException(), isNull);
       },
       variant: TargetPlatformVariant.only(TargetPlatform.windows),

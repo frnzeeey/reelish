@@ -11,8 +11,9 @@ import '../widgets/brand_logo.dart';
 /// `android/app/src/main/res`; change them together so the hand-off from
 /// the system splash to Flutter has no jump.
 abstract final class SplashSpec {
-  // Fixed, not the theme: the native launch screen cannot follow it.
-  static const background = Color(0xFF0B0B0F);
+  // Fixed, not the theme: the native launch screen cannot follow it. Living
+  // Room's warm charcoal, the default look.
+  static const background = Color(0xFF14110E);
 
   /// Matches the 160dp logo in `launch_background.xml` and `splash_icon.xml`.
   /// The primary logo sits inside transparent margins, so its artwork is
@@ -31,13 +32,13 @@ abstract final class SplashSpec {
     SplashArt.sovereignCrest => crestAsset,
   };
 
-  /// The light that blooms behind [art]: coral for the logo, champagne
+  /// The light that blooms behind [art]: terracotta for the logo, champagne
   /// over midnight violet for the crest (the Sovereign Edition's colours).
   static List<Color> glowFor(SplashArt art) => switch (art) {
     SplashArt.reelish => const [
-      Color(0x47FF4D6D),
-      Color(0x14FF4D6D),
-      Color(0x00FF4D6D),
+      Color(0x47BA725A),
+      Color(0x14BA725A),
+      Color(0x00BA725A),
     ],
     SplashArt.sovereignCrest => const [
       Color(0x38D6B779),
@@ -52,7 +53,7 @@ abstract final class SplashSpec {
 ///
 /// On Android the system splash has already shown the logo at this size and
 /// position, so the logo is drawn fully visible from the first frame and
-/// only a soft coral glow blooms in behind it: fading the logo out and back
+/// only a soft terracotta glow blooms in behind it: fading the logo out and back
 /// in would read as a flicker. Platforms without a native splash get a
 /// fade and gentle 0.94 → 1 scale reveal instead.
 ///
@@ -203,7 +204,7 @@ class _SplashViewState extends State<SplashView>
                 clipBehavior: Clip.none,
                 alignment: Alignment.center,
                 children: [
-                  // Ambient coral light: a painted radial gradient, no blur.
+                  // Ambient terracotta light: a painted radial gradient, no blur.
                   Positioned(
                     left: -SplashSpec.logoSize,
                     right: -SplashSpec.logoSize,

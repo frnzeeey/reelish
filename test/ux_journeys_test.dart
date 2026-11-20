@@ -446,6 +446,30 @@ void main() {
     }
   });
 
+  group('Phone navigation', () {
+    testWidgets('Together has Watch Party; Plugins opens from Settings', (
+      tester,
+    ) async {
+      await pumpHome(tester, size: const Size(600, 844));
+      await tester.tap(find.text('Together'));
+      await settle(tester, rounds: 10);
+      expect(find.text('WATCH PARTY'), findsOneWidget);
+      await tester.tap(find.text('Settings').last);
+      await settle(tester, rounds: 10);
+      final plugins = find.widgetWithText(SettingsTile, 'Plugins');
+      // Mid-page, clear of the floating dock.
+      await Scrollable.ensureVisible(tester.element(plugins), alignment: .4);
+      await settle(tester, rounds: 5);
+      await tester.tap(plugins);
+      await settle(tester, rounds: 30);
+      expect(find.byType(PluginsScreen), findsOneWidget);
+      await tester.tap(find.byTooltip('Back'));
+      await settle(tester, rounds: 30);
+      expect(find.byType(PluginsScreen), findsNothing);
+      await disposeHome(tester);
+    });
+  });
+
   group('Play with nothing installed', () {
     Future<void> playFirstTitle(WidgetTester tester) async {
       await tester.tap(find.text('Details').first);
@@ -463,11 +487,16 @@ void main() {
       await tester.tap(find.text('Open Plugins'));
       await settle(tester, rounds: 30);
       expect(find.byType(MediaDetailsScreen), findsNothing);
+      // The phone keeps Plugins in Settings: it opens over Home, and Back
+      // returns to Home's tab.
+      expect(find.byType(PluginsScreen), findsOneWidget);
+      await tester.tap(find.byTooltip('Back'));
+      await settle(tester, rounds: 30);
+      expect(find.byType(PluginsScreen), findsNothing);
       expect(
         tester.widget<SoftGlassDock>(find.byType(SoftGlassDock)).selectedIndex,
-        2,
+        0,
       );
-      expect(find.byType(PluginsScreen), findsOneWidget);
       await disposeHome(tester);
     });
 
@@ -811,12 +840,15 @@ void main() {
       ]) {
         expect(find.text(moved), findsNothing, reason: moved);
       }
+      // Nothing here can be sent (no analytics or crash reports in this
+      // build), so no empty Privacy section stands.
+      expect(find.text('PRIVACY'), findsNothing);
       expect(find.text('Help & Support'), findsOneWidget);
       // The privacy policy sends people here to delete their account.
       expect(find.text('Profile and account'), findsOneWidget);
     });
 
-    testWidgets('Share usage statistics stays in Settings, under General', (
+    testWidgets('Share usage statistics stays in Settings, under Privacy', (
       tester,
     ) async {
       // Local builds have no analytics configured, so the switch is hidden.
@@ -844,11 +876,11 @@ void main() {
       double top(String text) => tester.getTopLeft(find.text(text)).dy;
       expect(find.text('Share usage statistics'), findsOneWidget);
       // The privacy policy promises it can be turned off in Settings.
-      expect(
-        top('Share usage statistics'),
-        greaterThan(top('Join a watch party')),
-      );
-      expect(top('Share usage statistics'), lessThan(top('PLAYBACK')));
+      expect(top('Share usage statistics'), greaterThan(top('PRIVACY')));
+      expect(top('PRIVACY'), greaterThan(top('PLAYBACK')));
+      expect(top('PRIVACY'), lessThan(top('SUPPORT')));
+      // Joining a party is Together's, not a preference.
+      expect(find.text('Join a watch party'), findsNothing);
     });
 
     for (final (entry, screen) in const [

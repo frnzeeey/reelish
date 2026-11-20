@@ -1,5 +1,5 @@
 // Settings → Appearance → App icon: the launcher icon presets in a grid.
-// Android phones and tablets only (see lib/src/platform/app_icon.dart). Two
+// Android phones and tablets only (see lib/src/platform/app_icon.dart). Three
 // icons are free; the supporter collection shows to everyone, and opens for
 // Reelish Supporters. The Founder Collection shows to the Founder only.
 
@@ -544,8 +544,8 @@ class _SupporterIconSheet extends StatelessWidget {
             const SizedBox(height: AppSpace.xs),
             Text(
               'Part of the supporter collection: every app icon, as a '
-              'thank-you to the people who fund Reelish. Default and Slate '
-              'stay free for everyone.',
+              'thank-you to the people who fund Reelish. Default, Coral and '
+              'Slate stay free for everyone.',
               textAlign: TextAlign.center,
               style: TextStyle(color: GlassTheme.muted, height: 1.4),
             ),

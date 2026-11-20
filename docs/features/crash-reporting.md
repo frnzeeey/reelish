@@ -13,7 +13,7 @@ on the computer instead.
 | Which playback failures become reports | `lib/src/diagnostics/playback_diagnostics.dart` |
 | Windows log | `lib/src/diagnostics/local_error_log.dart`, opened from Help & Support › Open error log |
 | One-time question | `lib/src/widgets/crash_report_consent_dialog.dart`, asked after the usage statistics question |
-| Settings switch | "Share crash reports" under Settings › General, shown only where reports can be sent |
+| Settings switch | "Share crash reports" under Settings › Privacy, shown only where reports can be sent |
 | Native side | `CrashReportChannel.kt` (method channel `onfeed/crash_reports`), `FirebaseStarter.kt` |
 
 - **Native SDK, not FlutterFire**, for the reason in
@@ -98,7 +98,7 @@ adb shell setprop log.tag.FirebaseCrashlytics DEBUG
 ```
 
 Answer **Share**, then use the four **Test:** rows at the end of Settings ›
-General. Non-fatals are sent on the next launch; after the native crash, open
+Privacy. Non-fatals are sent on the next launch; after the native crash, open
 the app again. Reports reach the console within a few minutes.
 
 The release workflow never sets either flag. Without the Gradle flag the native

@@ -145,6 +145,14 @@ abstract final class GlassTheme {
   /// page text is dark; the theme's own text colour on a dark one.
   static Color get onArtwork => isLight ? Colors.white : _surfaces.textPrimary;
 
+  /// Secondary text over [artworkScrim]: metadata and synopses beside an
+  /// [onArtwork] title.
+  static Color get onArtworkMuted => onArtwork.withValues(alpha: .78);
+
+  /// The quietest marks over artwork: inactive page dots, outlines of
+  /// secondary buttons.
+  static Color get onArtworkQuiet => onArtwork.withValues(alpha: .35);
+
   /// The accent on the player's dark chrome: the theme's own, or on a light
   /// theme its lighter partner, which reads on dark where the page accent
   /// (deep enough for ivory) would not.

@@ -6,36 +6,45 @@ import 'package:flutter/material.dart';
 
 import '../platform/app_icon.dart';
 import '../theme/glass_theme.dart';
+import '../theme/supporter_themes.dart';
 
 /// Reelish's brand images, in one place. Each is an 846 × 846 PNG in
 /// `assets/icons/`; the platform icons, the Android splash and TV banner,
 /// and the Windows icon are generated from them by
 /// `tool/branding/generate_brand_assets.ps1`.
 abstract final class BrandAssets {
-  /// The app icon: the white mark on the coral tile.
-  static const appIcon = 'assets/icons/reelish_icon.png';
+  /// The app icon: the emblem on a warm charcoal tile.
+  static const appIcon = 'assets/icons/reelish_emblem_icon.png';
 
-  /// The mark over the wordmark, white, on transparency: the splash logo.
-  static const primaryLogo = 'assets/icons/Primary_logo.png';
+  /// The emblem over the wordmark, on transparency: the splash logo.
+  static const primaryLogo = 'assets/icons/reelish_primary_logo.png';
 
-  /// The mark alone, white, on transparency.
-  static const logoIcon = 'assets/icons/logo_icon.png';
+  /// The emblem alone, on transparency: the logo since v1.39.
+  static const logoIcon = 'assets/icons/reelish_app_emblem.png';
 
-  /// The wordmark alone ("REEL" white, "ISH" coral), on transparency.
-  static const wordLogo = 'assets/icons/word_logo.png';
+  /// The wordmark alone ("REEL" white, "ISH" terracotta), on transparency.
+  static const wordLogo = 'assets/icons/reelish_wordmark.png';
+
+  /// The emblem in white with its soft shadows, on transparency: the mark on
+  /// colour tiles (the icon presets, custom accent tiles).
+  static const whiteEmblem = 'assets/icons/reelish_emblem_white.png';
+  static const whiteEmblemBounds = Rect.fromLTRB(.212, .260, .790, .749);
 
   /// Where the artwork sits inside its square canvas, as fractions of the
-  /// canvas, measured from the images' alpha with a little room for their
-  /// soft shadows. Update these if the images are redrawn.
-  static const logoIconBounds = Rect.fromLTRB(.194, .281, .809, .745);
-  static const wordLogoBounds = Rect.fromLTRB(.217, .466, .785, .535);
-  static const primaryLogoBounds = Rect.fromLTRB(.195, .208, .806, .809);
+  /// canvas, measured from the images' alpha (soft shadows included) by
+  /// tool/branding/generate_emblem_sources.ps1. Update these if the images
+  /// are redrawn.
+  static const logoIconBounds = Rect.fromLTRB(.080, .150, .920, .862);
+  static const wordLogoBounds = Rect.fromLTRB(.219, .468, .783, .531);
+  static const primaryLogoBounds = Rect.fromLTRB(.206, .208, .793, .785);
 }
 
-/// The app icon in the chosen accent colour: the App icon preset of the
-/// same colour (each built-in accent has one; coral is the default icon),
-/// or for a custom colour the white mark on a tile of that colour. Read out
-/// as "Reelish".
+/// The app icon for the look in effect: under a theme, the theme's own icon
+/// (the emblem for Living Room, a Signature icon for a supporter theme, the
+/// Sovereign Crest for Sovereign Edition); for a built-in accent, the App
+/// icon preset of that colour; for a custom colour, the white emblem on a
+/// tile of that colour, as the colour presets are drawn.
+/// Read out as "Reelish".
 class AccentAppIcon extends StatelessWidget {
   const AccentAppIcon({super.key, required this.size, this.radius = 13});
 
@@ -44,7 +53,21 @@ class AccentAppIcon extends StatelessWidget {
 
   /// The icon artwork for [accentId], or null for a custom colour.
   static String? assetFor(String accentId) {
-    if (accentId == GlassTheme.coral.id) return BrandAssets.appIcon;
+    const themePrefix = 'theme:';
+    if (accentId.startsWith(themePrefix)) {
+      final theme = SupporterTheme.byId(accentId.substring(themePrefix.length));
+      if (theme == null || theme.collection == ThemeCollection.reelish) {
+        return BrandAssets.appIcon;
+      }
+      if (theme.collection == ThemeCollection.founder) {
+        return AppIconPreset.byId('sovereign_crest').preview;
+      }
+      // Each supporter theme has its Signature icon, named after it.
+      for (final preset in AppIconPreset.all) {
+        if (preset.label == theme.name) return preset.preview;
+      }
+      return BrandAssets.appIcon;
+    }
     for (final preset in AppIconPreset.all) {
       if (preset.id == accentId) return preset.preview;
     }
@@ -80,7 +103,11 @@ class AccentAppIcon extends StatelessWidget {
                   ),
                   child: Center(
                     child: ExcludeSemantics(
-                      child: ReelishMark(height: size * .42),
+                      child: _BrandArtwork(
+                        asset: BrandAssets.whiteEmblem,
+                        bounds: BrandAssets.whiteEmblemBounds,
+                        height: size * .42,
+                      ),
                     ),
                   ),
                 ),

@@ -36,7 +36,6 @@ import 'help_support_screen.dart';
 import 'notification_settings_screen.dart';
 import 'recommendation_settings_screen.dart';
 import 'subtitle_addons_screen.dart';
-import 'watch_party/join_party_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({
@@ -44,11 +43,16 @@ class SettingsScreen extends StatelessWidget {
     required this.onPlaybackSettings,
     required this.onAppearanceSettings,
     required this.accentSettings,
+    this.onPlugins,
   });
 
   final VoidCallback onPlaybackSettings;
   final VoidCallback onAppearanceSettings;
   final AccentSettingsController accentSettings;
+
+  /// Opens Plugins: the phone keeps it here, as it is set up once and
+  /// seldom visited. Null on TV, whose rail has its own Plugins.
+  final VoidCallback? onPlugins;
 
   void _open(BuildContext context, WidgetBuilder builder) => Navigator.of(
     context,
@@ -140,23 +144,18 @@ class SettingsScreen extends StatelessWidget {
               ),
             ),
           ),
-          // On TV this is the way into a party; phones also have the
-          // button on Home.
-          SettingsTile(
-            icon: ReelishIcons.people,
-            title: 'Join a watch party',
-            description: 'Enter a code to watch in sync with friends',
-            onTap: () => _open(context, (_) => const JoinPartyScreen()),
-          ),
-          // Android with Firebase configured only; absent elsewhere.
-          const _UsageStatisticsTile(),
-          const _CrashReportsTile(),
-          if (CrashReporter.testTriggers) const _CrashTestTiles(),
         ],
       ),
       SettingsSection(
         label: 'PLAYBACK',
         children: [
+          if (onPlugins case final onPlugins?)
+            SettingsTile(
+              icon: ReelishIcons.plugin,
+              title: 'Plugins',
+              description: 'The sources titles play from, and the Library',
+              onTap: onPlugins,
+            ),
           SettingsTile(
             icon: ReelishIcons.playCircle,
             title: 'Playback',
@@ -171,6 +170,10 @@ class SettingsScreen extends StatelessWidget {
           ),
         ],
       ),
+      // What leaves the device, after how Reelish plays. A watch party is
+      // joined from Together, on every interface, not here: Settings is for
+      // preferences.
+      const _PrivacySection(),
       // Everything about Reelish rather than its behaviour lives here: help,
       // About, credits, and the privacy policy and terms.
       SettingsSection(
@@ -234,25 +237,49 @@ class AppearanceSettingsScreen extends StatelessWidget {
           );
         },
       ),
+      // Reelish's own looks, free to everyone: Living Room, the default,
+      // and Classic, the look before it.
+      AnimatedBuilder(
+        animation: controller,
+        builder: (context, _) => SettingsSection(
+          label: 'REELISH',
+          description:
+              'A theme changes the colours of every screen and dresses your '
+              'profile. Classic uses the accent you pick below.',
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(14),
+              child: SupporterThemePicker(
+                savedId: controller.theme?.id,
+                classicAccent: controller.accent,
+                themes: SupporterTheme.reelishCollection,
+                classicLast: true,
+                onSelect: (id) => unawaited(
+                  controller.setTheme(
+                    id == SupporterTheme.classicId ? null : id,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
       AnimatedBuilder(
         animation: controller,
         builder: (context, _) {
           final unlocked = controller.supporters.has(SupporterPerk.appThemes);
           return SettingsSection(
-            label: 'THEMES',
+            label: 'SUPPORTER THEMES',
             description: unlocked
-                ? 'A theme changes the colours of every screen and dresses '
-                      'your profile. Choose one to preview it first. Classic '
-                      'uses the accent you pick below.'
-                : 'For Reelish Supporters: a theme changes the colours of '
-                      'every screen and dresses your profile. Choose one to '
-                      'preview it.',
+                ? 'Yours as a Reelish Supporter. Choose one to preview it '
+                      'first.'
+                : 'For Reelish Supporters. Choose one to preview it.',
             children: [
               Padding(
                 padding: const EdgeInsets.all(14),
                 child: SupporterThemePicker(
                   savedId: controller.theme?.id,
-                  classicAccent: controller.accent,
+                  includeClassic: false,
                   locked: !unlocked,
                   onLocked: () => unawaited(_explainThemes(context)),
                   onSelect: (id) => unawaited(
@@ -1721,6 +1748,38 @@ class PlaybackSettingsScreen extends StatelessWidget {
   String _durationLabel(int hours) => hours >= 24
       ? '${hours ~/ 24} day${hours >= 48 ? 's' : ''}'
       : '$hours hours';
+}
+
+/// PRIVACY: the opt-in usage statistics and crash reports. Shown only where
+/// either can be sent (Android builds with a Firebase configuration), or
+/// with the crash test rows compiled in; absent elsewhere, so no empty
+/// section stands on Windows.
+class _PrivacySection extends StatelessWidget {
+  const _PrivacySection();
+
+  @override
+  Widget build(BuildContext context) {
+    final analytics = AnalyticsService.instance;
+    final reports = CrashReporter.instance;
+    return ListenableBuilder(
+      listenable: Listenable.merge([analytics.available, reports.available]),
+      builder: (context, _) {
+        if (!analytics.available.value &&
+            !reports.available.value &&
+            !CrashReporter.testTriggers) {
+          return const SizedBox.shrink();
+        }
+        return SettingsSection(
+          label: 'PRIVACY',
+          children: [
+            const _UsageStatisticsTile(),
+            const _CrashReportsTile(),
+            if (CrashReporter.testTriggers) const _CrashTestTiles(),
+          ],
+        );
+      },
+    );
+  }
 }
 
 /// Turns opt-in usage statistics on or off. Shown only where they can be

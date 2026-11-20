@@ -265,7 +265,9 @@ class _PlayerProgressBarState extends State<PlayerProgressBar> {
                 child: Center(
                   child: DecoratedBox(
                     decoration: BoxDecoration(
-                      color: const Color(0xE6101015),
+                      color: GlassTheme.playerSurfaces.background.withValues(
+                        alpha: .9,
+                      ),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: const Color(0x26FFFFFF)),
                     ),

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../../theme/glass_theme.dart';
 import '../../theme/reelish_icons.dart';
 
 import '../../models/playback_settings.dart';
@@ -49,7 +50,7 @@ class SubtitlePositionPanel extends StatelessWidget {
         constraints: const BoxConstraints(maxWidth: 440),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: const Color(0xE6101015),
+            color: GlassTheme.playerSurfaces.background.withValues(alpha: .9),
             borderRadius: BorderRadius.circular(18),
             border: Border.all(color: const Color(0x2EFFFFFF)),
           ),

@@ -612,10 +612,10 @@ class _HeroText extends StatelessWidget {
                 meta,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
-                  color: Colors.white70,
+                  color: GlassTheme.onArtworkMuted,
                 ),
               ),
             ),
@@ -899,7 +899,7 @@ class _SpotlightRail extends StatelessWidget {
                             decoration: BoxDecoration(
                               color: i == index
                                   ? GlassTheme.primary
-                                  : Colors.white.withValues(alpha: .28),
+                                  : GlassTheme.onArtworkQuiet,
                               borderRadius: BorderRadius.circular(2),
                             ),
                           ),
@@ -912,18 +912,18 @@ class _SpotlightRail extends StatelessWidget {
                       children: [
                         TextSpan(
                           text: '${index + 1}'.padLeft(2, '0'),
-                          style: const TextStyle(color: Colors.white),
+                          style: TextStyle(color: GlassTheme.onArtwork),
                         ),
                         TextSpan(
                           text: '  /  ${'${items.length}'.padLeft(2, '0')}',
                         ),
                       ],
                     ),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
                       letterSpacing: 1.4,
                       fontWeight: FontWeight.w800,
-                      color: Colors.white54,
+                      color: GlassTheme.onArtworkMuted,
                     ),
                   ),
                 ],

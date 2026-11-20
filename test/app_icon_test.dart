@@ -131,9 +131,10 @@ void main() {
       }
     });
 
-    test('exactly two icons are free: Default and Slate', () {
+    test('exactly three icons are free: Default, Coral and Slate', () {
       expect(AppIconPreset.all.where((p) => p.free).map((p) => p.id), [
         'default',
+        'coral',
         'slate',
       ]);
       expect(
@@ -415,7 +416,7 @@ void main() {
       return supporters;
     }
 
-    testWidgets('someone who is not a supporter sees every icon, two free', (
+    testWidgets('someone who is not a supporter sees every icon, three free', (
       tester,
     ) async {
       await show(tester, ['none']);

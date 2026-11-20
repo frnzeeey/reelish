@@ -412,6 +412,68 @@ void main() {
     String key(PartyContent c) =>
         '${c.type}:${c.tmdbId}:${c.season}:${c.episode}';
 
+    testWidgets('leads the actions beside Play on every interface', (
+      tester,
+    ) async {
+      // Reading order: earlier line first, then further left.
+      bool before(String a, String b) {
+        final ya = _y(tester, a);
+        final yb = _y(tester, b);
+        return ya < yb - 1 ||
+            (ya - yb).abs() <= 1 && _x(tester, a) < _x(tester, b);
+      }
+
+      void share(BuildContext _, MediaItem _) {}
+      await _pump(
+        tester,
+        MediaDetailsScreen(
+          item: _movie,
+          tmdb: tmdb,
+          onPlay: (_) {},
+          onPlayEpisode: (_, _, _) {},
+          onWatchTogether: start,
+          onToggleFavorite: () async => true,
+          onShare: share,
+        ),
+      );
+      expect(before('Watch together', 'My list'), isTrue);
+      expect(before('My list', 'Recommend'), isTrue);
+
+      await _pump(
+        tester,
+        TvMediaDetailsScreen(
+          item: _movie,
+          tmdb: tmdb,
+          onPlay: (_) {},
+          onPlayEpisode: (_, _, _) {},
+          onWatchTogether: start,
+          onToggleFavorite: () async => true,
+          onShare: share,
+        ),
+        tv: true,
+      );
+      expect(before('Play movie', 'Watch together'), isTrue);
+      expect(before('Watch together', 'My list'), isTrue);
+      expect(before('My list', 'Recommend'), isTrue);
+
+      await _pump(
+        tester,
+        DesktopDetailsScreen(
+          item: _movie,
+          tmdb: tmdb,
+          onPlay: (_, _) {},
+          onPlayEpisode: (_, _, _, _) {},
+          isFavorite: (_) => false,
+          onToggleFavorite: (_) async => true,
+          onWatchTogether: start,
+          onShare: share,
+        ),
+      );
+      expect(before('Play', 'Watch together'), isTrue);
+      expect(before('Watch together', 'My list'), isTrue);
+      expect(before('My list', 'Recommend'), isTrue);
+    });
+
     testWidgets('phone: a movie starts at once, a series asks which episode', (
       tester,
     ) async {
@@ -522,7 +584,7 @@ void main() {
           onShare: share,
         ),
       );
-      await tester.tap(find.text('Share'));
+      await tester.tap(find.text('Recommend'));
       await _pump(
         tester,
         TvMediaDetailsScreen(
@@ -534,7 +596,7 @@ void main() {
         ),
         tv: true,
       );
-      await tester.tap(find.text('Share'));
+      await tester.tap(find.text('Recommend'));
       await _pump(
         tester,
         DesktopDetailsScreen(
@@ -547,11 +609,11 @@ void main() {
           onShare: share,
         ),
       );
-      await tester.tap(find.text('Share'));
+      await tester.tap(find.text('Recommend'));
       expect(shared, ['8', '7', '8']);
     });
 
-    testWidgets('no Share while Friends is off', (tester) async {
+    testWidgets('no Recommend while Friends is off', (tester) async {
       await _pump(
         tester,
         MediaDetailsScreen(
@@ -561,7 +623,7 @@ void main() {
           onPlayEpisode: (_, _, _) {},
         ),
       );
-      expect(find.text('Share'), findsNothing);
+      expect(find.text('Recommend'), findsNothing);
     });
   });
 }

@@ -4,12 +4,12 @@
   <background android:drawable="@drawable/ic_launcher_background_indigo"/>
   <foreground>
       <inset
-          android:drawable="@drawable/ic_launcher_foreground"
+          android:drawable="@drawable/ic_launcher_foreground_mark"
           android:inset="20%" />
   </foreground>
   <monochrome>
       <inset
-          android:drawable="@drawable/ic_launcher_monochrome"
+          android:drawable="@drawable/ic_launcher_monochrome_mark"
           android:inset="20%" />
   </monochrome>
 </adaptive-icon>

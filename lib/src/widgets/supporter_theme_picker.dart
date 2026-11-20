@@ -27,13 +27,18 @@ class SupporterThemePicker extends StatelessWidget {
     this.classicAccent,
     this.themes = SupporterTheme.all,
     this.includeClassic = true,
+    this.classicLast = false,
   });
 
-  /// The themes to offer: the supporter collection, or the Founder's.
+  /// The themes to offer: Reelish's own, the supporter collection, or the
+  /// Founder's.
   final List<SupporterTheme> themes;
 
   /// Whether Classic, the look without a theme, leads the cards.
   final bool includeClassic;
+
+  /// Whether Classic follows [themes] rather than leading them.
+  final bool classicLast;
 
   /// The accent Classic returns to, for its card; the current accent when
   /// null. Under a theme the current accent is the theme's, so the
@@ -73,20 +78,20 @@ class SupporterThemePicker extends StatelessWidget {
           280.0,
           (room - spacing * (columns - 1)) / columns,
         );
+        final classic = _ThemeCard(
+          width: width,
+          name: 'Classic',
+          description: 'Your accent on Reelish black',
+          surfaces: ThemeSurfaces.classic,
+          accent: classicAccent ?? GlassTheme.accent,
+          selected: current == SupporterTheme.classicId,
+          onSelect: () => onSelect(SupporterTheme.classicId),
+        );
         return Wrap(
           spacing: spacing,
           runSpacing: spacing,
           children: [
-            if (includeClassic)
-              _ThemeCard(
-                width: width,
-                name: 'Classic',
-                description: 'Your accent on Reelish black',
-                surfaces: ThemeSurfaces.classic,
-                accent: classicAccent ?? GlassTheme.accent,
-                selected: current == SupporterTheme.classicId,
-                onSelect: () => onSelect(SupporterTheme.classicId),
-              ),
+            if (includeClassic && !classicLast) classic,
             for (final theme in themes)
               _ThemeCard(
                 width: width,
@@ -99,6 +104,7 @@ class SupporterThemePicker extends StatelessWidget {
                 locked: locked,
                 onSelect: () => _preview(context, theme, current),
               ),
+            if (includeClassic && classicLast) classic,
           ],
         );
       },
@@ -196,7 +202,8 @@ class ThemePreview extends StatelessWidget {
                           ),
                         ),
                       ),
-                      _CollectionBadge(theme.collection),
+                      if (theme.collection != ThemeCollection.reelish)
+                        _CollectionBadge(theme.collection),
                     ],
                   ),
                   const SizedBox(height: AppSpace.xxs),
@@ -621,7 +628,8 @@ class _ThemeCard extends StatelessWidget {
                 fit: StackFit.expand,
                 children: [
                   _MiniPage(s: s, accent: accent),
-                  if (theme case final theme?)
+                  if (theme case final theme?
+                      when theme.collection != ThemeCollection.reelish)
                     Positioned(
                       right: AppSpace.xs,
                       bottom: AppSpace.xs,

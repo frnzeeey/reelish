@@ -10,12 +10,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/media_item.dart';
 import '../models/resume_summary.dart';
+import '../screens/social/together_screen.dart';
 import '../navigation/app_destination.dart';
 import '../theme/glass_theme.dart';
 import '../widgets/ambient_backdrop.dart';
 import '../widgets/poster_image.dart';
 import 'desktop_widgets.dart';
 import '../widgets/brand_logo.dart';
+import '../widgets/count_badge.dart';
 import '../widgets/avatar_frame.dart';
 import '../widgets/profile_avatar.dart';
 import '../widgets/artwork_image.dart';
@@ -414,7 +416,7 @@ class _RailContents extends StatelessWidget {
 
   /// The mark, every destination, the divider and the pin: what must fit
   /// before Continue watching gets any room.
-  static const fixedHeight = 540.0;
+  static const fixedHeight = 592.0;
 
   @override
   Widget build(BuildContext context) {
@@ -635,6 +637,21 @@ class _SidebarItemState extends State<_SidebarItem> {
                           dimension: 23,
                           child: AvatarFrameRim(
                             child: MyProfileAvatar(size: 23),
+                          ),
+                        )
+                      else if (widget.destination == TvDestination.together)
+                        // What is new with friends, on the icon so it shows
+                        // with the rail closed too.
+                        TogetherUpdates(
+                          builder: (context, count) => CountBadge(
+                            count: count,
+                            child: Icon(
+                              selected
+                                  ? ReelishIcons.filled(widget.destination.icon)
+                                  : widget.destination.icon,
+                              size: 23,
+                              color: color,
+                            ),
                           ),
                         )
                       else

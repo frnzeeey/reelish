@@ -15,8 +15,9 @@ import 'theme_tokens.dart';
 /// The ornament a theme adds to its backdrop, drawn once and cheaply.
 enum ThemeOrnament { none, stars, aurora, sheen, crest }
 
-/// Who a theme belongs to: the supporter perks, or the Founder's own.
-enum ThemeCollection { supporter, founder }
+/// Who a theme belongs to: everyone (Reelish's own looks), the supporter
+/// perks, or the Founder's own.
+enum ThemeCollection { reelish, supporter, founder }
 
 @immutable
 class SupporterTheme {
@@ -89,7 +90,38 @@ class SupporterTheme {
     dark: deepAccent,
   );
 
-  /// Reelish's flagship look.
+  /// The Reelish look, from the emblem's three colours: terracotta for the
+  /// accent, sand for the answering light, cream for text, on warm charcoal
+  /// rather than cinema black. Free, and the look for anyone who has not
+  /// chosen a theme (AccentSettingsController.load).
+  static const livingRoom = SupporterTheme(
+    id: 'living_room',
+    name: 'Living Room',
+    description: 'Warm charcoal, terracotta and sand',
+    surfaces: ThemeSurfaces(
+      background: Color(0xFF14110E),
+      surface: Color(0xFF1F1A16),
+      raised: Color(0xFF29221D),
+      // The emblem's cream.
+      textPrimary: Color(0xFFF4F0E5),
+      // 8:1 on the page, so captions stay readable from the sofa.
+      textSecondary: Color(0xFFB4AA9C),
+      glassTintOverride: Color(0xFF1A1613),
+      ambient: Color(0xFFBA725A),
+    ),
+    // The emblem's terracotta: 5:1 as text on the page.
+    primary: Color(0xFFBA725A),
+    light: Color(0xFFCB9884),
+    deepAccent: Color(0xFF9C5B45),
+    glow: Color(0xFFBA725A),
+    // The emblem's sand.
+    second: Color(0xFFCAA76C),
+    deep: Color(0xFF1C1511),
+    ink: Color(0xFFF4F0E5),
+    collection: ThemeCollection.reelish,
+  );
+
+  /// Reelish's flagship supporter look.
   static const velvetCinema = SupporterTheme(
     id: 'velvet_cinema',
     name: 'Velvet Cinema',
@@ -303,8 +335,14 @@ class SupporterTheme {
   /// donation unlocks. Shown only to the Founder.
   static const founderCollection = [sovereign];
 
-  /// Every theme, in either collection.
-  static const offered = [...all, ...founderCollection];
+  /// Reelish's own looks, free to everyone; the first is the default.
+  static const reelishCollection = [livingRoom];
+
+  /// The theme for anyone who has not chosen one.
+  static const standard = livingRoom;
+
+  /// Every theme, in any collection.
+  static const offered = [...reelishCollection, ...all, ...founderCollection];
 
   /// The picker's choice for no theme: the accent the user picked.
   static const classicId = 'classic';

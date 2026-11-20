@@ -37,6 +37,7 @@ import '../../services/subtitle_addon_service.dart';
 import '../../services/subtitle_loader.dart';
 import '../../services/torrent_source_preparer.dart';
 import '../../theme/design_tokens.dart';
+import '../../theme/glass_theme.dart';
 import '../../social/activity_publisher.dart';
 import '../../watch_party/party_player_sync.dart';
 import 'audio_switch_check.dart';
@@ -3649,7 +3650,9 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
                 child: IgnorePointer(
                   child: DecoratedBox(
                     decoration: BoxDecoration(
-                      color: const Color(0xCC101015),
+                      color: GlassTheme.playerSurfaces.background.withValues(
+                        alpha: .8,
+                      ),
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: Padding(

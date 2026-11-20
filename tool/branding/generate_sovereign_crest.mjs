@@ -1,17 +1,19 @@
 // Generates Sovereign Crest, the Founder Collection's launcher icon
 // (Settings > Appearance > App icon, shown to the Founder only): the Reelish
-// logo (assets/icons/logo_icon.png) recoloured in champagne gold, wearing the
+// emblem (assets/icons/reelish_app_emblem.png) in champagne gold, wearing the
 // Founder Collection's crown (sovereign_shared.mjs), inside a champagne laurel
 // wreath, on obsidian with a restrained midnight-violet glow.
 //
 //   cd tool/icons && npm ci && cd ../.. && node tool/branding/generate_sovereign_crest.mjs
 //
-// The gold fills the clean mark (tool/branding/launcher_monochrome.png, the
-// logo without its shadow, on the same canvas); logo_icon.png's own soft
-// shadow is kept underneath in dark ink, so the depth of the original stays.
+// The gold fills the clean emblem (tool/branding/emblem_clean.png, its shapes
+// without their shadows, on the same canvas; generate_emblem_sources.ps1);
+// the emblem's own soft shadows are kept underneath in dark ink, so the depth
+// of the original stays.
 // Writes:
 //   android/app/src/main/res/drawable-nodpi/ic_launcher_foreground_sovereign_crest.png
-//       the 432 px (108 dp at xxxhdpi) foreground: wreath, crown and gold logo
+//       the 432 px (108 dp at xxxhdpi) foreground: wreath, crown and gold
+//       emblem
 //   android/app/src/main/res/drawable-nodpi/ic_launcher_monochrome_sovereign_crest.png
 //       their silhouette, for themed icons on Android 13 and later
 //   android/app/src/main/res/drawable-nodpi/ic_launcher_background_sovereign_crest.png
@@ -55,30 +57,34 @@ const size = 432;
 const densities = { mdpi: 48, hdpi: 72, xhdpi: 96, xxhdpi: 144, xxxhdpi: 192 };
 const icoSizes = [16, 24, 32, 48, 64, 128, 256];
 
-const logo = CK.MakeImageFromEncoded(readFileSync(join(root, 'assets', 'icons', 'logo_icon.png')));
-const clean = CK.MakeImageFromEncoded(readFileSync(join(branding, 'launcher_monochrome.png')));
+const logo = CK.MakeImageFromEncoded(readFileSync(join(root, 'assets', 'icons', 'reelish_app_emblem.png')));
+const clean = CK.MakeImageFromEncoded(readFileSync(join(branding, 'emblem_clean.png')));
 
-// Placement in the logo's own 846 px space: the mark spans about x 178-668,
-// y 242-602, the R alone x 263-668. The crown sits on the R, centred over it
-// (not over the whole mark, whose dot would pull it left), a little narrower
-// than the R's bowl so the letter stays the subject. Its base keeps 12 px
-// above the R.
-const crownWidth = 236;
+// Placement in the emblem's own 846 px space: its shapes span x 78-767,
+// y 132-713, the beam's top bar about x 248-598, centred on x 422.5. The crown
+// sits on the beam, centred over it and a little narrower than its bar, so
+// the emblem stays the subject. Its base keeps 16 px above the emblem.
+const emblem = { left: 78, top: 132, right: 767, bottom: 713 };
+const crownWidth = 300;
 const crown = {
-  left: 465 - crownWidth / 2,
-  top: 230 - crownHeight(crownWidth),
+  left: (emblem.left + emblem.right) / 2 - crownWidth / 2,
+  top: emblem.top - 16 - crownHeight(crownWidth),
   width: crownWidth,
 };
-// The group of crown and mark, centred on the wreath: its box, nudged a
-// little toward the R, so the crown sits close to the wreath's axis.
-const content = { x: (178 + 668) / 2 + 14, y: (crown.top + 602) / 2 };
+// The group of crown and emblem, centred on the wreath.
+const content = {
+  x: (emblem.left + emblem.right) / 2,
+  y: (crown.top + emblem.bottom) / 2,
+};
 // The safe zone's radius at 432 px (33 dp), less a little room for shadows.
 const safe = 132 - 12;
 // Room between the artwork and the wreath's inner leaves, at 432 px.
 const breathing = 8;
 // The share of the room inside the wreath the crown and mark reach to, so
-// they read as a crest, not as a logo squeezed into a ring.
-const share = 0.78;
+// they read as a crest, not as a logo squeezed into a ring. The emblem is
+// square-cornered, so its corners reach the limit while its body still has
+// room: a larger share than the round R needed.
+const share = 0.92;
 
 /** Draws the artwork in logo space; the caller sets the transform. */
 function paintArtwork(canvas, { mono = false } = {}) {
@@ -87,17 +93,17 @@ function paintArtwork(canvas, { mono = false } = {}) {
     drawCrown(CK, canvas, crown.left, crown.top, crown.width, { ink: CK.Color(255, 255, 255, 1) });
     return;
   }
-  // logo_icon's shadow, in ink.
+  // The emblem's shadows, in ink.
   const ink = new CK.Paint();
   ink.setColorFilter(CK.ColorFilter.MakeBlend(CK.Color(0, 0, 0, 0.55), CK.BlendMode.SrcIn));
   canvas.drawImage(logo, 0, 0, ink);
   ink.delete();
   drawCrown(CK, canvas, crown.left, crown.top, crown.width);
-  // The clean mark, filled with metal.
+  // The clean emblem, filled with metal.
   canvas.saveLayer(null, null, null, 0);
   canvas.drawImage(clean, 0, 0, null);
   const gold = new CK.Paint();
-  gold.setShader(metal(CK, [178, 240], [668, 605]));
+  gold.setShader(metal(CK, [emblem.left, emblem.top], [emblem.right, emblem.bottom]));
   gold.setBlendMode(CK.BlendMode.SrcIn);
   canvas.drawRect(CK.XYWHRect(0, 0, 846, 846), gold);
   gold.delete();

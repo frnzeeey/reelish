@@ -1,8 +1,7 @@
 # Reelish UX/UI redesign: audit and roadmap
 
-Status: **Stage A (audit) and Stage B (plan) complete. Implementation not
-started.** Three decisions block parts of it (§ 9); everything else is
-ready to start phase by phase.
+Status: **Stages A and B complete; decisions D1–D3 taken (§ 9);
+implementation in progress (§ 10).**
 
 Scope: a brand-identity refinement and UX/UI redesign of the phone, Android
 TV / Google TV and Windows interfaces. Not a rebrand and not a rewrite. The
@@ -52,10 +51,10 @@ Audit baseline: `main` at `9e16ed3` (Release v1.38.2), 20 November 2026.
    finishes); the rest cluster in a few files (player overlays, Wrapped,
    profile style, account badges). Fix them as each screen is redesigned,
    not with a repo-wide sweep.
-6. **Social screens are phone-shaped on every platform.** `friends_screen.dart`
-   and `messages_screen.dart` have TV focus handling but no desktop layout:
-   on a wide window a conversation list and a chat are a single stretched
-   column.
+6. **Messages has no wide layout.** `friends_screen.dart` already splits into
+   two columns on TV and Windows from 720 dp, but `messages_screen.dart` is a
+   single column: on a wide window the conversation list and a chat are not
+   side by side.
 7. **Some brief items do not exist and some are named differently.** There is
    no offline download feature. "Sovereign" is not an account tier: it is
    the Founder's own collection (Sovereign Edition theme and profile card,
@@ -352,15 +351,38 @@ listed as unverified unless run on devices.
 
 ---
 
-## 9. Decisions needed
+## 9. Decisions
 
-- **D1 — Brand assets and palette.** Supply the approved logo files (vector
-  preferred: symbol, wordmark, lock-up) and colour values. Confirm whether
-  `assets/icons/reelish_app_emblem.png` is the new symbol. Until then
-  Phase 10 and any new palette are not started; no identity is invented.
-- **D2 — Plugins on the phone.** (a) Five dock items with Plugins kept, or
-  (b) Plugins moves to Settings › Sources, with a Home prompt when no
-  provider is installed. Windows and TV keep Plugins either way.
-- **D3 — Default look.** Whether the new brand theme becomes the default
-  only for new installs, for everyone who never chose a theme, or stays
-  opt-in. Saved choices are kept in every case.
+- **D1 — Brand assets and palette: decided.**
+  `assets/icons/reelish_app_emblem.png` is the new logo. Its three colours are
+  the palette: terracotta `#BA725A`, sand `#CAA76C`, cream `#F4F0E5`. It has
+  no green, so none is added; the brief's sofa/three-circle description does
+  not match the emblem and is not followed. Only a 846 × 846 PNG exists: a
+  vector source would still help for launcher layers and the wordmark.
+- **D2 — Plugins on the phone: option (b).** Plugins moves into Settings
+  (PLAYBACK › Plugins); Together takes its dock slot. The Home card for "no
+  source installed" already existed and stays. Windows and TV keep Plugins in
+  the rail and sidebar.
+- **D3 — Default look: yes.** The brand theme is the default for everyone
+  who has never chosen a theme (no saved `onfeed.appearance.theme`). Choosing
+  Classic, a supporter theme or Sovereign Edition is kept.
+
+## 10. Progress
+
+| Step | State | Notes |
+|---|---|---|
+| Living Room theme (brand palette) and default rule | Done | `lib/src/theme/supporter_themes.dart`, `lib/src/services/accent_settings_controller.dart`; [App themes](features/supporter-themes.md) |
+| Appearance: REELISH section (Living Room, Classic) above SUPPORTER THEMES | Done | `lib/src/screens/playback_settings_screen.dart`, `lib/src/widgets/supporter_theme_picker.dart` |
+| Together destination (phone dock, TV rail, Windows sidebar) with badge | Done | `lib/src/screens/social/together_screen.dart`; Friends page with a Watch Party section. TV rail items 48 → 44 dp so nine fit 540 dp; Windows sidebar's fixed part 540 → 592 px (scrolls below that) |
+| Plugins into phone Settings | Done | Opened over Home from Settings and from a Play with no source |
+| Phone header Join-party pill | Kept for now | Covered by layout tests; revisit in Phase 4 |
+| Brand assets (Phase 10) | Done | Emblem as the logo in the app (header, sidebar, Spotlight label, credits), splash (warm charcoal, terracotta glow), Android launcher icon, TV banner, Windows `.ico`; wordmark "ISH" in terracotta. `tool/branding/generate_emblem_sources.ps1` builds the sources. Every launcher icon now carries the emblem: the colour and Signature icons keep their backgrounds with the emblem in white (Ivory Studio in ink); the original coral is the free Coral icon; Sovereign Crest wears the emblem in champagne gold under the crown, in its laurel wreath |
+| Messages side by side on Windows | Done | `lib/src/screens/social/messages_split_view.dart`, from 900 px |
+| Phase 1: design-system gaps | Done | `AppShadow` (raised, floating, glow) in `lib/src/theme/design_tokens.dart`, adopted where a shadow already had exactly those values (poster cards, the Windows party poster, the TV focus glow), so nothing moved. The TV focus ring was already one spec (`TvFocusable`). Overlay roles and a secondary accent are left to Phase 4, where the Spotlight first needs them, rather than added unused |
+| Phase 2: shared components | Done | `NoticeCard` (replaces the Library and Collections empty cards and the Home "Add a source" card, now a solid card rather than glass), `EmptyState` (empty collection pages, an empty chat, the Messages pane), `CountBadge` (the Together badge on the dock, rail and sidebar); `test/shared_components_test.dart`. Platform headings stay per platform (`DesktopSectionTitle`, `TvRowTitle`, the phone's row heading) |
+| Phase 4: Home and Spotlight | Done | Text over artwork has two roles beside `GlassTheme.onArtwork`: `onArtworkMuted` (metadata, synopses) and `onArtworkQuiet` (page dots, secondary outlines), replacing hard-coded whites on the phone Spotlight and the Windows hero; on dark themes they follow the theme's text (cream on Living Room). The phone Spotlight label carries the emblem, as Windows' does. The phone row heading is on the type scale. Home's offline notice and empty catalog use `NoticeCard` and `EmptyState`. Kept on purpose: the three Spotlight layouts (each platform's own) and their animation presets; the phone header's Join party button (Watch Party's entry on Home; Together offers it too), a change from the plan; TV's hero text, which follows the page ink because its hero fades into the page; Windows' `DesktopMessage` and source banner, already consistent |
+| Phase 5: Details | Done | One action order on phone, TV and Windows: Play/Resume and Start over, then Watch together, My list, Collections, Recommend (was Share: it sends the title to friends, who see it under Recommended to you, and "Share" also names the usage-statistics consents). TV's remote reaches Watch together right after Play. The phone and Windows secondary buttons share one style each, on the artwork text colours (`onArtwork`, `onArtworkQuiet`) instead of fixed white; the phone tagline uses `onArtworkMuted`. Not changed: metadata, episode lists, source search and the play wiring |
+| Phase 6: Profile | Done | Profile reads identity card, PERSONALIZE (avatar frame, profile card, theme, app icon), YOUR VIEWING, TOGETHER (Friends, kept as a link, and Friends & privacy, both moved out of Account) and ACCOUNT. ACCOUNT gains a Reelish Supporters row: an invitation for free accounts, "Thank you" for supporters, nothing extra for the Founder (the card's capsule names them); before, Profile reached the Supporters page only through a badge, which free accounts do not have. A label only, from `SupporterController.entitlement`; no perk reads it. On TV and Windows, Together and Account form the second column. Not changed: the identity card, the Sovereign Edition card and frame, avatar, frame and card pickers and every unlock rule |
+| Phase 7: Together | Done | Friend requests lead the page (they wait on an answer). Someone with no friends, requests or messages sees "Bring your people in" (`NoticeCard`) instead of an empty Messages section, which shows once there is a conversation or a waiting message. The empty friends list no longer repeats Add a friend beside ADD A FRIEND. On Windows, Escape closes the open conversation before it leaves Messages. Not changed: every Friends and Messages request, the socket and the controllers |
+| Phase 8: Settings | Done | Phone and TV Settings: ACCOUNT, GENERAL (appearance, notifications, recommendations), PLAYBACK (Plugins on the phone, playback, subtitle addons), PRIVACY (usage statistics, crash reports; the section shows only where either can be sent, so Windows and local builds have none), SUPPORT. Join a watch party left Settings on every interface, Windows' rail included: Together offers it on all three, with Home's button on the phone and Home's row on Windows; Help now points to Together. The privacy policy and consent dialogs only promise "in Settings", which still holds. The Windows rail's one-off link row type went with it |
+| Phase 9: player chrome | Done | The player's solid panels read `GlassTheme.playerSurfaces` instead of a fixed copy of Classic's surface: the up-next card, the episode panel and its synopsis text, the seek-preview time, the gesture hint, the unlock button, Skip intro/outro and the subtitle position panel. Opacities unchanged; on Classic the colour is all but the same (`#15151C` for `#141419`); on Living Room the panels turn warm charcoal; on a light theme they stay dark (`test/player_chrome_theme_test.dart`). Kept: the black shades and white highlights drawn on the video itself, which belong to the video, not the theme. No playback, gesture, engine, subtitle, audio or Watch Party code changed (22 lines added, 10 removed in `lib/src/widgets/player/`) |

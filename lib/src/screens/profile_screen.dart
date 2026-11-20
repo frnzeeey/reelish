@@ -482,8 +482,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         if (personalize.isNotEmpty)
           SettingsSection(label: 'PERSONALIZE', children: personalize),
         viewing,
+        // The people you watch with; Together holds the same page.
         SettingsSection(
-          label: 'ACCOUNT',
+          label: 'TOGETHER',
           children: [
             SettingsTile(
               icon: ReelishIcons.people,
@@ -525,6 +526,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
               description: 'Your handle, friend code and who can find you',
               onTap: _openFriendsPrivacy,
             ),
+          ],
+        ),
+        SettingsSection(
+          label: 'ACCOUNT',
+          children: [
+            // Where support stands, and the way to the Supporters page for
+            // everyone, not only those with a badge to tap. A label only:
+            // perks are decided by SupporterController.has.
+            SettingsTile(
+              icon: ReelishIcons.coffee,
+              title: 'Reelish Supporters',
+              // The card's capsule already names Supporter or Founder.
+              value: _supporters.entitlement == Entitlement.supporter
+                  ? 'Thank you'
+                  : null,
+              description: _supporters.entitlement == Entitlement.free
+                  ? 'Support Reelish and unlock themes, icons and more'
+                  : null,
+              onTap: _openSupporters,
+            ),
             SettingsTile(
               icon: ReelishIcons.manageAccounts,
               title: 'Manage account',
@@ -553,11 +574,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   children: [identity(), ...sections],
                 );
               }
-              // Two columns: how Reelish looks with their viewing under it,
-              // and the account beside them.
+              // Two columns: how Reelish looks with their viewing under it;
+              // the people they watch with and the account beside them.
               final columns = [
-                sections.sublist(0, sections.length - 1),
-                [sections.last],
+                sections.sublist(0, sections.length - 2),
+                sections.sublist(sections.length - 2),
               ];
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,

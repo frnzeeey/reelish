@@ -66,6 +66,8 @@ import '../widgets/app_update_flow.dart';
 import '../widgets/category_chip.dart';
 import '../widgets/glass_box.dart';
 import '../widgets/media_card.dart';
+import '../widgets/empty_state.dart';
+import '../widgets/notice_card.dart';
 import '../widgets/recommendation_feedback_sheet.dart';
 import '../widgets/settings/settings_components.dart';
 import '../widgets/settings/tmdb_attribution.dart';
@@ -84,6 +86,7 @@ import '../search/playback_availability.dart';
 import '../search/universal_search_controller.dart';
 import 'genre_onboarding_screen.dart';
 import 'plugins_screen.dart';
+import 'social/together_screen.dart';
 import 'library_screen.dart';
 import 'player_screen.dart';
 import 'media_details_screen.dart';
@@ -192,7 +195,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   /// Dock positions; [SoftGlassDock] lists its tabs in this order.
   static const _libraryTab = 1;
-  static const _pluginsTab = 2;
+  static const _togetherTab = SoftGlassDock.togetherIndex;
+
+  /// Phone: Together has been opened, so its page stays built.
+  bool _togetherOpened = false;
   bool _openingDetails = false;
   int _spotlightPage = 0;
   int _libraryRefreshToken = 0;
@@ -1183,14 +1189,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 : discovery.message) ??
             'No source was returned for this title.';
         void openPlugins() {
-          setState(() {
-            _tab = _pluginsTab;
-            _tvDestination = TvDestination.plugins;
-          });
+          setState(() => _tvDestination = TvDestination.plugins);
           AnalyticsService.instance.logScreen(TvDestination.plugins.name);
           if (presentationContext?.mounted == true) {
             Navigator.of(presentationContext!).pop();
           }
+          // The phone keeps Plugins in Settings: it opens over Home.
+          if (!DeviceCapabilities.usesTvLayout) _openPluginsPage(context);
         }
 
         final noPlugins = _providerPlugins.repositories.isEmpty;
@@ -2060,52 +2065,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(18, 8, 18, 10),
-                child: GlassBox(
-                  radius: 22,
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: GlassTheme.primary.withValues(alpha: .12),
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Icon(
-                          ReelishIcons.link,
-                          color: GlassTheme.primary,
-                        ),
-                      ),
-                      const SizedBox(width: 13),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Add a source to start watching',
-                              style: TextStyle(fontWeight: FontWeight.w800),
-                            ),
-                            SizedBox(height: 3),
-                            Text(
-                              'Titles play through plugins you choose.',
-                              style: TextStyle(
-                                color: GlassTheme.muted,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      IconButton.filledTonal(
-                        // Also its name for screen readers.
-                        tooltip: 'Add a source',
-                        onPressed: () => ProviderInstallerModal.show(
-                          context,
-                          _providerPlugins,
-                        ),
-                        icon: const Icon(ReelishIcons.add),
-                      ),
-                    ],
+                // In the page, not floating over it: a solid card.
+                child: NoticeCard(
+                  icon: ReelishIcons.link,
+                  title: 'Add a source to start watching',
+                  message: 'Titles play through plugins you choose.',
+                  action: IconButton.filledTonal(
+                    // Also its name for screen readers.
+                    tooltip: 'Add a source',
+                    onPressed: () =>
+                        ProviderInstallerModal.show(context, _providerPlugins),
+                    icon: const Icon(ReelishIcons.add),
                   ),
                 ),
               ),
@@ -2115,35 +2085,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(18, 10, 18, 0),
-                child: GlassBox(
-                  radius: 16,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 10,
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        ReelishIcons.offline,
-                        color: GlassTheme.muted,
-                        size: 18,
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          feedError,
-                          style: TextStyle(
-                            color: GlassTheme.muted,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        tooltip: 'Retry catalog',
-                        onPressed: () => _reloadActiveFeed(),
-                        icon: const Icon(ReelishIcons.refresh),
-                      ),
-                    ],
+                child: NoticeCard(
+                  icon: ReelishIcons.offline,
+                  message: feedError,
+                  action: IconButton(
+                    tooltip: 'Retry catalog',
+                    onPressed: () => _reloadActiveFeed(),
+                    icon: const Icon(ReelishIcons.refresh),
                   ),
                 ),
               ),
@@ -2155,37 +2103,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   horizontal: 28,
                   vertical: 34,
                 ),
-                child: Column(
-                  children: [
-                    Icon(
-                      feedError == null
-                          ? ReelishIcons.movie
-                          : ReelishIcons.offline,
-                      size: 34,
-                      color: GlassTheme.muted,
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      feedError ?? 'Nothing to show just yet',
-                      style: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                    const SizedBox(height: 5),
-                    Text(
-                      feedError == null
-                          ? 'Refresh your picks, or search for a title.'
-                          : 'Titles you saved or started are still on this device.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: GlassTheme.muted),
-                    ),
-                    if (feedError != null) ...[
-                      const SizedBox(height: 12),
-                      OutlinedButton.icon(
-                        onPressed: () => _reloadActiveFeed(),
-                        icon: const Icon(ReelishIcons.refresh),
-                        label: const Text('Retry'),
-                      ),
-                    ],
-                  ],
+                child: EmptyState(
+                  icon: feedError == null
+                      ? ReelishIcons.movie
+                      : ReelishIcons.offline,
+                  title: feedError ?? 'Nothing to show just yet',
+                  message: feedError == null
+                      ? 'Refresh your picks, or search for a title.'
+                      : 'Titles you saved or started are still on this device.',
+                  action: feedError == null
+                      ? null
+                      : OutlinedButton.icon(
+                          onPressed: () => _reloadActiveFeed(),
+                          icon: const Icon(ReelishIcons.refresh),
+                          label: const Text('Retry'),
+                        ),
                 ),
               ),
             ),
@@ -2520,7 +2452,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           decoration: BoxDecoration(
                             color: index == page % items.length
                                 ? GlassTheme.primary
-                                : Colors.white.withValues(alpha: .35),
+                                : GlassTheme.onArtworkQuiet,
                             borderRadius: BorderRadius.circular(10),
                           ),
                         ),
@@ -2610,14 +2542,27 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   color: GlassTheme.primary.withValues(alpha: .45),
                 ),
               ),
-              child: Text(
-                'REELISH SPOTLIGHT',
-                style: TextStyle(
-                  color: GlassTheme.coralBright,
-                  fontSize: 10,
-                  letterSpacing: 1.5,
-                  fontWeight: FontWeight.w800,
-                ),
+              // The emblem heads Reelish's own picks, as on Windows; the
+              // words already say Reelish to a screen reader.
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const ExcludeSemantics(child: ReelishMark(height: 11)),
+                  const SizedBox(width: 6),
+                  // Wraps on a narrow phone with large text, as it did
+                  // before the emblem joined it.
+                  Flexible(
+                    child: Text(
+                      'REELISH SPOTLIGHT',
+                      style: TextStyle(
+                        color: GlassTheme.coralBright,
+                        fontSize: AppTextSize.micro,
+                        letterSpacing: 1.5,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -2666,9 +2611,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   ],
                 ],
               ),
-              style: const TextStyle(
-                color: Color(0xC7FFFFFF),
-                fontSize: 14,
+              style: TextStyle(
+                color: GlassTheme.onArtworkMuted,
+                fontSize: AppTextSize.body,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -2681,10 +2626,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 item.description,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Color(0xC7FFFFFF),
+                style: TextStyle(
+                  color: GlassTheme.onArtworkMuted,
                   height: 1.35,
-                  fontSize: 13,
+                  fontSize: AppTextSize.bodySmall,
                 ),
               ),
             ),
@@ -2726,12 +2671,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         style: OutlinedButton.styleFrom(
                           foregroundColor: saved
                               ? GlassTheme.primary
-                              : Colors.white,
+                              : GlassTheme.onArtwork,
                           shape: const StadiumBorder(),
                           side: BorderSide(
                             color: saved
                                 ? GlassTheme.primary.withValues(alpha: .55)
-                                : Colors.white.withValues(alpha: .35),
+                                : GlassTheme.onArtworkQuiet,
                           ),
                           padding: const EdgeInsets.symmetric(
                             horizontal: 19,
@@ -2789,6 +2734,33 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
+  /// Phone: the Plugins page over the current one, from Settings or from a
+  /// Play that found nothing to play.
+  void _openPluginsPage(BuildContext from) => unawaited(
+    Navigator.push(
+      from,
+      AppPageRoute<void>(
+        context: from,
+        builder: (pageContext) => Scaffold(
+          backgroundColor: GlassTheme.background,
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            scrolledUnderElevation: 0,
+            leading: IconButton(
+              tooltip: 'Back',
+              icon: const Icon(ReelishIcons.back),
+              onPressed: () => Navigator.of(pageContext).pop(),
+            ),
+          ),
+          body: PluginsScreen(
+            pluginService: _providerPlugins,
+            pluginLibrary: _pluginLibrary,
+          ),
+        ),
+      ),
+    ),
+  );
+
   /// Phone: opens a dock tab, refreshing what it shows. Home, tapped while
   /// on Home, returns to its top.
   void _selectTab(int value) {
@@ -2796,9 +2768,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     setState(() {
       _tab = value;
       if (value == _libraryTab) _libraryRefreshToken++;
+      if (value == _togetherTab) _togetherOpened = true;
     });
     AnalyticsService.instance.logScreen(
-      const ['home', 'library', 'plugins', 'settings'][value.clamp(0, 3)],
+      const ['home', 'library', 'together', 'settings'][value.clamp(0, 3)],
     );
     if (value == _libraryTab) {
       unawaited(_loadHistory());
@@ -2909,6 +2882,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               storage: _storage,
               onOpen: _showDetails,
               refreshToken: _libraryRefreshToken,
+            ),
+            // Two columns from 720 dp, so wider than the single-column pages.
+            TvDestination.together => const TvReadableWidth(
+              maxWidth: 1100,
+              child: TogetherScreen(),
             ),
             TvDestination.plugins => TvReadableWidth(
               maxWidth: 900,
@@ -3038,6 +3016,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               onToggleFavorite: _toggleFavorite,
               onHistoryChanged: () => unawaited(_loadHistory()),
             ),
+            // Two columns in the middle of the window.
+            TvDestination.together => Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1100),
+                child: const TogetherScreen(),
+              ),
+            ),
             TvDestination.plugins => DesktopPluginsPage(
               pluginService: _providerPlugins,
               pluginLibrary: _pluginLibrary,
@@ -3139,19 +3124,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ),
       ),
       TabPageTransition(
-        active: _tab == _pluginsTab,
-        child: PluginsScreen(
-          pluginService: _providerPlugins,
-          pluginLibrary: _pluginLibrary,
-        ),
+        active: _tab == _togetherTab,
+        // Built when first opened: Friends loads from the network.
+        child: _tab == _togetherTab || _togetherOpened
+            ? const TogetherScreen(
+                bottomClearance: SettingsMetrics.dockClearance,
+              )
+            : const SizedBox.shrink(),
       ),
       TabPageTransition(
         active: _tab == 3,
-        child: SettingsScreen(
-          accentSettings: widget.accentSettings,
-          onAppearanceSettings: () => unawaited(_openAppearanceSettings()),
-          onPlaybackSettings: () =>
-              unawaited(_openPlaybackSettings(availablePlugins)),
+        child: Builder(
+          builder: (settingsContext) => SettingsScreen(
+            accentSettings: widget.accentSettings,
+            onAppearanceSettings: () => unawaited(_openAppearanceSettings()),
+            onPlaybackSettings: () =>
+                unawaited(_openPlaybackSettings(availablePlugins)),
+            onPlugins: () => _openPluginsPage(settingsContext),
+          ),
         ),
       ),
     ];
@@ -3183,9 +3173,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               right: 0,
               bottom: 0,
               child: RepaintBoundary(
-                child: SoftGlassDock(
-                  selectedIndex: _tab,
-                  onSelected: _selectTab,
+                child: TogetherUpdates(
+                  builder: (context, count) => SoftGlassDock(
+                    selectedIndex: _tab,
+                    onSelected: _selectTab,
+                    togetherCount: count,
+                  ),
                 ),
               ),
             ),
@@ -3206,24 +3199,23 @@ class _RowHeading extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Text(
     title,
-    style: const TextStyle(
-      fontSize: 19,
+    style: AppType.title.copyWith(
       fontWeight: FontWeight.w800,
       letterSpacing: -.35,
     ),
   );
 }
 
-/// The Reelish mark on its own (logo_icon.png), in the page's text colour:
-/// part of the bar rather than an app tile floating on it. Read out as
-/// "Reelish".
+/// The Reelish emblem on its own, in its own colours: part of the bar rather
+/// than an app tile floating on it. Read out as "Reelish".
 class _HeaderMark extends StatelessWidget {
   const _HeaderMark();
 
   @override
   Widget build(BuildContext context) {
-    const mark = ReelishMark(height: 32);
-    // The artwork is white: on a light theme's page it takes the page ink.
+    const mark = ReelishMark(height: 28);
+    // Its cream squares would vanish on a light theme's ivory page: there it
+    // takes the page ink, shapes intact.
     if (!GlassTheme.isLight) return mark;
     return ColorFiltered(
       colorFilter: ColorFilter.mode(GlassTheme.textPrimary, BlendMode.srcIn),

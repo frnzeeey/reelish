@@ -72,18 +72,23 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.14.4
 
-# `dart run flutter_launcher_icons` after `tool/branding/generate_brand_assets.ps1`.
-# reelish_icon.png is the canonical icon (legacy launchers use it whole);
-# adaptive launchers rebuild it from its gradient and its mark, with the
-# mark at the share of the tile it has in reelish_icon.png.
+# `dart run flutter_launcher_icons` after `tool/branding/generate_emblem_sources.ps1`
+# and `tool/branding/generate_brand_assets.ps1`.
+# reelish_emblem_icon.png is the canonical icon (legacy launchers use it
+# whole); adaptive launchers rebuild it from its gradient and the emblem, at
+# the share of the tile it has in reelish_emblem_icon.png. The colour presets
+# keep the R mark through their own layers (generate_icon_presets.ps1).
+# Careful: the tool rewrites every android:icon in AndroidManifest.xml to
+# @mipmap/ic_launcher; afterwards set each icon alias's android:icon back to
+# its android:roundIcon (git diff shows them).
 flutter_launcher_icons:
   android: true
-  image_path: assets/icons/reelish_icon.png
+  image_path: assets/icons/reelish_emblem_icon.png
   adaptive_icon_background: tool/branding/launcher_background.png
-  adaptive_icon_foreground: assets/icons/logo_icon.png
+  adaptive_icon_foreground: tool/branding/launcher_foreground.png
   adaptive_icon_foreground_inset: 20
-  # Android 13+ themed icons: the mark alone, without its shadow, tinted by
-  # the system.
+  # Android 13+ themed icons: the emblem alone, without its shadows, tinted
+  # by the system.
   adaptive_icon_monochrome: tool/branding/launcher_monochrome.png
 
 # For information on the generic Dart part of this file, see the
@@ -100,11 +105,12 @@ flutter:
     - assets/js/cheerio_bundle.js
     - assets/fonts/Montserrat-OFL.txt
     - assets/fonts/BebasNeue-OFL.txt
-    - assets/icons/reelish_icon.png
-    - assets/icons/Primary_logo.png
+    - assets/icons/reelish_app_emblem.png
+    - assets/icons/reelish_emblem_icon.png
+    - assets/icons/reelish_emblem_white.png
+    - assets/icons/reelish_primary_logo.png
+    - assets/icons/reelish_wordmark.png
     - assets/icons/sovereign_crest_splash.png
-    - assets/icons/logo_icon.png
-    - assets/icons/word_logo.png
     - assets/data/plugins.json
     - assets/images/tmdb/tmdb_logo_alt_short.png
     - assets/images/trakt/trakt_logo_dark.png

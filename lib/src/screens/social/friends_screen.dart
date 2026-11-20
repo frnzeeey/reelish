@@ -15,6 +15,7 @@ import '../../social/social_controller.dart';
 import '../../theme/design_tokens.dart';
 import '../../theme/glass_theme.dart';
 import '../../theme/reelish_icons.dart';
+import '../../widgets/notice_card.dart';
 import '../../widgets/settings/settings_components.dart';
 import '../../widgets/social/social_widgets.dart';
 import '../../messaging/message_models.dart';
@@ -23,6 +24,7 @@ import 'conversation_options_screen.dart';
 import 'friend_collection_screen.dart';
 import 'friends_privacy_screen.dart';
 import 'messages_screen.dart';
+import 'messages_split_view.dart';
 
 /// Opens a page over the current one in a Scaffold, as Profile opens its
 /// pages; [page] gets a Back callback.
@@ -107,14 +109,14 @@ void openConversationOptions(
   ),
 );
 
-/// The conversation list.
+/// The conversation list. On Windows, with room for both, the chosen
+/// conversation opens beside it ([MessagesSplitView]) rather than over it.
 void openMessages(
   BuildContext context, {
   MessagesController? messages,
   FriendsController? friends,
-}) => openSocialPage(
-  context,
-  (back) => MessagesScreen(
+}) => openSocialPage(context, (back) {
+  Widget list() => MessagesScreen(
     messages: messages,
     onBack: back,
     openChat: (conversation) =>
@@ -126,8 +128,46 @@ void openMessages(
       friends: friends,
       withFriendPage: true,
     ),
-  ),
-);
+  );
+  if (!DeviceCapabilities.isDesktop) return list();
+  return LayoutBuilder(
+    builder: (_, constraints) =>
+        constraints.maxWidth < MessagesSplitView.minWidth
+        ? list()
+        : MessagesSplitView(
+            messages: messages,
+            onBack: back,
+            chat: (conversation, close) => ChatScreen(
+              conversation: conversation,
+              messages: messages,
+              onOpenFriend: () => openSocialPage(
+                context,
+                (back) => FriendScreen(
+                  person: conversation.peer,
+                  friends: friends,
+                  messages: messages,
+                  fromChat: true,
+                  onBack: back,
+                ),
+              ),
+              onOpenOptions: () => openConversationOptions(
+                context,
+                conversation,
+                messages: messages,
+                afterDelete: close,
+              ),
+            ),
+            openOptions: (conversation, close) => openConversationOptions(
+              context,
+              conversation,
+              messages: messages,
+              friends: friends,
+              withFriendPage: true,
+              afterDelete: close,
+            ),
+          ),
+  );
+});
 
 String _date(DateTime at) {
   const months = [
@@ -182,7 +222,21 @@ class FriendsScreen extends StatefulWidget {
     this.recommendations,
     this.messages,
     this.onBack,
+    this.title = 'Friends',
+    this.leading = const [],
+    this.bottomClearance = 20,
   });
+
+  /// The page's title: Friends, or Together where the page is a place in
+  /// the navigation.
+  final String title;
+
+  /// Sections above Friends' own, shown whether Friends is on or off (the
+  /// Together page's Watch Party).
+  final List<Widget> leading;
+
+  /// Space below the page, for the phone dock.
+  final double bottomClearance;
 
   /// [SocialController.instance] when null.
   final SocialController? social;
@@ -331,12 +385,13 @@ class _FriendsScreenState extends State<FriendsScreen> {
         body = const [_Spinner()];
       }
       final page = SettingsPage(
-        title: 'Friends',
+        title: widget.title,
         subtitle: profile == null ? null : '@${profile.handle}',
         icon: ReelishIcons.people,
         onBack: widget.onBack,
         footer: null,
-        children: body,
+        bottomClearance: widget.bottomClearance,
+        children: [...widget.leading, ...body],
       );
       // Pull to refresh where there is touch; a remote or mouse reloads
       // when the page opens or the app comes back.
@@ -391,49 +446,106 @@ class _FriendsScreenState extends State<FriendsScreen> {
     final conversations = _messages.conversations;
     final unreadMessages = _messages.unread;
     final waitingMessages = _social.counts.messages;
+    // Nobody here yet: say what Together is for before anything empty.
+    final newcomer =
+        _friends.loaded &&
+        friends.isEmpty &&
+        incoming.isEmpty &&
+        conversations.isEmpty &&
+        waitingMessages == 0;
     final left = <Widget>[
       if (_friends.failed && _friends.loaded)
         const _Note(
           'Reelish could not be reached: this is the list from your last '
           'visit.',
         ),
-      SettingsSection(
-        label: unreadMessages > 0
-            ? 'MESSAGES · $unreadMessages NEW'
-            : 'MESSAGES',
-        children: [
-          for (final conversation in conversations.take(3))
-            ConversationTile(
-              conversation: conversation,
-              messages: _messages,
-              onTap: () => openChat(
-                context,
-                conversation,
-                messages: _messages,
-                friends: _friends,
-              ),
-              onOptions: () => openConversationOptions(
-                context,
-                conversation,
-                messages: _messages,
-                friends: _friends,
-                withFriendPage: true,
-              ),
-            ),
-          SettingsTile(
-            icon: ReelishIcons.chat,
-            title: conversations.isEmpty ? 'Messages' : 'All messages',
-            description: waitingMessages > 0
-                ? (waitingMessages == 1
-                      ? '1 new message is waiting'
-                      : '$waitingMessages new messages are waiting')
-                : conversations.isEmpty
-                ? 'Private messages with friends. Open a friend to start.'
-                : null,
-            onTap: _openMessages,
+      if (newcomer)
+        const Padding(
+          padding: EdgeInsets.only(bottom: SettingsMetrics.sectionGap),
+          child: NoticeCard(
+            icon: ReelishIcons.people,
+            title: 'Bring your people in',
+            message:
+                'Add friends by their code or @handle. Then message them, '
+                'send them titles and watch together.',
           ),
-        ],
-      ),
+        ),
+      // Someone waiting on an answer comes first.
+      if (incoming.isNotEmpty)
+        SettingsSection(
+          label: 'REQUESTS · ${incoming.length}',
+          children: [
+            for (final person in incoming)
+              PersonTile(
+                person: person,
+                subtitle: 'Wants to be friends',
+                enabled: !_friends.isWorking(person.handle),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      tooltip: 'Decline',
+                      onPressed: _friends.isWorking(person.handle)
+                          ? null
+                          : () => unawaited(_decline(person)),
+                      icon: Icon(ReelishIcons.close, color: GlassTheme.muted),
+                    ),
+                    IconButton.filled(
+                      tooltip: 'Accept',
+                      onPressed: _friends.isWorking(person.handle)
+                          ? null
+                          : () => unawaited(
+                              _run(
+                                _friends.accept(person),
+                                'You and @${person.handle} are now friends',
+                              ),
+                            ),
+                      icon: const Icon(ReelishIcons.check),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      // Messages need a friend: hidden until there is something to read.
+      if (!newcomer)
+        SettingsSection(
+          label: unreadMessages > 0
+              ? 'MESSAGES · $unreadMessages NEW'
+              : 'MESSAGES',
+          children: [
+            for (final conversation in conversations.take(3))
+              ConversationTile(
+                conversation: conversation,
+                messages: _messages,
+                onTap: () => openChat(
+                  context,
+                  conversation,
+                  messages: _messages,
+                  friends: _friends,
+                ),
+                onOptions: () => openConversationOptions(
+                  context,
+                  conversation,
+                  messages: _messages,
+                  friends: _friends,
+                  withFriendPage: true,
+                ),
+              ),
+            SettingsTile(
+              icon: ReelishIcons.chat,
+              title: conversations.isEmpty ? 'Messages' : 'All messages',
+              description: waitingMessages > 0
+                  ? (waitingMessages == 1
+                        ? '1 new message is waiting'
+                        : '$waitingMessages new messages are waiting')
+                  : conversations.isEmpty
+                  ? 'Private messages with friends. Open a friend to start.'
+                  : null,
+              onTap: _openMessages,
+            ),
+          ],
+        ),
       if (_friends.watching.isNotEmpty)
         SettingsSection(
           label: 'WATCHING NOW',
@@ -484,42 +596,6 @@ class _FriendsScreenState extends State<FriendsScreen> {
           ),
         ],
       ),
-      if (incoming.isNotEmpty)
-        SettingsSection(
-          label: 'REQUESTS · ${incoming.length}',
-          children: [
-            for (final person in incoming)
-              PersonTile(
-                person: person,
-                subtitle: 'Wants to be friends',
-                enabled: !_friends.isWorking(person.handle),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      tooltip: 'Decline',
-                      onPressed: _friends.isWorking(person.handle)
-                          ? null
-                          : () => unawaited(_decline(person)),
-                      icon: Icon(ReelishIcons.close, color: GlassTheme.muted),
-                    ),
-                    IconButton.filled(
-                      tooltip: 'Accept',
-                      onPressed: _friends.isWorking(person.handle)
-                          ? null
-                          : () => unawaited(
-                              _run(
-                                _friends.accept(person),
-                                'You and @${person.handle} are now friends',
-                              ),
-                            ),
-                      icon: const Icon(ReelishIcons.check),
-                    ),
-                  ],
-                ),
-              ),
-          ],
-        ),
       if (outgoing.isNotEmpty)
         SettingsSection(
           label: 'SENT',
@@ -553,15 +629,9 @@ class _FriendsScreenState extends State<FriendsScreen> {
               : 'FRIENDS · ${_social.counts.friends > friends.length ? _social.counts.friends : friends.length}',
           description: friends.isEmpty
               ? 'No friends yet. Share your friend code, or add someone by '
-                    'theirs.'
+                    'theirs under Add a friend.'
               : null,
           children: [
-            if (friends.isEmpty)
-              SettingsTile(
-                icon: ReelishIcons.personAdd,
-                title: 'Add a friend',
-                onTap: () => unawaited(_add()),
-              ),
             for (final person in friends)
               PersonTile(
                 person: person,

@@ -177,7 +177,7 @@ const faqEntries = <FaqEntry>[
     FaqCategory.watchParty,
     'How does a watch party work?',
     'On a title, choose Watch together to get an 8-digit code. Friends enter '
-        'it in Settings › Join a watch party. Play, pause and seeking stay in '
+        'it in Together › Join a watch party. Play, pause and seeking stay in '
         'sync for up to 5 people. Everyone needs a working source on their '
         'own device.',
   ),

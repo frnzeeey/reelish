@@ -223,6 +223,19 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
     );
   }
 
+  /// Every action beside Play: a light outline over the artwork, in the
+  /// colours that read on it whatever the theme.
+  ButtonStyle get _secondaryAction => OutlinedButton.styleFrom(
+    foregroundColor: GlassTheme.onArtwork,
+    backgroundColor: GlassTheme.onArtwork.withValues(alpha: .1),
+    side: BorderSide(color: GlassTheme.onArtworkQuiet),
+    padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 18),
+    textStyle: const TextStyle(
+      fontFamily: GlassTheme.fontFamily,
+      fontWeight: FontWeight.w700,
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
     final details = _details;
@@ -556,44 +569,25 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
                                 if (widget.onStartOver case final startOver?)
                                   OutlinedButton.icon(
                                     onPressed: () => startOver(context),
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: Colors.white,
-                                      backgroundColor: Colors.white.withValues(
-                                        alpha: .1,
-                                      ),
-                                      side: BorderSide(
-                                        color: Colors.white.withValues(
-                                          alpha: .28,
-                                        ),
-                                      ),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 22,
-                                        vertical: 18,
-                                      ),
-                                    ),
+                                    style: _secondaryAction,
                                     icon: const Icon(ReelishIcons.restart),
-                                    label: const Text(
-                                      'Start over',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
+                                    label: const Text('Start over'),
                                   ),
+                              // Watching together leads the secondary
+                              // actions, as on every interface.
+                              if (widget.onWatchTogether != null &&
+                                  int.tryParse(_item.id) != null)
+                                OutlinedButton.icon(
+                                  onPressed: _isSeries && !_episodes.any(_aired)
+                                      ? null
+                                      : _watchTogether,
+                                  style: _secondaryAction,
+                                  icon: const Icon(ReelishIcons.people),
+                                  label: const Text('Watch together'),
+                                ),
                               OutlinedButton.icon(
                                 onPressed: _toggleFavorite,
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: Colors.white,
-                                  backgroundColor: Colors.white.withValues(
-                                    alpha: .1,
-                                  ),
-                                  side: BorderSide(
-                                    color: Colors.white.withValues(alpha: .28),
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 22,
-                                    vertical: 18,
-                                  ),
-                                ),
+                                style: _secondaryAction,
                                 icon: Icon(
                                   _favorite
                                       ? ReelishIcons.check
@@ -601,91 +595,23 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
                                 ),
                                 label: Text(
                                   _favorite ? 'On My list' : 'My list',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                  ),
                                 ),
                               ),
                               if (widget.onCollections case final collections?)
                                 OutlinedButton.icon(
                                   onPressed: () => collections(context, _item),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: Colors.white,
-                                    backgroundColor: Colors.white.withValues(
-                                      alpha: .1,
-                                    ),
-                                    side: BorderSide(
-                                      color: Colors.white.withValues(
-                                        alpha: .28,
-                                      ),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 22,
-                                      vertical: 18,
-                                    ),
-                                  ),
+                                  style: _secondaryAction,
                                   icon: const Icon(ReelishIcons.playlist),
-                                  label: const Text(
-                                    'Collections',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
+                                  label: const Text('Collections'),
                                 ),
+                              // Sends the title to friends, who find it under
+                              // Recommended to you.
                               if (widget.onShare case final share?)
                                 OutlinedButton.icon(
                                   onPressed: () => share(context, _item),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: Colors.white,
-                                    backgroundColor: Colors.white.withValues(
-                                      alpha: .1,
-                                    ),
-                                    side: BorderSide(
-                                      color: Colors.white.withValues(
-                                        alpha: .28,
-                                      ),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 22,
-                                      vertical: 18,
-                                    ),
-                                  ),
+                                  style: _secondaryAction,
                                   icon: const Icon(ReelishIcons.send),
-                                  label: const Text(
-                                    'Share',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ),
-                              if (widget.onWatchTogether != null &&
-                                  int.tryParse(_item.id) != null)
-                                OutlinedButton.icon(
-                                  onPressed: _isSeries && !_episodes.any(_aired)
-                                      ? null
-                                      : _watchTogether,
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: Colors.white,
-                                    backgroundColor: Colors.white.withValues(
-                                      alpha: .1,
-                                    ),
-                                    side: BorderSide(
-                                      color: Colors.white.withValues(
-                                        alpha: .28,
-                                      ),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 22,
-                                      vertical: 18,
-                                    ),
-                                  ),
-                                  icon: const Icon(ReelishIcons.people),
-                                  label: const Text(
-                                    'Watch together',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
+                                  label: const Text('Recommend'),
                                 ),
                             ],
                           ),

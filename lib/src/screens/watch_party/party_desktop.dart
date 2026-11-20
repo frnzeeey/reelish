@@ -137,13 +137,7 @@ class PartyDesktopPoster extends StatelessWidget {
         color: GlassTheme.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: DesktopSurfaces.hairline),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: .45),
-            blurRadius: 32,
-            offset: const Offset(0, 14),
-          ),
-        ],
+        boxShadow: AppShadow.floating,
       ),
       child: url.isEmpty
           ? Icon(ReelishIcons.movie, size: 48, color: GlassTheme.muted)

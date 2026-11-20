@@ -72,7 +72,7 @@ centered and works in landscape.
 
 | Area | Mobile | TV |
 |---|---|---|
-| Navigation | `SoftGlassDock` (Home, Plugins, Library, Settings) | `TvHomeShell` rail: Home, Movies, Series, Search, My library, Plugins, Settings |
+| Navigation | `SoftGlassDock` (Home, Library, Together, Settings; Plugins in Settings) | `TvHomeShell` rail: Profile, Home, Movies, Series, Search, My library, Together, Plugins, Settings |
 | Home | `HomeScreen._home()` | `TvHomePage`: browse hero + rows |
 | Movies / Series | category chips | `TvCatalogPage`: paging grid |
 | Search | header field | `UniversalSearchView`: TV keyboard, results by kind, remote focus |

@@ -59,7 +59,8 @@ class SkipSegmentButton extends StatelessWidget {
                     padding: EdgeInsets.symmetric(horizontal: large ? 26 : 20),
                     shape: const StadiumBorder(),
                     // The player's chrome stays dark in every theme.
-                    backgroundColor: const Color(0xE6141419),
+                    backgroundColor: GlassTheme.playerSurfaces.surface
+                        .withValues(alpha: .9),
                     foregroundColor: Colors.white,
                     side: BorderSide(
                       color: GlassTheme.playerPrimary.withValues(alpha: .7),
@@ -75,7 +76,9 @@ class SkipSegmentButton extends StatelessWidget {
                     backgroundColor: WidgetStateProperty.resolveWith(
                       (states) => states.contains(WidgetState.focused)
                           ? GlassTheme.playerPrimary
-                          : const Color(0xE6141419),
+                          : GlassTheme.playerSurfaces.surface.withValues(
+                              alpha: .9,
+                            ),
                     ),
                   ),
             ),

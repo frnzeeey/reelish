@@ -22,12 +22,26 @@ alias changes; the screen says so.
 
 | Group | Icons | Who |
 |---|---|---|
-| Free | Default, Slate | Everyone, always |
+| Free | Default, Coral, Slate | Everyone, always |
 | Signature | Velvet Cinema, Aurora, Ember, Arctic, Ivory Studio, Obsidian Gold, Rosé Noir | Reelish Supporters |
 | Colours | Amber, Orange, Rose, Violet, Indigo, Blue, Teal, Green, Lime | Reelish Supporters |
 
-The two free icons are full-quality icons, not lesser versions. Slate is the
-dark counterpart of the coral default. The Signature icons are the supporter
+Every icon shows the Reelish emblem, the logo since v1.39; none shows the
+R any more. The free icons are full-quality icons, not lesser versions.
+Default is the emblem in its own colours on warm charcoal
+(`assets/icons/reelish_emblem_icon.png`); its alias keeps the `.MainActivity`
+name, so shortcuts keep working and everyone on Default sees the emblem after
+updating. Coral (`coral`) keeps the colour of the original default icon, and
+Slate is its dark counterpart.
+
+The colour and Signature icons keep their backgrounds and carry the emblem in
+white with its soft shadows (`assets/icons/reelish_emblem_white.png`), as the
+white R sat on them before; Ivory Studio's is ink. They share the mark layers
+`ic_launcher_foreground_mark` and `ic_launcher_monochrome_mark`, written by
+`tool/branding/generate_icon_presets.ps1`, separate from the default icon's.
+The colour icons' backgrounds are sampled from their original tiles
+(`assets/icons/app_icon_<id>.png`, `reelish_icon.png` for Coral), which stay
+as sources only. The Signature icons are the supporter
 collection's own artwork, one per [app theme](supporter-themes.md), painted from
 the theme's palette and ornament (`test/app_icon_test.dart` checks there is one
 per theme). Their alias ids are the saved choice, so the first five keep the
@@ -62,9 +76,10 @@ for the same reason.
 
 Sovereign Crest (`sovereign_crest`, group `AppIconGroup.founder`) is the
 Founder's own icon, the launcher companion of the Sovereign Edition
-[theme](supporter-themes.md#the-founder-collection). It is the Reelish logo
-(`assets/icons/logo_icon.png`) recoloured in champagne gold (`#D6B779`,
-highlights in pale platinum `#F3DCA7`), wearing the Founder Collection's crown,
+[theme](supporter-themes.md#the-founder-collection). It is the Reelish emblem
+(`assets/icons/reelish_app_emblem.png`, filled through
+`tool/branding/emblem_clean.png`) in champagne gold (`#D6B779`, highlights in
+pale platinum `#F3DCA7`), wearing the Founder Collection's crown,
 on obsidian (`#090A12`) with a restrained midnight-violet glow (`#A78BFA`). The
 crown is the same one that tops the Founder's profile frame, and a champagne
 laurel wreath, drawn with that frame's leaves, encircles both.

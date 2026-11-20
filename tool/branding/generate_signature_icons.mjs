@@ -227,19 +227,21 @@ const adaptive = (id) => `<?xml version="1.0" encoding="utf-8"?>
   <background android:drawable="@drawable/ic_launcher_background_${id}"/>
   <foreground>
       <inset
-          android:drawable="@drawable/ic_launcher_foreground${id in marks ? `_${id}` : ''}"
+          android:drawable="@drawable/ic_launcher_foreground${id in marks ? `_${id}` : '_mark'}"
           android:inset="20%" />
   </foreground>
   <monochrome>
       <inset
-          android:drawable="@drawable/ic_launcher_monochrome"
+          android:drawable="@drawable/ic_launcher_monochrome_mark"
           android:inset="20%" />
   </monochrome>
 </adaptive-icon>
 `;
 
+// The white emblem the Signature icons are drawn around: the shared mark layer
+// generate_icon_presets.ps1 writes (run it first), apart from the default icon.
 const foreground = CK.MakeImageFromEncoded(
-  readFileSync(join(res, 'drawable-xxxhdpi', 'ic_launcher_foreground.png')));
+  readFileSync(join(res, 'drawable-xxxhdpi', 'ic_launcher_foreground_mark.png')));
 
 function snapshot(draw, width, height = width) {
   const surface = CK.MakeSurface(width, height);
