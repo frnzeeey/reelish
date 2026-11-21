@@ -11,7 +11,7 @@ Reelish is an open-source Flutter app for discovering movies and TV series and w
 - Sign in with your Trakt account: in the browser on phones and Windows, or with a short code on a TV.
 - Browse popular and trending movies and series, search titles, and view recommendations, new releases, and title details.
 - Keep a library of favorites, recently watched titles, and playback progress so you can continue where you left off. My list can stay in sync with your Trakt watchlist across your devices.
-- **Watch Party:** watch a movie or episode in sync with up to five people. Start a party from a title, share its 8-digit code, and everyone plays from their own providers while the host's play, pause, seek and episode changes are followed.
+- **Watch Party:** watch a movie or episode in sync with up to five people. Anyone signed in can host or join, free. Start a party from a title, share its 8-digit code, and everyone plays from their own providers while the host's play, pause, seek and episode changes are followed.
 - Get notified when a new episode of a series on My list, one you're watching, or a popular series comes out.
 - Set a display name and an avatar (an illustrated preset or a photo that stays on the device), and on Android choose the app icon's color.
 - Browse a built-in library of community provider repositories, search and filter it by language or content type, and install a repository from its details page.
@@ -59,14 +59,14 @@ The player supports external SRT and WebVTT subtitles, with language selection a
 
 ## Watch Party
 
-Watch the same movie or episode in sync with friends, each on their own device.
+Watch the same movie or episode in sync with friends, each on their own device. Hosting and joining are free for every signed-in account; no Supporter status is needed.
 
 1. On a title's details page choose **Watch together** (a series asks which episode), set who can control playback and whether to wait for everyone, and create the party.
 2. Share the 8-digit code from the waiting room (**Copy code** or **Copy invitation**).
-3. Friends choose **Join a watch party** in Settings (or the button in the phone's Home header), enter or paste the code, and see the title, host, and number of people before joining.
+3. Friends choose **Join with a code** on the **Together** page (or the join button on Home), enter or paste the code (on Android phones and Windows, opening the invitation link fills it in), and see the title, host, and number of people before joining.
 4. The host chooses **Start watching**. Each person's player finds a source with their own providers; the party starts once everyone is ready.
 
-While watching, the host's play, pause, seek and episode changes are followed by everyone, and players that drift apart catch up on their own. The waiting room shows who has joined and whether their player is ready; the host can let others control playback, hand over hosting, or remove someone. Parties hold up to five people and end when the host ends them, after everyone has left for a while, or after 12 hours.
+While watching, the host's play, pause, seek and episode changes are followed by everyone, and players that drift apart catch up on their own. The waiting room shows who has joined and whether their player is ready; the host can let others control playback, hand over hosting, or remove someone. Parties hold up to five people and end when the host ends them, after everyone has left for a while, or after 12 hours. To keep the free service available to everyone, one account can start up to 12 parties an hour.
 
 Each person needs a provider that can play the title. Different releases of the same title (an extra intro, a different cut) can leave pictures a few seconds apart even when the timelines match. Video never passes through Reelish's servers: only the title, the room's playback position, and who is in the room are shared.
 
