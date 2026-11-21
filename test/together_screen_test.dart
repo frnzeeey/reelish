@@ -38,16 +38,10 @@ void main() {
     expect(find.byType(JoinPartyScreen), findsOneWidget);
   });
 
-  testWidgets('without the hosting perk it says who hosts; joining is open', (
-    tester,
-  ) async {
+  testWidgets('hosting is for everyone: no Supporter note', (tester) async {
     await pump(tester);
-    expect(
-      find.text(
-        'Hosting is for Reelish Supporters. Anyone can join with a code.',
-      ),
-      findsOneWidget,
-    );
+    expect(find.textContaining('Supporters'), findsNothing);
+    expect(find.text('Join with a code'), findsOneWidget);
     // Without Home's search (no hook), no button that does nothing.
     expect(find.text('Pick a title to host'), findsNothing);
   });

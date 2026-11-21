@@ -1,6 +1,6 @@
 # Watch Party
 
-Friends watch one title together: a supporter hosts, anyone signed in joins
+Friends watch one title together: anyone signed in hosts or joins
 with an 8-digit code, and every player follows the room. The protocol, the
 sync thresholds and the room's limits are in
 [the backend README](../backend/README.md#watch-party); this page covers how
@@ -27,6 +27,7 @@ the pieces fit, the reliability rules, and the social features.
 | Reactions | Missing | Relayed, never stored, own limit |
 | Chat | Missing | Relayed, never stored, author set by the room, own limit |
 | Invitation links | A copied message with the code | A link (web page → `reelish://party/{code}`) on Android and Windows; the code everywhere |
+| Free hosting (late November 2026) | Hosting was a supporter perk | Open to everyone; a 12-rooms-an-hour quota per account and a D1 code index keep guesses and ended rooms from waking a Durable Object ([backend README](../backend/README.md#watch-party)) |
 
 ## Reliability rules
 

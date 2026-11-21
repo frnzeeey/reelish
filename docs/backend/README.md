@@ -128,7 +128,7 @@ its own).
 | `GET /api/v1/sessions` | Bearer | The account's signed-in devices |
 | `DELETE /api/v1/sessions/{id}` | Bearer | End one of the account's own sessions |
 | `GET /api/v1/tmdb/{tmdb path}` | Bearer | Allowlisted TMDB v3 request (below) |
-| `POST /api/v1/party` | Bearer | Supporters only (`403 supporter_required` otherwise). `{content, settings?, profile?}` → `201 {code, expiresAt, settings}`; ends the caller's previous party |
+| `POST /api/v1/party` | Bearer | Any signed-in account. `{content, settings?, profile?}` → `201 {code, expiresAt, settings}`; ends the caller's previous party; 429 `party_quota` past 12 rooms an hour |
 | `GET /api/v1/party/{code}` | Bearer | `{code, phase, content, host, participants, capacity}`; 404 `party_not_found` |
 | `GET /api/v1/party/{code}/socket` | Bearer | WebSocket upgrade into the room (below); 409 `party_full`, 403 `party_removed` |
 | `POST /api/v1/progress` | Bearer | `{device, changes}` (≤ 50 `{key, positionMs, durationMs, next?, removed?, title?, year?, poster?, backdrop?, seq, at}`, 32 KB) → `{accepted, serverTime}`; a change replaces a stored row only when newer ([sync strategy](../intelligent-continue-watching/CROSS_DEVICE_SYNC_STRATEGY.md), `src/progress.ts`) |
@@ -196,11 +196,25 @@ longest-connected participant hosts. `PARTY_MAX_CAPACITY` (default 5) caps
 every room. When a Free plan daily limit is spent, room calls fail with
 503 `party_unavailable` and normal watching is unaffected.
 
-Only supporters create rooms: `createParty` reads the account's donation
-record (one D1 read, at creation only) and answers 403 `supporter_required`
-otherwise. Anyone signed in can preview and join. A room carries on if its
-host's support ends, and a handover (by the host, or after the grace above)
-may pass it to anyone; neither extends its 12 hours.
+Any signed-in account creates, previews and joins rooms; no entitlement is
+checked. Each account hosts at most one room (`party_hosts`): creating
+another ends the old one. A handover (by the host, or after the grace above)
+may pass a room to anyone; neither extends its 12 hours.
+
+Because hosting is free, two rules keep one account from spending the Free
+plan's daily Durable Object budget that every party shares
+(`0016_party_limits.sql`):
+
+- **Hosting quota:** 12 new rooms per account per hour (`hostQuotaPerHour`,
+  counted in `party_hosts.window_start`/`window_count`), on top of the
+  per-minute limit. Over it, `POST /party` answers 429 `party_quota` with
+  `Retry-After` and ends nothing.
+- **Code index:** `party_codes` lists every live room's code. A preview or
+  socket for a code not there (a guess, a typo, an ended room) is answered
+  404 `party_not_found` from D1 without waking a room. The room deletes its
+  row when it ends, and the daily cron removes rows older than 12 hours.
+  Joining is one room request: the room checks the join itself and answers
+  a refusal with its verdict (`party_full`, `party_removed`).
 
 The `content` is `{tmdbId, type: "movie"|"series", season, episode, title,
 posterPath?}` (season and episode for series). Participants are named by

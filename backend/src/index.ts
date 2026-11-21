@@ -319,7 +319,7 @@ export default {
     return response;
   },
 
-  /** The daily cron in wrangler.toml: erases expired security log rows, stale progress, old collection deletion marks and expired social rows. */
+  /** The daily cron in wrangler.toml: erases expired security log rows, stale progress, old collection deletion marks, expired social rows and old party codes. */
   async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
     ctx.waitUntil(
       Promise.all([
@@ -328,6 +328,7 @@ export default {
         progress.pruneProgress(env),
         collections.pruneCollections(env),
         pruneSocial(env),
+        party.prunePartyCodes(env),
       ]).then(() => undefined),
     );
   },

@@ -38,7 +38,7 @@ What the data supports, verified in code:
 | Active Watch Parties | Only this device's own (`WatchPartyController.active`) | Not listed: there is no list of friends' parties |
 | Pending invitations | No: invites travel as a code or link (`PartyLinks`), there is no inbox | Not shown; Join with a code is the way in |
 | Friends hosting | No | Not shown |
-| Start a Watch Party | Yes, from a title (`CreatePartyScreen` needs content); hosting is a Supporter perk (`SupporterPerk.hostWatchParty`, enforced by the server) | "Pick a title" opens search |
+| Start a Watch Party | Yes, from a title (`CreatePartyScreen` needs content); any signed-in account can host | "Pick a title" opens search |
 | Friend code sharing | Copy, in Friends & privacy; no share sheet (no share package) | Copy on the page itself |
 | Recently watched together | No | Not shown |
 
@@ -49,7 +49,7 @@ Nothing on the page is placeholder or invented.
 | Order | Section | What it holds |
 |---|---|---|
 | 1 | Greeting and your people | "Good evening, Name"; the friends strip (avatars, those watching now first, with what they watch); Messages as a shortcut with its unread count |
-| 2 | Movie night | Join with a code; Pick a title to host (with the Supporter note for free accounts) |
+| 2 | Movie night | Join with a code; Pick a title to host |
 | 3 | Requests | Friend requests waiting on an answer (accept, decline), only when there are some |
 | 4 | Messages | The latest conversations, only once there are some |
 | 5 | Shared discoveries | Titles friends sent you, as posters; All recommendations |

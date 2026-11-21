@@ -263,13 +263,6 @@ export class WatchPartyRoom extends DurableObject<Env> {
     };
   }
 
-  async check(userId: string): Promise<JoinCheck> {
-    const room = await this.load();
-    // A gone socket must not hold the place this join needs.
-    if (room) await this.sweep(room);
-    return this.verdict(room, userId);
-  }
-
   private verdict(room: RoomRecord | null, userId: string): JoinCheck {
     if (!room) return 'not_found';
     if (room.removed.includes(userId)) return 'removed';
@@ -687,6 +680,7 @@ export class WatchPartyRoom extends DurableObject<Env> {
   }
 
   private async end(reason: 'host' | 'expired' | 'empty' | 'replaced') {
+    const code = (await this.load())?.code;
     for (const socket of this.ctx.getWebSockets()) {
       this.send(socket, { t: 'ended', reason });
       this.closeQuietly(socket, closeCodes.ended, 'The party ended.');
@@ -694,6 +688,15 @@ export class WatchPartyRoom extends DurableObject<Env> {
     await this.ctx.storage.deleteAlarm();
     await this.ctx.storage.deleteAll();
     this.room = null;
+    // Lookups for this code now stop at D1 (watch-party.ts). If this fails,
+    // the room answers them itself and the daily cron removes the row.
+    if (code) {
+      try {
+        await this.env.DB.prepare(`DELETE FROM party_codes WHERE code = ?`).bind(code).run();
+      } catch {
+        log('warn', 'party.code_unindex_failed', {});
+      }
+    }
     log('info', 'party.ended', { reason });
   }
 

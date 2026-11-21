@@ -132,7 +132,7 @@ The balance: friendly without being childish, premium without being exclusive, m
 | Reelish Spotlight | Discovery showcase | [Observed] phone and Windows, six animation styles |
 | Top 10 Picks | Discovery | [Observed] Home row with large numerals |
 | Friends & Messages | Connection | [Observed] friend codes and handles, private messages, nicknames, mute, unsend |
-| Watch Party | Togetherness | [Observed] synced viewing with chat and reactions; hosting is a Supporter perk, joining is free |
+| Watch Party | Togetherness | [Observed] synced viewing with chat and reactions; hosting and joining are free for everyone |
 | Together | The social home | [Observed] friends, Movie night, Messages, Shared discoveries, privacy |
 | Reelish Wrapped | Reflection | [Observed] yearly recap with share cards |
 | Reelish Clips | Discovery | Not implemented. [Exploratory] |
@@ -356,7 +356,7 @@ Reelish sounds like a friend inviting you over: conversational, warm, confident,
 | Conversational | "Pick up where you left off" | "Resume your viewing session" |
 | Warm | "Bring your people in" | "No entities found" |
 | Honest | "You sign in on Trakt. Reelish never sees your password." | Claims about content, quality or speed it cannot keep |
-| Inclusive | "Hosting is for Reelish Supporters. Anyone can join with a code." | Wording that makes free users feel lesser |
+| Inclusive | "Everything else in Reelish stays available to everyone." | Wording that makes free users feel lesser |
 | Calm | "The stream host refused access (HTTP 403)." | Alarm, blame, exclamation marks |
 | Playful, lightly | "Moments that made your year." | Jokes in errors or at anyone's expense |
 

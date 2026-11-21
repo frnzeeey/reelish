@@ -228,7 +228,11 @@ String partyErrorMessage(Object error) {
       'Watch Party is unavailable right now. Try again later.',
     'rate_limited' => 'Too many tries. Wait a minute and try again.',
     'invalid_content' => 'This title can’t be watched together.',
-    'supporter_required' => 'Hosting a Watch Party is for Reelish Supporters.',
+    // The hosting quota (backend/src/watch-party.ts): the server's words say
+    // how long to wait.
+    'party_quota' => error.message,
+    // A Reelish service from before hosting was free; it is being updated.
+    'supporter_required' => 'Hosting isn’t available yet. Try again later.',
     'network' => 'No connection. Check your network and try again.',
     'not_configured' => 'This build has no Reelish service configured.',
     _ when error.isUnauthorized => 'Sign in again to continue.',

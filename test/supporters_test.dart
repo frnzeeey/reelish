@@ -180,10 +180,10 @@ void main() {
       expect(find.text(_code), findsOneWidget);
       expect(find.text('I forgot to add my code'), findsOneWidget);
       expect(find.byType(SupporterBadge), findsNothing);
-      // One privilege, said plainly, and joining stays open to everyone.
-      expect(find.textContaining('host Watch Parties'), findsOneWidget);
+      // Watch Party is not a privilege: the page says it is for everyone.
+      expect(find.textContaining('You can host Watch Parties'), findsNothing);
       expect(
-        find.textContaining('anyone can join a Watch Party'),
+        find.textContaining('including hosting and joining Watch Parties'),
         findsOneWidget,
       );
     });

@@ -181,11 +181,7 @@ Future<Widget> _page() async {
       api: api,
       social: social,
     ),
-    movieNight: MovieNightCard(
-      onJoin: () {},
-      canHost: false,
-      onPickTitle: () {},
-    ),
+    movieNight: MovieNightCard(onJoin: () {}, onPickTitle: () {}),
   );
 }
 

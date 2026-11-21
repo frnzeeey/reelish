@@ -22,7 +22,6 @@ export type Entitlement = 'free' | 'supporter' | 'founder';
 
 /** Every supporter perk, by the name the app uses too. */
 export type SupporterPerk =
-  | 'host_watch_party'
   | 'app_themes'
   | 'app_icons'
   | 'avatar_frames'
@@ -46,7 +45,6 @@ export type FounderPerk =
   | 'founder_profile_card';
 
 const refusals: Record<SupporterPerk, string> = {
-  host_watch_party: 'Hosting a Watch Party is for Reelish Supporters.',
   app_themes: 'App themes are for Reelish Supporters.',
   app_icons: 'The supporter icons are for Reelish Supporters.',
   avatar_frames: 'Avatar frames are for Reelish Supporters.',

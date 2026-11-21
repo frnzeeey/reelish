@@ -297,23 +297,15 @@ class _LitSurface extends StatelessWidget {
 }
 
 /// Movie night: join a party with a code, or pick a title to host one.
-/// Hosting is a Supporter perk the server enforces; anyone can join.
+/// Anyone can do either.
 class MovieNightCard extends StatelessWidget {
-  const MovieNightCard({
-    super.key,
-    required this.onJoin,
-    required this.canHost,
-    this.onPickTitle,
-  });
+  const MovieNightCard({super.key, required this.onJoin, this.onPickTitle});
 
   final VoidCallback onJoin;
 
   /// Opens search, where a title's page starts a party. Null where the page
   /// has no way to search (a test).
   final VoidCallback? onPickTitle;
-
-  /// Whether this account has the hosting perk, as last known.
-  final bool canHost;
 
   @override
   Widget build(BuildContext context) => _LitSurface(
@@ -354,16 +346,6 @@ class MovieNightCard extends StatelessWidget {
               ),
           ],
         ),
-        if (!canHost) ...[
-          const SizedBox(height: AppSpace.sm),
-          Text(
-            'Hosting is for Reelish Supporters. Anyone can join with a code.',
-            style: TextStyle(
-              color: GlassTheme.muted,
-              fontSize: AppTextSize.label,
-            ),
-          ),
-        ],
       ],
     ),
   );

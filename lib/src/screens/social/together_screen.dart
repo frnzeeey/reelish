@@ -8,7 +8,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../../account/supporter_controller.dart';
 import '../../messaging/messages_controller.dart';
 import '../../navigation/app_transitions.dart';
 import '../../social/social_controller.dart';
@@ -23,39 +22,28 @@ abstract final class TogetherActions {
 }
 
 class TogetherScreen extends StatelessWidget {
-  const TogetherScreen({super.key, this.bottomClearance = 20, this.supporters});
+  const TogetherScreen({super.key, this.bottomClearance = 20});
 
   /// Space below the page, for the phone dock.
   final double bottomClearance;
 
-  /// [SupporterController.instance] when null: whether this account may
-  /// host, for Movie night's note.
-  final SupporterController? supporters;
-
   @override
-  Widget build(BuildContext context) {
-    final supporters = this.supporters ?? SupporterController.instance;
-    return FriendsScreen(
-      title: 'Together',
-      greet: true,
-      bottomClearance: bottomClearance,
-      movieNight: ListenableBuilder(
-        listenable: supporters,
-        builder: (context, _) => MovieNightCard(
-          canHost: supporters.has(SupporterPerk.hostWatchParty),
-          onPickTitle: TogetherActions.findTitle,
-          onJoin: () => unawaited(
-            Navigator.of(context).push(
-              AppPageRoute<void>(
-                context: context,
-                builder: (_) => const JoinPartyScreen(),
-              ),
-            ),
+  Widget build(BuildContext context) => FriendsScreen(
+    title: 'Together',
+    greet: true,
+    bottomClearance: bottomClearance,
+    movieNight: MovieNightCard(
+      onPickTitle: TogetherActions.findTitle,
+      onJoin: () => unawaited(
+        Navigator.of(context).push(
+          AppPageRoute<void>(
+            context: context,
+            builder: (_) => const JoinPartyScreen(),
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
 }
 
 /// What is new in Together: friend requests, messages waiting or unread,

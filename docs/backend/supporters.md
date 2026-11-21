@@ -1,10 +1,11 @@
 # Reelish Supporters
 
 Donors on Buy Me a Coffee receive a permanent Supporter Badge on their Reelish
-account. It carries these privileges: hosting a Watch Party, checked by the server,
-a choice of [app themes](../features/supporter-themes.md), and the full
-collection of [app icons](../features/app-icons.md) on Android phones. Joining a party, and everything else in the app,
-stays open to everyone.
+account. It carries cosmetic privileges ([entitlements](entitlements.md)): a
+choice of [app themes](../features/supporter-themes.md), the full collection of
+[app icons](../features/app-icons.md) on Android phones, avatar frames,
+cinematic profile cards and the exclusive Spotlight animations. Hosting and
+joining a Watch Party, and everything else in the app, stay open to everyone.
 
 | Piece | Where |
 |---|---|

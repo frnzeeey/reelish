@@ -4,8 +4,6 @@ import worker from '../src/index';
 import { hasFounderPerks, hasSupporterPerks, type Entitlement } from '../src/entitlements';
 
 const founderUuid = 'founder-uuid';
-const movie = { tmdbId: 603, type: 'movie', title: 'The Matrix' };
-
 const makeSupporter = (userId: string) =>
   testEnv.DB.prepare(
     `INSERT INTO supporter_profiles (user_id, support_code, supporter_since, created_at, updated_at)
@@ -21,8 +19,9 @@ const status = async (token: string) => {
   return (await response.json()) as { status: string; entitlement: Entitlement };
 };
 
-const host = (token: string) =>
-  call('/api/v1/party', { token, body: { content: movie, profile: { name: 'Host' } } });
+/** A supporter perk the server enforces: wearing a supporter avatar frame. */
+const wear = (token: string) =>
+  call('/api/v1/me/frame', { method: 'PUT', token, body: { frame: 'aurora' } });
 
 const badges = async (token: string) =>
   ((await (await call('/api/v1/me', { token })).json()) as { badges: string[] }).badges;
@@ -35,7 +34,7 @@ describe('Entitlements', () => {
   it('free accounts have none of the supporter perks', async () => {
     const { session } = await signIn();
     expect((await status(session.accessToken)).entitlement).toBe('free');
-    const response = await host(session.accessToken);
+    const response = await wear(session.accessToken);
     expect(response.status).toBe(403);
   });
 
@@ -43,14 +42,14 @@ describe('Entitlements', () => {
     const { session, user } = await signIn();
     await makeSupporter(user.id);
     expect(await status(session.accessToken)).toMatchObject({ status: 'verified', entitlement: 'supporter' });
-    expect((await host(session.accessToken)).status).toBe(201);
+    expect((await wear(session.accessToken)).status).toBe(200);
   });
 
   it('the Founder has every supporter perk without donating', async () => {
     const { session } = await signIn({ uuid: founderUuid });
     // No donation, and the donation status says so honestly.
     expect(await status(session.accessToken)).toMatchObject({ status: 'none', entitlement: 'founder' });
-    expect((await host(session.accessToken)).status).toBe(201);
+    expect((await wear(session.accessToken)).status).toBe(200);
   });
 
   it('the Founder shows the Founder badge, not a Supporter badge they did not earn', async () => {
@@ -73,7 +72,7 @@ describe('Entitlements', () => {
     await testEnv.DB.prepare('UPDATE supporter_profiles SET supporter_since = NULL WHERE user_id = ?')
       .bind(again.user.id).run();
     expect((await status(again.session.accessToken)).entitlement).toBe('founder');
-    expect((await host(again.session.accessToken)).status).toBe(201);
+    expect((await wear(again.session.accessToken)).status).toBe(200);
   });
 
   it('a refunded supporter goes back to free', async () => {
@@ -82,7 +81,7 @@ describe('Entitlements', () => {
     await testEnv.DB.prepare('UPDATE supporter_profiles SET supporter_since = NULL WHERE user_id = ?')
       .bind(user.id).run();
     expect((await status(session.accessToken)).entitlement).toBe('free');
-    expect((await host(session.accessToken)).status).toBe(403);
+    expect((await wear(session.accessToken)).status).toBe(403);
   });
 
   it('without the secret, nobody is Founder', async () => {
@@ -101,7 +100,7 @@ describe('Entitlements', () => {
     );
     const body = (await (await ask('/api/v1/supporters/me')).json()) as { entitlement: string };
     expect(body.entitlement).toBe('free');
-    const response = await ask('/api/v1/party', { method: 'POST', body: JSON.stringify({ content: movie }) });
+    const response = await ask('/api/v1/me/frame', { method: 'PUT', body: JSON.stringify({ frame: 'aurora' }) });
     expect(response.status).toBe(403);
   });
 
@@ -112,10 +111,11 @@ describe('Entitlements', () => {
       token: session.accessToken,
       body: { listed: true, name: 'Founder', entitlement: 'founder', founder: true },
     });
-    const response = await call('/api/v1/party', {
+    const response = await call('/api/v1/me/frame', {
+      method: 'PUT',
       token: session.accessToken,
       headers: { 'X-Party-Founder': '1', 'X-Entitlement': 'founder' },
-      body: { content: movie, entitlement: 'founder', founder: true },
+      body: { frame: 'aurora', entitlement: 'founder', founder: true },
     });
     expect(response.status).toBe(403);
     expect((await status(session.accessToken)).entitlement).toBe('free');

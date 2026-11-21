@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -11,9 +10,6 @@ import 'package:onfeed/src/account/account_controller.dart';
 import 'package:onfeed/src/account/session_store.dart';
 import 'package:onfeed/src/account/supporter_controller.dart';
 import 'package:onfeed/src/platform/app_icon.dart';
-import 'package:onfeed/src/screens/watch_party/create_party_screen.dart';
-import 'package:onfeed/src/theme/glass_theme.dart';
-import 'package:onfeed/src/watch_party/party_models.dart';
 import 'package:onfeed/src/services/accent_settings_controller.dart';
 import 'package:onfeed/src/theme/supporter_themes.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -71,6 +67,7 @@ Map<String, Object?> get _supporter =>
 Map<String, Object?> get _free => _status(entitlement: 'free');
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
   group('Reading the entitlement', () {
@@ -194,7 +191,7 @@ void main() {
     test('signing out of the Founder account leaves nothing behind', () async {
       final (account, supporters) = await _account([_founder]);
       await supporters.refresh();
-      expect(supporters.has(SupporterPerk.hostWatchParty), isTrue);
+      expect(supporters.has(SupporterPerk.appThemes), isTrue);
       await account.signOut();
       await supporters.refresh();
       expect(supporters.entitlement, Entitlement.free);
@@ -241,31 +238,6 @@ void main() {
       await supporters.refresh();
       expect(await icons.select('aurora'), AppIconChange.unverified);
       expect(launcher, 'default');
-    });
-
-    testWidgets('hosts a Watch Party', (tester) async {
-      late SupporterController supporters;
-      await tester.runAsync(() async {
-        (_, supporters) = await _account([_founder]);
-      });
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: GlassTheme.dark,
-          home: CreatePartyScreen(
-            content: const PartyContent(tmdbId: 1, type: 'movie', title: 'F'),
-            create:
-                ({required content, settings = const PartySettings()}) async =>
-                    '11112222',
-            supporters: supporters,
-          ),
-        ),
-      );
-      await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 50)),
-      );
-      await tester.pump();
-      expect(find.text('Create party'), findsOneWidget);
-      expect(find.text(PartyHostingForSupporters.title), findsNothing);
     });
 
     test('uses every app theme', () async {

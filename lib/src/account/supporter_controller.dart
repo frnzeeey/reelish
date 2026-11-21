@@ -27,7 +27,6 @@ enum Entitlement { free, supporter, founder }
 /// and call `requirePerk` wherever the server enforces it. Nothing names the
 /// Founder: inheritance happens in the entitlement.
 enum SupporterPerk {
-  hostWatchParty,
   appThemes,
   appIcons,
   avatarFrames,

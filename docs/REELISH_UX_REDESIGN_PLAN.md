@@ -224,7 +224,7 @@ fills; durations through `AppMotion.resolve`.
 | Velvet Cinema, Aurora, Obsidian Gold, Ember, Arctic, Rosé Noir, Ivory Studio | Supporters and Founder | `appThemes` perk | Unchanged ids and colours; screens must render them correctly |
 | Sovereign Edition theme, card, frame, Crest icon and splash | Founder only | Founder perks | Unchanged |
 | Supporter badge, Founder badge | Identity | Server | Unchanged; restyled placement only |
-| Hosting a Watch Party | Supporters, Founder | `createParty` on the server | Unchanged |
+| Hosting a Watch Party | Everyone (since November 2026) | None | Was a supporter perk |
 | Spotlight presets (2 free, 4 supporter) | — | Perk | Unchanged |
 | App icons: Default, Slate free; Signature and Colours supporter; Crest Founder | — | Server check | New brand icons added under new ids |
 

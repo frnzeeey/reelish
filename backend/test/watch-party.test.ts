@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { runDurableObjectAlarm, runInDurableObject } from 'cloudflare:test';
 import { call, signIn, testEnv } from './helpers';
-import { newCode } from '../src/watch-party';
+import { hostQuotaPerHour, newCode, prunePartyCodes } from '../src/watch-party';
 import { closeCodes, emptyGraceMs, hostGraceMs, participantId, presenceCheckMs, staleSocketMs, type WatchPartyRoom } from '../src/party-room';
 
 type ErrorBody = { error: { code: string } };
@@ -29,15 +29,16 @@ async function makeSupporter(userId: string) {
     .run();
 }
 
-/** An account that may host: hosting is for supporters. */
+/** A supporter, for the perks that still need one (avatar frames). */
 async function supporter(options: { uuid?: string } = {}) {
   const account = await signIn(options);
   await makeSupporter(account.user.id);
   return account;
 }
 
+/** A free account hosting a room: hosting needs no entitlement. */
 async function host(settings: Record<string, unknown> = {}) {
-  const account = await supporter();
+  const account = await signIn();
   const response = await create(account.session.accessToken, { settings });
   expect(response.status).toBe(201);
   const { code } = (await response.json()) as { code: string };
@@ -135,7 +136,7 @@ describe('Watch party rooms', () => {
 
   it('requires a signed-in account and valid content', async () => {
     expect((await call('/api/v1/party', { body: { content: movie } })).status).toBe(401);
-    const { session } = await supporter();
+    const { session } = await signIn();
     const bad = await create(session.accessToken, { content: { tmdbId: 'x', type: 'movie', title: 'A' } });
     expect(await codeOf(bad)).toBe('invalid_content');
     const noEpisode = await create(session.accessToken, { content: { tmdbId: 1, type: 'series', title: 'A' } });
@@ -418,7 +419,7 @@ describe('Watch party rooms', () => {
   });
 
   it('a signed-out session cannot host with its still-valid token', async () => {
-    const { session } = await supporter();
+    const { session } = await signIn();
     await call('/api/v1/auth/logout', { method: 'POST', token: session.accessToken });
     const response = await create(session.accessToken, { content: movie });
     expect(response.status).toBe(401);
@@ -621,72 +622,179 @@ describe('Avatar frames in a party', () => {
   });
 });
 
-describe('Hosting is for supporters; joining is for everyone', () => {
-  it('an account without a donation cannot create a room, however it asks', async () => {
-    const { session } = await signIn();
-    const attempts = [
-      { body: {} },
-      { body: { supporter: true, badges: ['supporter'], settings: { supporter: true } } },
-      { body: {}, headers: { 'X-Party-Supporter': '1', 'X-Supporter': 'true' } },
-    ];
-    for (const attempt of attempts) {
-      const response = await call('/api/v1/party', {
-        token: session.accessToken,
-        headers: attempt.headers,
-        body: { content: movie, ...attempt.body },
-      });
-      expect(response.status).toBe(403);
-      expect(await codeOf(response)).toBe('supporter_required');
-    }
-  });
+describe('Hosting and joining are for everyone', () => {
+  it('every entitlement hosts alike: free, pending, supporter, refunded and the Founder', async () => {
+    const free = await signIn();
+    expect((await create(free.session.accessToken)).status).toBe(201);
 
-  it('a donation waiting for review does not count', async () => {
-    const { session, user } = await signIn();
+    const pending = await signIn();
     await testEnv.DB.prepare(
       `INSERT INTO supporter_profiles (user_id, support_code, claim_requested_at, created_at, updated_at)
        VALUES (?, ?, 1000, 1000, 1000)`,
     )
-      .bind(user.id, `RS-${crypto.randomUUID().slice(0, 8)}`)
+      .bind(pending.user.id, `RS-${crypto.randomUUID().slice(0, 8)}`)
       .run();
-    expect((await create(session.accessToken)).status).toBe(403);
+    expect((await create(pending.session.accessToken)).status).toBe(201);
+
+    const backer = await supporter();
+    expect((await create(backer.session.accessToken)).status).toBe(201);
+
+    await testEnv.DB.prepare('UPDATE supporter_profiles SET supporter_since = NULL WHERE user_id = ?')
+      .bind(backer.user.id)
+      .run();
+    expect((await create(backer.session.accessToken)).status).toBe(201);
+
+    const founder = await signIn({ uuid: 'founder-uuid' });
+    expect((await create(founder.session.accessToken)).status).toBe(201);
   });
 
-  it('a supporter hosts, and anyone joins and stays in sync', async () => {
+  it('a free host and a free guest stay in sync; a late joiner gets the current state', async () => {
     const { code, token } = await host();
     const viewer = await signIn();
-    // Not a supporter, and nothing asks them to be one.
     expect((await call(`/api/v1/party/${code}`, { token: viewer.session.accessToken })).status).toBe(200);
     const hostClient = await connect(token, code);
     const guest = await connect(viewer.session.accessToken, code);
     hostClient.send({ t: 'start' });
     await guest.next('room', (m) => (m.room as { phase: string }).phase === 'watching');
     hostClient.send({ t: 'control', action: 'play', positionMs: 0 });
+    expect((await guest.next('state', (m) => (m.playback as { status: string }).status === 'playing')).playback)
+      .toMatchObject({ status: 'playing', positionMs: 0 });
     hostClient.send({ t: 'control', action: 'pause', positionMs: 4000 });
+    expect((await guest.next('state', (m) => (m.playback as { status: string }).status === 'paused')).playback)
+      .toMatchObject({ status: 'paused', positionMs: 4000 });
     hostClient.send({ t: 'control', action: 'seek', positionMs: 90_000 });
     const seek = await guest.next('state', (m) => (m.playback as { positionMs: number }).positionMs === 90_000);
     expect(seek.playback).toMatchObject({ status: 'paused', positionMs: 90_000 });
+
+    const late = await connect((await signIn()).session.accessToken, code);
+    const welcome = await late.next('welcome');
+    expect((welcome.room as { phase: string; playback: unknown })).toMatchObject({
+      phase: 'watching',
+      playback: { status: 'paused', positionMs: 90_000 },
+    });
   });
 
-  it('when support ends, no new room; the open one carries on', async () => {
-    const first = await host();
-    const viewer = await signIn();
-    const guest = await connect(viewer.session.accessToken, first.code);
-    await testEnv.DB.prepare('UPDATE supporter_profiles SET supporter_since = NULL WHERE user_id = ?')
-      .bind(first.account.user.id)
-      .run();
+  it('a free host\'s guests cannot control playback or take over the room', async () => {
+    const { code, token } = await host();
+    const hostClient = await connect(token, code);
+    const guest = await connect((await signIn()).session.accessToken, code);
+    hostClient.send({ t: 'start' });
+    await guest.next('room', (m) => (m.room as { phase: string }).phase === 'watching');
+    const welcome = guest.messages.find((m) => m.t === 'welcome')!;
+    const hostPid = (welcome.room as { host: { pid: string } }).host.pid;
 
-    const again = await create(first.token);
-    expect(again.status).toBe(403);
-    expect(await codeOf(again)).toBe('supporter_required');
-    // The refused request ended nothing: the room is still there.
-    expect((await call(`/api/v1/party/${first.code}`, { token: viewer.session.accessToken })).status).toBe(200);
-    expect(guest.closed).toBeNull();
+    for (const attempt of [
+      { t: 'control', action: 'play', positionMs: 1000 },
+      { t: 'heartbeat', positionMs: 1000, seq: 1 },
+      { t: 'settings', guestControl: true },
+      { t: 'transfer', pid: (welcome.you as { pid: string }).pid },
+      { t: 'kick', pid: hostPid },
+      { t: 'end' },
+    ]) {
+      const seen = guest.messages.length;
+      guest.send(attempt);
+      expect((await guest.next('error', () => true, seen)).code).toBe('not_allowed');
+    }
+    // The host is unchanged and the room still answers the host.
+    hostClient.send({ t: 'control', action: 'play', positionMs: 2000 });
+    expect((await guest.next('state', (m) => (m.playback as { positionMs: number }).positionMs === 2000)).playback)
+      .toMatchObject({ status: 'playing', by: hostPid });
+    expect(hostClient.closed).toBeNull();
   });
+});
 
-  it('becoming a supporter allows hosting at once', async () => {
+describe('Free hosting stays within the Free plan', () => {
+  const indexed = async (code: string) =>
+    (await testEnv.DB.prepare('SELECT 1 FROM party_codes WHERE code = ?').bind(code).first()) !== null;
+
+  it(`one account creates at most ${hostQuotaPerHour} rooms an hour; a refusal ends nothing`, async () => {
     const { session, user } = await signIn();
-    expect((await create(session.accessToken)).status).toBe(403);
-    await makeSupporter(user.id);
+    let last = '';
+    for (let i = 0; i < hostQuotaPerHour; i++) {
+      const response = await create(session.accessToken);
+      expect(response.status).toBe(201);
+      last = ((await response.json()) as { code: string }).code;
+    }
+    const watcher = await signIn();
+    const guest = await connect(watcher.session.accessToken, last);
+
+    const refused = await create(session.accessToken);
+    expect(refused.status).toBe(429);
+    expect(await codeOf(refused)).toBe('party_quota');
+    expect(Number(refused.headers.get('Retry-After'))).toBeGreaterThan(0);
+    // The open room carries on.
+    expect((await call(`/api/v1/party/${last}`, { token: watcher.session.accessToken })).status).toBe(200);
+    expect(guest.closed).toBeNull();
+
+    // An hour later the budget is whole again.
+    await testEnv.DB.prepare('UPDATE party_hosts SET window_start = window_start - 3601 WHERE user_id = ?')
+      .bind(user.id).run();
     expect((await create(session.accessToken)).status).toBe(201);
+    const row = await testEnv.DB.prepare('SELECT window_count FROM party_hosts WHERE user_id = ?')
+      .bind(user.id).first<{ window_count: number }>();
+    expect(row!.window_count).toBe(1);
+  });
+
+  it('the quota is per account: another host is unaffected', async () => {
+    const busy = await signIn();
+    for (let i = 0; i < hostQuotaPerHour; i++) expect((await create(busy.session.accessToken)).status).toBe(201);
+    expect((await create(busy.session.accessToken)).status).toBe(429);
+    expect((await create((await signIn()).session.accessToken)).status).toBe(201);
+  });
+
+  it('lookups for codes not issued stop at D1, before any room is asked', async () => {
+    const { code, token } = await host();
+    expect(await indexed(code)).toBe(true);
+    // The room is still there, but without its index row nothing reaches it.
+    await testEnv.DB.prepare('DELETE FROM party_codes WHERE code = ?').bind(code).run();
+    const preview = await call(`/api/v1/party/${code}`, { token });
+    expect(preview.status).toBe(404);
+    expect(await codeOf(preview)).toBe('party_not_found');
+    const socket = await call(`/api/v1/party/${code}/socket`, { token, headers: { Upgrade: 'websocket' } });
+    expect(socket.status).toBe(404);
+  });
+
+  it('an ended room leaves the index, and a replaced one too', async () => {
+    const first = await host();
+    const hostClient = await connect(first.token, first.code);
+    hostClient.send({ t: 'end' });
+    await hostClient.waitClosed();
+    await vi.waitFor(async () => expect(await indexed(first.code)).toBe(false));
+
+    const second = await host();
+    expect((await create(second.token)).status).toBe(201);
+    await vi.waitFor(async () => expect(await indexed(second.code)).toBe(false));
+  });
+
+  it('joining still reports a full room and a removed participant', async () => {
+    const { code, token } = await host({ capacity: 2 });
+    const hostClient = await connect(token, code);
+    const guest = await signIn();
+    const guestClient = await connect(guest.session.accessToken, code);
+    const third = await call(`/api/v1/party/${code}/socket`, {
+      token: (await signIn()).session.accessToken,
+      headers: { Upgrade: 'websocket' },
+    });
+    expect(third.status).toBe(409);
+    expect(await codeOf(third)).toBe('party_full');
+
+    const guestPid = (guestClient.messages.find((m) => m.t === 'welcome')!.you as { pid: string }).pid;
+    hostClient.send({ t: 'kick', pid: guestPid });
+    await guestClient.waitClosed();
+    const back = await call(`/api/v1/party/${code}/socket`, {
+      token: guest.session.accessToken,
+      headers: { Upgrade: 'websocket' },
+    });
+    expect(back.status).toBe(403);
+    expect(await codeOf(back)).toBe('party_removed');
+  });
+
+  it('the daily cron forgets codes older than a room\'s lifetime', async () => {
+    const now = Math.floor(Date.now() / 1000);
+    await testEnv.DB.prepare('INSERT INTO party_codes (code, created_at) VALUES (?, ?), (?, ?)')
+      .bind('00000001', now - 13 * 3600, '00000002', now - 3600).run();
+    expect(await prunePartyCodes(testEnv, now)).toBeGreaterThanOrEqual(1);
+    expect(await indexed('00000001')).toBe(false);
+    expect(await indexed('00000002')).toBe(true);
   });
 });

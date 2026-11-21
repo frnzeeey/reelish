@@ -89,8 +89,8 @@ the interface once per launch:
 - **Supporters:** the Supporter Badge is set only by Buy Me a Coffee's signed
   webhook, or the owner's `backend/scripts/grant-supporter.mjs`; never by the
   app. A donation names its account through a code in the donor's message,
-  since the platform has no metadata. Supporter perks: hosting a Watch Party
-  (enforced by `createParty`; joining stays open to everyone), app themes in Settings > Appearance
+  since the platform has no metadata. Watch Party hosting and joining are
+  free for everyone (no entitlement check). Supporter perks: app themes in Settings > Appearance
   (`supporter_themes.dart`, applied by `AccentSettingsController`: the page
   colours, the accent and the profile card) and every launcher icon (`app_icon.dart`: Default,
   Coral and Slate stay free; a supporter icon is applied only after a fresh server
