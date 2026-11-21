@@ -134,4 +134,73 @@ void main() {
       expect(watch.elapsed, lessThan(const Duration(seconds: 10)));
     },
   );
+
+  group('abort', () {
+    test('stops a provider waiting on its upstream', () async {
+      // A lookup the viewer left: the run must end (and free its runtime
+      // slot) now, not when the provider's 8 s request returns.
+      final abort = Completer<void>();
+      final watch = Stopwatch()..start();
+      final run = ProviderRunner.run(
+        _request(
+          'module.exports.getStreams = () =>'
+          '  new Promise(r => setTimeout(() => r([{ url: "https://cdn.example/a.m3u8" }]), 8000));',
+        ),
+        abort: abort.future,
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+      abort.complete();
+      await expectLater(run, throwsA(isA<ProviderRunCancelled>()));
+      expect(watch.elapsed, lessThan(const Duration(seconds: 3)));
+    });
+
+    test('before the runtime starts still stops the run', () async {
+      final watch = Stopwatch()..start();
+      await expectLater(
+        ProviderRunner.run(
+          _request(
+            'module.exports.getStreams = () => new Promise(r => setTimeout(() => r([]), 8000));',
+          ),
+          abort: Future.value(),
+        ),
+        throwsA(isA<ProviderRunCancelled>()),
+      );
+      expect(watch.elapsed, lessThan(const Duration(seconds: 3)));
+    });
+
+    test('a signal that never fires changes nothing', () async {
+      final streams = await ProviderRunner.run(
+        _request(
+          'module.exports.getStreams = async (id, type, s, e) =>'
+          '  [{ name: [id, type, s, e].join("/"), url: "https://cdn.example/a.m3u8" }];',
+        ),
+        abort: Completer<void>().future,
+      );
+      expect(streams.single['name'], '603/tv/2/5');
+      await expectLater(
+        ProviderRunner.run(
+          _request('throw new Error("site changed");'),
+          abort: Completer<void>().future,
+        ),
+        throwsA(
+          isA<ProviderRunException>().having(
+            (e) => e.message,
+            'message',
+            contains('site changed'),
+          ),
+        ),
+      );
+    });
+
+    test('a stuck synchronous provider still returns a timeout', () async {
+      await expectLater(
+        ProviderRunner.run(
+          _request('while (true) {}'),
+          timeout: const Duration(seconds: 2),
+          abort: Completer<void>().future,
+        ),
+        throwsA(isA<TimeoutException>()),
+      );
+    });
+  });
 }

@@ -299,10 +299,10 @@ The files imported by the most other `lib/` files. A change to one of these reac
 | [`lib/src/theme/glass_theme.dart`](../../lib/src/theme/glass_theme.dart) | 128 | 55 |
 | [`lib/src/theme/reelish_icons.dart`](../../lib/src/theme/reelish_icons.dart) | 110 | 12 |
 | [`lib/src/theme/design_tokens.dart`](../../lib/src/theme/design_tokens.dart) | 81 | 2 |
-| [`lib/src/models/media_item.dart`](../../lib/src/models/media_item.dart) | 59 | 58 |
+| [`lib/src/models/media_item.dart`](../../lib/src/models/media_item.dart) | 59 | 59 |
 | [`lib/src/platform/device_capabilities.dart`](../../lib/src/platform/device_capabilities.dart) | 59 | 31 |
 | [`lib/src/account/account_controller.dart`](../../lib/src/account/account_controller.dart) | 30 | 34 |
-| [`lib/src/services/storage_service.dart`](../../lib/src/services/storage_service.dart) | 30 | 41 |
+| [`lib/src/services/storage_service.dart`](../../lib/src/services/storage_service.dart) | 30 | 42 |
 | [`lib/src/widgets/settings/settings_components.dart`](../../lib/src/widgets/settings/settings_components.dart) | 30 | 3 |
 | [`lib/src/widgets/tv/tv_focus.dart`](../../lib/src/widgets/tv/tv_focus.dart) | 28 | 8 |
 | [`lib/src/account/account_api.dart`](../../lib/src/account/account_api.dart) | 23 | 33 |
@@ -319,7 +319,7 @@ The files imported by the most other `lib/` files. A change to one of these reac
 | [`lib/src/models/plugin_catalog.dart`](../../lib/src/models/plugin_catalog.dart) | 12 | 2 |
 | [`lib/src/desktop/desktop_widgets.dart`](../../lib/src/desktop/desktop_widgets.dart) | 11 | 6 |
 | [`lib/src/discovery/tmdb_genres.dart`](../../lib/src/discovery/tmdb_genres.dart) | 11 | 3 |
-| [`lib/src/services/provider_plugin_service.dart`](../../lib/src/services/provider_plugin_service.dart) | 11 | 5 |
+| [`lib/src/services/provider_plugin_service.dart`](../../lib/src/services/provider_plugin_service.dart) | 11 | 6 |
 | [`lib/src/services/tmdb_service.dart`](../../lib/src/services/tmdb_service.dart) | 11 | 18 |
 
 ## Package usage

@@ -60,6 +60,29 @@ class ProviderRunException implements Exception {
   String toString() => message;
 }
 
+/// Thrown by [ProviderRunner.run] when its abort signal stopped the run.
+class ProviderRunCancelled implements Exception {
+  const ProviderRunCancelled();
+
+  @override
+  String toString() => "The provider lookup was cancelled.";
+}
+
+/// What one run produced; sent back from the isolate.
+typedef _RunResult = ({
+  List<Map<String, dynamic>> streams,
+  String? error,
+  bool timedOut,
+  bool aborted,
+});
+
+const _RunResult _stopped = (
+  streams: <Map<String, dynamic>>[],
+  error: null,
+  timedOut: false,
+  aborted: true,
+);
+
 /// Runs provider scripts on a background isolate.
 ///
 /// QuickJS evaluates synchronously through FFI on the calling isolate. On the
@@ -73,7 +96,8 @@ abstract final class ProviderRunner {
   /// endless loop, a runaway regular expression) runs inside native QuickJS
   /// and only stops when the engine interrupts it: the QuickJS builds in use
   /// ignore their own timeout for such code, so the run's interrupt
-  /// deadline does it where the native library supports one (Android).
+  /// deadline does it where the native library supports one (Android, and
+  /// Windows with Reelish's bridge DLL; third_party/flutter_js/REELISH_PATCH.md).
   /// Where it does not, the caller still gets a timeout here and frees the
   /// provider's runtime slot, so one stuck provider cannot stall every later
   /// stream search, though the stuck isolate keeps running.
@@ -92,12 +116,17 @@ abstract final class ProviderRunner {
   static Future<List<Map<String, dynamic>>> run(
     ProviderRunRequest request, {
     @visibleForTesting Duration timeout = hardTimeout,
+    Future<void>? abort,
   }) async {
-    final result = await Isolate.run(() => _run(request)).timeout(
-      timeout,
-      onTimeout: () =>
-          throw TimeoutException('Provider ${request.pluginId} timed out.'),
-    );
+    final result = abort == null
+        ? await Isolate.run(() => _run(request)).timeout(
+            timeout,
+            onTimeout: () => throw TimeoutException(
+              'Provider ${request.pluginId} timed out.',
+            ),
+          )
+        : await _runAbortable(request, abort, timeout);
+    if (result.aborted) throw const ProviderRunCancelled();
     if (result.timedOut) {
       throw TimeoutException('Provider ${request.pluginId} timed out.');
     }
@@ -106,10 +135,84 @@ abstract final class ProviderRunner {
     return result.streams;
   }
 
-  static Future<
-    ({List<Map<String, dynamic>> streams, String? error, bool timedOut})
-  >
-  _run(ProviderRunRequest request) async {
+  /// [run] with a way to stop: when [abort] completes, the isolate stops
+  /// waiting for getStreams (and its fetches) and disposes its runtime. The
+  /// returned future still waits for that, so a caller that bounds live
+  /// runtimes (the scheduler's slots) frees its slot only once the heap is
+  /// gone. A script busy computing reads the message only when it yields;
+  /// the interrupt deadline bounds that case as before.
+  static Future<_RunResult> _runAbortable(
+    ProviderRunRequest request,
+    Future<void> abort,
+    Duration timeout,
+  ) async {
+    final port = RawReceivePort();
+    final done = Completer<_RunResult>();
+    SendPort? control;
+    var abortRequested = false;
+    void requestAbort() {
+      abortRequested = true;
+      control?.send(null);
+    }
+
+    port.handler = (Object? message) {
+      if (message is SendPort) {
+        control = message;
+        if (abortRequested) message.send(null);
+      } else if (message is _RunResult) {
+        if (!done.isCompleted) done.complete(message);
+      } else if (!done.isCompleted) {
+        // onError ([error, stack]) or onExit (null) before a result.
+        done.completeError(
+          message is List && message.isNotEmpty
+              ? ProviderRunException('${message.first}')
+              : const ProviderRunException('The provider runtime stopped.'),
+        );
+      }
+    };
+    unawaited(abort.then((_) => requestAbort()));
+    try {
+      await Isolate.spawn(
+        _abortableEntry,
+        (request, port.sendPort),
+        onError: port.sendPort,
+        onExit: port.sendPort,
+        debugName: 'provider ${request.pluginId}',
+      );
+      return await done.future.timeout(
+        timeout,
+        onTimeout: () {
+          // Ask a stuck run to stop; Isolate.run could not.
+          requestAbort();
+          throw TimeoutException('Provider ${request.pluginId} timed out.');
+        },
+      );
+    } finally {
+      port.close();
+    }
+  }
+
+  static Future<void> _abortableEntry(
+    (ProviderRunRequest, SendPort) message,
+  ) async {
+    final (request, reply) = message;
+    final control = ReceivePort();
+    final aborted = Completer<void>();
+    control.listen((_) {
+      if (!aborted.isCompleted) aborted.complete();
+    });
+    reply.send(control.sendPort);
+    final result = await _run(request, aborted: aborted.future);
+    control.close();
+    // Exits like Isolate.run: a stopped run's promise poller keeps a timer
+    // queued, which would otherwise keep this isolate alive.
+    Isolate.exit(reply, result);
+  }
+
+  static Future<_RunResult> _run(
+    ProviderRunRequest request, {
+    Future<void>? aborted,
+  }) async {
     final interruptAfter = request.interruptAfter;
     final deadline = interruptAfter == null
         ? null
@@ -220,9 +323,23 @@ abstract final class ProviderRunner {
           });
         })()
       ''');
-      final value = await activeRuntime
+      final pending = activeRuntime
           .handlePromise(call)
           .timeout(getStreamsTimeout);
+      final JsEvalResult value;
+      if (aborted == null) {
+        value = await pending;
+      } else {
+        // Stopped: the runtime is disposed below, and getStreams' promise
+        // (with its fetches) is dropped with it.
+        pending.ignore();
+        final first = await Future.any<JsEvalResult?>([
+          pending,
+          aborted.then((_) => null),
+        ]);
+        if (first == null) return _stopped;
+        value = first;
+      }
       final decoded = jsonDecode(value.stringResult);
       // An empty result is normal for a title a provider does not index.
       final List<dynamic> entries = decoded is List
@@ -237,18 +354,30 @@ abstract final class ProviderRunner {
         ],
         error: null,
         timedOut: false,
+        aborted: false,
       );
     } on TimeoutException {
-      return (streams: <Map<String, dynamic>>[], error: null, timedOut: true);
+      return (
+        streams: <Map<String, dynamic>>[],
+        error: null,
+        timedOut: true,
+        aborted: false,
+      );
     } catch (error) {
       // An interrupted script fails with QuickJS's "interrupted" error.
       if (deadline != null && !DateTime.now().isBefore(deadline)) {
-        return (streams: <Map<String, dynamic>>[], error: null, timedOut: true);
+        return (
+          streams: <Map<String, dynamic>>[],
+          error: null,
+          timedOut: true,
+          aborted: false,
+        );
       }
       return (
         streams: <Map<String, dynamic>>[],
         error: error.toString(),
         timedOut: false,
+        aborted: false,
       );
     } finally {
       try {

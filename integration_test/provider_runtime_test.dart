@@ -44,24 +44,58 @@ void main() {
     expect(watch.elapsed, lessThan(const Duration(seconds: 15)));
   });
 
-  test('without the deadline, whether the engine stops a loop', () async {
-    final watch = Stopwatch()..start();
-    Object? outcome;
-    try {
-      await ProviderRunner.run(
-        _request('while (true) {}'),
-        timeout: const Duration(seconds: 35),
+  test(
+    'without the deadline, whether the engine stops a loop',
+    () async {
+      final watch = Stopwatch()..start();
+      Object? outcome;
+      try {
+        await ProviderRunner.run(
+          _request('while (true) {}'),
+          timeout: const Duration(seconds: 35),
+        );
+      } catch (error) {
+        outcome = error;
+      }
+      // Informational: under 35 s means the native 20 s timeout interrupted
+      // the loop; 35 s means only the Dart ceiling ended the wait.
+      // ignore: avoid_print
+      print(
+        'NATIVE_TIMEOUT_PROBE ${watch.elapsed.inSeconds}s '
+        '${outcome.runtimeType}: $outcome',
       );
-    } catch (error) {
-      outcome = error;
-    }
-    // Informational: under 35 s means the native 20 s timeout interrupted
-    // the loop; 35 s means only the Dart ceiling ended the wait.
-    // ignore: avoid_print
-    print(
-      'NATIVE_TIMEOUT_PROBE ${watch.elapsed.inSeconds}s '
-      '${outcome.runtimeType}: $outcome',
-    );
-    expect(outcome, isA<Exception>());
-  }, timeout: const Timeout(Duration(seconds: 60)));
+      expect(outcome, isA<Exception>());
+    },
+    timeout: const Timeout(Duration(seconds: 60)),
+  );
+
+  test(
+    'an abort stops a provider waiting on its upstream',
+    () async {
+      final abort = Completer<void>();
+      final watch = Stopwatch()..start();
+      final run = ProviderRunner.run(
+        _request(
+          'module.exports.getStreams = () => new Promise(r => setTimeout(() => r([]), 10000));',
+        ),
+        abort: abort.future,
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+      abort.complete();
+      await expectLater(run, throwsA(isA<ProviderRunCancelled>()));
+      expect(watch.elapsed, lessThan(const Duration(seconds: 4)));
+      // The same deadline still applies on the abortable path.
+      await expectLater(
+        ProviderRunner.run(
+          _request(
+            'while (true) {}',
+            interruptAfter: const Duration(seconds: 3),
+          ),
+          abort: Completer<void>().future,
+        ),
+        throwsA(isA<TimeoutException>()),
+      );
+    },
+    timeout: const Timeout(Duration(seconds: 60)),
+  );
 }

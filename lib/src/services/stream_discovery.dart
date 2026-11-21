@@ -137,8 +137,13 @@ class StreamDiscovery {
     if (!_updates.isClosed) unawaited(_updates.close());
   }
 
+  /// Completes on [cancel]; running provider runs stop when it does.
+  Future<void> get whenCancelled => _cancelledSignal.future;
+  final Completer<void> _cancelledSignal = Completer<void>();
+
   void cancel() {
     _cancelled = true;
+    if (!_cancelledSignal.isCompleted) _cancelledSignal.complete();
   }
 
   static String _key(StreamSource source) =>

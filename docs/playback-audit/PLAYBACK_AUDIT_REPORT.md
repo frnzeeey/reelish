@@ -43,15 +43,15 @@ three places:
 
 | ID | Title | Severity | Evidence |
 |---|---|---|---|
-| PB-01 | Cancelled lookups keep running providers and hold the app's 2 runtime slots | High | Confirmed path, impact unmeasured |
-| PB-02 | Two slow providers at the top of the priority order delay every first source by up to 30 s | High | Confirmed path, impact unmeasured |
+| PB-01 | Cancelled lookups keep running providers and hold the app's 2 runtime slots | High | Measured 7.5 s; **fixed** ([deep audit](DEEP_AUDIT_2026-11-21.md)) |
+| PB-02 | Two slow providers at the top of the priority order delay every first source by up to 30 s | High | Measured 11 s; **improved** from the second lookup ([deep audit](DEEP_AUDIT_2026-11-21.md)) |
 | PB-03 | A live failure classified as "cancelled" leaves the player on a permanent spinner | Medium | Confirmed by test; **fixed** |
 | PB-04 | Rediscovery can open a source during an episode switch (corrected) | Low | Confirmed path, narrow; not fixed |
 | PB-05 | Link refresh can reuse the still-running lookup and replay the dead link | Low | Potential |
 | PB-06 | Up to five sequential engine round trips between initialize and play | Medium | Confirmed path, impact unmeasured |
 | PB-07 | Resuming buffers the start of the file, then seeks and buffers again | Medium | Confirmed path, impact unmeasured |
 | PB-08 | Each provider run builds an isolate and runtime and parses a 702 KB bundle | Medium | Confirmed path, impact unmeasured |
-| PB-09 | Windows: a provider stuck in synchronous code keeps its isolate and heap after the timeout | Medium | Confirmed (documented in code) |
+| PB-09 | Windows: a provider stuck in synchronous code keeps its isolate and heap after the timeout | Medium | **No longer applies**: the Windows DLL supports the deadline ([deep audit](DEEP_AUDIT_2026-11-21.md)) |
 | PB-10 | Production telemetry cannot separate source resolution from player start | Medium | Confirmed |
 | PB-11 | Three different source-identity keys | Low | Confirmed |
 | PB-12 | Media3 playing video with no audio is not detected | Low | Potential |

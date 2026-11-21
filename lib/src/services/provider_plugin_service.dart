@@ -87,6 +87,33 @@ class ProviderPluginService extends ChangeNotifier {
   final ProviderScriptCache _scripts = ProviderScriptCache();
   Map<String, bool> _enabledOverrides = {};
   String? lastLookupMessage;
+
+  /// Providers whose last run in this session timed out, or failed or found
+  /// nothing after [_stallAfter]. With two runtime slots, two such providers
+  /// at the top of the order held back every other provider for up to
+  /// [ProviderRunner.getStreamsTimeout] (PB-02,
+  /// docs/playback-audit/DEEP_AUDIT_2026-11-21.md), so later lookups start
+  /// them last. In memory only: each launch starts from the manifests' order.
+  final Set<String> _stalledProviders = {};
+  static const _stallAfter = Duration(seconds: 10);
+
+  static String _providerKey((ProviderRepository, ProviderPlugin) entry) =>
+      '${entry.$1.url}|${entry.$2.id}';
+
+  void _noteProviderRun(
+    (ProviderRepository, ProviderPlugin) entry,
+    Duration took, {
+    required bool found,
+    bool timedOut = false,
+  }) {
+    final key = _providerKey(entry);
+    if (!found && (timedOut || took >= _stallAfter)) {
+      _stalledProviders.add(key);
+    } else {
+      _stalledProviders.remove(key);
+    }
+  }
+
   bool _disposed = false;
 
   // Manifest loads and provider lookups can finish after Home is gone.
@@ -640,6 +667,7 @@ class ProviderPluginService extends ChangeNotifier {
           onSource: discovery.add,
           onCandidate: discovery.recordCandidate,
           isCancelled: () => discovery.isCancelled,
+          cancelled: discovery.whenCancelled,
           onMessage: (message) => discovery.message = message,
         );
       } catch (error) {
@@ -663,6 +691,7 @@ class ProviderPluginService extends ChangeNotifier {
     void Function(StreamSource source)? onSource,
     void Function()? onCandidate,
     bool Function()? isCancelled,
+    Future<void>? cancelled,
     void Function(String? message)? onMessage,
   }) async {
     // Why this lookup found nothing, or null. Reported to [onMessage], so
@@ -711,6 +740,11 @@ class ProviderPluginService extends ChangeNotifier {
             .where((entry) => _supportsMediaType(entry.$2, mediaType))
             .toList()
           ..sort((a, b) {
+            // Providers that wasted their runtime slot earlier in this
+            // session run after the others, still in priority order.
+            final stalledA = _stalledProviders.contains(_providerKey(a));
+            final stalledB = _stalledProviders.contains(_providerKey(b));
+            if (stalledA != stalledB) return stalledA ? 1 : -1;
             return b.$2.priority.compareTo(a.$2.priority);
           });
     if (repositories.isEmpty) {
@@ -737,6 +771,16 @@ class ProviderPluginService extends ChangeNotifier {
     final results = <StreamSource>[];
     var nextProviderIndex = 0;
     var stopStartingProviders = false;
+    // Stops providers already running: the lookup was cancelled (the viewer
+    // left) or hit the search cap. Their results would go nowhere, and each
+    // holds one of the scheduler's runtime slots, which the next lookup
+    // would otherwise wait for (docs/playback-audit/DEEP_AUDIT_2026-11-21.md).
+    final stopRunning = Completer<void>();
+    void stopRunningProviders() {
+      if (!stopRunning.isCompleted) stopRunning.complete();
+    }
+
+    unawaited(cancelled?.then((_) => stopRunningProviders()));
     var pausedForReview = 0;
     // Torrents left out because this lookup may not use them.
     var skippedTorrents = 0;
@@ -749,6 +793,8 @@ class ProviderPluginService extends ChangeNotifier {
         // providers from creating 90+ simultaneous QuickJS runtimes.
         final (repo, plugin) = available[nextProviderIndex++];
         final errorKey = '${plugin.name} (${repo.name})';
+        Stopwatch? runClock;
+        var found = 0;
         errors.remove(errorKey);
         if (kDebugMode) {
           // ignore: avoid_print
@@ -804,6 +850,7 @@ class ProviderPluginService extends ChangeNotifier {
                 : null;
             // QuickJS runs on a background isolate so provider code and the
             // bundle never block UI frames.
+            runClock = Stopwatch()..start();
             final streamEntries = await ProviderRunner.run(
               ProviderRunRequest(
                 pluginId: plugin.id,
@@ -817,6 +864,7 @@ class ProviderPluginService extends ChangeNotifier {
                 needsCheerio: needsCheerio,
                 needsCryptoJs: needsCryptoJs,
               ),
+              abort: stopRunning.future,
             );
             if (kDebugMode) {
               // ignore: avoid_print
@@ -846,13 +894,31 @@ class ProviderPluginService extends ChangeNotifier {
                   continue;
                 }
                 results.add(source);
+                found++;
                 onSource?.call(source);
               }
             }
+            _noteProviderRun(
+              (repo, plugin),
+              runClock.elapsed,
+              found: found > 0,
+            );
           } finally {
             _scheduler.releaseRuntime();
           }
+        } on ProviderRunCancelled {
+          // Stopped by this lookup, not a provider failure.
+          return;
         } catch (error) {
+          final ran = runClock;
+          if (ran != null) {
+            _noteProviderRun(
+              (repo, plugin),
+              ran.elapsed,
+              found: found > 0,
+              timedOut: error is TimeoutException,
+            );
+          }
           final message = _friendly(error);
           if (kDebugMode) {
             // ignore: avoid_print
@@ -880,10 +946,11 @@ class ProviderPluginService extends ChangeNotifier {
         List.generate(workerCount, (_) => runProviderWorker()),
       ).timeout(searchTimeout);
     } on TimeoutException {
-      // Stop workers from starting additional providers. Active provider
-      // runtimes finish their own bounded request and clean themselves up.
+      // Stop workers from starting additional providers, and the ones still
+      // running: this lookup reports what it has now.
       searchTimedOut = true;
       stopStartingProviders = true;
+      stopRunningProviders();
     }
     final unique = <String, StreamSource>{};
     for (final stream in results) {
