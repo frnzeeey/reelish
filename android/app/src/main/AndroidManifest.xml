@@ -122,14 +122,45 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
-            <!-- Watch party invitations: reelish://party/12345678, opened from
-                 the invitation page. The app only fills in the code; joining
-                 still asks (PartyLinks, JoinPartyScreen). -->
+            <!-- Reelish links, opened from a shared link's page: watch party
+                 invitations (reelish://party/12345678) and Reelish Connect
+                 (invite, add, movie, tv, open). The app only learns what to
+                 open; joining or adding still asks (PartyLinks, ConnectLinks). -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
-                <data android:scheme="reelish" android:host="party"/>
+                <data android:scheme="reelish"/>
+                <data android:host="party"/>
+                <data android:host="invite"/>
+                <data android:host="add"/>
+                <data android:host="movie"/>
+                <data android:host="tv"/>
+                <data android:host="open"/>
+            </intent-filter>
+            <!-- Android App Links: the shared https links themselves open the
+                 app once the Reelish API serves /.well-known/assetlinks.json
+                 (ANDROID_CERT_SHA256, backend/src/links.ts). Until then they
+                 open the link's page, whose button opens the app. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="https"/>
+                <data android:host="reelishofficial.netlify.app"/>
+                <data android:host="reelish-api.frnzgularez.workers.dev"/>
+                <data android:host="reelish-api-staging.frnzgularez.workers.dev"/>
+                <data android:pathPrefix="/invite/"/>
+                <data android:pathPrefix="/add/"/>
+                <data android:pathPrefix="/movie/"/>
+                <data android:pathPrefix="/tv/"/>
+                <data android:pathPrefix="/party/"/>
+                <!-- As a QR code carries them: in capitals. -->
+                <data android:pathPrefix="/INVITE/"/>
+                <data android:pathPrefix="/ADD/"/>
+                <data android:pathPrefix="/MOVIE/"/>
+                <data android:pathPrefix="/TV/"/>
+                <data android:pathPrefix="/PARTY/"/>
             </intent-filter>
         </activity>
         <!-- Launcher entries, one per app icon preset; exactly one is enabled

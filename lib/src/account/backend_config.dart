@@ -17,6 +17,17 @@ abstract final class BackendConfig {
     return uri.scheme == 'https' ? uri : null;
   }
 
+  static const _shareUrl = String.fromEnvironment(
+    'REELISH_SHARE_URL',
+    defaultValue: 'https://reelishofficial.netlify.app',
+  );
+
+  /// Where shared links and QR codes point (Reelish Connect): the website,
+  /// which forwards them to the Reelish API's link pages (its
+  /// netlify.toml). The pages read nothing, so every build can use the one
+  /// address. Null without a valid HTTPS address.
+  static Uri? get shareUrl => parse(_shareUrl);
+
   /// Base URL of the TMDB gateway, which mirrors TMDB's v3 paths.
   static String get tmdbBaseUrl {
     final api = apiUrl;

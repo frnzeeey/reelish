@@ -1,6 +1,8 @@
 // Pieces the watch party screens share: the title card, a participant's
 // avatar and row, the room code, and plain words for errors and statuses.
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../theme/reelish_icons.dart';
@@ -8,6 +10,8 @@ import '../../theme/reelish_icons.dart';
 import '../../account/account_api.dart';
 import '../../account/backend_config.dart';
 import '../../account/profile_controller.dart';
+import '../../connect/share_sheet.dart';
+import '../../connect/share_target.dart';
 import '../../models/tv_season.dart';
 import '../../theme/design_tokens.dart';
 import '../../theme/glass_theme.dart';
@@ -324,6 +328,20 @@ class PartyCodeBlock extends StatelessWidget {
               ),
               icon: const Icon(ReelishIcons.mailSend),
               label: const Text('Copy invitation'),
+            ),
+            // Reelish Connect: the same code as a QR code, for guests in
+            // the room to scan (on a TV, the screen everyone sees).
+            OutlinedButton.icon(
+              onPressed: () => unawaited(
+                ShareSheet.show(
+                  context,
+                  PartyShare(code),
+                  title: 'Join the watch party',
+                  note: 'Watching $title. The code works too.',
+                ),
+              ),
+              icon: const Icon(ReelishIcons.watchParty),
+              label: const Text('Show QR code'),
             ),
           ],
         ),

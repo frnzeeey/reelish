@@ -13,18 +13,25 @@
 #include "gamepad_channel.h"
 #include "win32_window.h"
 
-// WM_COPYDATA tag for a watch party invitation that a second launch hands to
-// the Reelish window already open (main.cpp).
+// WM_COPYDATA tag for a Reelish link that a second launch hands to the
+// Reelish window already open (main.cpp).
 constexpr ULONG_PTR kPartyLinkMessage = 0x52454C4B;  // "RELK"
 
-// The longest invitation accepted: reelish://party/ and an 8-digit code,
-// with room to spare. Dart checks the code itself (PartyLinks).
-constexpr size_t kMaxPartyLinkLength = 64;
+// The longest link accepted, with room to spare. Dart checks what the link
+// names itself (PartyLinks, src/connect/share_target.dart).
+constexpr size_t kMaxPartyLinkLength = 128;
 
-// Whether |link| looks like a watch party invitation.
+// Whether |link| looks like a Reelish link: a watch party invitation
+// (reelish://party/…) or a Reelish Connect link (invite, add, movie, tv,
+// open).
 inline bool IsPartyLink(const std::string& link) {
-  return link.size() <= kMaxPartyLinkLength &&
-         link.rfind("reelish://party/", 0) == 0;
+  if (link.size() > kMaxPartyLinkLength) return false;
+  for (const char* prefix :
+       {"reelish://party/", "reelish://invite/", "reelish://add/",
+        "reelish://movie/", "reelish://tv/", "reelish://open"}) {
+    if (link.rfind(prefix, 0) == 0) return true;
+  }
+  return false;
 }
 
 // A window that hosts a Flutter view, plus Reelish's desktop window

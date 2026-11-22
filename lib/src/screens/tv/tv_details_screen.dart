@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../../connect/share_sheet.dart';
+import '../../connect/share_target.dart';
 import '../../theme/reelish_icons.dart';
 
 import '../../models/media_details.dart';
@@ -429,6 +431,17 @@ class _TvMediaDetailsScreenState extends State<TvMediaDetailsScreen> {
                 onPressed: () => share(context, item),
                 icon: const Icon(ReelishIcons.send),
                 label: const Text('Recommend'),
+              ),
+            // Reelish Connect: the title's QR code on the big screen, for a
+            // phone in the room to scan.
+            if (TitleShare.of(item) case final target?)
+              OutlinedButton.icon(
+                style: _actionStyle(filled: false),
+                onPressed: () => unawaited(
+                  ShareSheet.show(context, target, title: item.name),
+                ),
+                icon: const Icon(ReelishIcons.share),
+                label: const Text('Share'),
               ),
             if (widget.onRemoveFromHistory != null)
               OutlinedButton.icon(

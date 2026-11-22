@@ -12,7 +12,9 @@ import io.flutter.plugin.common.MethodChannel
 import java.io.File
 
 /**
- * Shares or saves a Reelish Wrapped card (lib/src/wrapped/wrapped_export.dart).
+ * Shares or saves a Reelish Wrapped card (lib/src/wrapped/wrapped_export.dart)
+ * or a Reelish Connect QR card, and shares a link as text
+ * (lib/src/connect/share_service.dart).
  *
  * Share writes the PNG to cache/shares (exposed only through the app's
  * FileProvider, see res/xml/update_file_paths.xml) and opens the system
@@ -39,6 +41,20 @@ class ShareChannel(private val activity: Activity) {
                             result.success(false)
                         } else {
                             result.success(share(bytes, name, call.argument<String>("text")))
+                        }
+                    }
+                    // Reelish Connect: a link and its message, no file.
+                    "shareText" -> {
+                        val text = call.argument<String>("text")
+                        if (text.isNullOrBlank() || text.length > 2000) {
+                            result.success(false)
+                        } else {
+                            val send = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_TEXT, text)
+                            }
+                            activity.startActivity(Intent.createChooser(send, null))
+                            result.success(true)
                         }
                     }
                     "saveImage" -> {

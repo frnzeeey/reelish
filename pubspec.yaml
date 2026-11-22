@@ -57,6 +57,7 @@ dependencies:
   flutter_local_notifications: ^22.3.3
   workmanager: ^0.10.10
   flutter_cache_manager: ^3.4.6
+  qr: ^4.0.0
 
 dev_dependencies:
   flutter_test:

@@ -1,4 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import '../connect/share_sheet.dart';
+import '../connect/share_target.dart';
 import '../theme/reelish_icons.dart';
 import '../models/media_details.dart';
 import '../models/media_item.dart';
@@ -417,6 +421,7 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                 if (widget.onToggleFavorite != null ||
                     widget.onCollections != null ||
                     widget.onShare != null ||
+                    TitleShare.of(item) != null ||
                     _offersParty(item)) ...[
                   const SizedBox(height: 14),
                   Wrap(
@@ -431,6 +436,8 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                         _collectionsButton(() => collections(context, item)),
                       if (widget.onShare case final share?)
                         _shareButton(() => share(context, item)),
+                      if (TitleShare.of(item) case final target?)
+                        _linkButton(target, item.name),
                     ],
                   ),
                 ],
@@ -502,6 +509,15 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
       'Recommend',
       style: TextStyle(fontWeight: FontWeight.w700),
     ),
+  );
+
+  /// Reelish Connect: the title's link and QR code, for anyone.
+  Widget _linkButton(TitleShare target, String name) => OutlinedButton.icon(
+    style: _actionStyle(),
+    onPressed: () =>
+        unawaited(ShareSheet.show(context, target, title: 'Share $name')),
+    icon: const Icon(ReelishIcons.share, size: 19),
+    label: const Text('Share', style: TextStyle(fontWeight: FontWeight.w700)),
   );
 
   Widget _myListButton() => OutlinedButton.icon(

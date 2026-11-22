@@ -27,6 +27,7 @@ import '../../messaging/messages_controller.dart';
 import 'conversation_options_screen.dart';
 import 'friend_collection_screen.dart';
 import 'friends_privacy_screen.dart';
+import '../../connect/connect_screen.dart';
 import 'messages_screen.dart';
 import 'messages_split_view.dart';
 import 'together_sections.dart';
@@ -334,6 +335,19 @@ class _FriendsScreenState extends State<FriendsScreen> {
     (back) => BlockedPeopleScreen(friends: _friends, onBack: back),
   );
 
+  void _openConnect() => openSocialPage(
+    context,
+    (back) => ConnectScreen(onBack: back, social: _social),
+  );
+
+  /// Reelish Connect: invitations and QR codes, with Friends on or off.
+  SettingsTile _connectTile() => SettingsTile(
+    icon: ReelishIcons.share,
+    title: 'Reelish Connect',
+    description: 'Invite people with a QR code or a link',
+    onTap: _openConnect,
+  );
+
   Future<void> _add() async {
     final result = await showAddFriend(context, _friends);
     if (result == null || !mounted) return;
@@ -431,6 +445,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
         description: 'Choose a handle that friends will see',
         onTap: _openPrivacy,
       ),
+      _connectTile(),
     ],
   );
 
@@ -692,6 +707,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
     final privacy = SettingsSection(
       label: 'PRIVACY AND PEOPLE',
       children: [
+        _connectTile(),
         SettingsTile(
           icon: ReelishIcons.shield,
           title: 'Friends & privacy',

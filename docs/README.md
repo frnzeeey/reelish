@@ -39,6 +39,7 @@ search the generated references below: every file, class and function in
 | [Caching](features/caching.md) | TMDB response and artwork caches: policies, decision, measurements |
 | [Universal Search](features/universal-search.md) | Movies, series, people and collections in one search: requests, ranking, filters, provider sources, cost |
 | [Together](features/together.md) | The social home: audit, what the data supports, sections, where every feature went, states, look |
+| [Reelish Connect](features/reelish-connect.md) | Sharing: one link and QR engine for invitations, friend codes, titles and parties; link pages, referrals, QR safety, security, cost, deployment, status |
 | [Watch Party](features/watch-party.md) | Reliability audit, how actions reach the room, presence and reconnection, reactions, chat, invitation links, cost |
 | [Plugin Manager](features/plugin-manager.md) | Provider audit, collection and provider pages, compatibility, source trust, update check, security |
 | [Reelish Wrapped](features/wrapped.md) | The yearly recap: data sources, counting rules, personality rules, coverage, story, share cards and export, privacy, cost |

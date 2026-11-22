@@ -122,6 +122,14 @@ the interface once per launch:
   path), never `_togglePlay`/`_seekTo`, so they are not echoed back. Home
   registers `PartyPlayerLauncher.open` so parties reuse the normal source
   search.
+- **Reelish Connect** (`lib/src/connect/`, `backend/src/links.ts`,
+  `backend/src/referrals.ts`; `docs/features/reelish-connect.md`): every
+  share (invite, friend code, title, party) is a `ShareTarget` with one web
+  link on the API host and one `reelish://` link; one QR component
+  (`ReelishQrCode`, dark on cream, the exact link at error correction Q so the centre logo
+  is safe) and one dialog (`ShareSheet`). Incoming links all arrive through
+  `PartyLinks.receive`. Link pages are fixed and read nothing. A QR code is
+  never authorisation: every code is checked server-side when used.
 - **Release obfuscation check:** CI fails if `package:onfeed/src` survives
   in the compiled app. A `@pragma('vm:entry-point')` callback (WorkManager,
   notification handlers) keeps its library URI, so define it in

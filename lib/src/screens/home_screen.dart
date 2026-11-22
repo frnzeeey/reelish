@@ -57,7 +57,11 @@ import '../theme/glass_theme.dart';
 import '../viewmodels/home_view_model.dart';
 import '../widgets/collections/collection_actions.dart';
 import '../social/recommendations_controller.dart';
+import '../connect/invite_controller.dart';
+import '../connect/share_target.dart';
+import '../social/friends_controller.dart';
 import '../social/social_controller.dart';
+import '../widgets/social/social_widgets.dart' show showAddFriend;
 import '../widgets/social/share_dialog.dart';
 import '../widgets/provider_installer_modal.dart';
 import '../widgets/analytics_consent_dialog.dart';
@@ -333,7 +337,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     // Watch party invitations: Home exists only once someone is signed in.
     PartyLinks.pending.addListener(_openPartyLink);
     WidgetsBinding.instance.addPostFrameCallback((_) => _openPartyLink());
+    // Reelish Connect links (titles, friend codes, invitations), the same.
+    ConnectLinks.pending.addListener(_openConnectLink);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _openConnectLink());
     unawaited(PartyLinks.start());
+    // An invitation opened before anyone was signed in.
+    unawaited(_acceptKeptInvite());
     _spotlightMotion.addListener(_onSpotlightMotionChanged);
     unawaited(_spotlightMotion.load());
     _startSpotlightTimer();
@@ -1380,6 +1389,66 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
+  /// A Reelish Connect link: the title's page, Add a friend with the code
+  /// filled in (the request still waits for the viewer), or a friend's
+  /// invitation accepted. Party links go to [_openPartyLink].
+  void _openConnectLink() {
+    if (!mounted || ConnectLinks.pending.value == null) return;
+    switch (ConnectLinks.take()) {
+      case TitleShare(:final type, :final tmdbId):
+        unawaited(_openSharedTitle(type, tmdbId));
+      case FriendShare(:final code):
+        unawaited(_openSharedFriend(code));
+      case AppInvite(:final code?):
+        unawaited(InviteController.keep(code).then((_) => _acceptKeptInvite()));
+      case AppInvite() || PartyShare() || null:
+        // Just opening Reelish; parties arrive through PartyLinks.
+        break;
+    }
+  }
+
+  void _note(String message) => ScaffoldMessenger.maybeOf(
+    context,
+  )?.showSnackBar(SnackBar(content: Text(message)));
+
+  Future<void> _openSharedTitle(String type, int tmdbId) async {
+    try {
+      final item = await _tmdb.itemById(type, tmdbId);
+      if (mounted) await _showDetails(item);
+    } catch (_) {
+      if (mounted) {
+        _note('Couldn’t open that title. Check your connection and try again.');
+      }
+    }
+  }
+
+  Future<void> _openSharedFriend(String code) async {
+    final social = SocialController.instance;
+    if (!social.known) await social.refresh();
+    if (!mounted) return;
+    if (!social.enabled) {
+      _note('Turn on Friends in Together to add friends.');
+      return;
+    }
+    final result = await showAddFriend(
+      context,
+      FriendsController.instance,
+      initialValue: code,
+    );
+    final person = result?.person;
+    if (person == null || !mounted) return;
+    _note(
+      result!.friends
+          ? 'You and @${person.handle} are now friends'
+          : 'Request sent to @${person.handle}',
+    );
+  }
+
+  Future<void> _acceptKeptInvite() async {
+    final message = await InviteController.instance.acceptKept();
+    if (message != null && mounted) _note(message);
+  }
+
   void _openJoinParty() => unawaited(
     Navigator.push(
       context,
@@ -1548,6 +1617,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (AlertRoutes.open == _openAlert) AlertRoutes.open = null;
     if (WrappedLauncher.open == _openWrapped) WrappedLauncher.open = null;
     PartyLinks.pending.removeListener(_openPartyLink);
+    ConnectLinks.pending.removeListener(_openConnectLink);
     _services.dispose();
     for (final timer in _gateTimers.values) {
       timer.cancel();

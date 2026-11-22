@@ -490,6 +490,20 @@ class AccountApi {
     ];
   }
 
+  /// Reelish Connect: the caller's invite code (made on first ask), how many
+  /// joined with it, and whether the caller joined through one:
+  /// `{code, joined, invited}`.
+  Future<Map<String, dynamic>> invites(String accessToken) =>
+      _send('GET', '/referrals/me', token: accessToken);
+
+  /// Credits the caller's new account to the owner of invite [code].
+  Future<void> acceptInvite(String accessToken, String code) => _send(
+    'POST',
+    '/referrals/claim',
+    token: accessToken,
+    body: {'code': code},
+  );
+
   /// Friends: the caller's social profile, `{profile: null}` while it is off.
   Future<Map<String, dynamic>> socialProfile(String accessToken) =>
       _send('GET', '/social/profile', token: accessToken);

@@ -139,17 +139,29 @@ class ReelishActivity : FlutterActivity() {
         }
     }
 
-    /** Watch party invitation links (reelish://party/…), for Dart's PartyLinks. */
+    /**
+     * Reelish links (reelish://party/…, reelish://movie/…, the shared https
+     * links of Reelish Connect), for Dart's PartyLinks.
+     */
     private var linkChannel: MethodChannel? = null
     private var launchLink: String? = null
 
-    /** The invitation in [intent], or null; Dart checks the code itself. */
+    /** The Reelish link in [intent], or null; Dart checks what it names. */
     private fun partyLink(intent: Intent?): String? {
         val data = intent?.data ?: return null
         if (intent.action != Intent.ACTION_VIEW) return null
-        if (data.scheme != "reelish" || data.host != "party") return null
-        return data.toString().takeIf { it.length <= 64 }
+        val accepted = when (data.scheme) {
+            "reelish" -> linkKinds.contains(data.host ?: "")
+            // Only the hosts in the manifest's App Links filter reach here.
+            // QR codes carry their links in capitals.
+            "https" -> linkKinds.contains(data.pathSegments.firstOrNull()?.lowercase() ?: "")
+            else -> false
+        }
+        if (!accepted) return null
+        return data.toString().takeIf { it.length <= 128 }
     }
+
+    private val linkKinds = setOf("party", "invite", "add", "movie", "tv", "open", "download")
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)

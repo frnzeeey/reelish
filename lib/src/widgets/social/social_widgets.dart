@@ -152,10 +152,13 @@ class PersonTile extends StatelessWidget {
 /// result once one was sent, or null when the person gave up.
 Future<AddFriendResult?> showAddFriend(
   BuildContext context,
-  FriendsController friends,
-) async {
+  FriendsController friends, {
+
+  /// A code to start from: one a shared link or QR code brought.
+  String initialValue = '',
+}) async {
   if (DeviceCapabilities.isTv) {
-    var value = '';
+    var value = initialValue;
     for (;;) {
       if (!context.mounted) return null;
       final entered = await TvTextEntryDialog.show(
@@ -177,21 +180,23 @@ Future<AddFriendResult?> showAddFriend(
   }
   return showDialog<AddFriendResult>(
     context: context,
-    builder: (_) => _AddFriendDialog(friends: friends),
+    builder: (_) =>
+        _AddFriendDialog(friends: friends, initialValue: initialValue),
   );
 }
 
 class _AddFriendDialog extends StatefulWidget {
-  const _AddFriendDialog({required this.friends});
+  const _AddFriendDialog({required this.friends, this.initialValue = ''});
 
   final FriendsController friends;
+  final String initialValue;
 
   @override
   State<_AddFriendDialog> createState() => _AddFriendDialogState();
 }
 
 class _AddFriendDialogState extends State<_AddFriendDialog> {
-  final _controller = TextEditingController();
+  late final _controller = TextEditingController(text: widget.initialValue);
   String? _error;
   bool _sending = false;
 

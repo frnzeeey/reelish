@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
+import '../connect/share_sheet.dart';
+import '../connect/share_target.dart';
 import '../theme/reelish_icons.dart';
 
 import '../models/episode_progress.dart';
@@ -612,6 +614,20 @@ class _DesktopDetailsScreenState extends State<DesktopDetailsScreen> {
                                   style: _secondaryAction,
                                   icon: const Icon(ReelishIcons.send),
                                   label: const Text('Recommend'),
+                                ),
+                              // Reelish Connect: its link and QR code.
+                              if (TitleShare.of(_item) case final target?)
+                                OutlinedButton.icon(
+                                  onPressed: () => unawaited(
+                                    ShareSheet.show(
+                                      context,
+                                      target,
+                                      title: 'Share ${_item.name}',
+                                    ),
+                                  ),
+                                  style: _secondaryAction,
+                                  icon: const Icon(ReelishIcons.share),
+                                  label: const Text('Share'),
                                 ),
                             ],
                           ),
