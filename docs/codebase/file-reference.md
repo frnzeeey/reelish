@@ -4300,7 +4300,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 **Imported by:** `src/screens/plugin_library_screen.dart`
 
-**Tests importing it:** `test/plugin_library_test.dart`
+**Tests importing it:** `integration_test/app_smoke_test.dart`, `test/plugin_library_test.dart`
 
 ## lib/src/widgets/plugin_library/plugin_filter_bar.dart
 
