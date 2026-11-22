@@ -63,7 +63,7 @@ the interface once per launch:
   section, on all three interfaces.
 - The default look is the free Living Room theme (the emblem's terracotta,
   sand and cream; `SupporterTheme.standard`) for anyone who never chose a
-  theme; Classic is Reelish black with an accent, green (`GlassTheme.defaultAccent`) until one is picked. See
+  theme on phone and TV; on Windows it is Classic. Classic is Reelish black with an accent, green (`GlassTheme.defaultAccent`) until one is picked. See
   `docs/REELISH_UX_REDESIGN_PLAN.md` for the redesign in progress.
 
 ## Accounts, the Reelish API and Watch Party

@@ -84,7 +84,8 @@ abstract final class GlassTheme {
   );
 
   /// The accent of Classic until one is picked: green. Coral, the accent
-  /// before it, stays a preset; a saved coral is kept.
+  /// before it, stays a preset; a coral saved before green turns green once
+  /// (AccentSettingsController.load).
   static const defaultAccent = green;
 
   /// The presets in the order they are offered: the default first, then

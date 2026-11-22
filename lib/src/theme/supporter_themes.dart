@@ -338,7 +338,8 @@ class SupporterTheme {
   /// Reelish's own looks, free to everyone; the first is the default.
   static const reelishCollection = [livingRoom];
 
-  /// The theme for anyone who has not chosen one.
+  /// The theme for anyone who has not chosen one, on phone and TV; Windows
+  /// starts on Classic (AccentSettingsController.load).
   static const standard = livingRoom;
 
   /// Every theme, in any collection.

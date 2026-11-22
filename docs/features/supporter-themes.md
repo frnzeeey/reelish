@@ -6,8 +6,9 @@ and ornament. Settings > Appearance offers three collections:
 
 - **REELISH**, free to everyone: Living Room, the Reelish look and the
   default, and Classic, Reelish black with any accent: green until one is
-  picked (`GlassTheme.defaultAccent`; coral before it, and a saved coral
-  stays).
+  picked (`GlassTheme.defaultAccent`; coral before it. A coral saved then
+  turns green once, marked by `onfeed.appearance.coral_retired`; coral picked
+  since stays).
 - **SUPPORTER THEMES**, for accounts with the supporter perks (supporters, and
   the Founder).
 - **FOUNDER COLLECTION**, the Founder's own (below).
@@ -24,7 +25,9 @@ listed in `SupporterTheme.reelishCollection`; `mayUse` is always true.
 
 It is the default: `AccentSettingsController.load` uses
 `SupporterTheme.standard` when `onfeed.appearance.theme` has never been
-written. Choosing Classic saves an empty value, which stays Classic, so a choice
+written, on phone and TV. On Windows (`DeviceCapabilities.isDesktopPlatform`)
+the default is Classic with the green accent instead; Living Room picked there
+is saved and stays. Choosing Classic saves an empty value, which stays Classic, so a choice
 is never overridden. Someone who picked an accent before Living Room existed
 keeps that accent on Living Room's pages until they choose the theme's own.
 A lapsed supporter whose saved theme no longer applies gets Classic and their

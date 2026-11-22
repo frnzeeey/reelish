@@ -9,6 +9,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../account/supporter_controller.dart';
+import '../platform/device_capabilities.dart';
 import '../theme/glass_theme.dart';
 import '../theme/supporter_themes.dart';
 import '../theme/theme_tokens.dart';
@@ -27,6 +28,10 @@ class AccentSettingsController extends ChangeNotifier {
 
   static const _key = 'onfeed.appearance.accent';
   static const _themeKey = 'onfeed.appearance.theme';
+
+  /// Set once a saved accent has been read under the green default, so a
+  /// coral saved before then turns green only once (see [load]).
+  static const _coralRetiredKey = 'onfeed.appearance.coral_retired';
 
   /// '0' when the picked accent replaces the theme's own; anything else
   /// (including no value, as every device had before) keeps the theme's.
@@ -79,14 +84,26 @@ class AccentSettingsController extends ChangeNotifier {
   Future<void> load() async {
     final id = await _storage.readSetting(_key);
     // A preset id, or `custom:rrggbb`; anything else is the default (green).
-    // A saved coral stays coral.
     _accent = AccentPalette.fromId(id) ?? GlassTheme.defaultAccent;
+    // Coral was Classic's default before green, so a saved coral is
+    // switched to green, once. The mark keeps a coral picked after that.
+    if (await _storage.readSetting(_coralRetiredKey) == null) {
+      if (_accent == GlassTheme.coral) {
+        _accent = GlassTheme.defaultAccent;
+        await _storage.saveSetting(_key, _accent.id);
+      }
+      await _storage.saveSetting(_coralRetiredKey, '1');
+    }
     // Retired theme ids open as the theme that replaced them. No value at
-    // all means no theme was ever chosen: the Reelish look. Classic chosen
-    // in the picker is saved as '' and stays Classic.
+    // all means no theme was ever chosen: the Reelish look on phone and TV,
+    // Classic (Reelish black with the green accent) on Windows. Classic
+    // chosen in the picker is saved as '' and stays Classic; a theme picked
+    // on Windows is saved, so it stays too.
     final theme = await _storage.readSetting(_themeKey);
     _themeId = theme == null
-        ? SupporterTheme.standard.id
+        ? (DeviceCapabilities.isDesktopPlatform
+              ? null
+              : SupporterTheme.standard.id)
         : SupporterTheme.byId(theme)?.id;
     final themeAccent = await _storage.readSetting(_themeAccentKey);
     // Someone who picked an accent before the Reelish look existed keeps
@@ -114,6 +131,8 @@ class AccentSettingsController extends ChangeNotifier {
       AnalyticsEvent.featureUsed(AnalyticsFeature.accentChange),
     );
     await _storage.saveSetting(_key, value.id);
+    // A picked coral is a choice, never the retired default.
+    await _storage.saveSetting(_coralRetiredKey, '1');
     if (hadThemeAccent != _themeAccent) {
       await _storage.saveSetting(_themeAccentKey, '0');
     }
