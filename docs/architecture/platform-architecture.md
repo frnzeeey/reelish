@@ -45,7 +45,7 @@ graph TD
 | Theme | `GlassTheme.dark` | `GlassTheme.tv` | `GlassTheme.tv` plus `DesktopSurfaces` |
 | Navigation | Dock tabs (`SoftGlassDock`) | `TvHomeShell` rail, D-pad | `DesktopShell` hover rail; mouse, keyboard, controller |
 | Details | `MediaDetailsScreen` | `TvMediaDetailsScreen` | `DesktopDetailsScreen` |
-| Library | `LibraryScreen` | `TvLibraryPage` | `DesktopLibraryPage`, plus Continue watching in the sidebar |
+| Library | `LibraryScreen` | `TvLibraryPage` | `DesktopLibraryPage` (Continue watching also leads Home) |
 | Search | `UniversalSearchScreen` from the header | `UniversalSearchView` | `UniversalSearchView` (Ctrl+F) |
 | Plugins | `PluginsScreen` | `PluginsScreen` | `DesktopPluginsPage` |
 | Settings | `SettingsScreen` | `SettingsScreen` | `DesktopSettingsPage` (reuses the sub-pages) |

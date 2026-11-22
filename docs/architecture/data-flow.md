@@ -71,7 +71,7 @@ graph LR
   SS -- "history(), seriesProgress()" --> HVM[HomeViewModel.loadHistory]
   SS -- "favorites()" --> HVM
   SS --> LVM[LibraryViewModel]
-  HVM --> CW["Continue watching<br/>(phone/TV row, Windows sidebar)"]
+  HVM --> CW["Continue watching<br/>(a Home row on every interface)"]
   LVM --> Lib["Library pages"]
 ```
 
@@ -91,9 +91,10 @@ graph LR
   `ResumeSummary`
   ([`resume_summary.dart`](../../lib/src/models/resume_summary.dart)) turns
   that into the card text ("S2 E1 · 27 min left") and never estimates:
-  unknown progress shows nothing. On Windows the list is shown in the
-  sidebar (`DesktopResumeShelf` in
-  [`desktop_shell.dart`](../../lib/src/desktop/desktop_shell.dart)).
+  unknown progress shows nothing. On Windows the list is the first row
+  under the Spotlight on Home (`DesktopResumeShelf` and
+  `DesktopContinueWatchingRow` in
+  [`desktop_pages.dart`](../../lib/src/desktop/desktop_pages.dart)).
 - **When it refreshes.** After the player closes (`_openItem` reloads the
   history), when the library opens, and when a title is removed from the
   history. Reads that finish after a newer one are dropped, so a slow read

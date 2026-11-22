@@ -11,6 +11,7 @@ import 'package:onfeed/src/discovery/discovery_controller.dart';
 import 'package:onfeed/src/discovery/discovery_data.dart';
 import 'package:onfeed/src/discovery/discovery_store.dart';
 import 'package:onfeed/src/models/media_item.dart';
+import 'package:onfeed/src/models/resume_summary.dart';
 import 'package:onfeed/src/platform/device_capabilities.dart';
 import 'package:onfeed/src/screens/recommendation_settings_screen.dart';
 import 'package:onfeed/src/screens/tv/tv_browse.dart';
@@ -168,6 +169,48 @@ void main() {
         FeedbackKind.notInterested,
       );
       expect(discovery.sections.single.items, isNot(contains(first)));
+      await tester.pumpWidget(const SizedBox.shrink());
+      discovery.dispose();
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+
+  testWidgets(
+    'Windows: Continue watching leads Home, above Top 10, and only once '
+    'something is started',
+    (tester) async {
+      tester.view.physicalSize = const Size(1600, 1400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final discovery = await discoveryWithRow(tester);
+      Widget home(List<MediaItem> started) => MaterialApp(
+        home: Scaffold(
+          body: DesktopHomePage(
+            catalog: catalog(discovery),
+            continueWatching: DesktopResumeShelf(
+              items: started,
+              summaryOf: (_) => const ResumeSummary(),
+              onResume: (_) {},
+              onDetails: (_) {},
+            ),
+            onOpen: (_) {},
+            onPlay: (_) {},
+            onToggleFavorite: (_) async => false,
+            onRetry: () {},
+            onAddSource: () {},
+          ),
+        ),
+      );
+      await tester.pumpWidget(home(const []));
+      await tester.pump();
+      expect(find.byType(DesktopContinueWatchingRow), findsNothing);
+
+      await tester.pumpWidget(home([_title(1)]));
+      await tester.pump();
+      expect(
+        tester.getTopLeft(find.byType(DesktopContinueWatchingRow)).dy,
+        lessThan(tester.getTopLeft(find.byKey(const ValueKey('row:top10'))).dy),
+      );
       await tester.pumpWidget(const SizedBox.shrink());
       discovery.dispose();
     },

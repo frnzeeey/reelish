@@ -40,7 +40,7 @@ class, function and file is in the generated references:
 | `DesktopGamepad` | Widget | [`lib/src/platform/desktop_gamepad.dart`](../../lib/src/platform/desktop_gamepad.dart) | Game-controller input as focus and action intents | Windows |
 | `DesktopHero` | Widget | [`lib/src/desktop/desktop_hero.dart`](../../lib/src/desktop/desktop_hero.dart) | The Spotlight: backdrop, text, actions and the looping rail | Windows |
 | `DesktopHomePage` | Widget | [`lib/src/desktop/desktop_pages.dart`](../../lib/src/desktop/desktop_pages.dart) | Windows Home: hero, Top 10 and catalog rows | Windows |
-| `DesktopResumeShelf` | Model | [`lib/src/desktop/desktop_shell.dart`](../../lib/src/desktop/desktop_shell.dart) | What the sidebar's Continue watching shows and does | Windows |
+| `DesktopResumeShelf` | Model | [`lib/src/desktop/desktop_pages.dart`](../../lib/src/desktop/desktop_pages.dart) | What Home's Continue watching row shows and does | Windows |
 | `DesktopShell` | Widget | [`lib/src/desktop/desktop_shell.dart`](../../lib/src/desktop/desktop_shell.dart) | The Windows frame: hover-open sidebar and retained pages | Windows |
 | `DesktopShortcuts` | Widget | [`lib/src/platform/desktop_window.dart`](../../lib/src/platform/desktop_window.dart) | F11, Escape and Backspace on every screen | Windows |
 | `DetailsViewModel` | View model | [`lib/src/viewmodels/details_view_model.dart`](../../lib/src/viewmodels/details_view_model.dart) | Details, seasons and episodes for every details screen | Shared |

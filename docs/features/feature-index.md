@@ -89,9 +89,10 @@ Started titles, most recent first, with real progress; playback resumes
 where it stopped, a series in the episode watched last.
 **Entry:** `HomeViewModel.loadHistory`
 ([`home_view_model.dart`](../../lib/src/viewmodels/home_view_model.dart)).
-**UI:** phone and TV rows in Home; Windows sidebar (`DesktopResumeShelf` in
-[`desktop_shell.dart`](../../lib/src/desktop/desktop_shell.dart), resume
-via `HomeScreen._resumeFromSidebar`); library pages.
+**UI:** a row in Home on every interface (on Windows the first row under the
+Spotlight, `DesktopContinueWatchingRow` in
+[`desktop_pages.dart`](../../lib/src/desktop/desktop_pages.dart), resume
+via `HomeScreen._resumeTitle`); library pages.
 **Data:** `onfeed.history` and `onfeed.history.episodes.v1` via
 [`storage_service.dart`](../../lib/src/services/storage_service.dart);
 card text from [`resume_summary.dart`](../../lib/src/models/resume_summary.dart).

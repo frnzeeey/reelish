@@ -60,7 +60,7 @@ Future<void> _pumpHero(
       theme: GlassTheme.dark,
       home: Scaffold(
         body: Padding(
-          padding: const EdgeInsets.only(left: DesktopShell.expandedWidth),
+          padding: const EdgeInsets.only(left: DesktopShell.expandedExtent),
           child: TickerMode(
             enabled: shown,
             child: ListView(
@@ -214,7 +214,7 @@ void main() {
             .getTopLeft(card('More about Title 2 with a fairly long name'))
             .dx,
         moreOrLessEquals(
-          DesktopShell.expandedWidth + DesktopMetrics.pagePadding,
+          DesktopShell.expandedExtent + DesktopMetrics.pagePadding,
           epsilon: 1,
         ),
       );
@@ -271,7 +271,7 @@ void main() {
       expect(
         shown,
         moreOrLessEquals(
-          DesktopShell.expandedWidth + DesktopMetrics.pagePadding,
+          DesktopShell.expandedExtent + DesktopMetrics.pagePadding,
           epsilon: 1,
         ),
       );
@@ -310,7 +310,7 @@ void main() {
         'redrawn there', (tester) async {
       await _pumpHero(tester, _spotlight(5));
       await tester.pumpAndSettle();
-      const start = DesktopShell.expandedWidth + DesktopMetrics.pagePadding;
+      const start = DesktopShell.expandedExtent + DesktopMetrics.pagePadding;
       final before = tester.getRect(
         card('Show Title 1 with a fairly long name'),
       );
@@ -674,7 +674,7 @@ void main() {
     test('a laptop window shows five posters a row, a 1080p one eight', () {
       // Content width beside the expanded sidebar, less the page margins.
       double content(double window) =>
-          window - DesktopShell.expandedWidth - DesktopMetrics.pagePadding * 2;
+          window - DesktopShell.expandedExtent - DesktopMetrics.pagePadding * 2;
       expect(DesktopMetrics.columns(content(1280)), 5);
       expect(DesktopMetrics.columns(content(1920)), 8);
     });

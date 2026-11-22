@@ -334,8 +334,8 @@ void main() {
   );
 
   testWidgets(
-    'Continue watching is in the sidebar, from the watch history, and not '
-    'a row on Home',
+    'Continue watching is a row on Home, from the watch history, between '
+    'the Spotlight and Top 10, and not in the sidebar',
     (tester) async {
       SharedPreferences.setMockInitialValues({});
       const started = MediaItem(
@@ -352,18 +352,32 @@ void main() {
       );
       await pumpHome(tester, size: const Size(1600, 6000), keepData: true);
 
+      final row = find.byKey(const ValueKey('row:continue'));
+      expect(row, findsOneWidget);
       expect(
-        find.descendant(
-          of: find.byType(DesktopHomePage),
-          matching: find.text('Continue watching'),
-        ),
-        findsNothing,
+        find.descendant(of: row, matching: find.text('Continue watching')),
+        findsOneWidget,
       );
-      expect(find.byKey(const ValueKey('row:continue')), findsNothing);
-      // Compact: the thumbnail, with the title and what is left as its
-      // tooltip.
-      expect(find.byKey(const ValueKey('resume:movie:4242')), findsOneWidget);
-      expect(find.byTooltip('A film half watched\n1h left'), findsOneWidget);
+      // The card says what is left.
+      expect(
+        find.descendant(of: row, matching: find.text('A film half watched')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: row, matching: find.text('1h left')),
+        findsOneWidget,
+      );
+      // Under the Spotlight, above Top 10.
+      expect(
+        tester.getTopLeft(row).dy,
+        greaterThan(tester.getTopLeft(find.byType(DesktopHero)).dy),
+      );
+      expect(
+        tester.getTopLeft(row).dy,
+        lessThan(tester.getTopLeft(topTen()).dy),
+      );
+      // The sidebar is navigation only.
+      expect(find.byTooltip('A film half watched\n1h left'), findsNothing);
 
       await disposeHome(tester);
     },

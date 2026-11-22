@@ -2,7 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:onfeed/src/theme/reelish_icons.dart';
+import 'package:onfeed/src/desktop/desktop_pages.dart';
 import 'package:onfeed/src/desktop/desktop_provider_search.dart';
 import 'package:onfeed/src/desktop/desktop_shell.dart';
 import 'package:onfeed/src/desktop/desktop_widgets.dart';
@@ -33,11 +33,10 @@ Future<void> _pump(WidgetTester tester, Widget child, {Size? size}) async {
 }
 
 class _ShellHost extends StatefulWidget {
-  const _ShellHost({this.probe = false, this.shelf});
+  const _ShellHost({this.probe = false});
 
   /// Home is a [_PageProbe], which counts its builds.
   final bool probe;
-  final DesktopResumeShelf? shelf;
 
   @override
   State<_ShellHost> createState() => _ShellHostState();
@@ -50,7 +49,6 @@ class _ShellHostState extends State<_ShellHost> {
   Widget build(BuildContext context) => DesktopShell(
     destination: destination,
     onDestinationChanged: (value) => setState(() => destination = value),
-    continueWatching: widget.shelf,
     pageBuilder: (context, destination) =>
         widget.probe && destination == TvDestination.home
         ? const _PageProbe()
@@ -130,7 +128,7 @@ void main() {
       await tester.pumpAndSettle();
       final page = tester.getRect(find.byType(_PageProbe));
       final builds = _PageProbe.builds;
-      expect(page.left, DesktopShell.collapsedWidth);
+      expect(page.left, DesktopShell.collapsedExtent);
       expect(find.text('Movies'), findsNothing);
 
       // A pointer that only crosses the rail does not open it.
@@ -148,7 +146,7 @@ void main() {
       expect(find.text('Movies'), findsOneWidget);
       expect(
         tester.getTopLeft(find.text('Movies')).dx,
-        lessThan(DesktopShell.expandedWidth),
+        lessThan(DesktopShell.expandedExtent),
       );
       // The page neither rebuilt nor moved.
       expect(_PageProbe.builds, builds);
@@ -191,7 +189,7 @@ void main() {
       // Pinned, the page sits beside the rail instead of under it.
       expect(
         tester.getTopLeft(find.text('page:home')).dx,
-        greaterThan(DesktopShell.expandedWidth),
+        greaterThan(DesktopShell.expandedExtent),
       );
       final preferences = await SharedPreferences.getInstance();
       expect(preferences.getBool('reelish.desktop.sidebarPinned'), isTrue);
@@ -332,213 +330,156 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('page:movies'), findsOneWidget);
     });
+
+    testWidgets('floats off the window edges and holds navigation only', (
+      tester,
+    ) async {
+      await _pump(tester, const _ShellHost(), size: const Size(1400, 900));
+      await tester.pumpAndSettle();
+      final home = tester.getRect(find.byTooltip('Home'));
+      expect(home.left, greaterThanOrEqualTo(DesktopShell.inset));
+      expect(home.right, lessThanOrEqualTo(DesktopShell.collapsedExtent));
+      // Grouped: browsing first, then yours, then the app's at the foot.
+      double top(String label) => tester.getTopLeft(find.byTooltip(label)).dy;
+      expect(top('Movies'), lessThan(top('My library')));
+      expect(top('Together'), lessThan(top('Plugins')));
+      expect(top('Settings'), lessThan(top('Profile')));
+      expect(find.textContaining('CONTINUE WATCHING'), findsNothing);
+    });
+
+    for (final height in [600.0, 720.0, 768.0, 1080.0]) {
+      testWidgets('a ${height.toInt()} px window lays the rail out cleanly; '
+          'Settings stays reachable', (tester) async {
+        await _pump(tester, const _ShellHost(), size: Size(1280, height));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        if (height >= 720) {
+          // Everything fits without scrolling the rail itself.
+          final pin = tester.getRect(find.byTooltip('Keep sidebar open'));
+          expect(pin.bottom, lessThanOrEqualTo(height - DesktopShell.inset));
+        }
+        await tester.tap(find.byTooltip('Settings'), warnIfMissed: false);
+        await tester.pumpAndSettle();
+        if (height >= 720) {
+          expect(find.text('page:settings'), findsOneWidget);
+        }
+      });
+    }
   });
 
-  group('Continue watching in the sidebar', () {
+  group('Continue watching on Home', () {
     late List<String> resumed, detailed;
+    late int seeAll;
     setUp(() {
       resumed = [];
       detailed = [];
+      seeAll = 0;
     });
 
-    DesktopResumeShelf shelf(int count, {bool loaded = true}) =>
-        DesktopResumeShelf(
-          items: [
-            for (var i = 0; i < count; i++)
-              MediaItem(
-                id: '$i',
-                type: i.isEven ? 'movie' : 'series',
-                name: 'Started title $i',
-                resumeMs: 60000 * 20,
-              ),
-          ],
-          summaryOf: (item) => item.id == '0'
-              ? const ResumeSummary(fraction: .4, label: '34 min left')
-              : const ResumeSummary(label: 'S2 E1'),
-          onResume: (item) => resumed.add(item.id),
-          onDetails: (item) => detailed.add(item.id),
-          loaded: loaded,
-        );
-
-    Finder tile(String id) => find.byKey(
-      ValueKey('resume:${int.parse(id).isEven ? 'movie' : 'series'}:$id'),
+    DesktopResumeShelf shelf(int count) => DesktopResumeShelf(
+      items: [
+        for (var i = 0; i < count; i++)
+          MediaItem(
+            id: '$i',
+            type: i.isEven ? 'movie' : 'series',
+            name: 'Started title $i',
+            resumeMs: 60000 * 20,
+          ),
+      ],
+      summaryOf: (item) => item.id == '0'
+          ? const ResumeSummary(fraction: .4, label: '34 min left')
+          : const ResumeSummary(label: 'S2 E1'),
+      onResume: (item) => resumed.add(item.id),
+      onDetails: (item) => detailed.add(item.id),
+      onSeeAll: () => seeAll++,
     );
 
-    testWidgets('compact: thumbnails with their title and progress as a '
-        'tooltip; a click resumes, a right click opens details', (
-      tester,
-    ) async {
+    Finder card(String name) => find.ancestor(
+      of: find.text(name),
+      matching: find.byType(DesktopPosterCard),
+    );
+
+    testWidgets('wide cards say where each was left; a click resumes, a '
+        'right click opens details, See all opens the library', (tester) async {
       await _pump(
         tester,
-        _ShellHost(shelf: shelf(3)),
+        SingleChildScrollView(
+          child: DesktopContinueWatchingRow(shelf: shelf(3)),
+        ),
         size: const Size(1400, 900),
       );
       await tester.pumpAndSettle();
-      expect(tile('0'), findsOneWidget);
-      expect(find.text('Started title 0'), findsNothing);
-      expect(find.byTooltip('Started title 0\n34 min left'), findsOneWidget);
-      expect(find.byTooltip('Started title 1\nS2 E1'), findsOneWidget);
-      // Within the compact rail, with a progress line.
-      expect(
-        tester.getRect(tile('0')).right,
-        lessThanOrEqualTo(DesktopShell.collapsedWidth),
-      );
-
-      await tester.tap(tile('0'));
-      await tester.pump();
-      expect(resumed, ['0']);
-      await tester.tap(tile('1'), buttons: kSecondaryMouseButton);
-      await tester.pump();
-      expect(detailed, ['1']);
-      expect(resumed, ['0']);
-    });
-
-    testWidgets('open: titles, where each was left, and See all opens the '
-        'library', (tester) async {
-      await _pump(
-        tester,
-        _ShellHost(shelf: shelf(3)),
-        size: const Size(1400, 900),
-      );
-      await tester.tap(find.byTooltip('Keep sidebar open'));
-      await tester.pumpAndSettle();
-      expect(find.text('CONTINUE WATCHING'), findsOneWidget);
-      expect(find.text('Started title 0'), findsOneWidget);
+      expect(find.text('Continue watching'), findsOneWidget);
       expect(find.text('34 min left'), findsOneWidget);
       expect(find.text('S2 E1'), findsNWidgets(2));
+      expect(
+        tester.widget<DesktopPosterCard>(card('Started title 0')).progress,
+        .4,
+      );
 
-      await tester.tap(find.text('Started title 2'));
+      await tester.tap(card('Started title 2'));
       await tester.pump();
+      expect(resumed, ['2']);
+      await tester.tap(card('Started title 1'), buttons: kSecondaryMouseButton);
+      await tester.pump();
+      expect(detailed, ['1']);
       expect(resumed, ['2']);
 
       await tester.tap(find.text('See all'));
-      await tester.pumpAndSettle();
-      expect(find.text('page:library'), findsOneWidget);
+      expect(seeAll, 1);
     });
 
-    testWidgets('Enter on a focused title resumes it', (tester) async {
+    testWidgets('Enter on a focused card resumes it', (tester) async {
       await _pump(
         tester,
-        _ShellHost(shelf: shelf(2)),
+        SingleChildScrollView(
+          child: DesktopContinueWatchingRow(shelf: shelf(2)),
+        ),
         size: const Size(1400, 900),
       );
       Focus.of(
         tester.element(
           find
-              .descendant(of: tile('1'), matching: find.byType(GestureDetector))
+              .descendant(
+                of: card('Started title 1'),
+                matching: find.byType(GestureDetector),
+              )
               .first,
         ),
       ).requestFocus();
-      await tester.pumpAndSettle();
-      // Focus opens the rail, and stays on the title as it does.
-      expect(find.text('Started title 1'), findsOneWidget);
+      await tester.pump();
       await tester.sendKeyEvent(LogicalKeyboardKey.enter);
       await tester.pump();
       expect(resumed, ['1']);
     });
 
-    testWidgets('hover shows the resume glyph; a series leads with its '
-        'episode', (tester) async {
+    testWidgets('a narrower window resizes the cards at once, without '
+        'overflowing while they ease', (tester) async {
       await _pump(
         tester,
-        _ShellHost(shelf: shelf(2)),
-        size: const Size(1400, 900),
+        SingleChildScrollView(
+          child: DesktopContinueWatchingRow(shelf: shelf(4)),
+        ),
+        size: const Size(1600, 900),
       );
-      await tester.pumpAndSettle();
-      double glyph() => tester
-          .widget<AnimatedOpacity>(
-            find
-                .ancestor(
-                  of: find.descendant(
-                    of: tile('0'),
-                    matching: find.byIcon(ReelishIcons.play),
-                  ),
-                  matching: find.byType(AnimatedOpacity),
-                )
-                .first,
-          )
-          .opacity;
-      expect(glyph(), 0);
-
-      // Windows highlights hover; the test default (Android) does not.
-      FocusManager.instance.highlightStrategy =
-          FocusHighlightStrategy.alwaysTraditional;
-      addTearDown(
-        () => FocusManager.instance.highlightStrategy =
-            FocusHighlightStrategy.automatic,
-      );
-      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
-      addTearDown(mouse.removePointer);
-      await mouse.addPointer(location: const Offset(900, 300));
-      await mouse.moveTo(tester.getCenter(tile('0')));
-      await tester.pump(const Duration(milliseconds: 400));
-      await tester.pumpAndSettle();
-      expect(glyph(), 1);
-      // Open on hover: the movie says what is left, the series its episode
-      // first.
-      expect(find.text('34 min left'), findsOneWidget);
-      expect(find.text('S2 E1'), findsOneWidget);
-      await mouse.moveTo(const Offset(900, 300));
-      await tester.pump(const Duration(milliseconds: 400));
-      await tester.pumpAndSettle();
-      expect(glyph(), 0);
+      tester.view.physicalSize = const Size(1500, 900);
+      await tester.pump(const Duration(milliseconds: 30));
+      expect(tester.takeException(), isNull);
     });
 
-    testWidgets('while the history loads, no "nothing started" note', (
+    testWidgets('shows a dozen at most; the library holds the rest', (
       tester,
     ) async {
       await _pump(
         tester,
-        _ShellHost(shelf: shelf(0, loaded: false)),
+        SingleChildScrollView(
+          child: DesktopContinueWatchingRow(shelf: shelf(30)),
+        ),
         size: const Size(1400, 900),
       );
-      await tester.tap(find.byTooltip('Keep sidebar open'));
-      await tester.pumpAndSettle();
-      expect(find.text('CONTINUE WATCHING'), findsOneWidget);
-      expect(find.textContaining('Titles you start'), findsNothing);
+      final row = tester.widget<DesktopMediaRow>(find.byType(DesktopMediaRow));
+      expect(row.items, hasLength(DesktopResumeShelf.maxShown));
     });
-
-    testWidgets('nothing started: a short note when open, nothing compact', (
-      tester,
-    ) async {
-      await _pump(
-        tester,
-        _ShellHost(shelf: shelf(0)),
-        size: const Size(1400, 900),
-      );
-      await tester.pumpAndSettle();
-      expect(find.textContaining('Titles you start'), findsNothing);
-      await tester.tap(find.byTooltip('Keep sidebar open'));
-      await tester.pumpAndSettle();
-      expect(find.textContaining('Titles you start'), findsOneWidget);
-      expect(find.text('See all'), findsNothing);
-    });
-
-    for (final height in [600.0, 768.0, 1080.0]) {
-      testWidgets('many titles in a ${height.toInt()} px window scroll in '
-          'place; Plugins and Settings stay reachable', (tester) async {
-        await _pump(
-          tester,
-          _ShellHost(shelf: shelf(30)),
-          size: Size(1400, height),
-        );
-        await tester.pumpAndSettle();
-        expect(tester.takeException(), isNull);
-        // At most a dozen; the library holds the rest.
-        expect(find.byType(ListView).evaluate().isNotEmpty, isTrue);
-        expect(tile('12'), findsNothing);
-        if (height >= 768) {
-          // Everything fits without scrolling the rail itself.
-          final settings = tester.getRect(find.byTooltip('Settings'));
-          expect(settings.bottom, lessThanOrEqualTo(height));
-        }
-        await tester.tap(find.byTooltip('Settings'), warnIfMissed: false);
-        await tester.pumpAndSettle();
-        if (height >= 768) {
-          expect(find.text('page:settings'), findsOneWidget);
-        }
-      });
-    }
   });
 
   group('Provider search panel', () {

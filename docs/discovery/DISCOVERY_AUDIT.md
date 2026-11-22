@@ -26,7 +26,7 @@ the four paged catalog rows, and each layout draws them its own way:
 | Phone, For you tab | Spotlight hero → Continue watching → personalised rows → Top 10 → New releases → Trending now → New movies → Series worth the queue (audited order; since 2026-11-14 Top 10 sits directly under the Spotlight, before Continue watching) |
 | Phone, other tabs | Movies = New movies grid; Series = Series worth the queue grid; Trending = Trending grid |
 | Android TV | Continue watching → New movies → Series worth the queue → personalised rows → Watch together → Top 10 → New releases → Trending now (focus-driven hero from Spotlight) |
-| Windows | Spotlight hero → Top 10 → personalised rows → Trending now → Watch together → New movies → Series worth the queue → New releases (Continue watching is in the sidebar) |
+| Windows | Spotlight hero → Continue watching → Top 10 → personalised rows → Trending now → Watch together → New movies → Series worth the queue → New releases |
 
 ## Section by section
 
@@ -125,7 +125,7 @@ Personalised rows lead, general discovery follows. Each interface keeps its
 own layout:
 
 1. Spotlight (phone, Windows hero; TV focus hero)
-2. Continue watching (phone, TV; Windows sidebar)
+2. Continue watching (phone, TV; Windows under the Spotlight)
 3. Discovery prompt *(existing accounts without preferences only;
    dismissible)*
 4. Recommended for you

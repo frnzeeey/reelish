@@ -13,6 +13,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:onfeed/main.dart' as app;
 import 'package:onfeed/src/desktop/desktop_shell.dart';
+import 'package:onfeed/src/widgets/plugin_library/plugin_card.dart';
 import 'package:onfeed/src/widgets/settings/settings_components.dart';
 import 'package:onfeed/src/widgets/soft_glass_dock.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -77,21 +78,25 @@ void main() {
     await pumpUntil(tester, find.text('Browse Reelish Plugins'));
     // An icon button on phones and TVs; a labelled button on the Windows
     // Plugins page.
+    // The empty page repeats the Windows button, so at least one there.
     expect(
-      desktop
-          ? find.text('Paste a manifest URL')
-          : find.byTooltip('Paste a manifest URL'),
-      findsOneWidget,
+      desktop ? find.text('Add by link') : find.byTooltip('Add by link'),
+      desktop ? findsWidgets : findsOneWidget,
     );
     expect(find.text('Add provider'), findsNothing);
 
-    await tester.tap(find.text('Browse Reelish Plugins'));
-    await pumpUntil(tester, find.text('Reelish Plugins'));
+    await tester.tap(find.text('Browse Reelish Plugins').first);
     // The catalog loads from the network, the cache or the bundled copy.
-    await pumpUntil(tester, find.text('Providers'));
+    await pumpUntil(tester, find.byType(PluginCard));
     expect(find.text('Unable to load plugins'), findsNothing);
 
-    await tester.tap(find.byTooltip('Back to plugins'));
+    // Windows shows the library in place, behind the Installed / Discover
+    // switch; phones and TVs open it as a page with a back button.
+    await tester.tap(
+      desktop
+          ? find.byTooltip('Your collections and providers')
+          : find.byTooltip('Back to plugins'),
+    );
     await pumpUntil(tester, find.text('Browse Reelish Plugins'));
   });
 }

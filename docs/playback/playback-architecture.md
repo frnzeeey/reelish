@@ -64,8 +64,8 @@ Notes:
 
 - **Who calls `_openItem`.** The phone, TV and Windows details screens;
   the Windows hero and Spotlight play button for a movie (for a series they
-  open its details, where episodes are chosen); and the Windows sidebar's
-  Continue watching (`_resumeFromSidebar`, which picks the episode watched
+  open its details, where episodes are chosen); and Windows Home's
+  Continue watching row (`_resumeTitle`, which picks the episode watched
   last). The player also calls it for every episode change
   (`onPlayEpisode`), handing over its engine through `EpisodeHandOff`.
 - **Cancel.** The search can be cancelled from the dialog or overlay. A

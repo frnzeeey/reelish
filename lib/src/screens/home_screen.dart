@@ -2948,11 +2948,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  /// Continue watching in the Windows sidebar: a movie plays on from its
-  /// saved position; a series plays on in the episode watched last, or the
-  /// next one once that is finished. A series with neither known opens the
+  /// Continue watching on Windows Home: a movie plays on from its saved
+  /// position; a series plays on in the episode watched last, or the next
+  /// one once that is finished. A series with neither known opens the
   /// episode list there instead, as Play does.
-  Future<void> _resumeFromSidebar(MediaItem item) async {
+  Future<void> _resumeTitle(MediaItem item) async {
     if (item.type != 'series') return _openItem(item);
     var progress = SeriesProgress.empty;
     try {
@@ -2995,16 +2995,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         DesktopShell(
           destination: _tvDestination,
           onDestinationChanged: _onTvDestinationChanged,
-          continueWatching: DesktopResumeShelf(
-            items: _continueWatching,
-            loaded: _homeModel.historyLoaded,
-            summaryOf: _resumeSummary,
-            onResume: (item) => unawaited(_resumeFromSidebar(item)),
-            onDetails: (item) => unawaited(_showDetails(item)),
-          ),
           pageBuilder: (context, destination) => switch (destination) {
             TvDestination.home => DesktopHomePage(
               catalog: catalog,
+              continueWatching: DesktopResumeShelf(
+                items: _continueWatching,
+                summaryOf: _resumeSummary,
+                onResume: (item) => unawaited(_resumeTitle(item)),
+                onDetails: (item) => unawaited(_showDetails(item)),
+                onSeeAll: () => _onTvDestinationChanged(TvDestination.library),
+              ),
               onOpen: _showDetails,
               // A series needs an episode first, so Play opens its page.
               onPlay: (item) => item.type == 'series'

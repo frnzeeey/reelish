@@ -7,6 +7,7 @@ import '../theme/reelish_icons.dart';
 import '../discovery/discovery_data.dart';
 import '../discovery/discovery_engine.dart';
 import '../models/media_item.dart';
+import '../models/resume_summary.dart';
 import '../viewmodels/home_catalog.dart';
 import '../viewmodels/home_view_model.dart';
 import '../services/paged_feed_controller.dart';
@@ -35,9 +36,14 @@ class DesktopHomePage extends StatefulWidget {
     this.onJoinParty,
     this.onChooseGenres,
     this.onDismissGenres,
+    this.continueWatching,
   });
 
   final TvCatalog catalog;
+
+  /// The Continue watching row under the Spotlight; none without it, or
+  /// while nothing is started.
+  final DesktopResumeShelf? continueWatching;
   final ValueChanged<MediaItem> onOpen;
   final ValueChanged<MediaItem> onPlay;
 
@@ -116,9 +122,17 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
           key: const ValueKey('add-source'),
           onAddSource: widget.onAddSource,
         ),
-      // Windows shows Top 10 right under the Spotlight; phone and TV Home
-      // keep it further down. It still loads only once Movies and Series
-      // (its seeds) have, showing its placeholders until then.
+      // Picking up where you left off comes first after the Spotlight: it
+      // is the most likely next step, and it belongs with the content, not
+      // in the navigation.
+      if (widget.continueWatching case final shelf? when shelf.items.isNotEmpty)
+        DesktopContinueWatchingRow(
+          key: const ValueKey('row:continue'),
+          shelf: shelf,
+        ),
+      // Windows shows Top 10 next; phone and TV Home keep it further down.
+      // It still loads only once Movies and Series (its seeds) have,
+      // showing its placeholders until then.
       DesktopTopTenRow(
         key: const ValueKey('row:top10'),
         feed: catalog.top10,
@@ -162,7 +176,6 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
             onRemove: (item) =>
                 discovery.giveFeedback(FeedbackKind.notInterested, item),
           ),
-      // Continue watching is in the sidebar on Windows, not a row here.
       if (_trending.isNotEmpty)
         DesktopMediaRow(
           key: const ValueKey('row:trending'),
@@ -224,6 +237,76 @@ class _DesktopHomePageState extends State<DesktopHomePage> {
         return index < 0 ? null : index;
       },
       itemBuilder: (context, index) => rows[index],
+    );
+  }
+}
+
+/// What Home's Continue watching row shows and does: the titles Home's
+/// watch history holds, and the same play flow as everywhere else.
+class DesktopResumeShelf {
+  const DesktopResumeShelf({
+    required this.items,
+    required this.summaryOf,
+    required this.onResume,
+    required this.onDetails,
+    this.onSeeAll,
+  });
+
+  /// Started titles, most recent first.
+  final List<MediaItem> items;
+
+  /// Where each was left ("S2 E1 · 27 min left") and how far in.
+  final ResumeSummary Function(MediaItem item) summaryOf;
+
+  /// Plays on from where the title was left.
+  final ValueChanged<MediaItem> onResume;
+
+  /// Its details page: a right click, or the card's Details button.
+  final ValueChanged<MediaItem> onDetails;
+
+  /// Opens the whole list (My library); no See all without it.
+  final VoidCallback? onSeeAll;
+
+  /// Titles shown at most; the library holds the rest.
+  static const maxShown = 12;
+}
+
+/// Continue watching on Home: wide cards on each title's backdrop, with
+/// where it was left and how far in. A click plays on.
+class DesktopContinueWatchingRow extends StatelessWidget {
+  const DesktopContinueWatchingRow({super.key, required this.shelf});
+
+  final DesktopResumeShelf shelf;
+
+  @override
+  Widget build(BuildContext context) {
+    final onSeeAll = shelf.onSeeAll;
+    return DesktopMediaRow(
+      title: 'Continue watching',
+      items: shelf.items.take(DesktopResumeShelf.maxShown).toList(),
+      landscape: true,
+      onOpen: shelf.onResume,
+      onDetails: shelf.onDetails,
+      progressOf: (item) => shelf.summaryOf(item).fraction,
+      captionOf: (item) => shelf.summaryOf(item).label,
+      trailing: onSeeAll == null
+          ? null
+          : TextButton.icon(
+              onPressed: onSeeAll,
+              iconAlignment: IconAlignment.end,
+              icon: const Icon(ReelishIcons.chevronRight, size: 16),
+              label: const Text('See all'),
+              style: TextButton.styleFrom(
+                foregroundColor: GlassTheme.textPrimary,
+                visualDensity: VisualDensity.compact,
+                // A button style's text replaces the theme's, font included.
+                textStyle: const TextStyle(
+                  fontFamily: GlassTheme.fontFamily,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
     );
   }
 }

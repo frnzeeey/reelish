@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/semantics.dart' show CustomSemanticsAction;
 import 'package:flutter/services.dart';
 import '../theme/reelish_icons.dart';
 
@@ -114,6 +115,7 @@ class DesktopPosterCard extends StatefulWidget {
     this.caption = '',
     this.showType = true,
     this.landscape = false,
+    this.onDetails,
   });
 
   final MediaItem item;
@@ -153,6 +155,11 @@ class DesktopPosterCard extends StatefulWidget {
   /// progress drawn on the art: Continue watching, where where you are
   /// matters more than the poster.
   final bool landscape;
+
+  /// Opens [item]'s details page, for a card whose click does something
+  /// else (Continue watching resumes): a right click, a corner button on
+  /// hover, and a screen-reader action.
+  final VoidCallback? onDetails;
 
   @override
   State<DesktopPosterCard> createState() => _DesktopPosterCardState();
@@ -259,8 +266,12 @@ class _DesktopPosterCardState extends State<DesktopPosterCard> {
         },
         child: GestureDetector(
           onTap: () => widget.onOpen(item),
+          onSecondaryTap: widget.onDetails,
           child: Semantics(
             button: true,
+            customSemanticsActions: {
+              const CustomSemanticsAction(label: 'Details'): ?widget.onDetails,
+            },
             label: [
               if (widget.rank case final rank?) 'Number $rank',
               item.name,
@@ -273,134 +284,153 @@ class _DesktopPosterCardState extends State<DesktopPosterCard> {
                   scale: lifted ? (landscape ? 1.025 : 1.04) : 1,
                   duration: duration,
                   curve: Curves.easeOutCubic,
-                  child: AnimatedContainer(
-                    duration: duration,
-                    curve: Curves.easeOutCubic,
+                  // Sized at once, and only the look animated: a size
+                  // eased after a window resize would overflow the row,
+                  // which resizes at once.
+                  child: SizedBox(
                     width: width,
                     height: artHeight,
-                    decoration: BoxDecoration(
-                      borderRadius: radius,
-                      boxShadow: lifted
-                          ? [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: .55),
-                                blurRadius: 24,
-                                offset: const Offset(0, 10),
-                              ),
-                            ]
-                          : const [],
-                    ),
-                    foregroundDecoration: BoxDecoration(
-                      borderRadius: radius,
-                      border: Border.all(
-                        color: _focused
-                            ? GlassTheme.coralBright
-                            : _hovered
-                            ? GlassTheme.textPrimary.withValues(alpha: .4)
-                            : GlassTheme.textPrimary.withValues(alpha: .06),
-                        width: _focused ? 3 : 1.5,
-                      ),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: radius,
-                      child: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          const PosterPlaceholder(iconSize: 34),
-                          if (art.isNotEmpty)
-                            ArtworkImage.network(
-                              art,
-                              fit: BoxFit.cover,
-                              cacheWidth: posterDecodeWidth(
-                                width * MediaQuery.devicePixelRatioOf(context),
-                              ),
-                              frameBuilder: posterFadeIn(context),
-                              errorBuilder: (_, _, _) =>
-                                  const SizedBox.shrink(),
-                            ),
-                          if (landscape)
-                            _ResumeOverlay(
-                              item: item,
-                              caption: widget.caption.isNotEmpty
-                                  ? widget.caption
-                                  : meta,
-                              accentCaption: widget.caption.isNotEmpty,
-                              lifted: lifted,
-                              duration: duration,
-                            )
-                          else
-                            // Hover: a quiet shade with the rating and a play
-                            // glyph, so the card reads as clickable.
-                            AnimatedOpacity(
-                              opacity: lifted ? 1 : 0,
-                              duration: duration,
-                              child: const _HoverShade(),
-                            ),
-                          if (widget.isFavorite)
-                            const Positioned(
-                              top: 8,
-                              left: 8,
-                              child: _Badge(
-                                child: Icon(
-                                  ReelishIcons.heartFilled,
-                                  size: 14,
-                                  color: Colors.white,
+                    child: AnimatedContainer(
+                      duration: duration,
+                      curve: Curves.easeOutCubic,
+                      decoration: BoxDecoration(
+                        borderRadius: radius,
+                        boxShadow: lifted
+                            ? [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: .55),
+                                  blurRadius: 24,
+                                  offset: const Offset(0, 10),
                                 ),
+                              ]
+                            : const [],
+                      ),
+                      foregroundDecoration: BoxDecoration(
+                        borderRadius: radius,
+                        border: Border.all(
+                          color: _focused
+                              ? GlassTheme.coralBright
+                              : _hovered
+                              ? GlassTheme.textPrimary.withValues(alpha: .4)
+                              : GlassTheme.textPrimary.withValues(alpha: .06),
+                          width: _focused ? 3 : 1.5,
+                        ),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: radius,
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            const PosterPlaceholder(iconSize: 34),
+                            if (art.isNotEmpty)
+                              ArtworkImage.network(
+                                art,
+                                fit: BoxFit.cover,
+                                cacheWidth: posterDecodeWidth(
+                                  width *
+                                      MediaQuery.devicePixelRatioOf(context),
+                                ),
+                                frameBuilder: posterFadeIn(context),
+                                errorBuilder: (_, _, _) =>
+                                    const SizedBox.shrink(),
                               ),
-                            ),
-                          if (widget.onToggleFavorite != null ||
-                              widget.onRemove != null)
-                            Positioned(
-                              top: 8,
-                              right: 8,
-                              // Mouse buttons, shown with the hover shade;
-                              // keyboard users press F or Delete instead.
-                              child: IgnorePointer(
-                                ignoring: !lifted,
-                                child: AnimatedOpacity(
-                                  opacity: lifted ? (_busy ? .5 : 1) : 0,
-                                  duration: duration,
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      if (widget.onToggleFavorite != null)
-                                        _CardAction(
-                                          icon: ReelishIcons.heart,
-                                          filled: widget.isFavorite,
-                                          tooltip: widget.isFavorite
-                                              ? 'Remove from My list (F)'
-                                              : 'Add to My list (F)',
-                                          onPressed: () =>
-                                              unawaited(_toggleFavorite()),
-                                        ),
-                                      if (widget.onToggleFavorite != null &&
-                                          widget.onRemove != null)
-                                        const SizedBox(width: 6),
-                                      if (widget.onRemove != null)
-                                        _CardAction(
-                                          icon: ReelishIcons.close,
-                                          tooltip:
-                                              '${widget.removeLabel} (Delete)',
-                                          onPressed: () => unawaited(_remove()),
-                                        ),
-                                    ],
+                            if (landscape)
+                              _ResumeOverlay(
+                                item: item,
+                                caption: widget.caption.isNotEmpty
+                                    ? widget.caption
+                                    : meta,
+                                accentCaption: widget.caption.isNotEmpty,
+                                lifted: lifted,
+                                duration: duration,
+                              )
+                            else
+                              // Hover: a quiet shade with the rating and a play
+                              // glyph, so the card reads as clickable.
+                              AnimatedOpacity(
+                                opacity: lifted ? 1 : 0,
+                                duration: duration,
+                                child: const _HoverShade(),
+                              ),
+                            if (widget.isFavorite)
+                              const Positioned(
+                                top: 8,
+                                left: 8,
+                                child: _Badge(
+                                  child: Icon(
+                                    ReelishIcons.heartFilled,
+                                    size: 14,
+                                    color: Colors.white,
                                   ),
                                 ),
                               ),
-                            ),
-                          if (widget.progress > 0)
-                            Positioned(
-                              left: 0,
-                              right: 0,
-                              bottom: 0,
-                              child: LinearProgressIndicator(
-                                value: widget.progress.clamp(0, 1),
-                                minHeight: 4,
-                                color: GlassTheme.primary,
-                                backgroundColor: Colors.black54,
+                            if (widget.onToggleFavorite != null ||
+                                widget.onRemove != null ||
+                                widget.onDetails != null)
+                              Positioned(
+                                top: 8,
+                                right: 8,
+                                // Mouse buttons, shown with the hover shade;
+                                // keyboard users press F or Delete instead.
+                                child: IgnorePointer(
+                                  ignoring: !lifted,
+                                  child: AnimatedOpacity(
+                                    opacity: lifted ? (_busy ? .5 : 1) : 0,
+                                    duration: duration,
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        if (widget.onDetails
+                                            case final onDetails?) ...[
+                                          _CardAction(
+                                            icon: ReelishIcons.info,
+                                            tooltip: 'Details',
+                                            onPressed: onDetails,
+                                          ),
+                                          if (widget.onToggleFavorite != null ||
+                                              widget.onRemove != null)
+                                            const SizedBox(width: 6),
+                                        ],
+                                        if (widget.onToggleFavorite != null)
+                                          _CardAction(
+                                            icon: ReelishIcons.heart,
+                                            filled: widget.isFavorite,
+                                            tooltip: widget.isFavorite
+                                                ? 'Remove from My list (F)'
+                                                : 'Add to My list (F)',
+                                            onPressed: () =>
+                                                unawaited(_toggleFavorite()),
+                                          ),
+                                        if (widget.onToggleFavorite != null &&
+                                            widget.onRemove != null)
+                                          const SizedBox(width: 6),
+                                        if (widget.onRemove != null)
+                                          _CardAction(
+                                            icon: ReelishIcons.close,
+                                            tooltip:
+                                                '${widget.removeLabel} (Delete)',
+                                            onPressed: () =>
+                                                unawaited(_remove()),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
                               ),
-                            ),
-                        ],
+                            if (widget.progress > 0)
+                              Positioned(
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                child: LinearProgressIndicator(
+                                  value: widget.progress.clamp(0, 1),
+                                  minHeight: 4,
+                                  color: GlassTheme.primary,
+                                  backgroundColor: Colors.black54,
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -669,27 +699,19 @@ class DesktopSectionTitle extends StatelessWidget {
       DesktopMetrics.pagePadding,
       10,
     ),
+    // Plain type, no accent rule: the accent is kept for what can be acted
+    // on, so a page of rows is not striped with it.
     child: Row(
       children: [
-        // A short accent rule ties each row to the hero's label.
-        Container(
-          width: 4,
-          height: 18,
-          margin: const EdgeInsets.only(right: 12),
-          decoration: BoxDecoration(
-            color: GlassTheme.primary,
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ),
         Flexible(
           child: Text(
             title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
-              fontSize: 21,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -.3,
+              fontSize: AppTextSize.titleLarge,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -.2,
             ),
           ),
         ),
@@ -717,6 +739,8 @@ class DesktopMediaRow extends StatefulWidget {
     this.onNearEnd,
     this.loadingMore = false,
     this.landscape = false,
+    this.onDetails,
+    this.trailing,
   });
 
   final String title;
@@ -741,6 +765,13 @@ class DesktopMediaRow extends StatefulWidget {
   /// Wide 16:9 cards on each title's backdrop (see
   /// [DesktopPosterCard.landscape]).
   final bool landscape;
+
+  /// Opens a title's details, for a row whose click does something else
+  /// (see [DesktopPosterCard.onDetails]).
+  final ValueChanged<MediaItem>? onDetails;
+
+  /// Beside the heading, at the row's right edge ("See all").
+  final Widget? trailing;
 
   @override
   State<DesktopMediaRow> createState() => _DesktopMediaRowState();
@@ -805,7 +836,7 @@ class _DesktopMediaRowState extends State<DesktopMediaRow> {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      DesktopSectionTitle(widget.title),
+      DesktopSectionTitle(widget.title, trailing: widget.trailing),
       LayoutBuilder(
         builder: (context, constraints) {
           final available =
@@ -872,6 +903,10 @@ class _DesktopMediaRowState extends State<DesktopMediaRow> {
                           onRemove: bindItem(widget.onRemove, item),
                           removeLabel: widget.removeLabel,
                           landscape: widget.landscape,
+                          onDetails: switch (widget.onDetails) {
+                            final onDetails? => () => onDetails(item),
+                            null => null,
+                          },
                         );
                       },
                     ),

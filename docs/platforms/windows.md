@@ -9,8 +9,8 @@ the architecture to the code.
 
 | Concern | Location |
 |---|---|
-| Shell | [`desktop_shell.dart`](../../lib/src/desktop/desktop_shell.dart): `DesktopShell`, the hover-open glass sidebar, Continue watching (`DesktopResumeShelf`), Ctrl+F |
-| Home | [`desktop_pages.dart`](../../lib/src/desktop/desktop_pages.dart) (`DesktopHomePage`), [`desktop_hero.dart`](../../lib/src/desktop/desktop_hero.dart) (Spotlight and its rail), [`desktop_top_ten.dart`](../../lib/src/desktop/desktop_top_ten.dart) |
+| Shell | [`desktop_shell.dart`](../../lib/src/desktop/desktop_shell.dart): `DesktopShell`, the floating, hover-open navigation rail, Ctrl+F |
+| Home | [`desktop_pages.dart`](../../lib/src/desktop/desktop_pages.dart) (`DesktopHomePage`, `DesktopContinueWatchingRow`), [`desktop_hero.dart`](../../lib/src/desktop/desktop_hero.dart) (Spotlight and its rail), [`desktop_top_ten.dart`](../../lib/src/desktop/desktop_top_ten.dart) |
 | Catalog, Search, Library | [`desktop_pages.dart`](../../lib/src/desktop/desktop_pages.dart): `DesktopCatalogPage`, `DesktopLibraryPage` (Search: `UniversalSearchView`) |
 | Details | [`desktop_details_screen.dart`](../../lib/src/desktop/desktop_details_screen.dart) (episode panel from 1180 px wide) |
 | Settings, Plugins | [`desktop_settings_page.dart`](../../lib/src/desktop/desktop_settings_page.dart), [`desktop_plugins_page.dart`](../../lib/src/desktop/desktop_plugins_page.dart), [`desktop_update_section.dart`](../../lib/src/desktop/desktop_update_section.dart) |
@@ -24,10 +24,16 @@ the architecture to the code.
 
 ## Interface and input
 
-- **Sidebar.** An 80 px icon rail that opens to 248 px over the page when
-  the pointer rests on it or keyboard focus enters it, without rebuilding
-  the page. "Keep sidebar open" pins it beside the page (preference
-  `reelish.desktop.sidebarPinned`). Continue watching sits in the rail.
+- **Sidebar.** A floating rounded rail, 12 px off the window edges: 72 px of
+  icons that open to 232 px over the page when the pointer rests on it or
+  keyboard focus enters it, without rebuilding the page. "Keep sidebar
+  open" pins it beside the page (preference
+  `reelish.desktop.sidebarPinned`). Navigation only, in three groups:
+  Home, Movies, Series, Search; My library, Together; Plugins, Settings,
+  Profile at the foot.
+- **Home.** Spotlight, then Continue watching (wide cards: a click plays
+  on, a right click or the Details button opens the title, See all opens
+  My library), then Top 10 and the other rows.
 - **Pages** stay alive once visited (offstage, `TickerMode` off).
 - **Spotlight.** A full-bleed backdrop with text on the left and a looping
   "In the Spotlight" rail; rotates every 8 s while Home is shown and the

@@ -3,36 +3,35 @@ import 'dart:math' as math;
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/semantics.dart' show CustomSemanticsAction;
 import 'package:flutter/services.dart';
 import '../theme/reelish_icons.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../models/media_item.dart';
-import '../models/resume_summary.dart';
 import '../screens/social/together_screen.dart';
 import '../navigation/app_destination.dart';
+import '../theme/design_tokens.dart';
 import '../theme/glass_theme.dart';
 import '../widgets/ambient_backdrop.dart';
-import '../widgets/poster_image.dart';
 import 'desktop_widgets.dart';
 import '../widgets/brand_logo.dart';
 import '../widgets/count_badge.dart';
 import '../widgets/avatar_frame.dart';
 import '../widgets/profile_avatar.dart';
-import '../widgets/artwork_image.dart';
 
-/// The Windows interface's frame: a compact icon rail on the left and the
-/// selected page beside it.
+/// The Windows interface's frame: a floating navigation rail on the left
+/// and the selected page beside it.
 ///
-/// * The rail opens into a frosted panel with labels while the pointer is
-///   over it or keyboard focus is inside it. Open, it lies over the page's
-///   edge instead of pushing the page aside, so the page (a playing trailer,
-///   a scrolled row, a loading grid) is never rebuilt or laid out again.
+/// * The rail is a rounded panel held [inset] off the window's edges. It
+///   shows icons only, and opens into a labelled, frosted panel while the
+///   pointer rests on it or keyboard focus is inside it. Open, it lies over
+///   the page's edge instead of pushing the page aside, so the page (a
+///   playing trailer, a scrolled row, a loading grid) is never rebuilt or
+///   laid out again.
 /// * "Keep sidebar open" pins it open beside the page instead, and is
 ///   remembered.
-/// * Continue watching lives in the rail, between browsing and Plugins:
-///   thumbnails when compact, titles and progress when open.
+/// * The rail is navigation only: browsing, then your library and friends,
+///   then Plugins, Settings and Profile at its foot. Continue watching is
+///   on Home, with the content.
 /// * Pages stay alive once visited, so each keeps its scroll position.
 /// * Ctrl+F opens Search.
 class DesktopShell extends StatefulWidget {
@@ -41,7 +40,6 @@ class DesktopShell extends StatefulWidget {
     required this.destination,
     required this.onDestinationChanged,
     required this.pageBuilder,
-    this.continueWatching,
   });
 
   final TvDestination destination;
@@ -49,11 +47,16 @@ class DesktopShell extends StatefulWidget {
   final Widget Function(BuildContext context, TvDestination destination)
   pageBuilder;
 
-  /// The rail's Continue watching section; none without it.
-  final DesktopResumeShelf? continueWatching;
+  /// The gap between the floating rail and the window's edges.
+  static const inset = AppSpace.sm;
 
-  static const collapsedWidth = 80.0;
-  static const expandedWidth = 248.0;
+  /// The rail panel's width, compact and open.
+  static const collapsedWidth = 72.0;
+  static const expandedWidth = 232.0;
+
+  /// Where the page starts: the rail and its gap from the window edge.
+  static const collapsedExtent = inset + collapsedWidth;
+  static const expandedExtent = inset + expandedWidth;
 
   @override
   State<DesktopShell> createState() => _DesktopShellState();
@@ -126,8 +129,8 @@ class _DesktopShellState extends State<DesktopShell> {
               duration: desktopMotion(context, 220),
               curve: DesktopSurfaces.curve,
               left: _pinned
-                  ? DesktopShell.expandedWidth
-                  : DesktopShell.collapsedWidth,
+                  ? DesktopShell.expandedExtent
+                  : DesktopShell.collapsedExtent,
               top: 0,
               right: 0,
               bottom: 0,
@@ -147,16 +150,15 @@ class _DesktopShellState extends State<DesktopShell> {
               ),
             ),
             Positioned(
-              left: 0,
-              top: 0,
-              bottom: 0,
+              left: DesktopShell.inset,
+              top: DesktopShell.inset,
+              bottom: DesktopShell.inset,
               child: _Sidebar(
                 pinned: _pinned,
                 selected: widget.destination,
                 onSelected: widget.onDestinationChanged,
                 onTogglePinned: _togglePinned,
                 onReleaseFocus: _shellFocus.requestFocus,
-                shelf: widget.continueWatching,
               ),
             ),
           ],
@@ -206,7 +208,6 @@ class _Sidebar extends StatefulWidget {
     required this.onSelected,
     required this.onTogglePinned,
     required this.onReleaseFocus,
-    this.shelf,
   });
 
   final bool pinned;
@@ -216,13 +217,15 @@ class _Sidebar extends StatefulWidget {
 
   /// Moves focus out of the rail, so it can close.
   final VoidCallback onReleaseFocus;
-  final DesktopResumeShelf? shelf;
 
   /// A pointer passing over on its way elsewhere does not open the rail...
   static const openDelay = Duration(milliseconds: 120);
 
   /// ...and one that slips off its edge for a moment does not close it.
   static const closeDelay = Duration(milliseconds: 220);
+
+  /// The floating panel's corners.
+  static const radius = AppRadius.xl;
 
   @override
   State<_Sidebar> createState() => _SidebarState();
@@ -270,13 +273,12 @@ class _SidebarState extends State<_Sidebar> {
   @override
   Widget build(BuildContext context) {
     final open = _open;
-    // Over the page: frosted, with depth. Pinned or closed it sits flush
-    // beside the page, so there is nothing behind it to blur.
+    // Over the page: frosted, with more depth. Compact or pinned it is a
+    // quiet, solid panel; there is nothing behind it worth blurring.
     final overlay = open && !widget.pinned;
     final duration = desktopMotion(context, 220);
-    final radius = BorderRadius.horizontal(
-      right: Radius.circular(overlay ? 22 : 0),
-    );
+    final dark = GlassTheme.surfaces.brightness == Brightness.dark;
+    final radius = BorderRadius.circular(_Sidebar.radius);
     // Focus left in the rail by the keyboard or a controller would hold it
     // open, and mouse clicks never move focus. So the pointer leaving the
     // rail, or a click on the page, gives focus back to the shell.
@@ -307,20 +309,16 @@ class _SidebarState extends State<_Sidebar> {
               width: open
                   ? DesktopShell.expandedWidth
                   : DesktopShell.collapsedWidth,
+              // Soft, warm depth: enough to float, never a hard edge.
               decoration: BoxDecoration(
                 borderRadius: radius,
                 boxShadow: [
                   BoxShadow(
-                    // A light page needs only a soft shadow to lift the rail.
                     color: Colors.black.withValues(
-                      alpha: overlay
-                          ? (GlassTheme.surfaces.brightness == Brightness.dark
-                                ? .5
-                                : .14)
-                          : 0,
+                      alpha: overlay ? (dark ? .45 : .14) : (dark ? .22 : .06),
                     ),
-                    blurRadius: 36,
-                    offset: const Offset(10, 0),
+                    blurRadius: overlay ? 40 : 20,
+                    offset: Offset(overlay ? 8 : 0, 8),
                   ),
                 ],
               ),
@@ -329,60 +327,34 @@ class _SidebarState extends State<_Sidebar> {
                 child: BackdropFilter(
                   // One blur, only while the rail is open over the page.
                   enabled: overlay,
-                  filter: ImageFilter.blur(sigmaX: 26, sigmaY: 26),
+                  filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
                   child: AnimatedContainer(
                     duration: duration,
                     curve: DesktopSurfaces.curve,
                     decoration: BoxDecoration(
                       borderRadius: radius,
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          Color.alphaBlend(
-                            GlassTheme.primary.withValues(alpha: .07),
-                            overlay
-                                ? Color.lerp(
-                                    GlassTheme.background,
-                                    GlassTheme.surface,
-                                    .4,
-                                  )!.withValues(alpha: .55)
-                                : DesktopSurfaces.sidebar,
-                          ),
-                          overlay
-                              ? DesktopSurfaces.sidebar.withValues(alpha: .7)
-                              : DesktopSurfaces.sidebar,
-                        ],
-                        stops: const [0, .5],
-                      ),
-                      // Over the page the lit glass edge replaces it.
-                      border: Border(
-                        right: BorderSide(
-                          color: GlassTheme.textPrimary.withValues(
-                            alpha: overlay ? 0 : .06,
-                          ),
+                      color: overlay
+                          ? Color.lerp(
+                              DesktopSurfaces.sidebar,
+                              GlassTheme.surface,
+                              .35,
+                            )!.withValues(alpha: .78)
+                          : DesktopSurfaces.sidebar,
+                      border: Border.all(
+                        color: GlassTheme.textPrimary.withValues(
+                          alpha: overlay ? .12 : .07,
                         ),
                       ),
                     ),
-                    // Always present, so the rail's contents keep their place in the
-                    // tree (and their focus) when it opens; lit only over the page.
-                    foregroundDecoration: _GlassEdgeDecoration(
-                      radius: 22,
-                      lit: overlay,
-                    ),
                     child: FocusTraversalGroup(
                       child: _FillOrScroll(
-                        minHeight: widget.shelf == null
-                            ? _RailContents.fixedHeight
-                            : _RailContents.fixedHeight +
-                                  _ResumeSection.minHeight,
+                        minHeight: _RailContents.fixedHeight,
                         child: _RailContents(
                           open: open,
                           pinned: widget.pinned,
                           selected: widget.selected,
                           onSelected: widget.onSelected,
                           onTogglePinned: _togglePinned,
-                          shelf: widget.shelf,
                         ),
                       ),
                     ),
@@ -404,7 +376,6 @@ class _RailContents extends StatelessWidget {
     required this.selected,
     required this.onSelected,
     required this.onTogglePinned,
-    this.shelf,
   });
 
   final bool open;
@@ -412,95 +383,119 @@ class _RailContents extends StatelessWidget {
   final TvDestination selected;
   final ValueChanged<TvDestination> onSelected;
   final VoidCallback onTogglePinned;
-  final DesktopResumeShelf? shelf;
 
-  /// The mark, every destination, the divider and the pin: what must fit
-  /// before Continue watching gets any room.
-  static const fixedHeight = 592.0;
+  /// Browsing, then your own places, then (at the foot) the app's.
+  static const _browse = [
+    TvDestination.home,
+    TvDestination.movies,
+    TvDestination.series,
+    TvDestination.search,
+  ];
+  static const _yours = [TvDestination.library, TvDestination.together];
+  static const _foot = [
+    TvDestination.plugins,
+    TvDestination.settings,
+    TvDestination.profile,
+  ];
+
+  /// The mark, every destination, the dividers and the pin: below this
+  /// height the rail scrolls rather than overflowing.
+  static const fixedHeight =
+      _brandHeight +
+      _SidebarItem.extent * 9 +
+      _Divider.extent * 2 +
+      _PinToggle.extent;
+
+  static const _brandHeight = 84.0;
 
   @override
   Widget build(BuildContext context) {
+    assert(
+      {..._browse, ..._yours, ..._foot}.length == TvDestination.values.length,
+      'Every destination needs a place in the rail.',
+    );
     final duration = desktopMotion(context, 200);
+    Widget item(TvDestination destination) => _SidebarItem(
+      destination: destination,
+      selected: destination == selected,
+      open: open,
+      onTap: () => onSelected(destination),
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // The mark keeps its place; the wordmark fades in beside it.
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 24, 12, 28),
-          child: Row(
-            children: [
-              // In the accent colour, as phone Home's (the coral icon for
-              // the default accent). Not read out: the wordmark says it.
-              ExcludeSemantics(
-                child: AccentAppIcon(
-                  key: ValueKey(GlassTheme.accent.id),
-                  size: 40,
-                  radius: 11,
+        // The mark keeps its place, centred in the compact rail; the
+        // wordmark fades in beside it.
+        SizedBox(
+          height: _brandHeight,
+          child: Padding(
+            padding: const EdgeInsets.only(left: 18, right: 12),
+            child: Row(
+              children: [
+                // In the accent colour, as phone Home's. Not read out: the
+                // wordmark says it.
+                ExcludeSemantics(
+                  child: AccentAppIcon(
+                    key: ValueKey(GlassTheme.accent.id),
+                    size: 36,
+                    radius: 10,
+                  ),
                 ),
-              ),
-              Flexible(
-                child: AnimatedOpacity(
-                  duration: duration,
-                  opacity: open ? 1 : 0,
-                  // Laid out at its full width and clipped, so the narrow
-                  // compact rail cuts it off instead of overflowing.
-                  child: const Padding(
-                    padding: EdgeInsets.only(left: 14),
-                    child: SizedBox(
-                      height: 18,
-                      child: ClipRect(
-                        child: OverflowBox(
-                          alignment: Alignment.centerLeft,
-                          minWidth: 0,
-                          maxWidth: double.infinity,
-                          minHeight: 0,
-                          maxHeight: double.infinity,
-                          child: ReelishWordmark(height: 16),
+                Flexible(
+                  child: AnimatedOpacity(
+                    duration: duration,
+                    opacity: open ? 1 : 0,
+                    // Laid out at its full width and clipped, so the narrow
+                    // compact rail cuts it off instead of overflowing.
+                    child: const Padding(
+                      padding: EdgeInsets.only(left: 14),
+                      child: SizedBox(
+                        height: 18,
+                        child: ClipRect(
+                          child: OverflowBox(
+                            alignment: Alignment.centerLeft,
+                            minWidth: 0,
+                            maxWidth: double.infinity,
+                            minHeight: 0,
+                            maxHeight: double.infinity,
+                            child: ReelishWordmark(height: 15),
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
-        // Browsing first, then Continue watching in the room left; Plugins
-        // and Settings sit at the foot. The same order for Tab and the
-        // arrow keys.
-        for (final destination in TvDestination.values) ...[
-          if (destination == TvDestination.plugins) ...[
-            if (shelf case final shelf?)
-              Expanded(
-                child: _ResumeSection(
-                  open: open,
-                  shelf: shelf,
-                  onSeeAll: () => onSelected(TvDestination.library),
-                ),
-              )
-            else
-              const Spacer(),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 10),
-              child: Divider(
-                height: 1,
-                color: GlassTheme.textPrimary.withValues(alpha: .07),
-              ),
-            ),
-          ],
-          _SidebarItem(
-            destination: destination,
-            selected: destination == selected,
-            open: open,
-            onTap: () => onSelected(destination),
-          ),
-        ],
-        const SizedBox(height: 6),
+        // The same order for Tab and the arrow keys.
+        for (final destination in _browse) item(destination),
+        const _Divider(),
+        for (final destination in _yours) item(destination),
+        const Spacer(),
+        const _Divider(),
+        for (final destination in _foot) item(destination),
         _PinToggle(open: open, pinned: pinned, onTap: onTogglePinned),
-        const SizedBox(height: 18),
       ],
     );
   }
+}
+
+/// A hairline between the rail's groups, inset to the items' edges.
+class _Divider extends StatelessWidget {
+  const _Divider();
+
+  static const extent = 17.0;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+    child: Divider(
+      height: 1,
+      color: GlassTheme.textPrimary.withValues(alpha: .08),
+    ),
+  );
 }
 
 /// Fills the sidebar's height, so its foot sits at the bottom, and scrolls
@@ -535,6 +530,19 @@ class _SidebarItem extends StatefulWidget {
   final bool open;
   final VoidCallback onTap;
 
+  static const _height = 44.0;
+  static const _gap = 3.0;
+
+  /// The height one item takes in the rail, gaps included.
+  static const extent = _height + _gap * 2;
+
+  /// Centres the icon in the compact rail, so it never moves as the rail
+  /// opens: the rail's width, less the item's margins and the icon.
+  static const iconInset =
+      (DesktopShell.collapsedWidth - _margin * 2 - _icon) / 2;
+  static const _margin = 10.0;
+  static const _icon = 22.0;
+
   @override
   State<_SidebarItem> createState() => _SidebarItemState();
 }
@@ -553,7 +561,10 @@ class _SidebarItemState extends State<_SidebarItem> {
         ? accent
         : _hovered || _focused
         ? GlassTheme.textPrimary
-        : GlassTheme.textPrimary.withValues(alpha: .7);
+        : GlassTheme.textPrimary.withValues(alpha: .66);
+    final icon = selected
+        ? ReelishIcons.filled(widget.destination.icon)
+        : widget.destination.icon;
     // The tooltip shows only while the labels are hidden. A hidden tooltip
     // drops its wrapper, so the item is keyed to keep its state and focus
     // as the rail opens and closes around it.
@@ -563,10 +574,13 @@ class _SidebarItemState extends State<_SidebarItem> {
         message: widget.destination.label,
         preferBelow: false,
         verticalOffset: 0,
-        margin: const EdgeInsets.only(left: DesktopShell.collapsedWidth),
+        margin: const EdgeInsets.only(left: DesktopShell.collapsedExtent),
         child: Padding(
           key: _item,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+          padding: const EdgeInsets.symmetric(
+            horizontal: _SidebarItem._margin,
+            vertical: _SidebarItem._gap,
+          ),
           child: FocusableActionDetector(
             mouseCursor: SystemMouseCursors.click,
             onShowHoverHighlight: (value) => setState(() => _hovered = value),
@@ -589,79 +603,32 @@ class _SidebarItemState extends State<_SidebarItem> {
                 child: AnimatedContainer(
                   duration: duration,
                   curve: DesktopSurfaces.curve,
-                  height: 46,
+                  height: _SidebarItem._height,
+                  // Selected: a soft accent pill, a filled icon and a bolder
+                  // label, so it never depends on colour alone. Hover is
+                  // neutral, so it never reads as selected.
                   decoration: BoxDecoration(
-                    // Selected: a soft accent light that fades to the right,
-                    // with the bar, a filled icon and a bolder label, so it
-                    // never depends on colour alone. Hover is neutral, so
-                    // it never reads as selected.
-                    gradient: selected
-                        ? LinearGradient(
-                            colors: [
-                              accent.withValues(alpha: _hovered ? .28 : .22),
-                              accent.withValues(alpha: _hovered ? .1 : .05),
-                            ],
-                          )
-                        : null,
                     color: selected
-                        ? null
-                        : _hovered
-                        ? GlassTheme.textPrimary.withValues(alpha: .07)
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(13),
-                    border: Border.all(
-                      color: _focused
-                          ? GlassTheme.coralBright
-                          : selected
-                          ? accent.withValues(alpha: .22)
-                          : Colors.transparent,
-                      width: _focused ? 2 : 1,
-                    ),
+                        ? accent.withValues(alpha: _hovered ? .2 : .14)
+                        : GlassTheme.textPrimary.withValues(
+                            alpha: _hovered ? .06 : 0,
+                          ),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                  ),
+                  // The focus ring sits on top, so it never moves the icon.
+                  foregroundDecoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    border: _focused
+                        ? Border.all(color: GlassTheme.coralBright, width: 2)
+                        : null,
                   ),
                   child: Row(
                     children: [
-                      // The active page's accent bar.
-                      AnimatedContainer(
-                        duration: duration,
-                        width: 3,
-                        height: selected ? 20 : 0,
-                        margin: const EdgeInsets.only(left: 5, right: 10),
-                        decoration: BoxDecoration(
-                          color: accent,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
+                      const SizedBox(width: _SidebarItem.iconInset),
+                      SizedBox.square(
+                        dimension: _SidebarItem._icon,
+                        child: Center(child: _icon(icon, color, selected)),
                       ),
-                      // Profile shows whose it is; the others their icon.
-                      if (widget.destination == TvDestination.profile)
-                        const SizedBox.square(
-                          dimension: 23,
-                          child: AvatarFrameRim(
-                            child: MyProfileAvatar(size: 23),
-                          ),
-                        )
-                      else if (widget.destination == TvDestination.together)
-                        // What is new with friends, on the icon so it shows
-                        // with the rail closed too.
-                        TogetherUpdates(
-                          builder: (context, count) => CountBadge(
-                            count: count,
-                            child: Icon(
-                              selected
-                                  ? ReelishIcons.filled(widget.destination.icon)
-                                  : widget.destination.icon,
-                              size: 23,
-                              color: color,
-                            ),
-                          ),
-                        )
-                      else
-                        Icon(
-                          selected
-                              ? ReelishIcons.filled(widget.destination.icon)
-                              : widget.destination.icon,
-                          size: 23,
-                          color: color,
-                        ),
                       // Built only while open: a hidden label would still
                       // take clicks and screen-reader focus at the rail's
                       // edge.
@@ -676,11 +643,13 @@ class _SidebarItemState extends State<_SidebarItem> {
                                 softWrap: false,
                                 overflow: TextOverflow.clip,
                                 style: TextStyle(
-                                  color: color,
-                                  fontSize: 15,
+                                  color: selected
+                                      ? GlassTheme.textPrimary
+                                      : color,
+                                  fontSize: AppTextSize.body,
                                   fontWeight: selected
-                                      ? FontWeight.w800
-                                      : FontWeight.w600,
+                                      ? FontWeight.w700
+                                      : FontWeight.w500,
                                 ),
                               ),
                             ),
@@ -696,6 +665,26 @@ class _SidebarItemState extends State<_SidebarItem> {
       ),
     );
   }
+
+  Widget _icon(IconData icon, Color color, bool selected) =>
+      switch (widget.destination) {
+        // Profile shows whose it is.
+        TvDestination.profile => const SizedBox.square(
+          dimension: _SidebarItem._icon,
+          child: AvatarFrameRim(
+            child: MyProfileAvatar(size: _SidebarItem._icon),
+          ),
+        ),
+        // What is new with friends, on the icon so it shows with the rail
+        // closed too.
+        TvDestination.together => TogetherUpdates(
+          builder: (context, count) => CountBadge(
+            count: count,
+            child: Icon(icon, size: _SidebarItem._icon, color: color),
+          ),
+        ),
+        _ => Icon(icon, size: _SidebarItem._icon, color: color),
+      };
 }
 
 /// Keeps the rail open beside the page, or lets it close again.
@@ -710,24 +699,34 @@ class _PinToggle extends StatelessWidget {
   final bool pinned;
   final VoidCallback onTap;
 
+  static const _height = 40.0;
+
+  /// Its height in the rail, with the room under it.
+  static const extent = 6 + _height + 14;
+
   @override
   Widget build(BuildContext context) {
     final label = pinned ? 'Collapse sidebar' : 'Keep sidebar open';
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
+      padding: const EdgeInsets.fromLTRB(
+        _SidebarItem._margin,
+        6,
+        _SidebarItem._margin,
+        14,
+      ),
       child: Tooltip(
         message: label,
         child: InkWell(
-          borderRadius: BorderRadius.circular(13),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           onTap: onTap,
           child: SizedBox(
-            height: 42,
+            height: _height,
             child: Row(
               children: [
-                const SizedBox(width: 17),
+                const SizedBox(width: _SidebarItem.iconInset),
                 Icon(
                   pinned ? ReelishIcons.panelClose : ReelishIcons.panelOpen,
-                  size: 22,
+                  size: _SidebarItem._icon,
                   color: GlassTheme.muted,
                 ),
                 if (open)
@@ -742,8 +741,8 @@ class _PinToggle extends StatelessWidget {
                           overflow: TextOverflow.clip,
                           style: TextStyle(
                             color: GlassTheme.muted,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
+                            fontSize: AppTextSize.bodySmall,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ),
@@ -774,631 +773,4 @@ class _FadeIn extends StatelessWidget {
         Opacity(opacity: opacity, child: child),
     child: child,
   );
-}
-
-/// What the rail's Continue watching section shows and does: the titles
-/// Home's watch history holds, and the same play flow as everywhere else.
-class DesktopResumeShelf {
-  const DesktopResumeShelf({
-    required this.items,
-    required this.summaryOf,
-    required this.onResume,
-    required this.onDetails,
-    this.loaded = true,
-  });
-
-  /// Started titles, most recent first.
-  final List<MediaItem> items;
-
-  /// The history has been read; until then the section shows nothing,
-  /// rather than a moment of "nothing started".
-  final bool loaded;
-
-  /// Where each was left ("S2 E1 · 27 min left") and how far in.
-  final ResumeSummary Function(MediaItem item) summaryOf;
-
-  /// Plays on from where the title was left.
-  final ValueChanged<MediaItem> onResume;
-
-  /// Its details page, from a right click.
-  final ValueChanged<MediaItem> onDetails;
-
-  /// Titles listed at most; the library holds the rest.
-  static const maxShown = 12;
-}
-
-/// Continue watching in the rail: a heading, then the most recent titles,
-/// scrolling within the room between browsing and Plugins.
-class _ResumeSection extends StatelessWidget {
-  const _ResumeSection({
-    required this.open,
-    required this.shelf,
-    required this.onSeeAll,
-  });
-
-  final bool open;
-  final DesktopResumeShelf shelf;
-  final VoidCallback onSeeAll;
-
-  static const _headerHeight = 36.0;
-
-  /// The heading and one title.
-  static const minHeight = 12 + _headerHeight + _ResumeTile.height;
-
-  @override
-  Widget build(BuildContext context) {
-    final items = shelf.items.take(DesktopResumeShelf.maxShown).toList();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(24, 10, 24, 0),
-          child: Divider(
-            height: 1,
-            color: GlassTheme.textPrimary.withValues(alpha: .07),
-          ),
-        ),
-        SizedBox(
-          height: _headerHeight,
-          child: open
-              ? _AtOpenWidth(
-                  // Starts where the thumbnails do, so the heading and the
-                  // list share one edge.
-                  child: Padding(
-                    padding: const EdgeInsets.only(
-                      left: _ResumeTile.thumbLeft,
-                      right: 6,
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: _FadeIn(
-                            child: Text(
-                              'CONTINUE WATCHING',
-                              maxLines: 1,
-                              softWrap: false,
-                              overflow: TextOverflow.clip,
-                              style: TextStyle(
-                                color: GlassTheme.textPrimary.withValues(
-                                  alpha: .55,
-                                ),
-                                fontSize: 10,
-                                letterSpacing: 1.2,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ),
-                        ),
-                        if (items.isNotEmpty)
-                          _FadeIn(
-                            child: TextButton.icon(
-                              onPressed: onSeeAll,
-                              iconAlignment: IconAlignment.end,
-                              icon: const Icon(
-                                ReelishIcons.chevronRight,
-                                size: 14,
-                              ),
-                              label: const Text('See all'),
-                              style: TextButton.styleFrom(
-                                foregroundColor: GlassTheme.coralBright,
-                                visualDensity: VisualDensity.compact,
-                                minimumSize: const Size(0, 28),
-                                padding: const EdgeInsets.only(
-                                  left: 6,
-                                  right: 2,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                // A button style's text replaces the theme's,
-                                // font included.
-                                textStyle: const TextStyle(
-                                  fontFamily: GlassTheme.fontFamily,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                )
-              // Compact: a quiet mark, so the thumbnails read as a group.
-              : Tooltip(
-                  message: 'Continue watching',
-                  child: Center(
-                    child: Icon(
-                      ReelishIcons.history,
-                      size: 18,
-                      color: GlassTheme.muted,
-                    ),
-                  ),
-                ),
-        ),
-        Expanded(
-          child: items.isEmpty
-              ? open && shelf.loaded
-                    ? _AtOpenWidth(
-                        child: Padding(
-                          padding: EdgeInsets.fromLTRB(
-                            _ResumeTile.thumbLeft,
-                            4,
-                            20,
-                            0,
-                          ),
-                          child: _FadeIn(
-                            child: Text(
-                              'Titles you start appear here, ready to pick '
-                              'up where you left off.',
-                              style: TextStyle(
-                                color: GlassTheme.muted,
-                                fontSize: 12.5,
-                                height: 1.45,
-                              ),
-                            ),
-                          ),
-                        ),
-                      )
-                    : const SizedBox.shrink()
-              // No scrollbar: it would crowd the thumbnails, and the wheel
-              // and Tab both scroll the list.
-              : ScrollConfiguration(
-                  behavior: ScrollConfiguration.of(
-                    context,
-                  ).copyWith(scrollbars: false),
-                  // A title cut by the list's foot fades out instead of
-                  // ending on a hard edge.
-                  child: ShaderMask(
-                    blendMode: BlendMode.dstIn,
-                    shaderCallback: (rect) => LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: const [
-                        Colors.white,
-                        Colors.white,
-                        Color(0x00FFFFFF),
-                      ],
-                      stops: [0, math.max(0, 1 - 22 / rect.height), 1],
-                    ).createShader(rect),
-                    child: ListView.builder(
-                      padding: const EdgeInsets.only(top: 2, bottom: 12),
-                      itemCount: items.length,
-                      itemBuilder: (context, index) {
-                        final item = items[index];
-                        return _ResumeTile(
-                          key: ValueKey('resume:${item.type}:${item.id}'),
-                          item: item,
-                          summary: shelf.summaryOf(item),
-                          open: open,
-                          onResume: () => shelf.onResume(item),
-                          onDetails: () => shelf.onDetails(item),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-        ),
-      ],
-    );
-  }
-}
-
-/// Lays [child] out at the open rail's width, clipped while the rail is
-/// still widening, so it never reflows or overflows mid-animation.
-class _AtOpenWidth extends StatelessWidget {
-  const _AtOpenWidth({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) => ClipRect(
-    child: OverflowBox(
-      alignment: Alignment.topLeft,
-      minWidth: DesktopShell.expandedWidth,
-      maxWidth: DesktopShell.expandedWidth,
-      child: child,
-    ),
-  );
-}
-
-/// One title: its poster with a progress line, and, while the rail is
-/// open, its name and where it was left. The poster sits where the
-/// destination icons do, so nothing shifts as the rail opens.
-class _ResumeTile extends StatefulWidget {
-  const _ResumeTile({
-    super.key,
-    required this.item,
-    required this.summary,
-    required this.open,
-    required this.onResume,
-    required this.onDetails,
-  });
-
-  static const height = 62.0;
-
-  /// A square poster, centred under the rail's icons.
-  static const _thumb = 44.0;
-
-  /// The thumbnail's left edge in the rail: the tile's margin, border and
-  /// inset. The heading lines up with it.
-  static const thumbLeft = 12.0 + 1 + 5;
-
-  final MediaItem item;
-  final ResumeSummary summary;
-  final bool open;
-  final VoidCallback onResume;
-  final VoidCallback onDetails;
-
-  @override
-  State<_ResumeTile> createState() => _ResumeTileState();
-}
-
-class _ResumeTileState extends State<_ResumeTile> {
-  // As on the destinations: keeps state and focus while the tooltip's
-  // wrapper comes and goes.
-  final _tile = GlobalKey();
-  bool _hovered = false;
-  bool _focused = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final item = widget.item;
-    final summary = widget.summary;
-    final caption = summary.label.isNotEmpty
-        ? summary.label
-        : item.type == 'series'
-        ? 'Series'
-        : 'Movie';
-    // A series' episode code leads its caption ("S1 E14 · 14 min left").
-    final parts = caption.split(' · ');
-    final episode =
-        item.type == 'series' && RegExp(r'^S\d+ E\d+$').hasMatch(parts.first)
-        ? parts.first
-        : null;
-    final rest = episode == null ? caption : parts.skip(1).join(' · ');
-    final active = _hovered || _focused;
-    final duration = desktopMotion(context, 180);
-    final dpr = MediaQuery.devicePixelRatioOf(context);
-    return TooltipVisibility(
-      visible: !widget.open,
-      child: Tooltip(
-        message: '${item.name}\n$caption',
-        preferBelow: false,
-        verticalOffset: 0,
-        margin: const EdgeInsets.only(left: DesktopShell.collapsedWidth),
-        child: Padding(
-          key: _tile,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-          child: FocusableActionDetector(
-            mouseCursor: SystemMouseCursors.click,
-            onShowHoverHighlight: (value) => setState(() => _hovered = value),
-            onShowFocusHighlight: (value) => setState(() => _focused = value),
-            actions: {
-              ActivateIntent: CallbackAction<ActivateIntent>(
-                onInvoke: (_) {
-                  widget.onResume();
-                  return null;
-                },
-              ),
-            },
-            child: GestureDetector(
-              onTap: widget.onResume,
-              onSecondaryTap: widget.onDetails,
-              child: Semantics(
-                button: true,
-                label: 'Resume ${item.name}, $caption',
-                customSemanticsActions: {
-                  const CustomSemanticsAction(label: 'Details'):
-                      widget.onDetails,
-                },
-                excludeSemantics: true,
-                child: AnimatedContainer(
-                  duration: duration,
-                  curve: DesktopSurfaces.curve,
-                  height: _ResumeTile.height - 4,
-                  // The whole row lights up, quietly, so it reads as one
-                  // target; the focus ring is the accent, as on the
-                  // destinations.
-                  decoration: BoxDecoration(
-                    color: GlassTheme.textPrimary.withValues(
-                      alpha: _hovered ? .06 : 0,
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: _focused
-                          ? GlassTheme.coralBright
-                          : GlassTheme.textPrimary.withValues(
-                              alpha: _hovered ? .06 : 0,
-                            ),
-                      width: _focused ? 2 : 1,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      // Less the focus ring's extra width, so the thumbnail
-                      // never moves.
-                      SizedBox(width: _focused ? 4 : 5),
-                      _thumbnail(context, dpr, active, duration),
-                      if (widget.open)
-                        Expanded(
-                          child: _FadeIn(
-                            child: Padding(
-                              padding: const EdgeInsets.only(
-                                left: 12,
-                                right: 8,
-                              ),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  AnimatedDefaultTextStyle(
-                                    duration: duration,
-                                    style: TextStyle(
-                                      fontFamily: GlassTheme.fontFamily,
-                                      color: active
-                                          ? GlassTheme.textPrimary
-                                          : GlassTheme.textPrimary.withValues(
-                                              alpha: .88,
-                                            ),
-                                      fontSize: 13,
-                                      height: 1.25,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                    child: Text(
-                                      item.name,
-                                      maxLines: 1,
-                                      softWrap: false,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text.rich(
-                                    TextSpan(
-                                      children: [
-                                        if (episode != null)
-                                          TextSpan(
-                                            text: episode,
-                                            style: TextStyle(
-                                              color: GlassTheme.textPrimary
-                                                  .withValues(alpha: .8),
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                          ),
-                                        if (episode != null && rest.isNotEmpty)
-                                          const TextSpan(text: '  ·  '),
-                                        if (rest.isNotEmpty)
-                                          TextSpan(text: rest),
-                                      ],
-                                    ),
-                                    maxLines: 1,
-                                    softWrap: false,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      color: GlassTheme.muted,
-                                      fontSize: 11.5,
-                                      height: 1.25,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// The poster, a slim progress bar along its foot, and, on hover or
-  /// focus, a resume glyph over a light shade with the art eased forward.
-  Widget _thumbnail(
-    BuildContext context,
-    double dpr,
-    bool active,
-    Duration duration,
-  ) {
-    final item = widget.item;
-    final fraction = widget.summary.fraction;
-    final radius = BorderRadius.circular(10);
-    return Container(
-      width: _ResumeTile._thumb,
-      height: _ResumeTile._thumb,
-      decoration: BoxDecoration(
-        borderRadius: radius,
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x59000000),
-            blurRadius: 8,
-            offset: Offset(0, 3),
-          ),
-        ],
-      ),
-      // A hairline edge keeps dark posters off the dark rail.
-      foregroundDecoration: BoxDecoration(
-        borderRadius: radius,
-        border: Border.all(
-          color: GlassTheme.textPrimary.withValues(alpha: active ? .18 : .08),
-        ),
-      ),
-      child: ClipRRect(
-        borderRadius: radius,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            const PosterPlaceholder(iconSize: 16),
-            if (item.poster.isNotEmpty)
-              AnimatedScale(
-                scale: active ? 1.06 : 1,
-                duration: duration,
-                curve: DesktopSurfaces.curve,
-                child: ArtworkImage.network(
-                  item.poster,
-                  fit: BoxFit.cover,
-                  // Above the middle: the key art, not the billing block.
-                  alignment: const Alignment(0, -.4),
-                  cacheWidth: posterDecodeWidth(_ResumeTile._thumb * dpr),
-                  frameBuilder: posterFadeIn(context),
-                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
-                ),
-              ),
-            // Shade under the bar, so it reads on any artwork.
-            if (fraction > 0)
-              const DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Color(0x00000000), Color(0x99000000)],
-                    stops: [.55, 1],
-                  ),
-                ),
-              ),
-            AnimatedOpacity(
-              opacity: active ? 1 : 0,
-              duration: duration,
-              curve: DesktopSurfaces.curve,
-              child: ColoredBox(
-                color: Colors.black.withValues(alpha: .38),
-                child: Center(
-                  child: Container(
-                    width: 24,
-                    height: 24,
-                    decoration: BoxDecoration(
-                      color: GlassTheme.primary,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      ReelishIcons.play,
-                      size: 17,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            if (fraction > 0)
-              Positioned(
-                left: 4,
-                right: 4,
-                bottom: 4,
-                child: _ProgressLine(fraction: fraction),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// How far in a title is: a slim, rounded bar on a soft track.
-class _ProgressLine extends StatelessWidget {
-  const _ProgressLine({required this.fraction});
-
-  final double fraction;
-
-  @override
-  Widget build(BuildContext context) => ClipRRect(
-    borderRadius: BorderRadius.circular(2),
-    child: Container(
-      height: 3,
-      color: GlassTheme.textPrimary.withValues(alpha: .28),
-      alignment: Alignment.centerLeft,
-      child: FractionallySizedBox(
-        // Never a sliver too thin to see.
-        widthFactor: fraction.clamp(.06, 1),
-        heightFactor: 1,
-        child: ColoredBox(color: GlassTheme.primary),
-      ),
-    ),
-  );
-}
-
-/// The open rail's glass edge: the same light as every glass surface, lit
-/// from above and shaded below, drawn on the right side only (the left sits
-/// on the window edge) and round its [radius] corners, with a faint inner
-/// rim for thickness.
-class _GlassEdgeDecoration extends Decoration {
-  const _GlassEdgeDecoration({required this.radius, required this.lit});
-
-  final double radius;
-
-  /// Drawn only while the rail lies over the page.
-  final bool lit;
-
-  @override
-  BoxPainter createBoxPainter([VoidCallback? onChanged]) =>
-      _GlassEdgePainter(radius, lit: lit);
-}
-
-class _GlassEdgePainter extends BoxPainter {
-  _GlassEdgePainter(this.radius, {required this.lit});
-
-  final double radius;
-  final bool lit;
-
-  @override
-  void paint(Canvas canvas, Offset offset, ImageConfiguration configuration) {
-    final size = configuration.size;
-    if (!lit || size == null || size.isEmpty) return;
-    final rect = offset & size;
-    // Only the right side and its corners: the strip from where the corners
-    // start bending to the edge.
-    final strip = Rect.fromLTRB(
-      rect.right - radius - 2,
-      rect.top,
-      rect.right,
-      rect.bottom,
-    );
-    RRect shape(double inset) => RRect.fromRectAndCorners(
-      rect.deflate(inset),
-      topRight: Radius.circular(math.max(0, radius - inset)),
-      bottomRight: Radius.circular(math.max(0, radius - inset)),
-    );
-    canvas
-      ..save()
-      ..clipRect(strip);
-    // Inner rim, then the lit outer edge.
-    canvas.drawRRect(
-      shape(1.75),
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.5
-        ..shader = LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Colors.white.withValues(alpha: .08),
-            Colors.white.withValues(alpha: .02),
-            Colors.black.withValues(alpha: .12),
-          ],
-          stops: const [0, .4, 1],
-        ).createShader(rect),
-    );
-    canvas.drawRRect(
-      shape(.5),
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1
-        ..shader = LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Colors.white.withValues(alpha: .30),
-            Colors.white.withValues(alpha: .12),
-            Colors.white.withValues(alpha: .07),
-            Colors.black.withValues(alpha: .22),
-          ],
-          stops: const [0, .25, .7, 1],
-        ).createShader(rect),
-    );
-    canvas.restore();
-  }
 }
