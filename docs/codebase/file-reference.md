@@ -288,7 +288,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/widgets/settings/settings_components.dart`](#libsrcwidgetssettingssettings_componentsdart) | Shared | 681 | Shared settings layout: page scaffold, header, sections, rows and metrics. |
 | [`lib/src/widgets/settings/tmdb_attribution.dart`](#libsrcwidgetssettingstmdb_attributiondart) | Shared | 78 | TMDB attribution wording and assets, per https://developer.themoviedb.org/docs/faq and https://www.themoviedb.org/about/logos-attribution. |
 | [`lib/src/widgets/social/share_dialog.dart`](#libsrcwidgetssocialshare_dialogdart) | Shared | 231 | Share with friends: pick up to ten friends, add a short note (not on TV, where typing is awkward) and send a title from its details page. |
-| [`lib/src/widgets/social/social_widgets.dart`](#libsrcwidgetssocialsocial_widgetsdart) | Shared | 533 | People in Friends: the avatar friends chose (a built-in preset or an initial), a person row for lists, a recommendation card, and the Add friend and Report dialogs. |
+| [`lib/src/widgets/social/social_widgets.dart`](#libsrcwidgetssocialsocial_widgetsdart) | Shared | 534 | People in Friends: the avatar friends chose (a built-in preset or an initial), a person row for lists, a recommendation card, and the Add friend and Report dialogs. |
 | [`lib/src/widgets/soft_glass_dock.dart`](#libsrcwidgetssoft_glass_dockdart) | Shared | 302 | The phone and tablet bottom navigation dock. |
 | [`lib/src/widgets/sovereign_laurel.dart`](#libsrcwidgetssovereign_laureldart) | Shared | 214 | The golden laurel of Sovereign Edition, the Founder's own profile card (FounderPerk.founderProfileCard): the branch geometry, the engraved seal the card's background carries, and the "Sovereign Edition" designation by the name. |
 | [`lib/src/widgets/supporter_theme_picker.dart`](#libsrcwidgetssupporter_theme_pickerdart) | Shared | 843 | Chooses an app theme. |
@@ -4762,7 +4762,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/widgets/social/social_widgets.dart
 
-**Source:** [`lib/src/widgets/social/social_widgets.dart`](../../lib/src/widgets/social/social_widgets.dart) · **Platform:** Shared · **Lines:** 533 · **Branches on:** isTv
+**Source:** [`lib/src/widgets/social/social_widgets.dart`](../../lib/src/widgets/social/social_widgets.dart) · **Platform:** Shared · **Lines:** 534 · **Branches on:** isTv
 
 **Purpose:** People in Friends: the avatar friends chose (a built-in preset or an initial), a person row for lists, a recommendation card, and the Add friend and Report dialogs.
 

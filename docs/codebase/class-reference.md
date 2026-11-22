@@ -37,8 +37,8 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `ActivitySession` | Class | [`activity_publisher.dart:22`](../../lib/src/social/activity_publisher.dart#L22) |  | Shared | 1 lib file | One player's link to `ActivityPublisher`; null when nothing is shared. |
 | `_ActivityState` | Class | [`activity_publisher.dart:48`](../../lib/src/social/activity_publisher.dart#L48) |  | Shared | its own file |  |
 | `_AddBubble` | Widget | [`together_sections.dart:197`](../../lib/src/screens/social/together_sections.dart#L197) | extends StatelessWidget | Shared | its own file |  |
-| `_AddFriendDialog` | Widget | [`social_widgets.dart:187`](../../lib/src/widgets/social/social_widgets.dart#L187) | extends StatefulWidget | Shared | its own file |  |
-| `_AddFriendDialogState` | Widget state | [`social_widgets.dart:197`](../../lib/src/widgets/social/social_widgets.dart#L197) | extends State<_AddFriendDialog> | Shared | its own file |  |
+| `_AddFriendDialog` | Widget | [`social_widgets.dart:188`](../../lib/src/widgets/social/social_widgets.dart#L188) | extends StatefulWidget | Shared | its own file |  |
+| `_AddFriendDialogState` | Widget state | [`social_widgets.dart:198`](../../lib/src/widgets/social/social_widgets.dart#L198) | extends State<_AddFriendDialog> | Shared | its own file |  |
 | `AddFriendResult` | Typedef | [`friends_controller.dart:231`](../../lib/src/social/friends_controller.dart#L231) | = ( | Shared | 1 lib file | The answer to Add friend: a request sent, or already (now) friends. |
 | `_AddonSearchStatus` | Widget | [`subtitle_picker_sheet.dart:210`](../../lib/src/widgets/player/subtitle_picker_sheet.dart#L210) | extends StatelessWidget | Shared | its own file |  |
 | `_AddonTile` | Widget | [`subtitle_addons_screen.dart:207`](../../lib/src/screens/subtitle_addons_screen.dart#L207) | extends StatelessWidget | Shared | its own file |  |
@@ -915,7 +915,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `RecommendationSettingsScreen` | Widget | [`recommendation_settings_screen.dart:14`](../../lib/src/screens/recommendation_settings_screen.dart#L14) | extends StatelessWidget | Shared | 2 lib files, 2 test files |  |
 | `RecommendationsScreen` | Widget | [`friends_screen.dart:804`](../../lib/src/screens/social/friends_screen.dart#L804) | extends StatefulWidget | Shared | 2 test files | Every title friends sent, newest first. |
 | `_RecommendationsScreenState` | Widget state | [`friends_screen.dart:815`](../../lib/src/screens/social/friends_screen.dart#L815) | extends State<RecommendationsScreen> | Shared | its own file |  |
-| `RecommendationTile` | Widget | [`social_widgets.dart:410`](../../lib/src/widgets/social/social_widgets.dart#L410) | extends StatelessWidget | Shared | 1 lib file | A title a friend sent: poster, title and year, who sent it and their note, a dot while unopened, and Remove. |
+| `RecommendationTile` | Widget | [`social_widgets.dart:411`](../../lib/src/widgets/social/social_widgets.dart#L411) | extends StatelessWidget | Shared | 1 lib file | A title a friend sent: poster, title and year, who sent it and their note, a dot while unopened, and Remove. |
 | `Rect` | Typedef | [`avatar_image.dart:110`](../../lib/src/account/avatar_image.dart#L110) | = ui.Rect; | Shared | 11 lib files, 7 test files |  |
 | `ReelishApp` | Widget | [`main.dart:51`](../../lib/main.dart#L51) | extends StatefulWidget | Shared | 1 lib file, 1 test file |  |
 | `_ReelishAppState` | Widget state | [`main.dart:58`](../../lib/main.dart#L58) | extends State<ReelishApp> | Shared | its own file |  |
@@ -945,9 +945,9 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `_ReleaseNotesState` | Widget state | [`desktop_update_dialogs.dart:37`](../../lib/src/desktop/desktop_update_dialogs.dart#L37) | extends State<_ReleaseNotes> | Windows | its own file |  |
 | `RememberedSubtitle` | Service type | [`storage_service.dart:1059`](../../lib/src/services/storage_service.dart#L1059) |  | Shared | 1 lib file, 1 test file | A remembered subtitle choice for one title. |
 | `_RemoveIntent` | Class | [`desktop_widgets.dart:172`](../../lib/src/desktop/desktop_widgets.dart#L172) | extends Intent | Windows | its own file |  |
-| `ReportChoice` | Typedef | [`social_widgets.dart:270`](../../lib/src/widgets/social/social_widgets.dart#L270) | = ( | Shared | its own file only | What a report says: a reason, an optional note and whether to block too. |
-| `_ReportDialog` | Widget | [`social_widgets.dart:281`](../../lib/src/widgets/social/social_widgets.dart#L281) | extends StatefulWidget | Shared | its own file |  |
-| `_ReportDialogState` | Widget state | [`social_widgets.dart:290`](../../lib/src/widgets/social/social_widgets.dart#L290) | extends State<_ReportDialog> | Shared | its own file |  |
+| `ReportChoice` | Typedef | [`social_widgets.dart:271`](../../lib/src/widgets/social/social_widgets.dart#L271) | = ( | Shared | its own file only | What a report says: a reason, an optional note and whether to block too. |
+| `_ReportDialog` | Widget | [`social_widgets.dart:282`](../../lib/src/widgets/social/social_widgets.dart#L282) | extends StatefulWidget | Shared | its own file |  |
+| `_ReportDialogState` | Widget state | [`social_widgets.dart:291`](../../lib/src/widgets/social/social_widgets.dart#L291) | extends State<_ReportDialog> | Shared | its own file |  |
 | `ReportKind` | Enum | [`support_service.dart:42`](../../lib/src/support/support_service.dart#L42) |  | Shared | 1 lib file, 2 test files |  |
 | `ReportReason` | Enum | [`friends_controller.dart:202`](../../lib/src/social/friends_controller.dart#L202) |  | Shared | 1 lib file, 1 test file | The reasons a person can be reported for, by the name the API uses. |
 | `ReportScreen` | Widget | [`help_support_screen.dart:453`](../../lib/src/screens/help_support_screen.dart#L453) | extends StatefulWidget | Shared | 2 test files | The bug report and feedback form: fill in, review exactly what will be sent, then send once. |
