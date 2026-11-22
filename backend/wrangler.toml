@@ -98,7 +98,7 @@ enabled = true
 name = "reelish-api-staging"
 # No custom domain yet: served at reelish-api-staging.<subdomain>.workers.dev.
 workers_dev = true
-vars = { ENVIRONMENT = "staging", SUPPORTERS_ACCEPT_TEST_EVENTS = "true", TRAKT_API_URL = "https://api.trakt.tv", TMDB_API_URL = "https://api.themoviedb.org/3", TRAKT_AUTHORIZE_URL = "https://trakt.tv/oauth/authorize", PUBLIC_URL = "https://reelish-api-staging.frnzgularez.workers.dev", PARTY_MAX_CAPACITY = "5" }
+vars = { ENVIRONMENT = "staging", SUPPORTERS_ACCEPT_TEST_EVENTS = "true", TRAKT_API_URL = "https://api.trakt.tv", TMDB_API_URL = "https://api.themoviedb.org/3", TRAKT_AUTHORIZE_URL = "https://trakt.tv/oauth/authorize", PUBLIC_URL = "https://reelish-api-staging.frnzgularez.workers.dev", PARTY_MAX_CAPACITY = "5", ANDROID_CERT_SHA256 = "ED:0D:D0:15:59:4E:08:EA:2C:19:C2:98:7F:C5:7E:7D:94:4C:35:78:47:53:72:F9:D2:58:5A:C7:11:7C:18:68" }
 d1_databases = [
   { binding = "DB", database_name = "reelish-staging", database_id = "3c059848-a838-4fe1-8cfb-3573831323d2", migrations_dir = "migrations" },
 ]
@@ -119,7 +119,7 @@ triggers = { crons = ["17 3 * * *"] }
 name = "reelish-api"
 # No custom domain yet: served at reelish-api.<subdomain>.workers.dev.
 workers_dev = true
-vars = { ENVIRONMENT = "production", TRAKT_API_URL = "https://api.trakt.tv", TMDB_API_URL = "https://api.themoviedb.org/3", TRAKT_AUTHORIZE_URL = "https://trakt.tv/oauth/authorize", PUBLIC_URL = "https://reelish-api.frnzgularez.workers.dev", PARTY_MAX_CAPACITY = "5" }
+vars = { ENVIRONMENT = "production", TRAKT_API_URL = "https://api.trakt.tv", TMDB_API_URL = "https://api.themoviedb.org/3", TRAKT_AUTHORIZE_URL = "https://trakt.tv/oauth/authorize", PUBLIC_URL = "https://reelish-api.frnzgularez.workers.dev", PARTY_MAX_CAPACITY = "5", ANDROID_CERT_SHA256 = "ED:0D:D0:15:59:4E:08:EA:2C:19:C2:98:7F:C5:7E:7D:94:4C:35:78:47:53:72:F9:D2:58:5A:C7:11:7C:18:68" }
 d1_databases = [
   { binding = "DB", database_name = "reelish-production", database_id = "55df1ede-5244-4a26-8827-d0d347bccf1d", migrations_dir = "migrations" },
 ]

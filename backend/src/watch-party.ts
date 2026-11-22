@@ -7,6 +7,7 @@ import { equippedFrame } from './frames';
 import type { Env } from './env';
 import { ApiError, json, readJsonBody } from './http';
 import { log } from './audit';
+import { invalidLinkPage, linkPage } from './links';
 import { requireLiveSession, type Principal } from './sessions';
 import { cleanContent, cleanProfile, maxCapacity, roomLifetimeMs, type JoinCheck, type WatchPartyRoom } from './party-room';
 
@@ -157,42 +158,11 @@ const joinErrors: Record<Exclude<JoinCheck, 'ok'>, () => ApiError> = {
  * in use and costs no room request. Its button opens `reelish://party/{code}`,
  * where the app checks the room and asks before joining, as for a typed code.
  */
-export function invitePage(code: string): Response {
-  const valid = codePattern.test(code);
-  const shown = valid ? `${code.slice(0, 4)} ${code.slice(4)}` : '';
-  const body = valid
-    ? `<h1>You’re invited to a watch party</h1>
-<p>Open the invitation in Reelish, or open Reelish, choose Join a party and enter the code.</p>
-<div class="code">${shown}</div>
-<a class="open" href="reelish://party/${code}">Open in Reelish</a>
-<p class="small">Reelish checks the party when it opens. If it has ended, Reelish says so.</p>`
-    : `<h1>This invitation isn’t valid</h1>
-<p>Ask for the code instead, then open Reelish and choose Join a party.</p>`;
-  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="robots" content="noindex"><title>Reelish · Watch party</title>
-<style>
-body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0b0b0f;color:#f4f4f6;
-font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:24px;box-sizing:border-box}
-main{max-width:420px;text-align:center;padding:32px 28px;border-radius:24px;background:#16161d;border:1px solid #2a2a33}
-.brand{letter-spacing:.18em;font-weight:800;font-size:14px;color:#ff4d6d;margin-bottom:20px}
-h1{font-size:24px;margin:0 0 8px}p{margin:0 0 16px;color:#a6a6b2}
-.code{font-size:36px;font-weight:800;letter-spacing:.12em;color:#ff4d6d;margin:8px 0 20px;font-variant-numeric:tabular-nums}
-.open{display:inline-block;background:#ff4d6d;color:#0b0b0f;font-weight:800;text-decoration:none;padding:14px 28px;border-radius:999px;margin-bottom:20px}
-.small{font-size:13px;margin:0}
-</style></head><body><main><div class="brand">REELISH</div>${body}</main></body></html>`;
-  return new Response(html, {
-    status: valid ? 200 : 404,
-    headers: {
-      'Content-Type': 'text/html; charset=utf-8',
-      'Cache-Control': 'no-store',
-      'X-Content-Type-Options': 'nosniff',
-      'Referrer-Policy': 'no-referrer',
-      'X-Frame-Options': 'DENY',
-      'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
-      'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
-    },
-  });
+export function invitePage(code: string, userAgent: string | null = null): Response {
+  // The same page as Reelish Connect's /party/{code} link (src/links.ts).
+  return codePattern.test(code)
+    ? linkPage({ kind: 'party', code }, userAgent)
+    : invalidLinkPage();
 }
 
 /**

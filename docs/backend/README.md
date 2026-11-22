@@ -105,6 +105,10 @@ its own).
 | Method and path | Auth | Purpose |
 |---|---|---|
 | `GET /health` | — | Liveness |
+| `GET /invite/{code}`, `/add/{code}`, `/movie/{id}`, `/tv/{id}`, `/party/{code}`, `/download` | — | Reelish Connect: the fixed page a shared link opens, with its `reelish://` button and the downloads for the visitor's device; kinds are case-insensitive (QR codes carry capitals); a malformed value answers a 404 page ([Reelish Connect](../features/reelish-connect.md), `src/links.ts`) |
+| `GET /.well-known/assetlinks.json` | — | Android App Links for the shared links; 404 until `ANDROID_CERT_SHA256` is set |
+| `GET /api/v1/referrals/me` | Bearer | `{code, joined, invited}`: the caller's invite code (made on first ask), how many joined with it, whether the caller joined through one (`src/referrals.ts`) |
+| `POST /api/v1/referrals/claim` | Bearer | `{code}` → 201 credited, 200 already credited to the same inviter; 404 `invite_not_found`; 409 `own_invite`, `already_invited`, `invite_too_late` (account older than 14 days); 429 `invite_limit` (25 a day per inviter) |
 | `POST /api/v1/auth/device/start` | — | `{platform, deviceName}` → `{pollToken, userCode, verificationUrl, expiresIn, interval}` |
 | `POST /api/v1/auth/device/poll` | — | `{pollToken}` → `202 {status:"pending", interval}` or `200 {status:"authorized", session, user}` |
 | `POST /api/v1/auth/web/start` | — | `{platform, deviceName}` → `{pollToken, authorizeUrl, expiresIn, interval}`; 503 `web_sign_in_unavailable` without `PUBLIC_URL` |
@@ -253,7 +257,8 @@ it frees its place, and a vanished host starts the 60-second host grace
 instead of staying in charge with nobody hearing from it. Sockets that never
 pinged (apps from before this) are left to Cloudflare.
 
-`GET /api/v1/join/{code}` is the page an invitation link opens. It needs no
+`GET /api/v1/join/{code}` is the page an invitation link opens (Reelish
+Connect's `/party/{code}` is the same page, `src/links.ts`). It needs no
 session, never asks the room (so it reveals nothing about which codes are in
 use and costs no room request), shows the code, and links to
 `reelish://party/{code}`, which the app turns into Join a party with the code

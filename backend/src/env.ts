@@ -35,6 +35,12 @@ export interface Env {
    * sign-in off; the device code still works.
    */
   PUBLIC_URL?: string;
+  /**
+   * SHA-256 fingerprints (AA:BB:…) of the Android release signing
+   * certificate, comma-separated: turns on Android App Links for shared
+   * links (/.well-known/assetlinks.json, src/links.ts). Public, not secret.
+   */
+  ANDROID_CERT_SHA256?: string;
   /** "true" lets Buy Me a Coffee dashboard test events count. Staging only. */
   SUPPORTERS_ACCEPT_TEST_EVENTS?: string;
   /** Most participants a watch party may allow (2–20; default 5). */

@@ -11,6 +11,8 @@ import * as web from './web-auth';
 import * as sync from './trakt-sync';
 import * as alerts from './episode-alerts';
 import * as party from './watch-party';
+import * as links from './links';
+import * as referrals from './referrals';
 import { pruneAuditEvents } from './retention';
 import * as support from './support';
 import * as supporters from './supporters';
@@ -39,6 +41,8 @@ const version = '/api/v1';
 export function maskPath(path: string): string {
   return path
     .replace(/^(\/api\/v1\/(?:party|join)\/)[^/]+/, '$1:code')
+    // Shared links name a person's code or what they shared.
+    .replace(/^(\/(?:invite|add|party|movie|tv)\/)[^/]+$/i, '$1:id')
     .replace(/^(\/api\/v1\/social\/(?:friends|requests|blocks)\/)[^/]+/, '$1:handle')
     .replace(/^(\/api\/v1\/social\/friends\/:handle\/collections\/)[^/]+/, '$1:id')
     .replace(/^(\/api\/v1\/social\/recommendations\/)(?!sent$|read$)[^/]+$/, '$1:id');
@@ -60,7 +64,20 @@ async function route(request: Request, env: Env, requestId: string): Promise<Res
   if (path === '/health' && method === 'GET') {
     return json({ ok: true, environment: env.ENVIRONMENT }, requestId);
   }
+  if (path === '/.well-known/assetlinks.json' && method === 'GET') {
+    const file = links.assetLinks(env);
+    if (!file) throw new ApiError(404, 'not_found', 'Not found.');
+    return file;
+  }
   if (!path.startsWith(`${version}/`)) {
+    // Reelish Connect: the public page a shared link opens.
+    const target = method === 'GET' ? links.parseLinkPath(path) : null;
+    if (target) {
+      await limit(env.PARTY_LIMITER, `link-ip:${ip}`);
+      return target === 'invalid'
+        ? links.invalidLinkPage()
+        : links.linkPage(target, request.headers.get('User-Agent'));
+    }
     throw new ApiError(404, 'not_found', 'Not found.');
   }
   const rest = path.slice(version.length);
@@ -119,7 +136,7 @@ async function route(request: Request, env: Env, requestId: string): Promise<Res
   if (join && method === 'GET') {
     // A watch party invitation: a fixed page that never asks the room.
     await limit(env.PARTY_LIMITER, `invite-ip:${ip}`);
-    return party.invitePage(join[1]);
+    return party.invitePage(join[1], request.headers.get('User-Agent'));
   }
   if (post('/auth/refresh')) {
     await limit(env.AUTH_LIMITER, `refresh:${ip}`);
@@ -137,6 +154,15 @@ async function route(request: Request, env: Env, requestId: string): Promise<Res
     return frames.setFrame(env, principal, request, requestId);
   }
   if (rest === '/sessions' && method === 'GET') return auth.listSessions(env, principal, requestId);
+  if (rest === '/referrals/me' && method === 'GET') {
+    await limit(env.SYNC_LIMITER, `referrals:${principal.userId}`);
+    return referrals.myInvites(env, principal, requestId);
+  }
+  if (post('/referrals/claim')) {
+    // Answers say whether a code exists, so they are counted like lookups.
+    await limit(env.SOCIAL_LOOKUP_LIMITER, `referral-claim:${principal.userId}`);
+    return referrals.claimInvite(env, principal, request, requestId);
+  }
   if (post('/notifications/token')) {
     await limit(env.SYNC_LIMITER, principal.userId);
     return alerts.issueToken(env, principal, requestId);
