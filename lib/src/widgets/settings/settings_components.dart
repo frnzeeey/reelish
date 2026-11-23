@@ -35,6 +35,7 @@ class SettingsPage extends StatelessWidget {
     this.footer = const TmdbAttributionFooter(),
     this.bottomClearance = 20,
     this.applyBottomInset = true,
+    this.readableWidth = 820,
   });
 
   final String title;
@@ -52,6 +53,11 @@ class SettingsPage extends StatelessWidget {
   /// handles the system gesture inset.
   final bool applyBottomInset;
 
+  /// How wide the page may grow on TV and Windows (phones fill the screen):
+  /// a readable column for settings; wider for a page laid out in two
+  /// columns there, such as Together.
+  final double readableWidth;
+
   bool get _isRoot => onBack == null;
 
   @override
@@ -66,8 +72,11 @@ class SettingsPage extends StatelessWidget {
       controller: controller,
       builder: (context, controller) {
         final scroll = _scrollView(controller, bottom);
-        if (_isRoot) return TvReadableWidth(child: scroll);
+        if (_isRoot) {
+          return TvReadableWidth(maxWidth: readableWidth, child: scroll);
+        }
         return TvReadableWidth(
+          maxWidth: readableWidth,
           child: Column(
             children: [
               SettingsHeader(

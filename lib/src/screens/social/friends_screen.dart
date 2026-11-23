@@ -391,12 +391,17 @@ class _FriendsScreenState extends State<FriendsScreen> {
       final List<Widget> body;
       if (profile != null) {
         body = [_on(profile)];
-      } else if (_social.known) {
-        body = [?movieNight, _off()];
-      } else if (_social.failed) {
-        body = [?movieNight, _retry()];
       } else {
-        body = [?movieNight, const _Spinner()];
+        body = [
+          _beforeFriends(
+            movieNight,
+            _social.known
+                ? _off()
+                : _social.failed
+                ? _retry()
+                : const _Spinner(),
+          ),
+        ];
       }
       // The viewer's own name, never the app's: with neither a chosen name
       // nor a Trakt username, the greeting stands alone.
@@ -404,6 +409,9 @@ class _FriendsScreenState extends State<FriendsScreen> {
           ProfileController.instance.displayName ??
           AccountController.instance.username;
       final page = SettingsPage(
+        // Two columns on TV and Windows: the width Home gives Together
+        // there, not a settings page's single readable column.
+        readableWidth: 1100,
         title: widget.title,
         subtitle: widget.greet
             ? [greetingFor(DateTime.now()), ?name].join(', ')
@@ -430,6 +438,42 @@ class _FriendsScreenState extends State<FriendsScreen> {
       await Future.wait([_friends.load(), _recommendations.load()]);
       await _friends.loadWatching();
     }
+  }
+
+  /// Before Friends is on: Movie night, then [friends] (turning it on, or
+  /// loading it). Side by side where the page is wide (TV, Windows), as
+  /// with Friends on, so neither half leaves the other's side empty; one
+  /// column on a phone, with the sections' usual gap between them.
+  Widget _beforeFriends(Widget? movieNight, Widget friends) {
+    if (movieNight == null) return friends;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final wide =
+            DeviceCapabilities.usesTvLayout && constraints.maxWidth >= 720;
+        if (!wide) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(
+                  bottom: SettingsMetrics.sectionGap,
+                ),
+                child: movieNight,
+              ),
+              friends,
+            ],
+          );
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: movieNight),
+            const SizedBox(width: AppSpace.lg),
+            Expanded(child: friends),
+          ],
+        );
+      },
+    );
   }
 
   Widget _off() => SettingsSection(

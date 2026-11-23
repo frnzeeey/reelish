@@ -130,7 +130,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/screens/social/conversation_options_screen.dart`](#libsrcscreenssocialconversation_options_screendart) | Shared | 326 | One conversation's options for the signed-in account: a nickname for the friend, mute, and deleting the conversation. |
 | [`lib/src/screens/social/friend_collection_screen.dart`](#libsrcscreenssocialfriend_collection_screendart) | Shared | 323 | A friend's shared collection, read-only: its titles as poster cards that open the title's details. |
 | [`lib/src/screens/social/friends_privacy_screen.dart`](#libsrcscreenssocialfriends_privacy_screendart) | Shared | 643 | Friends & privacy: turning Friends on or off, the handle and friend code, what friends see and who can find the account. |
-| [`lib/src/screens/social/friends_screen.dart`](#libsrcscreenssocialfriends_screendart) | Shared | 1305 | Friends, the body of Together: your people as faces and a list, requests waiting both ways, messages, what friends sent, a friend's page and the people blocked (docs/features/together.md). |
+| [`lib/src/screens/social/friends_screen.dart`](#libsrcscreenssocialfriends_screendart) | Shared | 1349 | Friends, the body of Together: your people as faces and a list, requests waiting both ways, messages, what friends sent, a friend's page and the people blocked (docs/features/together.md). |
 | [`lib/src/screens/social/messages_screen.dart`](#libsrcscreenssocialmessages_screendart) | Shared | 1186 | Private messages with friends: the conversation list and a conversation. |
 | [`lib/src/screens/social/messages_split_view.dart`](#libsrcscreenssocialmessages_split_viewdart) | Shared | 152 | Messages on Windows with room for both: the conversation list on the left and the open conversation beside it, instead of one replacing the other. |
 | [`lib/src/screens/social/together_screen.dart`](#libsrcscreenssocialtogether_screendart) | Shared | 110 | Together: the social home of Reelish, a place in the navigation on phone, Android TV and Windows. |
@@ -285,7 +285,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/widgets/recommendation_feedback_sheet.dart`](#libsrcwidgetsrecommendation_feedback_sheetdart) | Shared | 158 | Phone: the sheet a long press on a recommended title opens, saying why it was recommended and offering Not interested, Already watched and More like this. |
 | [`lib/src/widgets/reelish_slider.dart`](#libsrcwidgetsreelish_sliderdart) | Shared | 366 | Reelish's slider: Material's Slider, less its OverlayPortal. |
 | [`lib/src/widgets/settings/developer_credit.dart`](#libsrcwidgetssettingsdeveloper_creditdart) | Shared | 64 | The Settings screen's footer: the Reelish primary logo and who designed and developed the app, at the size of the TMDB attribution it replaces there. |
-| [`lib/src/widgets/settings/settings_components.dart`](#libsrcwidgetssettingssettings_componentsdart) | Shared | 681 | Shared settings layout: page scaffold, header, sections, rows and metrics. |
+| [`lib/src/widgets/settings/settings_components.dart`](#libsrcwidgetssettingssettings_componentsdart) | Shared | 690 | Shared settings layout: page scaffold, header, sections, rows and metrics. |
 | [`lib/src/widgets/settings/tmdb_attribution.dart`](#libsrcwidgetssettingstmdb_attributiondart) | Shared | 78 | TMDB attribution wording and assets, per https://developer.themoviedb.org/docs/faq and https://www.themoviedb.org/about/logos-attribution. |
 | [`lib/src/widgets/social/share_dialog.dart`](#libsrcwidgetssocialshare_dialogdart) | Shared | 231 | Share with friends: pick up to ten friends, add a short note (not on TV, where typing is awkward) and send a title from its details page. |
 | [`lib/src/widgets/social/social_widgets.dart`](#libsrcwidgetssocialsocial_widgetsdart) | Shared | 534 | People in Friends: the avatar friends chose (a built-in preset or an initial), a person row for lists, a recommendation card, and the Add friend and Report dialogs. |
@@ -2230,7 +2230,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/screens/social/friends_screen.dart
 
-**Source:** [`lib/src/screens/social/friends_screen.dart`](../../lib/src/screens/social/friends_screen.dart) · **Platform:** Shared · **Lines:** 1305 · **Branches on:** isTv, isDesktop, usesTvLayout
+**Source:** [`lib/src/screens/social/friends_screen.dart`](../../lib/src/screens/social/friends_screen.dart) · **Platform:** Shared · **Lines:** 1349 · **Branches on:** isTv, isDesktop, usesTvLayout
 
 **Purpose:** Friends, the body of Together: your people as faces and a list, requests waiting both ways, messages, what friends sent, a friend's page and the people blocked (docs/features/together.md).
 
@@ -4712,7 +4712,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/widgets/settings/settings_components.dart
 
-**Source:** [`lib/src/widgets/settings/settings_components.dart`](../../lib/src/widgets/settings/settings_components.dart) · **Platform:** Shared · **Lines:** 681
+**Source:** [`lib/src/widgets/settings/settings_components.dart`](../../lib/src/widgets/settings/settings_components.dart) · **Platform:** Shared · **Lines:** 690
 
 **Purpose:** Shared settings layout: page scaffold, header, sections, rows and metrics.
 

@@ -54,6 +54,56 @@ void main() {
     expect(greetingFor(DateTime(2026, 1, 1, 2)), 'Good evening');
   });
 
+  group('Before Friends is on', () {
+    tearDown(
+      () => DeviceCapabilities.debugOverride = const DeviceCapabilities(),
+    );
+
+    Future<void> pumpAt(WidgetTester tester, Size size) async {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: GlassTheme.dark,
+          home: const Scaffold(body: TogetherScreen()),
+        ),
+      );
+      await tester.pump();
+    }
+
+    // With no account here, Friends is still loading: its side of the page
+    // is the spinner, laid out as Turn on Friends would be.
+    testWidgets(
+      'a wide Windows page puts Movie night and Friends side by side',
+      (tester) async {
+        DeviceCapabilities.debugOverride = const DeviceCapabilities(
+          hasTouchscreen: false,
+          supportsPictureInPicture: false,
+        );
+        TogetherActions.findTitle = () {};
+        await pumpAt(tester, const Size(1100, 900));
+        final movieNight = tester.getRect(find.text('Movie night'));
+        final friends = tester.getRect(find.byType(CircularProgressIndicator));
+        expect(friends.left, greaterThan(movieNight.right));
+        // Top-aligned halves: Friends starts beside Movie night, not below.
+        expect(friends.top, lessThan(movieNight.bottom + 120));
+        expect(tester.takeException(), isNull);
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.windows),
+    );
+
+    testWidgets('a phone keeps one column, with a gap under Movie night', (
+      tester,
+    ) async {
+      TogetherActions.findTitle = () {};
+      await pumpAt(tester, const Size(412, 915));
+      final join = tester.getRect(find.text('Join with a code'));
+      final friends = tester.getRect(find.byType(CircularProgressIndicator));
+      expect(friends.top, greaterThan(join.bottom));
+    });
+  });
+
   group('Together sections', () {
     tearDown(
       () => DeviceCapabilities.debugOverride = const DeviceCapabilities(),
