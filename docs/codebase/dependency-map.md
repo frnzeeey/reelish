@@ -317,7 +317,7 @@ The files imported by the most other `lib/` files. A change to one of these reac
 | [`lib/src/theme/glass_theme.dart`](../../lib/src/theme/glass_theme.dart) | 131 | 55 |
 | [`lib/src/theme/reelish_icons.dart`](../../lib/src/theme/reelish_icons.dart) | 112 | 11 |
 | [`lib/src/theme/design_tokens.dart`](../../lib/src/theme/design_tokens.dart) | 84 | 2 |
-| [`lib/src/platform/device_capabilities.dart`](../../lib/src/platform/device_capabilities.dart) | 63 | 32 |
+| [`lib/src/platform/device_capabilities.dart`](../../lib/src/platform/device_capabilities.dart) | 63 | 33 |
 | [`lib/src/models/media_item.dart`](../../lib/src/models/media_item.dart) | 59 | 60 |
 | [`lib/src/account/account_controller.dart`](../../lib/src/account/account_controller.dart) | 31 | 36 |
 | [`lib/src/widgets/settings/settings_components.dart`](../../lib/src/widgets/settings/settings_components.dart) | 31 | 3 |

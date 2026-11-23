@@ -468,7 +468,16 @@ void main() {
       // The welcome holds the one way to add a friend and the code to give
       // out; Your people waits until there is someone in it.
       expect(find.text('Add a friend'), findsOneWidget);
-      expect(find.textContaining('Copy your code'), findsOneWidget);
+      // The code as its own panel, copied with a tap.
+      expect(find.text('YOUR FRIEND CODE'), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Semantics &&
+              (widget.properties.label ?? '').startsWith('Copy your code'),
+        ),
+        findsOneWidget,
+      );
       expect(find.text('Add by code or @handle'), findsNothing);
       expect(find.textContaining('YOUR PEOPLE'), findsNothing);
       // Still there: what friends send, and the people settings.

@@ -3,6 +3,8 @@
 // Shared discoveries. The lists (requests, conversations, friends, privacy)
 // stay in settings sections (friends_screen.dart). Everything shown is real
 // data from the social controllers; nothing here is a placeholder.
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../platform/device_capabilities.dart';
@@ -270,34 +272,61 @@ class TogetherShortcuts extends StatelessWidget {
   );
 }
 
-/// A softly lit surface for the page's moments (Movie night, the welcome):
-/// the theme's accent glowing into its surface, no outline.
-class _LitSurface extends StatelessWidget {
-  const _LitSurface({required this.child});
+/// A section's opening: an accent badge, its title and one line on what it
+/// is for. Sits on the page itself, so only the actions under it are
+/// surfaces (no card around the whole section).
+class _SectionIntro extends StatelessWidget {
+  const _SectionIntro({
+    required this.icon,
+    required this.title,
+    required this.text,
+  });
 
-  final Widget child;
+  final IconData icon;
+  final String title;
+  final String text;
 
   @override
-  Widget build(BuildContext context) => Container(
-    width: double.infinity,
-    padding: const EdgeInsets.all(AppSpace.lg),
-    decoration: BoxDecoration(
-      borderRadius: BorderRadius.circular(AppRadius.xl),
-      gradient: LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [
-          Color.lerp(GlassTheme.surface, GlassTheme.primary, .2)!,
-          GlassTheme.surface,
-        ],
+  Widget build(BuildContext context) => Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: GlassTheme.primary.withValues(alpha: .14),
+          borderRadius: BorderRadius.circular(AppRadius.md),
+        ),
+        child: Icon(icon, color: GlassTheme.primary, size: AppIcon.md),
       ),
-    ),
-    child: child,
+      const SizedBox(width: AppSpace.sm),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: AppType.title.copyWith(color: GlassTheme.textPrimary),
+            ),
+            const SizedBox(height: AppSpace.xxs),
+            Text(
+              text,
+              style: AppType.bodySmall.copyWith(
+                color: GlassTheme.muted,
+                height: 1.4,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ],
   );
 }
 
 /// Movie night: join a party with a code, or pick a title to host one.
-/// Anyone can do either.
+/// Anyone can do either. Two equal tiles side by side, Join lit with the
+/// accent; stacked on TV (so Down goes from Join to Host) and where the
+/// page is too narrow for two.
 class MovieNightCard extends StatelessWidget {
   const MovieNightCard({super.key, required this.onJoin, this.onPickTitle});
 
@@ -308,51 +337,196 @@ class MovieNightCard extends StatelessWidget {
   final VoidCallback? onPickTitle;
 
   @override
-  Widget build(BuildContext context) => _LitSurface(
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  Widget build(BuildContext context) {
+    final join = _MovieNightTile(
+      icon: ReelishIcons.dialpad,
+      label: 'Join with a code',
+      hint: 'Got a party code?',
+      lit: true,
+      onSelect: onJoin,
+    );
+    final host = switch (onPickTitle) {
+      final pick? => _MovieNightTile(
+        icon: ReelishIcons.movieFilter,
+        label: 'Pick a title to host',
+        hint: 'Choose what to watch',
+        onSelect: pick,
+      ),
+      null => null,
+    };
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          children: [
-            Icon(ReelishIcons.createRoom, color: GlassTheme.primary),
-            const SizedBox(width: AppSpace.xs),
-            Text(
-              'Movie night',
-              style: AppType.title.copyWith(color: GlassTheme.textPrimary),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpace.xs),
-        Text(
-          'Watch in sync with friends, wherever they are: play, pause and '
-          'seeking stay together.',
-          style: AppType.bodySmall.copyWith(color: GlassTheme.muted),
+        const _SectionIntro(
+          icon: ReelishIcons.watchParty,
+          title: 'Movie night',
+          text:
+              'Watch in sync with friends, wherever they are: play, pause '
+              'and seeking stay together.',
         ),
         const SizedBox(height: AppSpace.md),
-        Wrap(
-          spacing: AppSpace.sm,
-          runSpacing: AppSpace.sm,
-          children: [
-            FilledButton.icon(
-              onPressed: onJoin,
-              icon: const Icon(ReelishIcons.dialpad),
-              label: const Text('Join with a code'),
-            ),
-            if (onPickTitle case final pick?)
-              OutlinedButton.icon(
-                onPressed: pick,
-                icon: const Icon(ReelishIcons.search),
-                label: const Text('Pick a title to host'),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final stacked =
+                DeviceCapabilities.isTv || constraints.maxWidth < 300;
+            if (host == null) return join;
+            if (stacked) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  join,
+                  const SizedBox(height: AppSpace.sm),
+                  host,
+                ],
+              );
+            }
+            return IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(child: join),
+                  const SizedBox(width: AppSpace.sm),
+                  Expanded(child: host),
+                ],
               ),
-          ],
+            );
+          },
         ),
       ],
-    ),
-  );
+    );
+  }
+}
+
+/// A surface that does something when pressed. On TV, the remote's focus
+/// (TvFocusable: the lit ring, the slight lift). Elsewhere, a ripple drawn
+/// over the surface and the keyboard's focus ring (Windows), with no ring
+/// left behind after a tap.
+class _Pressable extends StatelessWidget {
+  const _Pressable({
+    required this.onSelect,
+    required this.borderRadius,
+    required this.semanticLabel,
+    required this.child,
+    this.focusScale = 1.03,
+  });
+
+  final VoidCallback onSelect;
+  final double borderRadius;
+  final String semanticLabel;
+  final double focusScale;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (DeviceCapabilities.isTv) {
+      return TvFocusable(
+        onSelect: onSelect,
+        borderRadius: borderRadius,
+        focusScale: focusScale,
+        semanticLabel: semanticLabel,
+        child: child,
+      );
+    }
+    final radius = BorderRadius.circular(borderRadius);
+    return Semantics(
+      button: true,
+      label: semanticLabel,
+      // Passthrough: the surface keeps the width and height it is given
+      // (two equal tiles), the ink fills it.
+      child: Stack(
+        fit: StackFit.passthrough,
+        children: [
+          child,
+          Positioned.fill(
+            child: Material(
+              type: MaterialType.transparency,
+              child: InkWell(
+                borderRadius: radius,
+                onTap: onSelect,
+                focusColor: GlassTheme.primary.withValues(alpha: .12),
+                splashColor: GlassTheme.primary.withValues(alpha: .12),
+                highlightColor: GlassTheme.textPrimary.withValues(alpha: .04),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// One Movie night action: an icon, its name and a line on when to use it.
+/// [lit] gives it the accent, for the action most people come for.
+class _MovieNightTile extends StatelessWidget {
+  const _MovieNightTile({
+    required this.icon,
+    required this.label,
+    required this.hint,
+    required this.onSelect,
+    this.lit = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final String hint;
+  final VoidCallback onSelect;
+  final bool lit;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = GlassTheme.primary;
+    return _Pressable(
+      onSelect: onSelect,
+      borderRadius: AppRadius.lg,
+      focusScale: 1.03,
+      semanticLabel: label,
+      child: Container(
+        padding: const EdgeInsets.all(AppSpace.md),
+        decoration: BoxDecoration(
+          color: lit
+              ? accent.withValues(alpha: .14)
+              : GlassTheme.elevatedSurface,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(
+            color: lit ? accent.withValues(alpha: .4) : GlassTheme.border,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: AppIcon.md,
+              color: lit ? accent : GlassTheme.textPrimary,
+            ),
+            const SizedBox(height: AppSpace.sm),
+            Text(
+              label,
+              style: TextStyle(
+                color: GlassTheme.textPrimary,
+                fontSize: AppTextSize.body,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              hint,
+              style: TextStyle(
+                color: GlassTheme.muted,
+                fontSize: AppTextSize.label,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 /// For someone with nobody here yet: what Together is for, Add a friend
-/// first, and their own code to give out.
+/// first and strongest, and their own code to give out, shown as the
+/// identifier it is and copied with a tap.
 class WelcomeCard extends StatelessWidget {
   const WelcomeCard({
     super.key,
@@ -366,40 +540,134 @@ class WelcomeCard extends StatelessWidget {
   final VoidCallback onCopyCode;
 
   @override
-  Widget build(BuildContext context) => _LitSurface(
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Bring your people in',
-          style: AppType.title.copyWith(color: GlassTheme.textPrimary),
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      const _SectionIntro(
+        icon: ReelishIcons.people,
+        title: 'Bring your people in',
+        text:
+            'Add friends by their code or @handle. Then message them, send '
+            'them titles and watch together.',
+      ),
+      const SizedBox(height: AppSpace.md),
+      FilledButton.icon(
+        style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+        onPressed: onAdd,
+        icon: const Icon(ReelishIcons.personAdd),
+        label: const Text('Add a friend'),
+      ),
+      const SizedBox(height: AppSpace.sm),
+      _CodePanel(code: friendCode, onCopy: onCopyCode),
+    ],
+  );
+}
+
+/// Your friend code as a shareable identifier: labelled, large and spaced,
+/// copied with a tap, and saying so in place for a moment.
+class _CodePanel extends StatefulWidget {
+  const _CodePanel({required this.code, required this.onCopy});
+
+  final String code;
+  final VoidCallback onCopy;
+
+  @override
+  State<_CodePanel> createState() => _CodePanelState();
+}
+
+class _CodePanelState extends State<_CodePanel> {
+  bool _copied = false;
+  Timer? _reset;
+
+  @override
+  void dispose() {
+    _reset?.cancel();
+    super.dispose();
+  }
+
+  void _copy() {
+    widget.onCopy();
+    _reset?.cancel();
+    setState(() => _copied = true);
+    _reset = Timer(const Duration(seconds: 2), () {
+      if (mounted) setState(() => _copied = false);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = GlassTheme.primary;
+    return _Pressable(
+      onSelect: _copy,
+      borderRadius: AppRadius.lg,
+      focusScale: 1.02,
+      semanticLabel: 'Copy your code ${widget.code}',
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpace.md,
+          vertical: AppSpace.sm,
         ),
-        const SizedBox(height: AppSpace.xs),
-        Text(
-          'Add friends by their code or @handle. Then message them, send '
-          'them titles and watch together.',
-          style: AppType.bodySmall.copyWith(color: GlassTheme.muted),
+        decoration: BoxDecoration(
+          color: GlassTheme.elevatedSurface,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(color: GlassTheme.border),
         ),
-        const SizedBox(height: AppSpace.md),
-        Wrap(
-          spacing: AppSpace.sm,
-          runSpacing: AppSpace.sm,
+        child: Row(
           children: [
-            FilledButton.icon(
-              onPressed: onAdd,
-              icon: const Icon(ReelishIcons.personAdd),
-              label: const Text('Add a friend'),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'YOUR FRIEND CODE',
+                    style: TextStyle(
+                      color: GlassTheme.muted,
+                      fontSize: AppTextSize.caption,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    widget.code,
+                    style: TextStyle(
+                      color: GlassTheme.textPrimary,
+                      fontSize: AppTextSize.titleLarge,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 2,
+                    ),
+                  ),
+                ],
+              ),
             ),
-            OutlinedButton.icon(
-              onPressed: onCopyCode,
-              icon: const Icon(ReelishIcons.copy),
-              label: Text('Copy your code $friendCode'),
+            AnimatedSwitcher(
+              duration: AppMotion.resolve(context, AppMotion.hover),
+              child: Row(
+                key: ValueKey(_copied),
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    _copied ? ReelishIcons.check : ReelishIcons.copy,
+                    size: 20,
+                    color: _copied ? accent : GlassTheme.muted,
+                  ),
+                  const SizedBox(width: AppSpace.xxs + 2),
+                  Text(
+                    _copied ? 'Copied' : 'Copy',
+                    style: TextStyle(
+                      color: _copied ? accent : GlassTheme.muted,
+                      fontSize: AppTextSize.label,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
-      ],
-    ),
-  );
+      ),
+    );
+  }
 }
 
 /// Titles friends sent, as posters: the newest first, new ones marked.
