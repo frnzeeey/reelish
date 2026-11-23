@@ -1,7 +1,7 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -553,6 +553,109 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(ReelishQrCode), findsNothing);
     });
+
+    Future<void> openAt(
+      WidgetTester tester,
+      Size size,
+      ShareTarget target,
+    ) async {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: GlassTheme.tv,
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () => ShareSheet.show(
+                  context,
+                  target,
+                  title: 'Your Reelish invitation',
+                  note:
+                      'It opens a page with Reelish for their phone, TV '
+                      'or PC.',
+                  base: _site,
+                ),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 50)),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('one primary action; copying says so inside the dialog', (
+      tester,
+    ) async {
+      await openAt(tester, const Size(412, 915), const AppInvite('ABCD2345'));
+      // Header close replaces a footer Close on phones and Windows.
+      expect(find.byTooltip('Close'), findsOneWidget);
+      expect(find.byType(FilledButton), findsOneWidget);
+      expect(find.text('Full screen'), findsOneWidget);
+      expect(
+        find.text('reelishofficial.netlify.app/invite/ABCD2345'),
+        findsOneWidget,
+      );
+
+      final copied = <String>[];
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async {
+          if (call.method == 'Clipboard.setData') {
+            copied.add((call.arguments as Map)['text'] as String);
+          }
+          return null;
+        },
+      );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          null,
+        ),
+      );
+      await tester.tap(find.text('Copy link'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(copied, ['https://reelishofficial.netlify.app/invite/ABCD2345']);
+      expect(find.text('Link copied'), findsWidgets);
+      await tester.pump(const Duration(seconds: 3));
+      expect(find.text('Link copied'), findsNothing);
+
+      await tester.tap(find.byTooltip('Close'));
+      await tester.pumpAndSettle();
+      expect(find.byType(ReelishQrCode), findsNothing);
+    });
+
+    for (final (name, size, tv) in const [
+      ('a small phone', Size(320, 568), false),
+      ('a large phone', Size(430, 932), false),
+      ('a tablet', Size(1024, 1366), false),
+      ('a phone on its side', Size(915, 412), false),
+      ('a TV', Size(1920, 1080), true),
+    ]) {
+      testWidgets('fits $name without overflowing', (tester) async {
+        if (tv) {
+          DeviceCapabilities.debugOverride = const DeviceCapabilities(
+            isTelevision: true,
+            hasTouchscreen: false,
+          );
+        }
+        await openAt(tester, size, const PartyShare('12345678'));
+        expect(tester.takeException(), isNull);
+        final code = tester.getSize(find.byType(ReelishQrCode));
+        expect(code.width, greaterThanOrEqualTo(150), reason: name);
+        // The code stays inside the screen.
+        final rect = tester.getRect(find.byType(ReelishQrCode));
+        expect(rect.left, greaterThanOrEqualTo(0));
+        expect(rect.right, lessThanOrEqualTo(size.width));
+      });
+    }
 
     testWidgets('a build without a Reelish API says so, with no dialog', (
       tester,
