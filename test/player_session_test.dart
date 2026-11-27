@@ -9,11 +9,18 @@
 // literals so source preparation needs no DNS lookup.
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:onfeed/src/account/account_api.dart';
+import 'package:onfeed/src/account/account_controller.dart';
+import 'package:onfeed/src/account/profile_controller.dart';
+import 'package:onfeed/src/account/session_store.dart';
 import 'package:onfeed/src/models/episode_context.dart';
 import 'package:onfeed/src/models/media_item.dart';
 import 'package:onfeed/src/models/stream_source.dart';
@@ -23,6 +30,7 @@ import 'package:onfeed/src/services/playback_coordinator.dart';
 import 'package:onfeed/src/services/playback_settings_controller.dart';
 import 'package:onfeed/src/services/storage_service.dart';
 import 'package:onfeed/src/services/stream_discovery.dart';
+import 'package:onfeed/src/watch_party/watch_party_controller.dart';
 import 'package:onfeed/src/widgets/player/custom_video_player.dart'
     show EpisodeHandOff, EpisodeSwitch;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -81,6 +89,7 @@ void main() {
     StreamDiscovery? discovery,
     StreamDiscovery Function()? onRediscover,
     EpisodeSwitch? onPlayEpisode,
+    PlaybackSettingsController? playbackSettings,
   }) async {
     // With an episode switch, the player is S01E01 of a series whose next
     // episode is S01E02.
@@ -96,7 +105,8 @@ void main() {
           source: sources.first,
           sources: sources,
           storage: storage,
-          playbackSettings: PlaybackSettingsController(storage: storage),
+          playbackSettings:
+              playbackSettings ?? PlaybackSettingsController(storage: storage),
           discovery: discovery,
           onRediscover: onRediscover,
           onPlayEpisode: onPlayEpisode,
@@ -465,6 +475,125 @@ void main() {
       await closePlayer(tester);
     });
 
+    // The auto-next countdown keeps running if the stream drops during the
+    // credits, so it can start the switch while a refresh waits.
+    _testSession('the auto-next countdown moves on during a refresh without '
+        'reopening the old episode', (tester) async {
+      final playback = PlaybackSettingsController(storage: storage);
+      await tester.runAsync(
+        () =>
+            playback.update(playback.value.copyWith(autoPlayNextEpisode: true)),
+      );
+      final lookup = StreamDiscovery()..add(_first);
+      final refresh = StreamDiscovery();
+      final asked = <EpisodeRef>[];
+      final found = Completer<void>();
+      EpisodeHandOff? handOff;
+      engine.onCreate = (player) =>
+          player.initialize(duration: const Duration(minutes: 10));
+      await openPlayer(
+        tester,
+        sources: const [_first],
+        discovery: lookup,
+        onRediscover: () => refresh,
+        playbackSettings: playback,
+        onPlayEpisode: (target, offered) async {
+          asked.add(target);
+          handOff = offered;
+          await found.future;
+        },
+      );
+      await advance(tester);
+      expect(showsVideo(), isTrue);
+
+      // The credits: the next-episode card and its countdown appear.
+      engine.players.single.position = const Duration(minutes: 9, seconds: 58);
+      await advance(tester);
+      expect(find.textContaining('Next episode ·'), findsOneWidget);
+
+      engine.players.single.fail('Source error: response code: 403');
+      await advance(tester);
+      expect(engine.players, hasLength(1));
+
+      // The countdown runs out and the switch saves the position (real
+      // file writes) before asking for the next episode.
+      for (var i = 0; i < 40 && asked.isEmpty; i++) {
+        await tester.pump(const Duration(seconds: 1));
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 20)),
+        );
+      }
+      expect(asked.map((ref) => ref.episode), [2]);
+
+      refresh.add(_firstRenewed);
+      await advance(tester);
+      expect(engine.players, hasLength(1));
+
+      // The next episode's streams are found: this player lets go.
+      await handOff!.release();
+      await advance(tester);
+      expect(engine.live, isEmpty);
+      expect(engine.players, hasLength(1));
+      await closePlayer(tester);
+    });
+
+    // A Watch Party guest follows the host to another episode through
+    // _PartyHandle.remoteEpisode, the same switch, while its own link is
+    // being refreshed.
+    _testSession('a guest following the host to the next episode during a '
+        'refresh does not reopen the old episode', (tester) async {
+      final (party, socket) = await _joinAsGuest(tester);
+      addTearDown(() {
+        party.dispose();
+        WatchPartyController.active.value = null;
+      });
+      final lookup = StreamDiscovery()..add(_first);
+      final refresh = StreamDiscovery();
+      final asked = <EpisodeRef>[];
+      EpisodeHandOff? handOff;
+      engine.onCreate = (player) => player.initialize();
+      await openPlayer(
+        tester,
+        sources: const [_first],
+        discovery: lookup,
+        onRediscover: () => refresh,
+        onPlayEpisode: (target, offered) {
+          asked.add(target);
+          handOff = offered;
+          return Completer<void>().future;
+        },
+      );
+      await advance(tester);
+      expect(showsVideo(), isTrue);
+
+      engine.players.single.fail('Source error: response code: 403');
+      await advance(tester);
+      expect(engine.players, hasLength(1));
+
+      // The host moves the room to S01E02.
+      await tester.runAsync(() async {
+        socket.receive({'t': 'room', 'room': _partyRoom(episode: 2)});
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      });
+      for (var i = 0; i < 60 && asked.isEmpty; i++) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 50)),
+        );
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      expect(asked.map((ref) => ref.episode), [2]);
+
+      refresh.add(_firstRenewed);
+      await advance(tester);
+      expect(engine.players, hasLength(1));
+
+      await handOff!.release();
+      await advance(tester);
+      expect(engine.live, isEmpty);
+      expect(engine.players, hasLength(1));
+      await closePlayer(tester);
+    });
+
     _testSession('a refresh with no switch still plays the renewed link at '
         'once', (tester) async {
       final lookup = StreamDiscovery()..add(_first);
@@ -569,3 +698,113 @@ void _testSession(String description, WidgetTesterCallback body) => testWidgets(
   body,
   variant: TargetPlatformVariant.only(TargetPlatform.linux),
 );
+
+/// The Watch Party room's side of the connection: messages in, sent ones
+/// recorded.
+class _PartySocket implements PartySocket {
+  final _incoming = StreamController<dynamic>();
+
+  @override
+  int? closeCode;
+
+  @override
+  Stream<dynamic> get messages => _incoming.stream;
+
+  @override
+  void send(String text) {}
+
+  void receive(Map<String, Object?> message) =>
+      _incoming.add(jsonEncode(message));
+
+  @override
+  Future<void> close([int? code, String? reason]) async {
+    closeCode ??= code;
+    if (!_incoming.isClosed) await _incoming.close();
+  }
+}
+
+/// A room watching series 1, S01E01 (the session tests' title) at [episode].
+Map<String, Object?> _partyRoom({required int episode}) => {
+  'code': '12345678',
+  'phase': 'watching',
+  'content': {
+    'tmdbId': 1,
+    'type': 'series',
+    'title': 'Clip',
+    'season': 1,
+    'episode': episode,
+  },
+  'settings': {'capacity': 5, 'guestControl': false, 'waitForAll': true},
+  'host': {'pid': 'host-pid', 'name': 'Host', 'avatar': 'avatar2'},
+  'hostConnected': true,
+  'playback': {
+    'status': 'playing',
+    'positionMs': 0,
+    'rate': 1,
+    'at': DateTime.now().millisecondsSinceEpoch,
+    'seq': episode,
+    'by': 'host-pid',
+  },
+  'participants': [
+    {
+      'pid': 'host-pid',
+      'name': 'Host',
+      'avatar': 'avatar2',
+      'host': true,
+      'status': 'joined',
+    },
+  ],
+};
+
+/// Joins a party as a guest, with the room at S01E01. Runs on real time:
+/// the connection and the sign-in it needs are real futures.
+Future<(WatchPartyController, _PartySocket)> _joinAsGuest(
+  WidgetTester tester,
+) async {
+  final socket = _PartySocket();
+  late WatchPartyController party;
+  await tester.runAsync(() async {
+    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final api = AccountApi(
+      baseUrl: Uri.parse('https://api.reelish.test'),
+      client: MockClient(
+        (_) async => http.Response(
+          '{}',
+          200,
+          headers: {'content-type': 'application/json'},
+        ),
+      ),
+    );
+    final account = AccountController(
+      api: api,
+      store: MemorySessionStore(
+        StoredSession(
+          sessionId: 's1',
+          accessToken: 'access-1',
+          accessExpiresAt: now + 900,
+          refreshToken: 'refresh-1',
+          refreshExpiresAt: now + 86400,
+          userId: 'u1',
+          username: 'viewer',
+        ),
+      ),
+    );
+    await account.restore();
+    party = WatchPartyController(
+      code: '12345678',
+      account: account,
+      api: api,
+      profile: ProfileController(directory: () async => Directory.systemTemp),
+      connector: (_, _) async => socket,
+    );
+    await party.start();
+    socket.receive({
+      't': 'welcome',
+      'you': {'pid': 'guest-pid'},
+      'room': _partyRoom(episode: 1),
+      'serverTime': DateTime.now().millisecondsSinceEpoch,
+    });
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+  });
+  return (party, socket);
+}

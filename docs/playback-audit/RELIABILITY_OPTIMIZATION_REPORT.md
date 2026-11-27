@@ -494,8 +494,11 @@ refresh"):
 | When the new episode's player does not open after the engine was released, the old one resumes with the refreshed link | Fails (opened twice) | Pass |
 | A refresh with no switch still plays the renewed link at once | Pass | Pass |
 | A next episode that finds no stream leaves the playing episode playing; repeated presses ask once | Pass | Pass |
+| The auto-next countdown moves on during a refresh without reopening the old episode (added after checkpoint 7) | Fails (old episode reopened) | Pass |
+| A Watch Party guest following the host to the next episode during a refresh does not reopen the old episode (real `WatchPartyController` on a fake socket; added after checkpoint 7) | Fails (old episode reopened) | Pass |
 
-Disabling the change again makes exactly the first and third fail.
+Disabling the change again makes exactly the first and third fail, and the
+two tests added later.
 
 **Test harness note.** `StorageService` runs every save on one app-wide
 queue; a save started under an earlier test's fake clock never finishes and
@@ -505,9 +508,10 @@ the position save real time (`tester.runAsync`). Flutter's Linux key
 simulation has no media keys, so the next-track key is sent as an Android
 key event, as a TV remote sends it.
 
-**Not verified.** The Watch Party and auto-next paths (same `_playEpisode`,
-not driven separately); a real device or provider; Windows' keyboard path
-(the same handler).
+**Not verified.** A real device or provider; Windows' keyboard path (the
+same handler); the Watch Party host's own episode change (the key path plus
+a message to the room). Auto-next and a guest following the host are now
+driven by tests of their own (above).
 
 ## 6. Source identity (PB-11)
 
@@ -590,6 +594,7 @@ they say nothing about real decoders, TV hardware, remotes or HDMI audio.
 
 No code changed in this checkpoint. The unit and widget suite last ran
 after checkpoint 6 on the same code: 1946 passed, 4 skipped, 0 failed.
+Two tests added afterwards bring it to 1948.
 
 ### Integration runs
 
@@ -689,7 +694,7 @@ same 24 sessions all played on Media3 with no failure and no fallback, at
 | Movie playback | Windows integration; emulator Media3 | Device (Windows), Emulator |
 | Series playback, episode selection | `episode_selection_test`, `player_session_test` | Logic |
 | Automatic episode selection, previous and next | `episode_selection_test` (season boundaries, first and last) | Logic |
-| Auto-next | Next-episode card (`player_ui_test`); the switch itself shares `_playEpisode` with the tested key path | Logic, partial |
+| Auto-next | Next-episode card (`player_ui_test`); the countdown switching during a refresh (`player_session_test`) | Logic |
 | Automatic and manual source selection | `playback_reliability_test` (ranking), `player_ui_test` (source sheet) | Logic |
 | Late provider results | `player_session_test`, `provider_lookup_scheduling_test` (real QuickJS) | Logic |
 | Provider filtering, enablement and priorities, torrent preferences | `playback_pipeline_test` (source policy), `provider_lookup_scheduling_test` | Logic |
@@ -705,7 +710,7 @@ same 24 sessions all played on Media3 with no failure and no fallback, at
 | Account progress sync | `progress_sync_test` | Logic |
 | Watch Party host, guest, recovery, episode transitions | `watch_party_test`, `watch_party_reliability_test` | Logic |
 | Cancellation and disposal | `player_session_test` (closing while a source opens), `windows_playback_test` (close and reopen), `player_long_session_test` | Logic, Device, Emulator |
-| No stale session replacing a newer one | `player_session_test` (episode switch during a refresh; a declined refresh) | Logic |
+| No stale session replacing a newer one | `player_session_test` (episode switch during a refresh by key, auto-next and a party guest; a declined refresh) | Logic |
 
 ## Final report
 
@@ -779,16 +784,16 @@ sections above. Why each is safe:
 
 | Command | Result |
 |---|---|
-| `flutter test` (after checkpoint 6) | 1946 passed, 4 skipped, 0 failed (1913 at baseline) |
+| `flutter test` (after the follow-up tests) | 1948 passed, 4 skipped, 0 failed (1913 at baseline) |
 | `flutter analyze lib test integration_test test_driver` | 15 infos, no warnings or errors (unchanged from baseline) |
 | `dart run tool/docs/docs_tool.dart check` | Passed |
 | `flutter build windows --release` | Built |
-| `flutter build apk --profile` | Built, 208.3 MB. The APK grew from 177 MB to 208 MB between checkpoints 1 and 2 and has stayed there. The cause was not found; no dependency or asset was added |
+| `flutter build apk --profile` | Built, 177.1 MB, the same as `main` (177.0 MB). The 208 MB seen from checkpoint 2 on was not the app: both files held the same 876 entries (176.6 MB); the rest was dead space incremental packaging leaves in a local APK it updates in place. Rebuilt after deleting the packaged APK: 177.1 MB |
 | Windows integration | All files listed above passed (audio switching after two environmental failures, explained above) |
 | Phone emulator integration | 5 files passed, 1 skipped by design, `app_smoke_test` failed (sign-in; no playback) |
 | Google TV emulator integration | After the clock fix: Media3 4/4, long session 1/1, provider runtime 4/4, torrent 1/1 |
 
-Tests added: 33 unit and widget tests in five files (including the new
+Tests added: 35 unit and widget tests in five files (including the new
 `test/source_identity_test.dart`), plus one Windows integration test.
 Expectation updates for intended changes: two in `playback_metrics_test`,
 one in `analytics_test`.
@@ -864,11 +869,13 @@ were not used as evidence.
    affects its DASH fallback.
 5. **Watch Party across devices:** not tested.
 6. **Home's Play flow** (origin, resolve time, `source_lookup` calls) has no
-   widget-test harness; it was verified by reading the code. No real
-   Firebase values have been seen yet.
-7. **Auto-next and the Watch Party host's episode change** go through the
-   same tested `_playEpisode` path but were not driven separately.
-8. **The APK size increase** between checkpoints 1 and 2 is unexplained.
+   widget-test harness; it was verified by reading the code. Each call is on
+   a path that returns at once, and the event's content is tested. A harness
+   would need Home with injected providers and a replaceable analytics
+   service. No real Firebase values have been seen yet.
+7. **The Watch Party host's own episode change** is the tested key path
+   plus a message to the room; it was not driven with a party. Auto-next and
+   a guest following the host now have tests of their own.
 
 ### I. Final changed-file inventory
 
@@ -891,7 +898,7 @@ Tests:
 
 | File | Change |
 |---|---|
-| `test/player_session_test.dart` | Link refresh (3) and episode switch during a refresh (5) groups; storage queue reset in `setUp` |
+| `test/player_session_test.dart` | Link refresh (3) and episode switch during a refresh (7, including auto-next and a Watch Party guest) groups; storage queue reset in `setUp` |
 | `test/provider_lookup_scheduling_test.dart` | Fresh lookups (3), lookup counts, stalled checks, hash-only torrents |
 | `test/analytics_test.dart` | Stage, omission, recovery, privacy and `source_lookup` tests; one expectation updated |
 | `test/playback_metrics_test.dart` | Two expectations updated for the summary line |
