@@ -145,7 +145,7 @@ void main() {
       await _scrollTo(tester, find.text(label));
       expect(find.text(label), findsOneWidget, reason: label);
     }
-    final credit = find.textContaining('HedgeByte', findRichText: true);
+    final credit = find.textContaining('FRANZE', findRichText: true);
     await _scrollTo(tester, credit);
     expect(
       find.textContaining('Designed & Developed by', findRichText: true),

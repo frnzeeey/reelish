@@ -46,7 +46,7 @@ class _Credit extends StatelessWidget {
       text: 'Designed & Developed by\n',
       children: [
         TextSpan(
-          text: 'HedgeByte',
+          text: 'FRANZE',
           style: TextStyle(
             color: GlassTheme.textPrimary,
             fontWeight: FontWeight.w700,
