@@ -73,7 +73,14 @@ stateDiagram-v2
 - **Recovers stalls:** playing but buffering in place for 25 s (60 s for a
   torrent) is handled like a dropped stream (`StallWatchdog`,
   `_onStall`): reconnect, then another source. `_recoverStalls` turns it
-  off.
+  off. A source that stalls before it ever moved is a failed start, not a
+  dropped stream: no reconnect or link refresh, straight to the other
+  engine or the next source.
+- **Gives up on a start that never moves:** an engine that accepted play
+  but whose position has not moved after the same 25 s (60 s for a
+  torrent), without saying it is buffering, fails as an engine problem
+  (`_armFirstFrameDeadline`). Paused by the viewer before the first frame,
+  it waits again.
 - **Keeps the display on** while playing (Android window flag; Windows
   `SetThreadExecutionState` through `DesktopWindow.keepDisplayOn`; on
   Windows a failure releases it, so the error screen lets the display

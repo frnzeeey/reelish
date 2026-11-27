@@ -243,7 +243,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/widgets/player/audio_switch_check.dart`](#libsrcwidgetsplayeraudio_switch_checkdart) | Shared | 76 | Confirms that playback goes on after libmpv switches the audio track. |
 | [`lib/src/widgets/player/audio_track_sheet.dart`](#libsrcwidgetsplayeraudio_track_sheetdart) | Shared | 283 | Picks an audio track. |
 | [`lib/src/widgets/player/content_advisory_overlay.dart`](#libsrcwidgetsplayercontent_advisory_overlaydart) | Shared | 246 | The age rating and content advisory shown briefly when a title starts. |
-| [`lib/src/widgets/player/custom_video_player.dart`](#libsrcwidgetsplayercustom_video_playerdart) | Shared | 4164 | The player session for every platform: engine and source attempts, controls, subtitles, audio and video tracks, resume and progress saving, and episode switching. |
+| [`lib/src/widgets/player/custom_video_player.dart`](#libsrcwidgetsplayercustom_video_playerdart) | Shared | 4262 | The player session for every platform: engine and source attempts, controls, subtitles, audio and video tracks, resume and progress saving, and episode switching. |
 | [`lib/src/widgets/player/episode_panel.dart`](#libsrcwidgetsplayerepisode_paneldart) | Shared | 839 | Lists a series' episodes by season, with thumbnails, runtimes, synopses and the viewer's progress. |
 | [`lib/src/widgets/player/external_cue_clock.dart`](#libsrcwidgetsplayerexternal_cue_clockdart) | Shared | 199 | The text of the downloaded subtitle cue that should be on screen, kept in step with the player's own clock. |
 | [`lib/src/widgets/player/gesture_touch_layer.dart`](#libsrcwidgetsplayergesture_touch_layerdart) | Shared | 100 | Touch handling for the video area. |
@@ -4032,7 +4032,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/widgets/player/custom_video_player.dart
 
-**Source:** [`lib/src/widgets/player/custom_video_player.dart`](../../lib/src/widgets/player/custom_video_player.dart) · **Platform:** Shared · **Lines:** 4164 · **Branches on:** isTv, isDesktop, usesTvLayout, TargetPlatform.windows, TargetPlatform.android, TorrentSupport
+**Source:** [`lib/src/widgets/player/custom_video_player.dart`](../../lib/src/widgets/player/custom_video_player.dart) · **Platform:** Shared · **Lines:** 4262 · **Branches on:** isTv, isDesktop, usesTvLayout, TargetPlatform.windows, TargetPlatform.android, TorrentSupport
 
 **Purpose:** The player session for every platform: engine and source attempts, controls, subtitles, audio and video tracks, resume and progress saving, and episode switching.
 

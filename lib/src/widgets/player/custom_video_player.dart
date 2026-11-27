@@ -493,6 +493,21 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
   static const _stallLimit = Duration(seconds: 25);
   static const _torrentStallLimit = Duration(seconds: 60);
 
+  /// Whether the current attempt has shown playback (its position moved
+  /// after play). [_ready] only says the engine accepted play: a source
+  /// that fails before this is a failed start, not a dropped stream, so it
+  /// is not reconnected or refreshed as if it had played.
+  bool _showedPlayback = false;
+
+  /// Ends an attempt whose engine accepted play but never moved, and never
+  /// said it was buffering either, so [_stallWatchdog] cannot see it.
+  Timer? _firstFrameDeadline;
+
+  /// How long a refresh may hold recovery for its first source while other
+  /// sources found earlier are still untried. With none left, it waits for
+  /// the lookup as before, since there is nothing else to try.
+  static const _refreshWaitWithAlternatives = Duration(seconds: 10);
+
   /// Watches the playing source; replaced with each attempt.
   StallWatchdog? _stallWatchdog;
   final DateTime _playerStartedAt = DateTime.now();
@@ -654,6 +669,9 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
     _openCancellation = cancellation;
     final generation = ++_initializationGeneration;
     _handlingFailure = false;
+    _showedPlayback = false;
+    _firstFrameDeadline?.cancel();
+    _firstFrameDeadline = null;
     final old = _controller;
     _controller = null;
     final oldTorrent = _torrentSession;
@@ -869,6 +887,14 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
         );
         _awaitFirstFrame(c, generation, attemptClock, attemptEngine);
         _watchForPicture(c, generation, attemptEngine, failedCandidate);
+        if (_party?.holdOpening != true) {
+          _armFirstFrameDeadline(
+            c,
+            generation,
+            failedCandidate,
+            failedCandidate.isTorrent ? _torrentStallLimit : _stallLimit,
+          );
+        }
         // The other engine started what the preferred one could not. It is
         // tried first for the rest of the session once it shows a picture
         // (_awaitFirstFrame), not on accepting play: some sources fail a
@@ -943,6 +969,38 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
     controller.addListener(listener);
   }
 
+  /// Fails the attempt when [controller] accepted play but its position has
+  /// not moved after [limit]. The stall watchdog only sees an engine that
+  /// says it is buffering; one that never says so would otherwise leave the
+  /// viewer on a still picture with every other source untried. It fails as
+  /// an engine problem, so on Android the other engine gets the same source
+  /// first. Paused by the viewer before the first frame, it waits again.
+  void _armFirstFrameDeadline(
+    VideoPlayerController controller,
+    int generation,
+    StreamSource source,
+    Duration limit,
+  ) {
+    _firstFrameDeadline?.cancel();
+    _firstFrameDeadline = Timer(limit, () {
+      _firstFrameDeadline = null;
+      if (!mounted ||
+          generation != _initializationGeneration ||
+          _showedPlayback) {
+        return;
+      }
+      if (!controller.value.isPlaying) {
+        _armFirstFrameDeadline(controller, generation, source, limit);
+        return;
+      }
+      PlaybackLog.log(
+        'Failure',
+        'no playback ${limit.inSeconds}s after play was accepted',
+      );
+      unawaited(_handleFailure(source, const EngineStartTimeout(), generation));
+    });
+  }
+
   /// Follows the start of playback: notes the first frame (the position
   /// starts advancing after play) for diagnostics, then, after a second of
   /// playback with a picture, tells [_enginePreference] that [engine] really
@@ -965,6 +1023,9 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
       if (!value.isPlaying) return;
       if (!noted && value.position > start) {
         noted = true;
+        _showedPlayback = true;
+        _firstFrameDeadline?.cancel();
+        _firstFrameDeadline = null;
         // Some streams list their audio tracks only once they play.
         unawaited(_refreshAudioTracks(controller));
         _metrics.firstFrame(engine.id.name);
@@ -1022,7 +1083,12 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
     _enginePreference.attemptEnded();
     _stallWatchdog?.dispose();
     _stallWatchdog = null;
-    final wasPlaying = _ready;
+    _firstFrameDeadline?.cancel();
+    _firstFrameDeadline = null;
+    // Played, not just accepted: a source that never moved is a failed
+    // start. Reconnecting it, refreshing its link or skipping the other
+    // engine as for a dropped stream only delays the next source.
+    final wasPlaying = _ready && _showedPlayback;
     _reportPip(null);
     final failedEngine = _engine;
     final failedController = _controller;
@@ -1493,22 +1559,53 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
       }
       previous?.cancel();
       _rediscovery = discovery;
-      first = await discovery.firstSource;
+      // Sources found earlier and not tried yet can play now; a lookup may
+      // take its whole search cap to answer. With any left, the refresh
+      // gets a bounded wait, then keeps running: its sources still arrive
+      // as candidates through the subscription below.
+      final untried = _playbackCoordinator.candidates.any(
+        (source) =>
+            _isSourceAllowed(source) &&
+            !_playbackCoordinator.wasAttempted(source),
+      );
+      first = untried
+          ? await discovery.firstSource.timeout(
+              _refreshWaitWithAlternatives,
+              onTimeout: () => null,
+            )
+          : await discovery.firstSource;
     } catch (_) {
       return false;
     }
-    if (!mounted || first == null) return false;
+    unawaited(_rediscoverySubscription?.cancel());
+    if (!mounted) return false;
+    // Subscribed even when nothing came yet: a late fresh source is then a
+    // candidate like any other, and resumes playback after a failure.
+    _rediscoverySubscription = _listenForSources(discovery);
+    if (first == null) {
+      PlaybackLog.log('Resolve', 'rediscovery has no source yet; moving on');
+      return false;
+    }
     final fresh = discovery.sources.where(_isSourceAllowed).toList();
     if (fresh.isEmpty) return false;
     PlaybackLog.log('Resolve', 'rediscovery found ${fresh.length} source(s)');
-    _sources = fresh;
+    // Fresh links first, then the sources found earlier that were never
+    // tried: a refresh that answers with fewer sources must not drop them.
+    // Sources already tried stay out; the attempt budget starts again with
+    // the fresh link.
+    final freshKeys = {for (final source in fresh) _sourceKey(source)};
+    final merged = [
+      ...fresh,
+      for (final source in _playbackCoordinator.candidates)
+        if (_isSourceAllowed(source) &&
+            !_playbackCoordinator.wasAttempted(source) &&
+            !freshKeys.contains(_sourceKey(source)))
+          source,
+    ];
+    _sources = merged;
     _playbackCoordinator
-      ..replaceCandidates(fresh)
+      ..replaceCandidates(merged)
       ..reset();
-    // The first lookup keeps its own subscription: providers that had not
-    // answered yet still add their sources as candidates.
-    unawaited(_rediscoverySubscription?.cancel());
-    _rediscoverySubscription = _listenForSources(discovery);
     final match = prefer == null
         ? null
         : fresh
@@ -3341,6 +3438,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
     // Detach first: nothing below may be notified after it is disposed.
     _controller?.removeListener(_tick);
     _stallWatchdog?.dispose();
+    _firstFrameDeadline?.cancel();
     PlayerPip.detach(this);
     _discoverySubscription?.cancel();
     _rediscoverySubscription?.cancel();

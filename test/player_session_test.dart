@@ -146,6 +146,16 @@ void main() {
 
   bool showsVideo() => find.byType(VideoPlayer).evaluate().isNotEmpty;
 
+  /// The engine plays: the open player's position moves on, as a real
+  /// engine's does once frames arrive. A source counts as playing only
+  /// then, not when its engine merely accepts play.
+  Future<void> playFor(WidgetTester tester) async {
+    for (final player in engine.live) {
+      if (player.playing) player.position += const Duration(seconds: 5);
+    }
+    await advance(tester, const Duration(seconds: 1));
+  }
+
   /// Presses the remote's next-track key and lets the switch's position save
   /// finish. Saves are real file writes on one app-wide queue: one left
   /// waiting here would hold every later test's saves too.
@@ -210,6 +220,7 @@ void main() {
     expect(engine.players, hasLength(1));
     expect(showsVideo(), isTrue);
 
+    await playFor(tester);
     engine.players.single.fail('Request was cancelled');
     // A playing source that drops is reconnected after a short backoff.
     await advance(tester, const Duration(seconds: 2));
@@ -253,6 +264,140 @@ void main() {
     expect(engine.players, hasLength(1));
   });
 
+  // Starts that never played (playback audit of 27 November 2026,
+  // docs/playback-audit/RELIABILITY_OPTIMIZATION_REPORT.md): accepting play
+  // is not playing, and known sources are not held back or dropped.
+  group('starts that never play', () {
+    _testSession('a source that accepts play but fails before it moves goes '
+        'to the next source, without reconnecting or refreshing', (
+      tester,
+    ) async {
+      var refreshes = 0;
+      engine.onCreate = (player) => player.initialize();
+      await openPlayer(
+        tester,
+        sources: const [_first, _second],
+        discovery: StreamDiscovery()
+          ..add(_first)
+          ..add(_second),
+        onRediscover: () {
+          refreshes++;
+          return StreamDiscovery();
+        },
+      );
+      await advance(tester);
+      expect(showsVideo(), isTrue);
+
+      // No frame yet: the position never moved.
+      engine.players.single.fail('Source error');
+      await advance(tester, const Duration(seconds: 4));
+
+      // Before: two reconnects of the same source, then a refresh that held
+      // everything else back.
+      expect(engine.players.map((player) => player.uri), [
+        _first.url,
+        _second.url,
+      ]);
+      expect(refreshes, 0);
+      expect(engine.players.last.playCalls, 1);
+      await closePlayer(tester);
+    });
+
+    _testSession('an engine that accepts play but never moves is given up '
+        'after the stall limit', (tester) async {
+      // Never buffering either, so the stall watchdog cannot see it.
+      engine.onCreate = (player) => player.initialize();
+      await openPlayer(tester, sources: const [_first, _second]);
+      await advance(tester);
+      expect(engine.players, hasLength(1));
+
+      await advance(tester, const Duration(seconds: 20));
+      expect(engine.players, hasLength(1), reason: 'not before the limit');
+
+      await advance(tester, const Duration(seconds: 6));
+      // Before: the first source stayed open forever.
+      expect(engine.players.map((player) => player.uri), [
+        _first.url,
+        _second.url,
+      ]);
+      expect(engine.players.first.disposed, isTrue);
+      await closePlayer(tester);
+    });
+
+    _testSession('a refresh that answers with fewer sources keeps the known '
+        'ones it did not return', (tester) async {
+      final lookup = StreamDiscovery()
+        ..add(_first)
+        ..add(_second)
+        ..complete();
+      // The refresh renews only the first link, which then fails too.
+      final refresh = StreamDiscovery()
+        ..add(_firstRenewed)
+        ..complete();
+      engine.onCreate = (player) => player.uri == _firstRenewed.url
+          ? player.fail('Source error: response code: 403')
+          : player.initialize();
+      await openPlayer(
+        tester,
+        sources: const [_first, _second],
+        discovery: lookup,
+        onRediscover: () => refresh,
+      );
+      await advance(tester);
+      await playFor(tester);
+      engine.players.single.fail('Source error: response code: 403');
+      await advance(tester);
+
+      // Before: the error screen, with the second source never tried.
+      expect(engine.players.map((player) => player.uri), [
+        _first.url,
+        _firstRenewed.url,
+        _second.url,
+      ]);
+      expect(engine.players.last.playCalls, 1);
+      await closePlayer(tester);
+    });
+
+    _testSession('a refresh that has not answered does not hold back a known '
+        'source for long, and its late link is still offered', (tester) async {
+      final lookup = StreamDiscovery()
+        ..add(_first)
+        ..add(_second);
+      final refresh = StreamDiscovery();
+      // The known second source turns out dead too.
+      engine.onCreate = (player) => player.uri == _second.url
+          ? player.fail('Source error: response code: 404')
+          : player.initialize();
+      await openPlayer(
+        tester,
+        sources: const [_first, _second],
+        discovery: lookup,
+        onRediscover: () => refresh,
+      );
+      await advance(tester);
+      await playFor(tester);
+      engine.players.single.fail('Source error: response code: 403');
+      await advance(tester);
+      expect(engine.players, hasLength(1), reason: 'the refresh may answer');
+
+      await advance(tester, const Duration(seconds: 10));
+      // Before: up to the lookup's 60 s search cap.
+      expect(engine.players.map((player) => player.uri), [
+        _first.url,
+        _second.url,
+      ]);
+      expect(refresh.isCancelled, isFalse);
+      expect(engine.live, isEmpty, reason: 'nothing left to try for now');
+
+      // The refresh answers after all: its renewed link plays.
+      refresh.add(_firstRenewed);
+      await advance(tester);
+      expect(engine.players.last.uri, _firstRenewed.url);
+      expect(engine.players.last.playCalls, 1);
+      await closePlayer(tester);
+    });
+  });
+
   // PB-05 (docs/playback-audit/PLAYBACK_AUDIT_REPORT.md): a link that stops
   // working is refreshed by a new provider lookup, never by the one still
   // running, which only holds the links it already gave.
@@ -277,6 +422,7 @@ void main() {
       lookup.add(_second);
       await advance(tester);
 
+      await playFor(tester);
       engine.players.single.fail('Source error: response code: 403');
       await advance(tester);
 
@@ -305,6 +451,7 @@ void main() {
       );
       await advance(tester);
 
+      await playFor(tester);
       engine.players.single.fail('Source error: response code: 403');
       await advance(tester);
       expect(engine.players.map((player) => player.uri), [
@@ -351,6 +498,7 @@ void main() {
 
       for (var i = 0; i <= LinkRefreshBudget.maxPerSession; i++) {
         expect(showsVideo(), isTrue);
+        await playFor(tester);
         engine.players.last.fail('Source error: response code: 403');
         await advance(tester);
       }
@@ -399,6 +547,7 @@ void main() {
       );
       await advance(tester);
       expect(showsVideo(), isTrue);
+      await playFor(tester);
       engine.players.single.fail('Source error: response code: 403');
       await advance(tester);
       // The refresh has no source yet: nothing new opened.
@@ -566,6 +715,7 @@ void main() {
       await advance(tester);
       expect(showsVideo(), isTrue);
 
+      await playFor(tester);
       engine.players.single.fail('Source error: response code: 403');
       await advance(tester);
       expect(engine.players, hasLength(1));
@@ -607,6 +757,7 @@ void main() {
         onPlayEpisode: (_, _) async {},
       );
       await advance(tester);
+      await playFor(tester);
       engine.players.single.fail('Source error: response code: 403');
       await advance(tester);
       refresh.add(_firstRenewed);

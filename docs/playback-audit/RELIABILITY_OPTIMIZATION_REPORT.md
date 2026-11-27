@@ -952,3 +952,90 @@ runs on emulators and its logic is covered by tests. In order:
 
 No further code change is justified until one of these produces evidence
 for it.
+
+## Follow-up audit: what delays or prevents a start (28 November 2026)
+
+The path from Play to the first frame and through recovery was read again
+for anything that blocks or delays a start. Probe tests on the scripted
+engine (`FakeVideoPlayerPlatform`) confirmed three problems, all in
+recovery; each is now fixed and covered by a test that fails without its
+fix.
+
+| # | Finding | Severity | Status |
+|---|---|---|---|
+| A1 | A source that accepted play but never moved counted as "was playing": two reconnects, a link refresh, and on Android no try on the other engine | High | Fixed |
+| A2 | A link refresh waited for its first source with no limit (up to the 60 s search cap), and replaced the candidates, dropping known untried sources | High | Fixed |
+| A3 | No first-frame deadline: an engine that accepted play, never moved and never reported buffering was never given up | Medium | Fixed |
+| A4 | The quality wait: a source is "ideal" only at exactly the target height, so a 1080p source waits the full 3 s on 4K TVs, 1440p phones and 1440p or 4K monitors | Medium | Open: product decision |
+| A5 | Android: Media3 reports a dead HTTPS link as a generic "Source error" without its HTTP status, so it is retried on libmpv first, and refused links are never recognised | Medium | Open: needs the error code from `video_player_android` |
+| A6 | A dead torrent costs about 60 s (tracker DNS checks before the session, 30 s metadata, 20 s open) | Low–Medium | Open; torrents rank last |
+| A7 | libmpv loads lazily on Windows, its only engine; one first open in a fresh process took 17–20 s in checkpoint 3 | Low | Open: needs measuring |
+
+Checked and bounded: DNS (5 s), dispose (5 s), track queries, audio and seek
+(2 s), `play()` (10 s), engine switch (5 s), manifests and scripts (20 s),
+the search (60 s). Storage reads do not wait behind the write queue. Home
+cancels its lookup when the player closes, and the player cancels its
+refresh lookups when disposed.
+
+### Changes
+
+All in `lib/src/widgets/player/custom_video_player.dart`:
+
+- **A1.** `_showedPlayback` is set when the attempt's position first moves
+  after play (`_awaitFirstFrame`, the same signal as the first-frame
+  metric) and cleared by each `_initialize`. `_handleFailure` uses
+  `_ready && _showedPlayback` as "was playing". A source that never moved
+  is a failed start: no reconnect, no link refresh, the other engine where
+  the failure allows it, then the next source. A reconnect that fails while
+  opening was already handled this way; a source that played and dropped
+  still reconnects and refreshes as before.
+- **A2.** `_rediscoverAndPlay` puts the refresh's links first, then the
+  known sources not tried yet, and keeps tried ones out. While untried
+  sources exist, it waits at most `_refreshWaitWithAlternatives` (10 s) for
+  the refresh's first source, then lets the policy move on. The refresh
+  keeps running and stays subscribed, so its later links become candidates
+  and resume playback after a failure. With no untried source left, it
+  waits for the lookup as before. The 10 s is a judgment, not a
+  measurement: long enough for a provider that answers quickly, short
+  enough not to hold a playable source behind a slow one.
+- **A3.** `_armFirstFrameDeadline`: if the position has not moved by the
+  stall limit (25 s, 60 s for a torrent) after play was accepted, the
+  attempt fails as `EngineStartTimeout` (kind `engine`, so on Android the
+  other engine gets the source first). It is not armed for a Watch Party
+  guest held for the room, it waits again if the viewer paused, and the
+  first moving position, a new attempt, a failure or closing cancels it.
+
+Recovery for a stream that played and then dropped is unchanged: reconnect
+budget, link refresh budget, attempt budget, timeouts and engine order.
+
+### Tests
+
+New group `starts that never play` in `test/player_session_test.dart`:
+
+| Test | Without its fix | With |
+|---|---|---|
+| A source that accepts play but fails before it moves goes to the next source, without reconnecting or refreshing (A1) | Fails | Pass |
+| An engine that accepts play but never moves is given up after the stall limit (A3) | Fails | Pass |
+| A refresh that answers with fewer sources keeps the known ones it did not return (A2) | Fails | Pass |
+| A refresh that has not answered does not hold back a known source for long, and its late link is still offered (A2) | Fails | Pass |
+
+The existing tests that model "a playing stream drops" now make the
+scripted engine play first (`playFor` moves its position), since accepting
+play no longer counts as playing. No expectation changed.
+
+### Validation (28 November 2026)
+
+- `flutter test`: 1951 passed, 4 skipped, 1 failed. The failure is
+  `settings_ui_test` (developer credit). It comes from an uncommitted edit
+  to `developer_credit.dart` that is not part of this work: the test still
+  looks for the old name.
+- `flutter analyze lib test integration_test test_driver`: 15 infos, no
+  warnings or errors.
+- Docs check passed after regenerating the code references.
+- Windows (physical): `windows_playback_test` 10/10 on the second run (the
+  first lost the HLS clip mid-read, `tcp: ffurl_read`);
+  `windows_player_ui_test` 4/4.
+
+**Not verified.** A1–A3 on real Media3 and on libmpv failing a start; the
+first-frame deadline against real slow starts on Android and TV hardware,
+where 25 s should be ample but has not been measured.

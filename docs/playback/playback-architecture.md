@@ -85,7 +85,10 @@ order:
 
 1. **Cancelled**: stop.
 2. **Reconnect** the same source on the same engine, if it was already
-   playing, the failure is not "no picture" and the server did not refuse
+   playing (its position moved after play: `_showedPlayback`; an engine
+   that only accepted play has not played, and its failure is a failed
+   start that goes on to steps 4 and 5), the failure is not "no picture"
+   and the server did not refuse
    the link (401, 403, 404, 410: `linkRejected`): at most two reconnects per
    source in two minutes (`_allowReconnect`), after 1 s then 3 s.
 3. **Refresh a link**: a reused last link that fails is usually an expired
@@ -96,7 +99,12 @@ order:
    refresh is always a new lookup (`discoverStreams(fresh: true)`), never
    the first lookup still running, which only has the links it already gave
    (PB-05). That first lookup keeps running and its late sources still
-   become candidates.
+   become candidates. The refresh's links go first, followed by the
+   sources found earlier that were never tried; tried ones stay out. While
+   such untried sources exist, the refresh holds recovery for at most 10 s
+   (`_refreshWaitWithAlternatives`), then the policy moves on and the
+   refresh's later links still arrive as candidates. With none left, it
+   waits for the lookup, up to its 60 s search cap.
 4. **Other engine** for the same source, when the failure kind can depend
    on the engine (`canTryAnotherEngine`: manifest, format, decoder,
    rendering, engine, source, unknown), the engine can open the URL
