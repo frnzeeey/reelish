@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:video_player/video_player.dart';
@@ -163,7 +162,12 @@ class PlaybackFailure {
   };
 
   /// Short text for the player's error screen.
-  String get userMessage => switch (kind) {
+  String get userMessage => original is DashReopenUnsupported
+      ? 'Windows can play one DASH stream per session. Try another source, '
+            'or restart Reelish to play this one.'
+      : _kindMessage;
+
+  String get _kindMessage => switch (kind) {
     PlaybackFailureKind.preparation =>
       'The provider returned a stream address that cannot be used.',
     PlaybackFailureKind.http => switch (statusCode) {
@@ -198,6 +202,11 @@ class PlaybackFailure {
     }
     if (error is EngineStartTimeout) {
       return PlaybackFailure(PlaybackFailureKind.engine, error);
+    }
+    // A format this engine will not open again (PB-24): another source may
+    // play; reconnecting or refreshing the link would only be refused again.
+    if (error is DashReopenUnsupported) {
+      return PlaybackFailure(PlaybackFailureKind.format, error);
     }
     if (error is TimeoutException) {
       return PlaybackFailure(PlaybackFailureKind.timeout, error);
@@ -291,7 +300,15 @@ class PlaybackCoordinator {
   /// Distinct sources attempted since the last [reset].
   int get attemptedCount => _attemptedSources.length;
 
-  Future<({PlayableSource source, VideoPlayerController controller})>
+  /// Prepares [source] and opens it on [engine]. [preparation] is the time
+  /// spent checking the address and its host before the engine got it.
+  Future<
+    ({
+      PlayableSource source,
+      VideoPlayerController controller,
+      Duration preparation,
+    })
+  >
   prepareAndOpen(
     StreamSource source, {
     required PlayerEngine engine,
@@ -300,6 +317,7 @@ class PlaybackCoordinator {
     required Future<void> cancellation,
   }) async {
     final PlayableSource prepared;
+    final preparing = Stopwatch()..start();
     try {
       prepared = await _sourcePreparer.prepare(
         source,
@@ -308,6 +326,7 @@ class PlaybackCoordinator {
     } catch (error) {
       throw SourcePreparationException(error);
     }
+    final preparation = preparing.elapsed;
     await PlayerEngineGate.activate(engine);
     final controller = engine.createController(prepared);
     var initialized = false;
@@ -325,7 +344,11 @@ class PlaybackCoordinator {
           throw StateError('Playback initialization was cancelled.');
         }),
       ]);
-      return (source: prepared, controller: controller);
+      return (
+        source: prepared,
+        controller: controller,
+        preparation: preparation,
+      );
     } catch (_) {
       await controller.dispose();
       rethrow;
@@ -350,11 +373,7 @@ class PlaybackCoordinator {
     return true;
   }
 
-  String sourceKey(StreamSource source) {
-    final headers = source.headers.entries.toList()
-      ..sort((a, b) => a.key.toLowerCase().compareTo(b.key.toLowerCase()));
-    return '${source.url}|${jsonEncode(headers.map((entry) => [entry.key.toLowerCase(), entry.value]).toList())}';
-  }
+  String sourceKey(StreamSource source) => source.identityKey;
 
   String attemptKey(StreamSource source, PlayerEngineId engine) =>
       '${sourceKey(source)}|${engine.name}';

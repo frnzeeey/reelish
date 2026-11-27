@@ -4,7 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:onfeed/src/analytics/analytics_events.dart';
 import 'package:onfeed/src/analytics/analytics_service.dart';
 import 'package:onfeed/src/services/playback_coordinator.dart';
+import 'package:onfeed/src/models/stream_source.dart';
 import 'package:onfeed/src/services/playback_metrics.dart';
+import 'package:onfeed/src/services/stream_discovery.dart';
 import 'package:onfeed/src/theme/glass_theme.dart';
 import 'package:onfeed/src/widgets/analytics_consent_dialog.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -32,6 +34,55 @@ List<MethodCall> _fakeNative({bool configured = true}) {
 
 AnalyticsService _service({bool android = true}) =>
     AnalyticsService(channel: _channel, supportedPlatform: android);
+
+/// A session with every stage measured, from a lookup whose source carries
+/// everything that must never be sent.
+AnalyticsEvent _fullSession() {
+  var now = DateTime(2026);
+  void wait(int ms) => now = now.add(Duration(milliseconds: ms));
+  final lookup = StreamDiscovery()
+    ..add(
+      const StreamSource(
+        name: 'Clip Title 1080p',
+        url: 'https://cdn.example/clip.m3u8?token=abc',
+        providerName: 'Secret Provider',
+        providerId: 'https://repo.example/manifest.json|secret',
+        headers: {
+          'Authorization': 'Bearer abc',
+          'Referer': 'https://cdn.example',
+        },
+      ),
+    )
+    ..providerRan(failed: false, stalled: false)
+    ..providerRan(failed: true, stalled: true);
+  final metrics = PlaybackMetrics(clock: () => now)
+    ..resolution = SourceResolution(
+      origin: SourceOrigin.auto,
+      resolved: const Duration(milliseconds: 2300),
+      lookup: lookup.stats,
+    )
+    ..attempted()
+    ..opened(
+      const Duration(milliseconds: 900),
+      prepared: const Duration(milliseconds: 120),
+    )
+    ..playRequested();
+  wait(300);
+  metrics
+    ..firstFrame('media3')
+    ..playing(true)
+    ..recovering();
+  wait(1500);
+  metrics
+    ..attempted()
+    ..firstFrame('media3');
+  return metrics.event(
+    contentType: 'movie',
+    itemId: '550',
+    watched: .5,
+    watchParty: true,
+  );
+}
 
 Iterable<String> _events(List<MethodCall> calls) => calls
     .where((c) => c.method == 'logEvent')
@@ -187,6 +238,16 @@ void main() {
       for (final feature in AnalyticsFeature.values)
         AnalyticsEvent.featureUsed(feature),
       AnalyticsEvent.analyticsEnabled(),
+      _fullSession(),
+      for (final outcome in LookupOutcome.values)
+        AnalyticsEvent.sourceLookup(
+          contentType: 'series',
+          outcome: outcome,
+          lookupMs: 61000,
+          runs: 12,
+          failed: 3,
+          stalled: 2,
+        ),
     ];
 
     test('names and parameters meet Firebase limits', () {
@@ -304,6 +365,8 @@ void main() {
         'recovered': 0,
         'watched_pct': 90,
         'watch_party': 0,
+        'opens': 0,
+        'recovery_ms': 0,
       });
     });
 
@@ -341,6 +404,127 @@ void main() {
 
       metrics.firstFrame('mediaKit');
       expect(parameters()['outcome'], 'played');
+    });
+
+    test('a session found by a lookup reports where its start-up time '
+        'went', () {
+      final parameters = _fullSession().parameters;
+      expect(parameters, containsPair('source_origin', 'auto'));
+      expect(parameters, containsPair('resolve_ms', 2300));
+      expect(parameters['first_source_ms'], isA<int>());
+      expect(parameters, containsPair('lookup_stalled', 1));
+      expect(parameters, containsPair('prepare_ms', 120));
+      expect(parameters, containsPair('open_ms', 900));
+      expect(parameters, containsPair('opens', 2));
+      expect(parameters, containsPair('recovery_ms', 1500));
+      // Every parameter fits: Firebase drops those past 25 silently.
+      expect(parameters, hasLength(lessThanOrEqualTo(25)));
+    });
+
+    test('stages that did not run are left out, not sent as zero', () {
+      // A saved link: no lookup ran.
+      final cached = PlaybackMetrics()
+        ..resolution = const SourceResolution(
+          origin: SourceOrigin.cache,
+          resolved: Duration(milliseconds: 40),
+        );
+      final fromCache = cached
+          .event(contentType: 'movie', itemId: '1')
+          .parameters;
+      expect(fromCache, containsPair('source_origin', 'cache'));
+      expect(fromCache, containsPair('resolve_ms', 40));
+      expect(fromCache.keys, isNot(contains('first_source_ms')));
+      expect(fromCache.keys, isNot(contains('lookup_stalled')));
+      // Nothing opened: no preparation or open time.
+      expect(fromCache.keys, isNot(contains('prepare_ms')));
+      expect(fromCache.keys, isNot(contains('open_ms')));
+
+      // A source the viewer picked: their time with the list is not
+      // start-up time.
+      final picked = PlaybackMetrics()
+        ..resolution = SourceResolution(
+          origin: SourceOrigin.manual,
+          lookup: StreamDiscovery().stats,
+        );
+      final manual = picked.event(contentType: 'movie', itemId: '1').parameters;
+      expect(manual, containsPair('source_origin', 'manual'));
+      expect(manual.keys, isNot(contains('resolve_ms')));
+      // The lookup never found a source before it was picked from.
+      expect(manual.keys, isNot(contains('first_source_ms')));
+
+      // A player opened without Home's measurements.
+      final bare = PlaybackMetrics()
+          .event(contentType: 'movie', itemId: '1')
+          .parameters;
+      expect(bare.keys, isNot(contains('source_origin')));
+      expect(bare.keys, isNot(contains('resolve_ms')));
+    });
+
+    test('a session that closes while recovering counts the time so far', () {
+      var now = DateTime(2026);
+      final metrics = PlaybackMetrics(clock: () => now)
+        ..firstFrame('media3')
+        ..recovering();
+      now = now.add(const Duration(seconds: 4));
+      expect(
+        metrics.event(contentType: 'movie', itemId: '1').parameters,
+        containsPair('recovery_ms', 4000),
+      );
+    });
+
+    test('stage parameters never carry the stream, its host, headers, the '
+        'provider or the title', () {
+      final values = _fullSession().parameters.values.map((v) => '$v');
+      for (final secret in [
+        'cdn.example',
+        'token=',
+        'Bearer',
+        'Secret Provider',
+        'repo.example',
+        'Clip Title',
+      ]) {
+        expect(values.any((v) => v.contains(secret)), isFalse, reason: secret);
+      }
+      // Every value is a number or a fixed word.
+      for (final value in _fullSession().parameters.values) {
+        expect(
+          value is num || RegExp(r'^[a-z0-9_]+$').hasMatch('$value'),
+          isTrue,
+          reason: '$value',
+        );
+      }
+    });
+
+    test('a Play that never opens the player is one lookup event, only '
+        'after yes', () async {
+      final calls = _fakeNative();
+      final analytics = _service();
+      await analytics.load();
+      AnalyticsEvent lookup() => AnalyticsEvent.sourceLookup(
+        contentType: 'movie',
+        outcome: LookupOutcome.noSource,
+        lookupMs: 60400,
+        runs: 7,
+        failed: 2,
+        stalled: 3,
+      );
+      analytics.log(lookup());
+      await pumpEventQueue();
+      expect(_events(calls), isEmpty);
+
+      await analytics.setConsent(true);
+      calls.clear();
+      analytics.log(lookup());
+      await pumpEventQueue();
+      expect(_events(calls), ['source_lookup']);
+      expect((calls.single.arguments as Map)['parameters'], {
+        'content_type': 'movie',
+        'outcome': 'no_source',
+        'lookup_ms': 60400,
+        'lookup_runs': 7,
+        'lookup_failed': 2,
+        'lookup_stalled': 3,
+      });
     });
 
     test('a session is reported once', () async {

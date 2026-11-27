@@ -71,15 +71,59 @@ class MpvPlayerEngine implements PlayerEngine {
   }
 
   @override
-  VideoPlayerController createController(PlayableSource source) =>
-      PlayerEngineGate._track(
-        _EngineVideoController(
-          source.uri,
-          formatHint: _formatHint(source.streamType),
-          httpHeaders: source.headers,
-        ),
-        id,
-      );
+  VideoPlayerController createController(PlayableSource source) {
+    WindowsDashGuard.admit(source.streamType);
+    return PlayerEngineGate._track(
+      _EngineVideoController(
+        source.uri,
+        formatHint: _formatHint(source.streamType),
+        httpHeaders: source.headers,
+      ),
+      id,
+    );
+  }
+}
+
+/// Thrown instead of opening a second DASH stream with libmpv on Windows,
+/// which would end the app (PB-24, see [WindowsDashGuard]). The player
+/// treats it as a failed source and moves on to the next one.
+class DashReopenUnsupported implements Exception {
+  const DashReopenUnsupported();
+
+  @override
+  String toString() =>
+      'This DASH stream cannot be opened again until Reelish restarts.';
+}
+
+/// Lets libmpv on Windows open one DASH stream per app session.
+///
+/// The bundled libmpv's FFmpeg (n6.0) calls libxml2's process-wide
+/// `xmlCleanupParser()` after every DASH manifest it parses, and the next
+/// manifest parse in the same process crashes natively (access violation),
+/// taking the whole app down: FFmpeg ticket #11236, reproduced in
+/// `docs/playback-audit/RELIABILITY_OPTIMIZATION_REPORT.md` (PB-24). A
+/// second DASH open, including a reconnect of the same one, is refused
+/// before libmpv sees it, so it fails like any unplayable source instead.
+///
+/// Only sources Reelish recognizes as DASH (provider hint, MIME type or
+/// `.mpd` path) are held back; libmpv still detects others itself. Other
+/// formats and Android are unaffected.
+abstract final class WindowsDashGuard {
+  static bool _opened = false;
+
+  /// Throws [DashReopenUnsupported] when [type] is DASH and libmpv on
+  /// Windows has already been given one; otherwise records a DASH open.
+  static void admit(StreamType type, {TargetPlatform? platform}) {
+    if ((platform ?? defaultTargetPlatform) != TargetPlatform.windows ||
+        type != StreamType.dash) {
+      return;
+    }
+    if (_opened) throw const DashReopenUnsupported();
+    _opened = true;
+  }
+
+  @visibleForTesting
+  static void debugReset() => _opened = false;
 }
 
 class FlutterPlatformPlayerEngine implements PlayerEngine {

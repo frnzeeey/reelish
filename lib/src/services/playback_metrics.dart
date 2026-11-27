@@ -3,6 +3,23 @@ import 'package:flutter/foundation.dart';
 import '../analytics/analytics_events.dart';
 import '../analytics/analytics_service.dart';
 import 'playback_coordinator.dart';
+import 'stream_discovery.dart' show LookupStats;
+
+/// How a session's first source was found, measured by Home before the
+/// player opened.
+class SourceResolution {
+  const SourceResolution({required this.origin, this.resolved, this.lookup});
+
+  final SourceOrigin origin;
+
+  /// From Play to the player opening. Null when the viewer picked the
+  /// source: that wait is theirs, not the providers'.
+  final Duration? resolved;
+
+  /// The provider lookup's counts, read when the session ends (it may still be
+  /// adding fallbacks until then). Null for a saved link.
+  final LookupStats? lookup;
+}
 
 /// One player session's timings and failures. Debug and profile builds
 /// print a summary when the player closes; every build hands the same
@@ -48,6 +65,12 @@ class PlaybackMetrics {
   final Map<PlaybackFailureKind, int> _failures = {};
   PlaybackFailureKind? _firstFailure;
   bool _reported = false;
+  Duration? _prepare;
+  int _opens = 0;
+
+  /// How the first source was found; null when the player was opened
+  /// another way (the stages before the player are then left out).
+  SourceResolution? resolution;
 
   /// The first picture of the session (later sources keep the first time).
   void firstFrame(String engine) {
@@ -67,8 +90,18 @@ class PlaybackMetrics {
     }
   }
 
-  /// How long the first engine that opened took, from its attempt starting.
-  void opened(Duration elapsed) => _open ??= elapsed;
+  /// How long the first engine that opened took, from its attempt starting,
+  /// and the part of it spent [prepared] (checking the address and its
+  /// host before the engine got it).
+  void opened(Duration elapsed, {Duration? prepared}) {
+    if (_open != null) return;
+    _open = elapsed;
+    _prepare = prepared;
+  }
+
+  /// The player started opening a source: the first, a reconnect, the
+  /// other engine or another source.
+  void attempted() => _opens++;
 
   /// The kind of stream that opened last, such as `hls` or `torrent`.
   void sourceType(String type) => _sourceType = type;
@@ -142,6 +175,13 @@ class PlaybackMetrics {
         : _rebuffering + _clock().difference(since);
   }
 
+  Duration get _totalRecovering {
+    final since = _recoveringSince;
+    return since == null
+        ? _recovering
+        : _recovering + _clock().difference(since);
+  }
+
   Duration get _totalPlayed {
     final since = _playingSince;
     return since == null ? _played : _played + _clock().difference(since);
@@ -169,7 +209,23 @@ class PlaybackMetrics {
         'playToFrame=${_playToFrame == null ? '-' : '${_playToFrame!.inMilliseconds}ms'} '
         'rebufferRatio=${ratio == null ? '-' : '${(ratio * 100).toStringAsFixed(1)}%'} '
         'recovered=$_recovered/$_recoveries (${_recovering.inMilliseconds}ms) '
-        'close=${_slowestClose.inMilliseconds}ms';
+        'close=${_slowestClose.inMilliseconds}ms '
+        'prepare=${_ms(_prepare)} opens=$_opens${_resolutionSummary()}';
+  }
+
+  static String _ms(Duration? value) =>
+      value == null ? '-' : '${value.inMilliseconds}ms';
+
+  /// The stages before the player, when Home measured them.
+  String _resolutionSummary() {
+    final found = resolution;
+    if (found == null) return '';
+    final lookup = found.lookup;
+    return ' origin=${found.origin.name} resolve=${_ms(found.resolved)}'
+        '${lookup == null ? '' : ' firstSource=${_ms(lookup.firstSourceAfter)} '
+                  'lookup=${lookup.runs} run, '
+                  '${lookup.failed} failed, '
+                  '${lookup.stalled} stalled'}';
   }
 
   /// The session as one analytics event. [watched] is the share of the
@@ -207,6 +263,14 @@ class PlaybackMetrics {
         : ((watched.clamp(0.0, 1.0) * 10).round() * 10),
     watchParty: watchParty,
     sourceType: _sourceType,
+    origin: resolution?.origin,
+    firstSourceMs: resolution?.lookup?.firstSourceAfter?.inMilliseconds,
+    resolveMs: resolution?.resolved?.inMilliseconds,
+    lookupStalled: resolution?.lookup?.stalled,
+    prepareMs: _prepare?.inMilliseconds,
+    openMs: _open?.inMilliseconds,
+    opens: _opens,
+    recoveryMs: _totalRecovering.inMilliseconds,
   );
 
   /// Ends the session: prints [summary] (debug and profile) and sends

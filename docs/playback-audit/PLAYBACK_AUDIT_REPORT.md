@@ -46,14 +46,14 @@ three places:
 | PB-01 | Cancelled lookups keep running providers and hold the app's 2 runtime slots | High | Measured 7.5 s; **fixed** ([deep audit](DEEP_AUDIT_2026-11-21.md)) |
 | PB-02 | Two slow providers at the top of the priority order delay every first source by up to 30 s | High | Measured 11 s; **improved** from the second lookup ([deep audit](DEEP_AUDIT_2026-11-21.md)) |
 | PB-03 | A live failure classified as "cancelled" leaves the player on a permanent spinner | Medium | Confirmed by test; **fixed** |
-| PB-04 | Rediscovery can open a source during an episode switch (corrected) | Low | Confirmed path, narrow; not fixed |
-| PB-05 | Link refresh can reuse the still-running lookup and replay the dead link | Low | Potential |
-| PB-06 | Up to five sequential engine round trips between initialize and play | Medium | Confirmed path, impact unmeasured |
-| PB-07 | Resuming buffers the start of the file, then seeks and buffers again | Medium | Confirmed path, impact unmeasured |
+| PB-04 | Rediscovery can open a source during an episode switch (corrected) | Low | **Fixed** (reproduced; [reliability report](RELIABILITY_OPTIMIZATION_REPORT.md)) |
+| PB-05 | Link refresh can reuse the still-running lookup and replay the dead link | Low | **Fixed** ([reliability report](RELIABILITY_OPTIMIZATION_REPORT.md)) |
+| PB-06 | Up to five sequential engine round trips between initialize and play | Medium | Measured on Windows libmpv: under 30 ms, not worth changing; Android unmeasured ([reliability report](RELIABILITY_OPTIMIZATION_REPORT.md)) |
+| PB-07 | Resuming buffers the start of the file, then seeks and buffers again | Medium | Measured on Windows libmpv: +0.1 to +0.5 s to first frame; left as is; Android unmeasured ([reliability report](RELIABILITY_OPTIMIZATION_REPORT.md)) |
 | PB-08 | Each provider run builds an isolate and runtime and parses a 702 KB bundle | Medium | Confirmed path, impact unmeasured |
 | PB-09 | Windows: a provider stuck in synchronous code keeps its isolate and heap after the timeout | Medium | **No longer applies**: the Windows DLL supports the deadline ([deep audit](DEEP_AUDIT_2026-11-21.md)) |
-| PB-10 | Production telemetry cannot separate source resolution from player start | Medium | Confirmed |
-| PB-11 | Three different source-identity keys | Low | Confirmed |
+| PB-10 | Production telemetry cannot separate source resolution from player start | Medium | **Fixed** ([reliability report](RELIABILITY_OPTIMIZATION_REPORT.md)) |
+| PB-11 | Three different source-identity keys | Low (torrent part: Medium) | **Fixed**; also merged distinct hash-only torrents ([reliability report](RELIABILITY_OPTIMIZATION_REPORT.md)) |
 | PB-12 | Media3 playing video with no audio is not detected | Low | Potential |
 | PB-13 | Engine buffer and network settings are package defaults and were never measured | Low | Observation |
 | PB-14 | Architecture notes say Windows has no torrents | Low | Confirmed (documentation) |
@@ -240,6 +240,14 @@ or corrupts saved data.
   sources whose `sourceKey` has already failed.
 - **Validation:** A unit test of `discoverStreams(fresh: true)` returning a
   new object.
+- **Resolution (27 November 2026):** Home's `onRediscover` passes
+  `fresh: true`, so a refresh is a new lookup through the same worker pool
+  and runtime slots; the running lookup is not cancelled. The player keeps
+  its subscription to the first lookup, so late sources still become
+  candidates, and declines a refresh that hands back a lookup it already
+  follows. Tests: `player_session_test` ("link refresh while the first
+  lookup still runs") and `provider_lookup_scheduling_test` ("fresh
+  lookups"). See [RELIABILITY_OPTIMIZATION_REPORT.md](RELIABILITY_OPTIMIZATION_REPORT.md).
 
 ## PB-06: Up to five sequential engine round trips between initialize and play
 
@@ -364,6 +372,14 @@ or corrupts saved data.
   See the performance report for targets.
 - **Validation:** Extend `playback_metrics_test` for the new fields.
   `analytics_test` checks the event shape.
+- **Resolution (27 November 2026):** `playback_session` now carries
+  `source_origin`, `first_source_ms`, `resolve_ms`, `lookup_stalled`,
+  `prepare_ms`, `open_ms`, `opens` and `recovery_ms`, and a Play that never
+  opens the player sends `source_lookup`. The names differ from the
+  recommendation above (`providers…` keys would break the rule that no
+  parameter name mentions providers). Details in
+  [RELIABILITY_OPTIMIZATION_REPORT.md](RELIABILITY_OPTIMIZATION_REPORT.md)
+  and [analytics.md](../features/analytics.md).
 
 ## PB-11: Three different source-identity keys
 

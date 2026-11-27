@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'stream_type.dart';
 
 /// Where a subtitle comes from. Embedded tracks are inside the video and are
@@ -95,6 +97,31 @@ class StreamSource {
       (isTorrent || _hasSupportedUrl(url));
   final Map<String, String> headers;
   final List<SubtitleTrack> subtitles;
+
+  /// Whether two results are the same source, for every list that removes
+  /// duplicates or remembers what was tried (the lookup, the provider
+  /// search, the player's attempts): one rule, so they agree (PB-11).
+  ///
+  /// A link is its exact URL (query and signature included) and its
+  /// headers: header names in any case or order, values exactly. A torrent
+  /// given by info hash alone is that hash, in any case, and its file; a
+  /// magnet link adds its file. Not the provider: the same request from two
+  /// providers is one source. Kept in memory only, never saved.
+  String get identityKey {
+    if (url.isEmpty && infoHash.isNotEmpty) {
+      return 'torrent:${infoHash.toLowerCase()}#$fileIdx';
+    }
+    final named = headers.entries.toList()
+      ..sort((a, b) {
+        final byName = a.key.toLowerCase().compareTo(b.key.toLowerCase());
+        return byName != 0 ? byName : a.key.compareTo(b.key);
+      });
+    final key =
+        '$url|${jsonEncode([
+          for (final entry in named) [entry.key.toLowerCase(), entry.value],
+        ])}';
+    return isTorrent && fileIdx >= 0 ? '$key#$fileIdx' : key;
+  }
 
   StreamSource copyWithProviderId(String value) => StreamSource(
     name: name,

@@ -40,7 +40,7 @@ that numbering.
 | PB-08 | Each run parses the Cheerio/CryptoJS bundle | Low (was Medium) | All | Measured: 45 ms per run; not worth a cache |
 | PB-09 | Stuck synchronous providers outlive the timeout on Windows | n/a | Windows | **Already fixed** by the rebuilt bridge DLL; the code comment said otherwise (corrected) |
 | PB-22 | The 60 s search cap left running providers going | Medium | All | **Fixed** with PB-01 |
-| PB-23 | Discovery keeps running while the player buffers its first seconds | Low | All | Observation, unmeasured; not changed |
+| PB-23 | Discovery keeps running while the player buffers its first seconds | Low | All | Sensitivity measured on Windows with stand-in load (2026-11-27): matters on slow links; real provider traffic unmeasured; not changed ([reliability report](RELIABILITY_OPTIMIZATION_REPORT.md)) |
 
 PB-04 to PB-07 and PB-10 to PB-13 are unchanged from the earlier audits.
 

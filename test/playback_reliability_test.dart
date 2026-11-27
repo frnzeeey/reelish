@@ -256,6 +256,74 @@ void main() {
     });
   });
 
+  // PB-24 (docs/playback-audit/RELIABILITY_OPTIMIZATION_REPORT.md): libmpv
+  // on Windows ends the app on a second DASH manifest parse.
+  group('one DASH stream per session on Windows', () {
+    setUp(WindowsDashGuard.debugReset);
+    tearDown(WindowsDashGuard.debugReset);
+
+    test('the first DASH open goes ahead; any later one is refused', () {
+      const windows = TargetPlatform.windows;
+      WindowsDashGuard.admit(StreamType.dash, platform: windows);
+      expect(
+        () => WindowsDashGuard.admit(StreamType.dash, platform: windows),
+        throwsA(isA<DashReopenUnsupported>()),
+      );
+      // Still refused: the reconnect of the same stream is a second parse.
+      expect(
+        () => WindowsDashGuard.admit(StreamType.dash, platform: windows),
+        throwsA(isA<DashReopenUnsupported>()),
+      );
+    });
+
+    test('other formats on Windows are never held back', () {
+      const windows = TargetPlatform.windows;
+      WindowsDashGuard.admit(StreamType.dash, platform: windows);
+      for (final type in StreamType.values.where((t) => t != StreamType.dash)) {
+        WindowsDashGuard.admit(type, platform: windows);
+      }
+    });
+
+    test('Android is unchanged', () {
+      for (var i = 0; i < 3; i++) {
+        WindowsDashGuard.admit(
+          StreamType.dash,
+          platform: TargetPlatform.android,
+        );
+      }
+    });
+
+    test('the refusal is a failed source: the next one is tried, without '
+        'a reconnect or a link refresh', () {
+      final failure = PlaybackFailure.classify(const DashReopenUnsupported());
+      expect(failure.kind, PlaybackFailureKind.format);
+      expect(failure.canTryAnotherSource, isTrue);
+      expect(failure.linkMayHaveDied, isFalse);
+      expect(failure.linkRejected, isFalse);
+      expect(failure.userMessage, contains('one DASH stream per session'));
+    });
+
+    test('the Windows engine refuses a second DASH controller before libmpv '
+        'sees it', () {
+      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+      const engine = MpvPlayerEngine();
+      const url = 'https://cdn.example/manifest.mpd';
+      final dash = PlayableSource(
+        source: const StreamSource(name: 'dash', url: url),
+        uri: Uri.parse(url),
+        headers: const {},
+        streamType: StreamType.dash,
+      );
+      final first = engine.createController(dash);
+      addTearDown(first.dispose);
+      expect(
+        () => engine.createController(dash),
+        throwsA(isA<DashReopenUnsupported>()),
+      );
+    });
+  });
+
   group('engine selection', () {
     setUp(() => debugDefaultTargetPlatformOverride = TargetPlatform.android);
     tearDown(() => debugDefaultTargetPlatformOverride = null);

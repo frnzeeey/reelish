@@ -100,6 +100,31 @@ mediaKit`; on Windows there is only libmpv, so check its log lines.
 
 ---
 
+**Problem:** Windows: "Windows can play one DASH stream per session", or
+the app closes on its own when a second DASH stream opens.
+
+**Relevant source files:** [`player_engine.dart`](../../lib/src/services/player_engine.dart) (`WindowsDashGuard`, `DashReopenUnsupported`), [`playback_coordinator.dart`](../../lib/src/services/playback_coordinator.dart) (`classify`).
+
+**Execution path:** `prepareAndOpen` → `MpvPlayerEngine.createController`
+→ `WindowsDashGuard.admit` throws for the second DASH source → `format`
+failure → next source.
+
+**Potential failure points:** the bundled libmpv's FFmpeg crashes on a
+second DASH manifest in one process (PB-24), so only one DASH source plays
+per session. A DASH stream not recognized as DASH (no provider hint, MIME
+type or `.mpd` path) reaches libmpv and can still close the app.
+
+**How to investigate:** `[Playback][Failure] kind=format` right after a
+DASH source; restart the app to play it. See
+[platform-player-engines.md](platform-player-engines.md#one-dash-stream-per-session-on-windows).
+
+**Related tests:** `playback_reliability_test` (one DASH stream per session
+on Windows),
+[`windows_playback_test.dart`](../../integration_test/windows_playback_test.dart)
+(a second DASH stream is refused).
+
+---
+
 **Problem:** The player stays on "Starting playback…" or hangs on close.
 
 **Relevant source files:** [`player_engine.dart`](../../lib/src/services/player_engine.dart) (`_EngineVideoController.dispose`, `PlayerEngineGate`), [`custom_video_player.dart`](../../lib/src/widgets/player/custom_video_player.dart).

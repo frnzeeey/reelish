@@ -92,7 +92,9 @@ Things that look like bottlenecks but are not:
   (connection pooling, 4 per host). Clients do not survive across runs,
   since each run is a new isolate.
 - A lookup is shared per (title, episode, filter) while in flight, so a
-  repeated Play does not double the provider requests.
+  repeated Play does not double the provider requests. A link refresh is
+  the exception: it starts its own lookup (PB-05), which waits for the same
+  two runtime slots.
 - Cancelling does not cancel in-flight provider HTTP requests (PB-01).
 - The engines own their own connections. Reelish neither adds nor removes
   connection reuse there.

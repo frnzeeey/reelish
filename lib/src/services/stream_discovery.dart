@@ -18,6 +18,17 @@ class StreamDiscovery {
   bool _completed = false;
   bool _recordedCandidate = false;
 
+  /// Counts and times of this lookup, for diagnostics.
+  final LookupStats stats = LookupStats();
+
+  /// One provider finished: with an error ([failed]), and whether it
+  /// wasted its runtime slot ([stalled]).
+  void providerRan({required bool failed, required bool stalled}) {
+    stats._runs++;
+    if (failed) stats._failed++;
+    if (stalled) stats._stalled++;
+  }
+
   /// Why this lookup found no stream (no providers, all failed, paused for
   /// review...), once it has finished; null when nothing needs saying.
   String? message;
@@ -120,7 +131,10 @@ class StreamDiscovery {
     _sources.add(source);
     if (!_firstSource.isCompleted) {
       _firstSource.complete(source);
-      final elapsed = DateTime.now().difference(_startedAt).inMilliseconds;
+      final after = stats._firstSourceAfter = DateTime.now().difference(
+        _startedAt,
+      );
+      final elapsed = after.inMilliseconds;
       if (kDebugMode) {
         // Never include stream URLs or headers in playback diagnostics.
         // ignore: avoid_print
@@ -146,6 +160,27 @@ class StreamDiscovery {
     if (!_cancelledSignal.isCompleted) _cancelledSignal.complete();
   }
 
-  static String _key(StreamSource source) =>
-      '${source.url}|${source.headers.entries.toList()..sort((a, b) => a.key.compareTo(b.key))}';
+  static String _key(StreamSource source) => source.identityKey;
+}
+
+/// What a [StreamDiscovery] measured, without its sources: counts and times
+/// only, never which provider, link or title. Safe to keep for diagnostics.
+class LookupStats {
+  Duration? _firstSourceAfter;
+  int _runs = 0;
+  int _failed = 0;
+  int _stalled = 0;
+
+  /// How long the first valid source took from the lookup's start; null
+  /// until one arrives.
+  Duration? get firstSourceAfter => _firstSourceAfter;
+
+  /// Providers that ran or failed to start so far. A run the lookup itself
+  /// stopped (cancelled, search cap) is not counted.
+  int get runs => _runs;
+  int get failed => _failed;
+
+  /// Runs that timed out or took the stall limit without a source: the
+  /// ones later lookups in the session run last.
+  int get stalled => _stalled;
 }

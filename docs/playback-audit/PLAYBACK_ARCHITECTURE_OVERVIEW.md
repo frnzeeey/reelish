@@ -92,9 +92,9 @@ flowchart TD
     K -- no --> W{was playing, not rendering, link not refused, ≤2 reconnects in 2 min?}
     W -- yes --> RC[reconnect same source, same engine after 1 s / 3 s]
     W -- no --> CA{cached link, first failure?}
-    CA -- yes --> RD[rediscover, play first fresh source]
+    CA -- yes --> RD[new lookup, play first fresh source]
     CA -- no --> LR{played before, link may have died, budget 2/session?}
-    LR -- yes --> RD2[rediscover, prefer same name/provider]
+    LR -- yes --> RD2[new lookup, prefer same name/provider]
     LR -- no --> AE{not yet playing or rendering, engine-specific kind, other engine can open URL, untried?}
     AE -- yes --> OE[same source on other engine, 12 s]
     AE -- no --> NX{next ranked candidate within 5 distinct sources?}

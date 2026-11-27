@@ -202,6 +202,25 @@ void main() {
     expect(controller.value.size.width, greaterThan(0));
   });
 
+  // PB-24: libmpv's FFmpeg ends the process on a second DASH manifest parse.
+  // Before the guard this test never finished: the app was gone.
+  _liveTest('a second DASH stream is refused instead of ending the app, and '
+      'other formats still play', () async {
+    try {
+      final first = await _play(_source(_dash, StreamType.dash));
+      await first.dispose();
+    } on DashReopenUnsupported {
+      // "DASH plays" above already used this session's DASH open.
+    }
+    expect(
+      () => _play(_source(_dash, StreamType.dash)),
+      throwsA(isA<DashReopenUnsupported>()),
+    );
+    final hls = await _play(_source(_hls, StreamType.hls));
+    addTearDown(hls.dispose);
+    expect(hls.value.size.width, greaterThan(0));
+  });
+
   _liveTest('MP4 and MKV play, and playback speed applies', () async {
     for (final url in [_mp4, _mkv]) {
       final controller = await _play(

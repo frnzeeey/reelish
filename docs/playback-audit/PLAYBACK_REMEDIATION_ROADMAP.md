@@ -43,7 +43,7 @@ Each phase is one or more separate pull requests, validated with the
   cancelled' while playing".
 - **Done when:** the scenario shows the next source or the error panel.
 
-### 1.3 Rediscovery during an episode switch (PB-04). Priority: P3 (was P0)
+### 1.3 Rediscovery during an episode switch (PB-04). Priority: P3 (was P0). **Done** ([reliability report](RELIABILITY_OPTIMIZATION_REPORT.md))
 - **Dropped from Phase 1.** On closer reading the viewer cannot pick a
   source while rediscovery runs, so the reported race does not exist. A
   plain generation guard would make the remaining episode-key case worse.
@@ -117,7 +117,7 @@ Decide each item on the Phase 6.1 numbers.
 
 ## Phase 3: Lifecycle, memory and resource management
 
-### 3.1 Fresh lookups for link refresh (PB-05). Priority: P3
+### 3.1 Fresh lookups for link refresh (PB-05). Priority: P3. **Done** ([reliability report](RELIABILITY_OPTIMIZATION_REPORT.md))
 - **Files:** `provider_plugin_service.dart`, `home_screen.dart`
   (`onRediscover`).
 - **Approach:** A `fresh` flag that bypasses the in-flight map; or skip
@@ -125,7 +125,7 @@ Decide each item on the Phase 6.1 numbers.
 - **Done when:** a unit test shows a new discovery; a refresh never reopens
   the same failed key.
 
-### 3.2 One source identity key (PB-11). Priority: P3
+### 3.2 One source identity key (PB-11). Priority: P3. **Done** ([reliability report](RELIABILITY_OPTIMIZATION_REPORT.md))
 - **Files:** `stream_source.dart`, `stream_discovery.dart`,
   `provider_plugin_service.dart`, `playback_coordinator.dart`.
 - **Regression risk:** Low. Keys are in-memory only, not persisted (verify
@@ -170,7 +170,7 @@ Decide each item on the Phase 6.1 numbers.
 
 ## Phase 6: Monitoring and regression prevention
 
-### 6.1 Stage timings in the session event (PB-10). Priority: P1 (do early)
+### 6.1 Stage timings in the session event (PB-10). Priority: P1 (do early). **Done** ([reliability report](RELIABILITY_OPTIMIZATION_REPORT.md))
 - **Files:** `playback_metrics.dart`, `analytics_events.dart`,
   `home_screen.dart` (hand the resolve time to the player),
   `playback_coordinator.dart` (prepare time), `docs/features/analytics.md`.

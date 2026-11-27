@@ -8,16 +8,23 @@
 // timeouts, not the Media3/libmpv engine switch. Stream URLs use public IP
 // literals so source preparation needs no DNS lookup.
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:onfeed/src/models/episode_context.dart';
 import 'package:onfeed/src/models/media_item.dart';
 import 'package:onfeed/src/models/stream_source.dart';
 import 'package:onfeed/src/platform/device_capabilities.dart';
 import 'package:onfeed/src/screens/player_screen.dart';
+import 'package:onfeed/src/services/playback_coordinator.dart';
 import 'package:onfeed/src/services/playback_settings_controller.dart';
 import 'package:onfeed/src/services/storage_service.dart';
+import 'package:onfeed/src/services/stream_discovery.dart';
+import 'package:onfeed/src/widgets/player/custom_video_player.dart'
+    show EpisodeHandOff, EpisodeSwitch;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:video_player/video_player.dart' hide VideoAudioTrack;
 import 'package:video_player_platform_interface/video_player_platform_interface.dart';
@@ -27,6 +34,13 @@ import 'support/fake_video_player_platform.dart';
 const _first = StreamSource(
   name: 'First',
   url: 'https://8.8.8.8/first.m3u8',
+  providerName: 'A',
+);
+
+/// [_first] as its provider answers a new lookup: a renewed signed link.
+const _firstRenewed = StreamSource(
+  name: 'First',
+  url: 'https://8.8.8.8/first.m3u8?token=renewed',
   providerName: 'A',
 );
 const _second = StreamSource(
@@ -42,6 +56,9 @@ void main() {
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
+    // Saves run on one app-wide queue; one left waiting by an earlier
+    // test's fake clock would hold this test's saves.
+    StorageService.debugResetWrites();
     engine = FakeVideoPlayerPlatform();
     VideoPlayerPlatform.instance = engine;
     files = Directory.systemTemp.createTempSync('player_session_test');
@@ -61,15 +78,38 @@ void main() {
   Future<void> openPlayer(
     WidgetTester tester, {
     List<StreamSource> sources = const [_first, _second],
+    StreamDiscovery? discovery,
+    StreamDiscovery Function()? onRediscover,
+    EpisodeSwitch? onPlayEpisode,
   }) async {
+    // With an episode switch, the player is S01E01 of a series whose next
+    // episode is S01E02.
+    final series = onPlayEpisode != null;
     await tester.pumpWidget(
       MaterialApp(
         home: PlayerScreen(
-          item: const MediaItem(id: '1', type: 'movie', name: 'Clip'),
+          item: MediaItem(
+            id: '1',
+            type: series ? 'series' : 'movie',
+            name: 'Clip',
+          ),
           source: sources.first,
           sources: sources,
           storage: storage,
           playbackSettings: PlaybackSettingsController(storage: storage),
+          discovery: discovery,
+          onRediscover: onRediscover,
+          onPlayEpisode: onPlayEpisode,
+          season: series ? 1 : null,
+          episode: series ? 1 : null,
+          episodeContext: series
+              ? Future.value(
+                  const EpisodeContext(
+                    current: EpisodeRef(season: 1, episode: 1),
+                    next: EpisodeRef(season: 1, episode: 2),
+                  ),
+                )
+              : null,
         ),
       ),
     );
@@ -95,6 +135,26 @@ void main() {
   }
 
   bool showsVideo() => find.byType(VideoPlayer).evaluate().isNotEmpty;
+
+  /// Presses the remote's next-track key and lets the switch's position save
+  /// finish. Saves are real file writes on one app-wide queue: one left
+  /// waiting here would hold every later test's saves too.
+  Future<void> pressNextEpisode(
+    WidgetTester tester, {
+    required bool Function() asked,
+  }) async {
+    await tester.sendKeyEvent(
+      LogicalKeyboardKey.mediaTrackNext,
+      platform: 'android',
+    );
+    for (var i = 0; i < 60 && !asked(); i++) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 50)),
+      );
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    await advance(tester);
+  }
 
   _testSession('a source the host refuses moves on to the next source', (
     tester,
@@ -181,6 +241,283 @@ void main() {
 
     expect(engine.live, isEmpty);
     expect(engine.players, hasLength(1));
+  });
+
+  // PB-05 (docs/playback-audit/PLAYBACK_AUDIT_REPORT.md): a link that stops
+  // working is refreshed by a new provider lookup, never by the one still
+  // running, which only holds the links it already gave.
+  group('link refresh while the first lookup still runs', () {
+    _testSession('a refresh that hands back the running lookup does not '
+        'reopen the dead link', (tester) async {
+      final lookup = StreamDiscovery()..add(_first);
+      var refreshes = 0;
+      engine.onCreate = (player) => player.initialize();
+      await openPlayer(
+        tester,
+        sources: const [_first],
+        discovery: lookup,
+        onRediscover: () {
+          refreshes++;
+          return lookup;
+        },
+      );
+      await advance(tester);
+      expect(showsVideo(), isTrue);
+      // A provider that answered late adds a fallback.
+      lookup.add(_second);
+      await advance(tester);
+
+      engine.players.single.fail('Source error: response code: 403');
+      await advance(tester);
+
+      expect(refreshes, 1);
+      expect(engine.players.map((player) => player.uri), [
+        _first.url,
+        _second.url,
+      ]);
+      expect(lookup.isCancelled, isFalse);
+      expect(engine.players.last.playCalls, 1);
+      await closePlayer(tester);
+    });
+
+    _testSession('a fresh lookup renews the link, and the first lookup\'s '
+        'late sources still arrive', (tester) async {
+      final lookup = StreamDiscovery()..add(_first);
+      final refresh = StreamDiscovery()..add(_firstRenewed);
+      engine.onCreate = (player) => player.uri == _firstRenewed.url
+          ? player.fail('Source error: response code: 403')
+          : player.initialize();
+      await openPlayer(
+        tester,
+        sources: const [_first],
+        discovery: lookup,
+        onRediscover: () => refresh,
+      );
+      await advance(tester);
+
+      engine.players.single.fail('Source error: response code: 403');
+      await advance(tester);
+      expect(engine.players.map((player) => player.uri), [
+        _first.url,
+        _firstRenewed.url,
+      ]);
+
+      // The renewed link fails while opening. A provider of the first lookup
+      // answers only now; its source is the next one tried.
+      lookup.add(_second);
+      await advance(tester);
+
+      expect(engine.players.map((player) => player.uri), [
+        _first.url,
+        _firstRenewed.url,
+        _second.url,
+      ]);
+      expect(lookup.isCancelled, isFalse);
+      expect(engine.players.last.playCalls, 1);
+      await closePlayer(tester);
+    });
+
+    _testSession('a link that keeps dying is refreshed at most the budget, '
+        'and each refresh cancels the one before', (tester) async {
+      final lookup = StreamDiscovery()..add(_first);
+      final refreshes = <StreamDiscovery>[];
+      engine.onCreate = (player) => player.initialize();
+      await openPlayer(
+        tester,
+        sources: const [_first],
+        discovery: lookup,
+        onRediscover: () {
+          final renewed = StreamSource(
+            name: _first.name,
+            url: '${_first.url}?token=${refreshes.length}',
+            providerName: _first.providerName,
+          );
+          final refresh = StreamDiscovery()..add(renewed);
+          refreshes.add(refresh);
+          return refresh;
+        },
+      );
+      await advance(tester);
+
+      for (var i = 0; i <= LinkRefreshBudget.maxPerSession; i++) {
+        expect(showsVideo(), isTrue);
+        engine.players.last.fail('Source error: response code: 403');
+        await advance(tester);
+      }
+
+      expect(refreshes, hasLength(LinkRefreshBudget.maxPerSession));
+      expect(refreshes.first.isCancelled, isTrue);
+      expect(engine.players, hasLength(1 + LinkRefreshBudget.maxPerSession));
+      expect(engine.live, isEmpty);
+      expect(showsVideo(), isFalse);
+      expect(lookup.isCancelled, isFalse);
+      await closePlayer(tester);
+    });
+  });
+
+  // PB-04 (docs/playback-audit/PLAYBACK_AUDIT_REPORT.md): a link refresh
+  // that finds a source while the viewer is moving to another episode. The
+  // remote's next-track key reaches the player on the TV layout.
+  group('episode switch during a link refresh', () {
+    setUp(() {
+      DeviceCapabilities.debugOverride = const DeviceCapabilities(
+        isTelevision: true,
+        hasTouchscreen: false,
+        supportsPictureInPicture: false,
+      );
+    });
+
+    /// Plays S01E01 from [_first], makes it fail so a refresh starts, and
+    /// asks for the next episode while the refresh still waits.
+    Future<({StreamDiscovery refresh, List<EpisodeRef> asked})> startSwitch(
+      WidgetTester tester,
+      EpisodeSwitch onPlayEpisode,
+    ) async {
+      final lookup = StreamDiscovery()..add(_first);
+      final refresh = StreamDiscovery();
+      final asked = <EpisodeRef>[];
+      engine.onCreate = (player) => player.initialize();
+      await openPlayer(
+        tester,
+        sources: const [_first],
+        discovery: lookup,
+        onRediscover: () => refresh,
+        onPlayEpisode: (target, handOff) {
+          asked.add(target);
+          return onPlayEpisode(target, handOff);
+        },
+      );
+      await advance(tester);
+      expect(showsVideo(), isTrue);
+      engine.players.single.fail('Source error: response code: 403');
+      await advance(tester);
+      // The refresh has no source yet: nothing new opened.
+      expect(engine.players, hasLength(1));
+
+      await pressNextEpisode(tester, asked: () => asked.isNotEmpty);
+      expect(asked.map((ref) => ref.episode), [2]);
+      return (refresh: refresh, asked: asked);
+    }
+
+    _testSession('a link found while the next episode is looked up does not '
+        'reopen the old episode', (tester) async {
+      final found = Completer<void>();
+      EpisodeHandOff? handOff;
+      final started = await startSwitch(tester, (target, offered) async {
+        handOff = offered;
+        await found.future;
+      });
+
+      started.refresh.add(_firstRenewed);
+      await advance(tester);
+      // Before the fix: S01E01 opened again (and played) behind the switch.
+      expect(engine.players, hasLength(1));
+
+      // The next episode's streams are found: this player lets go.
+      await handOff!.release();
+      await advance(tester);
+      expect(engine.live, isEmpty);
+      expect(engine.players, hasLength(1));
+      await closePlayer(tester);
+    });
+
+    _testSession('when the next episode finds no stream, the old one resumes '
+        'with the refreshed link, not the dead one', (tester) async {
+      final found = Completer<void>();
+      final started = await startSwitch(tester, (_, _) => found.future);
+
+      started.refresh.add(_firstRenewed);
+      await advance(tester);
+      found.complete();
+      await advance(tester);
+
+      expect(engine.players.map((player) => player.uri), [
+        _first.url,
+        _firstRenewed.url,
+      ]);
+      expect(engine.players.last.playCalls, 1);
+      expect(showsVideo(), isTrue);
+      await closePlayer(tester);
+    });
+
+    _testSession('when the new episode\'s player does not open after the '
+        'engine was released, the old one resumes with the refreshed link', (
+      tester,
+    ) async {
+      final found = Completer<void>();
+      final started = await startSwitch(tester, (_, handOff) async {
+        await found.future;
+        await handOff.release();
+        // Home could not open the new episode after all.
+      });
+
+      started.refresh.add(_firstRenewed);
+      await advance(tester);
+      found.complete();
+      await advance(tester);
+
+      expect(engine.players.map((player) => player.uri), [
+        _first.url,
+        _firstRenewed.url,
+      ]);
+      expect(engine.live.single.uri, _firstRenewed.url);
+      expect(engine.players.last.playCalls, 1);
+      await closePlayer(tester);
+    });
+
+    _testSession('a refresh with no switch still plays the renewed link at '
+        'once', (tester) async {
+      final lookup = StreamDiscovery()..add(_first);
+      final refresh = StreamDiscovery();
+      engine.onCreate = (player) => player.initialize();
+      await openPlayer(
+        tester,
+        sources: const [_first],
+        discovery: lookup,
+        onRediscover: () => refresh,
+        onPlayEpisode: (_, _) async {},
+      );
+      await advance(tester);
+      engine.players.single.fail('Source error: response code: 403');
+      await advance(tester);
+      refresh.add(_firstRenewed);
+      await advance(tester);
+
+      expect(engine.players.last.uri, _firstRenewed.url);
+      expect(engine.players.last.playCalls, 1);
+      await closePlayer(tester);
+    });
+
+    _testSession('a next episode that finds no stream leaves the playing '
+        'episode playing, and repeated presses ask once', (tester) async {
+      final found = Completer<void>();
+      final asked = <EpisodeRef>[];
+      engine.onCreate = (player) => player.initialize();
+      await openPlayer(
+        tester,
+        sources: const [_first],
+        onPlayEpisode: (target, _) {
+          asked.add(target);
+          return found.future;
+        },
+      );
+      await advance(tester);
+      final playing = engine.players.single;
+      expect(playing.playCalls, 1);
+
+      await pressNextEpisode(tester, asked: () => asked.isNotEmpty);
+      // A second press while the switch runs is ignored.
+      await pressNextEpisode(tester, asked: () => asked.length > 1);
+      expect(asked, hasLength(1));
+
+      found.complete();
+      await advance(tester);
+      expect(engine.players, hasLength(1));
+      expect(playing.disposed, isFalse);
+      // Paused for the switch, then playing again.
+      expect(playing.playCalls, 2);
+      await closePlayer(tester);
+    });
   });
 
   // PB-19 (docs/REELISH_PLAYBACK_AUDIT.md). The test device's language is

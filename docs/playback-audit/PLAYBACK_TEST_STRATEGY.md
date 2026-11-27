@@ -50,7 +50,7 @@ files.
 | Two dead top-priority providers, one fast | first source ≈ fast provider time after one demotion | PB-02 |
 | `discoverStreams(fresh: true)` | returns a new discovery while one is in flight | PB-05 |
 | `StreamSource.identityKey` | mixed-case header names give one key | PB-11 |
-| `PlaybackMetrics` new fields | `resolveMs`, `prepareMs`, `attempts` and `fromCache` in the event; no names or URLs | PB-10 |
+| `PlaybackMetrics` new fields | Done: `analytics_test` (stages, left-out stages, privacy, limits, consent), `provider_lookup_scheduling_test` (lookup counts) | PB-10 |
 | Retry and timeout | the reconnect delays (1 s, 3 s) and the 2-in-2-min limit, through an injectable clock | existing behaviour |
 
 ## Recommended widget tests (fake engine harness)

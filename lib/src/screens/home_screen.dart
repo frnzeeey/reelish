@@ -48,6 +48,7 @@ import '../services/torrent_source_preparer.dart';
 import '../services/tmdb_service.dart';
 import '../services/plugin_library_repository.dart';
 import '../services/provider_plugin_service.dart';
+import '../services/playback_metrics.dart' show SourceResolution;
 import '../services/playback_settings_controller.dart';
 import '../services/playback_quality_policy.dart';
 import '../app/app_services.dart';
@@ -1014,6 +1015,27 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         Future.any<T?>([future, searchCancelled.future.then((_) => null)]);
 
     PerfTimeline.begin('PLAY_PRESSED');
+    // Restarted once an episode is chosen: the stages below are measured
+    // from Play, never including time the viewer spends choosing.
+    final playClock = Stopwatch()..start();
+
+    /// A Play that ends without a player: counts and times, never which
+    /// providers or title. Nothing is sent when no lookup ran.
+    void reportLookup(StreamDiscovery? lookup, LookupOutcome outcome) {
+      if (lookup == null) return;
+      final stats = lookup.stats;
+      AnalyticsService.instance.log(
+        AnalyticsEvent.sourceLookup(
+          contentType: item.type,
+          outcome: outcome,
+          lookupMs: playClock.elapsedMilliseconds,
+          runs: stats.runs,
+          failed: stats.failed,
+          stalled: stats.stalled,
+        ),
+      );
+    }
+
     int? season = selectedSeason, episode = selectedEpisode;
     if (item.type == 'series' && (season == null || episode == null)) {
       var episodeList = <Map<String, dynamic>>[];
@@ -1061,6 +1083,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       }
       season = selected.season;
       episode = selected.episode;
+      playClock.reset();
     }
     if (presentationContext?.mounted == true) {
       searchDialogOpen = true;
@@ -1112,6 +1135,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       StreamDiscovery? discovery;
       StreamSource? source;
       var sourceFromCache = false;
+      var pickedByViewer = false;
       if (playback.reuseLastLink) {
         source = await _storage.lastStream(
           item,
@@ -1138,6 +1162,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           discovery.startingSource(quality: quality),
         );
         if (searchCancelled.isCompleted) {
+          reportLookup(discovery, LookupOutcome.cancelled);
           discovery.cancel();
           return;
         }
@@ -1157,6 +1182,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ]),
           );
           if (searchCancelled.isCompleted) {
+            reportLookup(discovery, LookupOutcome.cancelled);
             discovery.cancel();
             return;
           }
@@ -1184,9 +1210,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               finished: discovery.finished,
             );
             if (source == null) {
+              reportLookup(discovery, LookupOutcome.declined);
               discovery.cancel();
               return;
             }
+            pickedByViewer = true;
           }
         }
       }
@@ -1194,6 +1222,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       // Cancelled during a step that does not watch for it (such as the
       // saved-link read): the player must not open anyway.
       if (!mounted || searchCancelled.isCompleted) {
+        if (searchCancelled.isCompleted) {
+          reportLookup(discovery, LookupOutcome.cancelled);
+        }
         discovery?.cancel();
         return;
       }
@@ -1208,6 +1239,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         setState(() => _resolvingStreams = false);
       }
       if (source == null) {
+        reportLookup(discovery, LookupOutcome.noSource);
         discovery?.cancel();
         final message =
             (discovery == null
@@ -1270,6 +1302,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           .then<MediaDetails?>((value) => value, onError: (Object _) => null);
       beforePlayerOpens();
       PerfTimeline.end('PLAY_PRESSED', 'PLAYER_OPEN');
+      final resolution = SourceResolution(
+        origin: sourceFromCache
+            ? SourceOrigin.cache
+            : pickedByViewer
+            ? SourceOrigin.manual
+            : SourceOrigin.auto,
+        // A picked source includes the viewer's time with the list.
+        resolved: pickedByViewer ? null : playClock.elapsed,
+        lookup: discovery?.stats,
+      );
       _spotlightTimer?.cancel();
       final route = AppPageRoute<void>(
         context: context,
@@ -1278,6 +1320,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           source: selectedSource,
           sources: discovery?.sources ?? [selectedSource],
           discovery: discovery,
+          resolution: resolution,
           storage: _storage,
           playbackSettings: _playbackSettings,
           sourceFromCache: sourceFromCache,
@@ -1293,6 +1336,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               episode: episode,
               allowedPluginIds: current.allowedProviderIds,
               allowTorrents: current.p2pStreaming && TorrentSupport.available,
+              // A refresh needs new links, not the lookup still running.
+              fresh: true,
             );
           },
           episodeLabel: season == null || episode == null

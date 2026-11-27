@@ -92,7 +92,11 @@ order:
    signed URL, so providers are asked again (`_refreshAfterCachedFailure`).
    So is a source that played and no longer opens (`_refreshDeadLink`),
    at most twice per session (`LinkRefreshBudget`); it returns to the same
-   source when the providers still offer it, at the same position.
+   source when the providers still offer it, at the same position. A
+   refresh is always a new lookup (`discoverStreams(fresh: true)`), never
+   the first lookup still running, which only has the links it already gave
+   (PB-05). That first lookup keeps running and its late sources still
+   become candidates.
 4. **Other engine** for the same source, when the failure kind can depend
    on the engine (`canTryAnotherEngine`: manifest, format, decoder,
    rendering, engine, source, unknown), the engine can open the URL

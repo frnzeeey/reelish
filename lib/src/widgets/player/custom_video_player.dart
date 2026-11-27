@@ -91,6 +91,7 @@ class CustomVideoPlayer extends StatefulWidget {
     this.sourceFromCache = false,
     this.streamCacheKey,
     this.discovery,
+    this.resolution,
     this.onRediscover,
     this.onPlayEpisode,
     this.episodeLabel = '',
@@ -115,8 +116,12 @@ class CustomVideoPlayer extends StatefulWidget {
   final String? streamCacheKey;
   final StreamDiscovery? discovery;
 
+  /// How [source] was found, for the session's diagnostics.
+  final SourceResolution? resolution;
+
   /// Starts a fresh progressive provider lookup for this title, used by
-  /// Retry and when a cached link has expired.
+  /// Retry and when a link has expired. It must be a new lookup, not
+  /// [discovery] still running: that one only has the links it already gave.
   final StreamDiscovery Function()? onRediscover;
 
   /// Plays another episode of this series through the app's play flow,
@@ -463,6 +468,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
   bool _cachedRefreshAttempted = false;
   StreamSubscription<StreamSource>? _discoverySubscription;
   StreamDiscovery? _rediscovery;
+  StreamSubscription<StreamSource>? _rediscoverySubscription;
 
   /// Last playback position of this session, so a source switch or recovery
   /// resumes where the viewer was rather than at the original resume point.
@@ -554,8 +560,11 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
           )
         : null;
     _source = widget.source;
+    _metrics.resolution = widget.resolution;
     final discovery = widget.discovery;
-    if (discovery != null) _listenForSources(discovery);
+    if (discovery != null) {
+      _discoverySubscription = _listenForSources(discovery);
+    }
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     unawaited(_resolveEpisodes());
     unawaited(_resolveDetails());
@@ -582,9 +591,10 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
 
   /// Adds sources from [discovery] as fallback candidates while it runs, and
   /// resumes playback with one when every earlier candidate has failed.
-  void _listenForSources(StreamDiscovery discovery) {
-    unawaited(_discoverySubscription?.cancel());
-    _discoverySubscription = discovery.updates.listen((source) {
+  StreamSubscription<StreamSource> _listenForSources(
+    StreamDiscovery discovery,
+  ) {
+    return discovery.updates.listen((source) {
       if (!mounted || !source.isPlayable || !_isSourceAllowed(source)) return;
       if (!_playbackCoordinator.addCandidate(source)) return;
       setState(() => _sources.add(source));
@@ -633,7 +643,9 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
           '${PlaybackLog.describe(source)}',
     );
     if (!mounted) return;
-    _metrics.interrupted();
+    _metrics
+      ..interrupted()
+      ..attempted();
     final previousOpen = _openCancellation;
     if (previousOpen != null && !previousOpen.isCompleted) {
       previousOpen.complete();
@@ -740,7 +752,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
             'actual=${c.value.size.height.round()}p '
             'target=${_playbackCoordinator.quality?.height ?? '?'}p',
       );
-      _metrics.opened(attemptClock.elapsed);
+      _metrics.opened(attemptClock.elapsed, prepared: opened.preparation);
       _metrics.sourceType(
         source.isTorrent ? 'torrent' : playable.streamType.name,
       );
@@ -1268,6 +1280,11 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
   /// player that replaces it, so disposing this one saves nothing stale.
   bool _progressHandedOff = false;
 
+  /// A source a link refresh found while an episode switch was running: not
+  /// opened then, since this episode is being left (PB-04). [_playEpisode]
+  /// opens it if the viewer stays.
+  StreamSource? _sourceAfterSwitch;
+
   /// The single way this player moves to another episode. The current
   /// position is saved first, so each episode keeps its own progress.
   /// Repeated taps while a switch is running are ignored.
@@ -1313,10 +1330,14 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
     if (!mounted) return;
     _progressHandedOff = false;
     setState(() => _switchingEpisode = false);
-    if (released) {
+    // A link refresh that finished during the switch (PB-04) holds this
+    // episode's fresh source; the dead one it replaced is not reopened.
+    final refreshed = _sourceAfterSwitch;
+    _sourceAfterSwitch = null;
+    if (released || refreshed != null) {
       // The new player did not open after all; reopen this episode at the
       // position it was left.
-      unawaited(_initialize(_source ?? widget.source));
+      unawaited(_initialize(refreshed ?? _source ?? widget.source));
       return;
     }
     if (wasPlaying && identical(c, _controller)) {
@@ -1463,8 +1484,14 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
     try {
       final previous = _rediscovery;
       discovery = rediscover();
-      // Lookups are shared per title, so the new one may be the same object.
-      if (!identical(previous, discovery)) previous?.cancel();
+      // A lookup this player already follows has no new links: it would
+      // hand back the one that just failed (PB-05). Leave it running, for
+      // its late sources, and let the failure policy move on.
+      if (identical(discovery, widget.discovery) ||
+          identical(discovery, previous)) {
+        return false;
+      }
+      previous?.cancel();
       _rediscovery = discovery;
       first = await discovery.firstSource;
     } catch (_) {
@@ -1478,7 +1505,10 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
     _playbackCoordinator
       ..replaceCandidates(fresh)
       ..reset();
-    _listenForSources(discovery);
+    // The first lookup keeps its own subscription: providers that had not
+    // answered yet still add their sources as candidates.
+    unawaited(_rediscoverySubscription?.cancel());
+    _rediscoverySubscription = _listenForSources(discovery);
     final match = prefer == null
         ? null
         : fresh
@@ -1489,7 +1519,16 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
                     source.description == prefer.description,
               )
               .firstOrNull;
-    await _initialize(match ?? fresh.first);
+    final next = match ?? fresh.first;
+    // The viewer is moving to another episode (PB-04): opening this one now
+    // would play it behind the hand-off, or beside the new episode's player
+    // once the engine is released. Keep it for when the switch falls
+    // through; any other recovery is unaffected.
+    if (_switchingEpisode) {
+      _sourceAfterSwitch = next;
+      return true;
+    }
+    await _initialize(next);
     return true;
   }
 
@@ -3304,6 +3343,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
     _stallWatchdog?.dispose();
     PlayerPip.detach(this);
     _discoverySubscription?.cancel();
+    _rediscoverySubscription?.cancel();
     // Stop starting further providers for a lookup this screen started.
     _rediscovery?.cancel();
     widget.playbackSettings.removeListener(_onPlaybackSettingsChanged);

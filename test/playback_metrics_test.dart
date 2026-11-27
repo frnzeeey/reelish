@@ -36,7 +36,7 @@ void main() {
       metrics.summary(),
       'engine=mediaKit firstFrame=1800ms rebuffers=2 (3100ms) stalls=1 '
       'failures=http:1,timeout:1 open=- playToFrame=- rebufferRatio=100.0% '
-      'recovered=0/0 (0ms) close=0ms',
+      'recovered=0/0 (0ms) close=0ms prepare=- opens=0',
     );
   });
 
@@ -114,7 +114,7 @@ void main() {
       metrics.summary(),
       'engine=- firstFrame=never rebuffers=0 (0ms) stalls=0 '
       'failures=network:1 open=- playToFrame=- rebufferRatio=- '
-      'recovered=0/0 (0ms) close=0ms',
+      'recovered=0/0 (0ms) close=0ms prepare=- opens=0',
     );
   });
 }

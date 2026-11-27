@@ -48,6 +48,26 @@ engine. So:
 Do not change engine order, the scheme routing or the gate without a
 verified cause; see the `playback-audit` skill.
 
+## One DASH stream per session on Windows
+
+The Windows libmpv (`media_kit_libs_windows_video` 1.0.11: mpv 0.36,
+FFmpeg n6.0) crashes the whole app (access violation) on the second DASH
+manifest it parses in a process: FFmpeg's DASH demuxer calls libxml2's
+process-wide `xmlCleanupParser()` after every manifest (FFmpeg ticket
+#11236). `WindowsDashGuard` (`player_engine.dart`) therefore lets
+`MpvPlayerEngine` open one DASH source per session on Windows; a later one,
+including a reconnect of the same source, throws `DashReopenUnsupported`
+before libmpv sees it. That classifies as a `format` failure, so the player
+tries the next source; if none plays, the error says to restart Reelish.
+
+Only sources recognized as DASH (provider hint, `application/dash+xml`,
+`.mpd` path) are held back; a DASH stream without those signs is still
+detected by libmpv itself and can still crash. Android is unaffected (DASH
+over HTTPS plays on Media3; Android's libmpv was not tested). The real fix
+is a libmpv build without that call. Details:
+[RELIABILITY_OPTIMIZATION_REPORT.md](../playback-audit/RELIABILITY_OPTIMIZATION_REPORT.md)
+(PB-24).
+
 ## Torrents
 
 On Android, compatible providers may return torrent (magnet / info hash)

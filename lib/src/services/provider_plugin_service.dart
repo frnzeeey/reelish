@@ -100,18 +100,21 @@ class ProviderPluginService extends ChangeNotifier {
   static String _providerKey((ProviderRepository, ProviderPlugin) entry) =>
       '${entry.$1.url}|${entry.$2.id}';
 
-  void _noteProviderRun(
+  /// Returns whether the run wasted its slot (is demoted).
+  bool _noteProviderRun(
     (ProviderRepository, ProviderPlugin) entry,
     Duration took, {
     required bool found,
     bool timedOut = false,
   }) {
     final key = _providerKey(entry);
-    if (!found && (timedOut || took >= _stallAfter)) {
+    final stalled = !found && (timedOut || took >= _stallAfter);
+    if (stalled) {
       _stalledProviders.add(key);
     } else {
       _stalledProviders.remove(key);
     }
+    return stalled;
   }
 
   bool _disposed = false;
@@ -639,12 +642,21 @@ class ProviderPluginService extends ChangeNotifier {
           value['file'] != null ||
           value['script'] != null);
 
+  /// Starts a progressive lookup, or returns the one already running for the
+  /// same title, episode and filters.
+  ///
+  /// [fresh] always starts a new lookup: a link refresh needs new answers
+  /// from the providers, and a running lookup only has the links it already
+  /// returned, including the one that just failed (PB-05). It runs through
+  /// the same worker pool and runtime slots as any other lookup, and leaves
+  /// the running one alone: its late sources still reach whoever listens.
   StreamDiscovery discoverStreams(
     MediaItem item, {
     int? season,
     int? episode,
     Set<String>? allowedPluginIds,
     bool allowTorrents = true,
+    bool fresh = false,
   }) {
     final filterKey = allowedPluginIds == null
         ? '*'
@@ -652,7 +664,7 @@ class ProviderPluginService extends ChangeNotifier {
     final key =
         '${item.type}|${item.id}|${season ?? ''}|${episode ?? ''}|$filterKey|$allowTorrents';
     final existing = _inflightDiscoveries[key];
-    if (existing != null && !existing.isCancelled) return existing;
+    if (!fresh && existing != null && !existing.isCancelled) return existing;
 
     final discovery = StreamDiscovery();
     _inflightDiscoveries[key] = discovery;
@@ -669,6 +681,7 @@ class ProviderPluginService extends ChangeNotifier {
           isCancelled: () => discovery.isCancelled,
           cancelled: discovery.whenCancelled,
           onMessage: (message) => discovery.message = message,
+          onProviderRun: discovery.providerRan,
         );
       } catch (error) {
         discovery.message = lastLookupMessage = _friendly(error);
@@ -693,6 +706,8 @@ class ProviderPluginService extends ChangeNotifier {
     bool Function()? isCancelled,
     Future<void>? cancelled,
     void Function(String? message)? onMessage,
+    // Each provider that ran (or failed to start): counts for diagnostics.
+    void Function({required bool failed, required bool stalled})? onProviderRun,
   }) async {
     // Why this lookup found nothing, or null. Reported to [onMessage], so
     // concurrent lookups each keep their own, and kept in
@@ -898,11 +913,12 @@ class ProviderPluginService extends ChangeNotifier {
                 onSource?.call(source);
               }
             }
-            _noteProviderRun(
+            final stalled = _noteProviderRun(
               (repo, plugin),
               runClock.elapsed,
               found: found > 0,
             );
+            onProviderRun?.call(failed: false, stalled: stalled);
           } finally {
             _scheduler.releaseRuntime();
           }
@@ -911,14 +927,15 @@ class ProviderPluginService extends ChangeNotifier {
           return;
         } catch (error) {
           final ran = runClock;
-          if (ran != null) {
-            _noteProviderRun(
-              (repo, plugin),
-              ran.elapsed,
-              found: found > 0,
-              timedOut: error is TimeoutException,
-            );
-          }
+          final stalled =
+              ran != null &&
+              _noteProviderRun(
+                (repo, plugin),
+                ran.elapsed,
+                found: found > 0,
+                timedOut: error is TimeoutException,
+              );
+          onProviderRun?.call(failed: true, stalled: stalled);
           final message = _friendly(error);
           if (kDebugMode) {
             // ignore: avoid_print
@@ -954,11 +971,7 @@ class ProviderPluginService extends ChangeNotifier {
     }
     final unique = <String, StreamSource>{};
     for (final stream in results) {
-      final headersKey = stream.headers.entries.toList()
-        ..sort((a, b) => a.key.compareTo(b.key));
-      final key =
-          '${stream.url}|${jsonEncode(headersKey.map((e) => [e.key, e.value]).toList())}';
-      unique.putIfAbsent(key, () => stream);
+      unique.putIfAbsent(stream.identityKey, () => stream);
     }
     if (searchTimedOut) {
       final timeoutSeconds = searchTimeout.inSeconds;

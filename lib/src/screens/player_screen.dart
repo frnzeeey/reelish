@@ -5,6 +5,7 @@ import '../models/media_details.dart';
 import '../models/media_item.dart';
 import '../models/stream_source.dart';
 import '../services/storage_service.dart';
+import '../services/playback_metrics.dart' show SourceResolution;
 import '../services/stream_discovery.dart';
 import '../services/playback_settings_controller.dart';
 import '../platform/device_capabilities.dart';
@@ -22,6 +23,7 @@ class PlayerScreen extends StatelessWidget {
     this.sourceFromCache = false,
     this.streamCacheKey,
     this.discovery,
+    this.resolution,
     this.onRediscover,
     this.onPlayEpisode,
     this.episodeLabel = '',
@@ -41,6 +43,9 @@ class PlayerScreen extends StatelessWidget {
   final bool sourceFromCache;
   final String? streamCacheKey;
   final StreamDiscovery? discovery;
+
+  /// How [source] was found, for the session's diagnostics.
+  final SourceResolution? resolution;
   final StreamDiscovery Function()? onRediscover;
   final EpisodeSwitch? onPlayEpisode;
   final String episodeLabel;
@@ -74,6 +79,7 @@ class PlayerScreen extends StatelessWidget {
       sourceFromCache: sourceFromCache,
       streamCacheKey: streamCacheKey,
       discovery: discovery,
+      resolution: resolution,
       onRediscover: onRediscover,
       onPlayEpisode: onPlayEpisode,
       episodeLabel: episodeLabel,

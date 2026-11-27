@@ -49,6 +49,7 @@ country from its automatic events (`first_open`, `session_start`,
 | `select_content` | `content_type` (`movie`/`series`), `item_id` (TMDB id), `origin` (`continue_watching`, when opened from watch history) | A details page opens | Which titles people look at; movies versus series |
 | `search_performed` | `outcome` (`results`, `no_results`, `failed`), `results` (0–20, 21 = more) | A search settles (phone search, TV search); refreshing the same results does not count | Whether search finds things; never the text |
 | `playback_session` | `content_type`, `item_id`, `outcome` (`played`, `failed`, `abandoned`, `interrupted`), `engine`, `first_frame_ms`, `rebuffers`, `rebuffer_ms`, `stalls`, `failure` (first failure kind, such as `http`, `timeout`, `decoder`), `watched_pct` (tens), `watch_party` (0/1), `source_type` (`hls`, `dash`, `progressive`, `torrent`…) | Once, when the player closes | Startup time, playback failure and abandonment rates, buffering, completion |
+| `source_lookup` | `content_type`, `outcome` (`no_source`, `cancelled`, `declined`), `lookup_ms` (Play to the end), `lookup_runs`, `lookup_failed`, `lookup_stalled` (counts of provider runs) | A Play that never opens the player, once; only when a provider lookup ran | Whether provider discovery is why some Plays never start |
 | `feature_used` | `feature`: `my_list_add`, `my_list_remove`, `watch_party_create`, `watch_party_join` (a guest reached the room, once per party), `plugin_repository_install`, `accent_change`, `app_icon_change`, `episode_alerts_on`, `update_accepted` | The feature succeeds | Which features matter |
 | `watch_party_session` | `role` (`host`/`guest`), `end_reason`, `minutes`, `reconnects` | Once, when this device's part in a party ends | How long parties last; whether connections hold |
 | `watch_party_failed` | `step` (`create`, `join`), `reason` (a fixed code, such as `not_found`, `full`) | A party could not be created or reached | Why people fail to get into a party |
@@ -79,6 +80,29 @@ waiting for data), `recoveries` and `recovered` (playback interruptions, and
 how many of them resumed). `interrupted` means a first frame was shown and
 playback then failed for good.
 
+It also says where start-up time went (stage attribution). A stage that did
+not run is left out, never sent as zero:
+
+| Parameter | Stage |
+|---|---|
+| `source_origin` | `cache` (saved last link), `auto` (chosen from a lookup), `manual` (picked from the list) |
+| `first_source_ms` | Provider lookup start to its first playable source (not for `cache`) |
+| `resolve_ms` | Play to the player opening: ID lookup, cache read, discovery and the quality wait (not for `manual`, which includes the viewer's time) |
+| `lookup_stalled` | Provider runs that timed out or took 10 s without a source, by the session's end (not for `cache`) |
+| `prepare_ms` | Address and host checks of the first source that opened |
+| `open_ms` | The same attempt from its start to the engine being ready (includes `prepare_ms`) |
+| `opens` | Every open the player started: first source, reconnects, other engine, other sources |
+| `recovery_ms` | Time spent recovering from interruptions, including one still running at close |
+
+`first_frame_ms` is measured from the player opening, so a Play's whole
+start-up is roughly `resolve_ms` + `first_frame_ms`. These are counts,
+durations and fixed words; provider identity is never sent, so a slow or
+failing provider shows up only as `lookup_stalled` and
+`source_lookup.lookup_failed`. Windows has no analytics: there the same
+stages appear only in the debug and profile summary line
+(`[Playback][Summary] … prepare= opens= origin= resolve= firstSource=
+lookup=…`).
+
 Useful reports: playback success rate = `playback_session` with
 `outcome = played` ÷ all sessions; recovery rate = sum of `recovered` ÷ sum
 of `recoveries`; completion = `watched_pct ≥ 90` among
@@ -86,6 +110,9 @@ played sessions; startup = median `first_frame_ms`. Register
 `content_type`, `outcome`, `failure`, `feature`, `screen_name` as custom
 dimensions and `first_frame_ms`, `play_to_frame_ms`, `rebuffer_ms`, `rebuffer_pct`,
 `recoveries`, `recovered`, `watched_pct` as custom
+metrics; for stage attribution add `source_origin` as a dimension and
+`first_source_ms`, `resolve_ms`, `prepare_ms`, `open_ms`, `opens`,
+`recovery_ms`, `lookup_stalled` and `source_lookup`'s `lookup_ms` as custom
 metrics in the Firebase console to see them in reports.
 
 ## Setting up Firebase (once)

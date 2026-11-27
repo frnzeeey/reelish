@@ -107,9 +107,15 @@ provider work.
 
 Every returned entry is normalised into a `StreamSource` (provider id is
 `repositoryUrl|pluginId`, matching the Playback settings keys), validated,
-and filtered by the viewer's P2P setting. `StreamDiscovery` de-duplicates by
-URL and headers. The player keeps listening to the same discovery while it
-runs, so later sources become fallback candidates
+and filtered by the viewer's P2P setting. One rule decides whether two
+results are the same source, `StreamSource.identityKey`, used by the
+provider search, `StreamDiscovery` and the player's attempts
+(`PlaybackCoordinator.sourceKey`): the exact URL (query and signature
+included) with its headers, names in any case or order and values exactly;
+a torrent given only by info hash is that hash (any case) and its file
+index. The provider is not part of it: the same request from two providers
+is listed once, under the first. The player keeps listening to the same
+discovery while it runs, so later sources become fallback candidates
 (`CustomVideoPlayer._listenForSources`).
 
 ## Tests

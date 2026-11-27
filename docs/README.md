@@ -118,6 +118,7 @@ Playback audit (2026-11-13, static review of v1.33.1; findings await review):
 | [Audit: test strategy](playback-audit/PLAYBACK_TEST_STRATEGY.md) | Existing coverage, gaps, fake-engine harness, device and stress tests |
 | [Audit: remediation roadmap](playback-audit/PLAYBACK_REMEDIATION_ROADMAP.md) | Phased fixes with dependencies, risks and definitions of done |
 | [Audit: deep audit 2026-11-21](playback-audit/DEEP_AUDIT_2026-11-21.md) | Measured provider waits: lookups that hold runtime slots (PB-01), slow top providers (PB-02); fixes and results |
+| [Reliability and optimization report](playback-audit/RELIABILITY_OPTIMIZATION_REPORT.md) | Checkpoint log of the 2026-11 reliability initiative: baseline, fresh lookups for link refresh (PB-05), later checkpoints |
 
 Playback audit (2026-11-20, runtime investigation on Windows; follows the one above):
 

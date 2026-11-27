@@ -37,6 +37,31 @@ enum PlaybackOutcome {
   interrupted,
 }
 
+/// Where the source a player session started with came from.
+enum SourceOrigin {
+  /// The saved last link (Playback settings: reuse last link).
+  cache,
+
+  /// Chosen automatically from a provider lookup.
+  auto,
+
+  /// The viewer picked it from the source list.
+  manual,
+}
+
+/// How a Play that never opened the player ended, for
+/// [AnalyticsEvent.sourceLookup].
+enum LookupOutcome {
+  /// The lookup finished without a playable source.
+  noSource,
+
+  /// The viewer stopped the search before a source was chosen.
+  cancelled,
+
+  /// Sources were found and the viewer closed the list without picking.
+  declined,
+}
+
 class AnalyticsEvent {
   AnalyticsEvent._(this.name, Map<String, Object> parameters)
     : parameters = _clean(parameters) {
@@ -89,6 +114,14 @@ class AnalyticsEvent {
     int? watchedPercent,
     bool watchParty = false,
     String sourceType = '',
+    SourceOrigin? origin,
+    int? firstSourceMs,
+    int? resolveMs,
+    int? lookupStalled,
+    int? prepareMs,
+    int? openMs,
+    int opens = 0,
+    int recoveryMs = 0,
   }) => AnalyticsEvent._('playback_session', {
     'content_type': _kind(contentType),
     'item_id': itemId,
@@ -106,6 +139,35 @@ class AnalyticsEvent {
     'watched_pct': ?watchedPercent,
     'watch_party': watchParty ? 1 : 0,
     if (sourceType.isNotEmpty) 'source_type': sourceType,
+    // Where the start-up time went (PB-10). A stage that did not run is
+    // left out, never sent as zero.
+    if (origin != null) 'source_origin': origin.name,
+    'first_source_ms': ?firstSourceMs,
+    'resolve_ms': ?resolveMs,
+    'lookup_stalled': ?lookupStalled,
+    'prepare_ms': ?prepareMs,
+    'open_ms': ?openMs,
+    'opens': opens,
+    'recovery_ms': recoveryMs,
+  });
+
+  /// A Play that never opened the player: no source was found, or the
+  /// viewer stopped waiting. Sent once per Play; counts and times only,
+  /// never which providers or what title.
+  factory AnalyticsEvent.sourceLookup({
+    required String contentType,
+    required LookupOutcome outcome,
+    required int lookupMs,
+    required int runs,
+    required int failed,
+    required int stalled,
+  }) => AnalyticsEvent._('source_lookup', {
+    'content_type': _kind(contentType),
+    'outcome': _snake(outcome.name),
+    'lookup_ms': lookupMs,
+    'lookup_runs': runs,
+    'lookup_failed': failed,
+    'lookup_stalled': stalled,
   });
 
   /// One party, sent when this device's part in it ends. How long parties
