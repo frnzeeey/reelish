@@ -162,7 +162,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/services/network_target_policy.dart`](#libsrcservicesnetwork_target_policydart) | Shared | 332 | The network destination policy for provider requests and streams: public addresses only, header checks, and connections pinned to the validated address. |
 | [`lib/src/services/paged_feed_controller.dart`](#libsrcservicespaged_feed_controllerdart) | Shared | 497 | The pages of one home row: what is loaded, whether more exist, and the guards that keep requests for it from piling up. |
 | [`lib/src/services/perf_timeline.dart`](#libsrcservicesperf_timelinedart) | Shared | 37 | Development-only milestones measured from process start, for spotting regressions in startup, browsing and playback. |
-| [`lib/src/services/playback_coordinator.dart`](#libsrcservicesplayback_coordinatordart) | Shared | 490 | Owns candidate identity, ranking and the bounded source-attempt policy independently of widget rendering. |
+| [`lib/src/services/playback_coordinator.dart`](#libsrcservicesplayback_coordinatordart) | Shared | 528 | Owns candidate identity, ranking and the bounded source-attempt policy independently of widget rendering. |
 | [`lib/src/services/playback_metrics.dart`](#libsrcservicesplayback_metricsdart) | Shared | 296 | One player session's timings and failures. |
 | [`lib/src/services/playback_quality_policy.dart`](#libsrcservicesplayback_quality_policydart) | Shared | 100 | Turns the Preferred video quality setting into a QualityTarget for this device and connection (docs/playback/quality-prioritization.md). |
 | [`lib/src/services/playback_settings_controller.dart`](#libsrcservicesplayback_settings_controllerdart) | Shared | 43 | Loads, holds and saves the playback settings. |
@@ -182,7 +182,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/services/source_preparer.dart`](#libsrcservicessource_preparerdart) | Shared | 70 | Validates a source, its headers and its destination before an engine opens it. |
 | [`lib/src/services/source_quality.dart`](#libsrcservicessource_qualitydart) | Shared | 87 | Resolution for choosing between provider sources: what each source claims, and how sources rank against a quality target (docs/playback/ quality-prioritization.md). |
 | [`lib/src/services/storage_service.dart`](#libsrcservicesstorage_servicedart) | Shared | 1110 | Local storage on SharedPreferences: watch history and per-episode progress, My list, provider repositories, cached manifests, settings and remembered subtitles. |
-| [`lib/src/services/stream_discovery.dart`](#libsrcservicesstream_discoverydart) | Shared | 186 | Owns one progressive provider lookup and its results for one playback request. |
+| [`lib/src/services/stream_discovery.dart`](#libsrcservicesstream_discoverydart) | Shared | 189 | Owns one progressive provider lookup and its results for one playback request. |
 | [`lib/src/services/stream_normalizer.dart`](#libsrcservicesstream_normalizerdart) | Shared | 32 | Converts provider-specific JSON shapes into Reelish's canonical source. |
 | [`lib/src/services/stream_validator.dart`](#libsrcservicesstream_validatordart) | Shared | 23 | Cheap source checks before native player open. |
 | [`lib/src/services/subtitle_addon_service.dart`](#libsrcservicessubtitle_addon_servicedart) | Shared | 400 | Installed Stremio subtitle addons and their searches: every enabled, compatible addon is asked for `subtitles/{type}/{id}.json` in parallel, and each addon's results are reported as they arrive. |
@@ -243,7 +243,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 | [`lib/src/widgets/player/audio_switch_check.dart`](#libsrcwidgetsplayeraudio_switch_checkdart) | Shared | 76 | Confirms that playback goes on after libmpv switches the audio track. |
 | [`lib/src/widgets/player/audio_track_sheet.dart`](#libsrcwidgetsplayeraudio_track_sheetdart) | Shared | 283 | Picks an audio track. |
 | [`lib/src/widgets/player/content_advisory_overlay.dart`](#libsrcwidgetsplayercontent_advisory_overlaydart) | Shared | 246 | The age rating and content advisory shown briefly when a title starts. |
-| [`lib/src/widgets/player/custom_video_player.dart`](#libsrcwidgetsplayercustom_video_playerdart) | Shared | 4262 | The player session for every platform: engine and source attempts, controls, subtitles, audio and video tracks, resume and progress saving, and episode switching. |
+| [`lib/src/widgets/player/custom_video_player.dart`](#libsrcwidgetsplayercustom_video_playerdart) | Shared | 4352 | The player session for every platform: engine and source attempts, controls, subtitles, audio and video tracks, resume and progress saving, and episode switching. |
 | [`lib/src/widgets/player/episode_panel.dart`](#libsrcwidgetsplayerepisode_paneldart) | Shared | 839 | Lists a series' episodes by season, with thumbnails, runtimes, synopses and the viewer's progress. |
 | [`lib/src/widgets/player/external_cue_clock.dart`](#libsrcwidgetsplayerexternal_cue_clockdart) | Shared | 199 | The text of the downloaded subtitle cue that should be on screen, kept in step with the player's own clock. |
 | [`lib/src/widgets/player/gesture_touch_layer.dart`](#libsrcwidgetsplayergesture_touch_layerdart) | Shared | 100 | Touch handling for the video area. |
@@ -2746,7 +2746,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/services/playback_coordinator.dart
 
-**Source:** [`lib/src/services/playback_coordinator.dart`](../../lib/src/services/playback_coordinator.dart) · **Platform:** Shared · **Lines:** 490
+**Source:** [`lib/src/services/playback_coordinator.dart`](../../lib/src/services/playback_coordinator.dart) · **Platform:** Shared · **Lines:** 528
 
 **Purpose:** Owns candidate identity, ranking and the bounded source-attempt policy independently of widget rendering.
 
@@ -3048,7 +3048,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/services/stream_discovery.dart
 
-**Source:** [`lib/src/services/stream_discovery.dart`](../../lib/src/services/stream_discovery.dart) · **Platform:** Shared · **Lines:** 186
+**Source:** [`lib/src/services/stream_discovery.dart`](../../lib/src/services/stream_discovery.dart) · **Platform:** Shared · **Lines:** 189
 
 **Purpose:** Owns one progressive provider lookup and its results for one playback request.
 
@@ -4032,7 +4032,7 @@ Every Dart file in `lib/`, sorted by path. For each: its purpose (the file's lea
 
 ## lib/src/widgets/player/custom_video_player.dart
 
-**Source:** [`lib/src/widgets/player/custom_video_player.dart`](../../lib/src/widgets/player/custom_video_player.dart) · **Platform:** Shared · **Lines:** 4262 · **Branches on:** isTv, isDesktop, usesTvLayout, TargetPlatform.windows, TargetPlatform.android, TorrentSupport
+**Source:** [`lib/src/widgets/player/custom_video_player.dart`](../../lib/src/widgets/player/custom_video_player.dart) · **Platform:** Shared · **Lines:** 4352 · **Branches on:** isTv, isDesktop, usesTvLayout, TargetPlatform.windows, TargetPlatform.android, TorrentSupport
 
 **Purpose:** The player session for every platform: engine and source attempts, controls, subtitles, audio and video tracks, resume and progress saving, and episode switching.
 

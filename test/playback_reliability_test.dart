@@ -254,6 +254,100 @@ void main() {
       coordinator.beginAttempt(failed, PlayerEngineId.media3);
       expect(coordinator.nextAfterFailure(failed), b);
     });
+
+    // Seen on a phone (28 November 2026): one provider's links to a host
+    // that answers with a page, not a file, filled the whole budget.
+    test('a host that served no video is tried last', () {
+      final coordinator = PlaybackCoordinator();
+      final page1 = _source(
+        'p1',
+        url: 'https://pages.example/a.m3u8',
+        provider: 'A',
+      );
+      final page2 = _source(
+        'p2',
+        url: 'https://Pages.example/b.m3u8',
+        provider: 'B',
+      );
+      final other = _source('other', provider: 'B');
+      coordinator.replaceCandidates([page1, page2, other]);
+      coordinator.beginAttempt(page1, PlayerEngineId.media3);
+      coordinator.recordFailure(
+        page1,
+        kind: PlaybackFailureKind.format,
+        hostSentNoVideo: true,
+      );
+
+      // page2 is from another provider and comes first in discovery order,
+      // but its host already sent a page instead of a video.
+      expect(coordinator.nextAfterFailure(page1), other);
+    });
+
+    test('a failure that says nothing about the host keeps its rank', () {
+      final coordinator = PlaybackCoordinator();
+      final dead = _source(
+        'd1',
+        url: 'https://files.example/a.m3u8',
+        provider: 'A',
+      );
+      final sameHost = _source(
+        'd2',
+        url: 'https://files.example/b.m3u8',
+        provider: 'B',
+      );
+      final other = _source('other', provider: 'C');
+      coordinator.replaceCandidates([dead, sameHost, other]);
+      coordinator.beginAttempt(dead, PlayerEngineId.media3);
+      // A missing file (404) is that file, not the host.
+      coordinator.recordFailure(dead, kind: PlaybackFailureKind.http);
+
+      expect(coordinator.nextAfterFailure(dead), sameHost);
+    });
+
+    test(
+      'past the budget, only candidates not yet discredited are offered',
+      () {
+        final coordinator = PlaybackCoordinator(maxAutomaticAttempts: 2);
+        final a1 = _source(
+          'a1',
+          url: 'https://pages.example/1.m3u8',
+          provider: 'A',
+        );
+        final a2 = _source(
+          'a2',
+          url: 'https://pages.example/2.m3u8',
+          provider: 'A',
+        );
+        final a3 = _source(
+          'a3',
+          url: 'https://pages.example/3.m3u8',
+          provider: 'A',
+        );
+        coordinator.replaceCandidates([a1, a2, a3]);
+        for (final source in [a1, a2]) {
+          coordinator.beginAttempt(source, PlayerEngineId.media3);
+          coordinator.recordFailure(
+            source,
+            kind: PlaybackFailureKind.format,
+            hostSentNoVideo: true,
+          );
+        }
+
+        expect(
+          coordinator.nextAfterFailure(a2),
+          isNull,
+          reason: 'budget spent',
+        );
+        // a3 is on the host that sent pages, from a provider that failed twice.
+        expect(coordinator.nextAfterFailure(a2, pastBudget: true), isNull);
+
+        final late = _source('late', provider: 'B');
+        coordinator.addCandidate(late);
+        expect(coordinator.nextAfterFailure(a2, pastBudget: true), late);
+        coordinator.beginAttempt(late, PlayerEngineId.media3);
+        expect(coordinator.nextAfterFailure(late, pastBudget: true), isNull);
+      },
+    );
   });
 
   // PB-24 (docs/playback-audit/RELIABILITY_OPTIMIZATION_REPORT.md): libmpv

@@ -293,6 +293,10 @@ class PlaybackCoordinator {
   final Set<String> _attemptedSources = {};
   final Set<String> _failedSources = {};
   final Map<String, int> _providerFailures = {};
+
+  /// Hosts that answered with something no engine recognized as video (a
+  /// web page where a file should be): their other links are tried last.
+  final Set<String> _hostsWithoutVideo = {};
   final List<StreamSource> _candidates = [];
 
   List<StreamSource> get candidates => List.unmodifiable(_candidates);
@@ -397,12 +401,22 @@ class PlaybackCoordinator {
   /// [PlaybackFailureKind.rendering] on a source claiming 1440p or more
   /// means the device could not show that size: [quality] drops below it,
   /// so other sources of the same size are not tried first.
-  void recordFailure(StreamSource source, {PlaybackFailureKind? kind}) {
+  ///
+  /// [hostSentNoVideo] means every engine tried read the response and found
+  /// no video in it: that host's other links are then tried last, since a
+  /// provider whose links to it are pages, not files, returns more of them.
+  void recordFailure(
+    StreamSource source, {
+    PlaybackFailureKind? kind,
+    bool hostSentNoVideo = false,
+  }) {
     if (!_failedSources.add(sourceKey(source))) return;
     final provider = source.providerName;
     if (provider.isNotEmpty) {
       _providerFailures[provider] = (_providerFailures[provider] ?? 0) + 1;
     }
+    final host = _hostOf(source);
+    if (hostSentNoVideo && host.isNotEmpty) _hostsWithoutVideo.add(host);
     final target = quality;
     final height = SourceQuality.claimedHeight(source);
     if (target != null &&
@@ -414,18 +428,43 @@ class PlaybackCoordinator {
     }
   }
 
+  /// The host of a direct link, lower case; empty for torrents, whose
+  /// trackers and peers are not one server.
+  static String _hostOf(StreamSource source) {
+    if (source.isTorrent) return '';
+    return Uri.tryParse(source.url.trim())?.host.toLowerCase() ?? '';
+  }
+
+  /// Ranked last: a provider that failed twice this session, or a host that
+  /// served no video (see [recordFailure]).
+  bool _demoted(StreamSource source) =>
+      (_providerFailures[source.providerName] ?? 0) >= 2 ||
+      _hostsWithoutVideo.contains(_hostOf(source));
+
   /// The best untried candidate after [failed], or null when the automatic
   /// budget is spent. Ranking is deterministic: providers that failed twice
-  /// this session last; then, with a [quality] target, the resolution tier
+  /// this session, and hosts that served no video, last; then, with a
+  /// [quality] target, the resolution tier
   /// ([QualityTarget.rank]); then a different provider first, providers that
   /// already failed lower, direct streams before torrents (which need
   /// metadata before they can start), and recognized stream types before
   /// unknown ones. Ties keep discovery order, which already reflects
   /// provider priority and response time.
-  StreamSource? nextAfterFailure(StreamSource failed) {
-    if (attemptedCount >= maxAutomaticAttempts) return null;
+  ///
+  /// [pastBudget] is for sources a lookup still adds once the budget is
+  /// spent: the budget no longer applies, but demoted candidates are left
+  /// out, so each provider still gets at most two failures and a host that
+  /// served no video none more.
+  StreamSource? nextAfterFailure(
+    StreamSource failed, {
+    bool pastBudget = false,
+  }) {
+    if (!pastBudget && attemptedCount >= maxAutomaticAttempts) return null;
     final candidates = _candidates
-        .where((source) => !wasAttempted(source))
+        .where(
+          (source) =>
+              !wasAttempted(source) && !(pastBudget && _demoted(source)),
+        )
         .toList();
     if (candidates.isEmpty) return null;
     int score(StreamSource source) {
@@ -441,8 +480,7 @@ class PlaybackCoordinator {
     }
 
     final target = quality;
-    bool demoted(StreamSource source) =>
-        (_providerFailures[source.providerName] ?? 0) >= 2;
+    final demoted = _demoted;
     final ranked =
         [
           for (var index = 0; index < candidates.length; index++)

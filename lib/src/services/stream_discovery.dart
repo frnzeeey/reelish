@@ -102,6 +102,9 @@ class StreamDiscovery {
   Future<void> get finished => _finished.future;
   bool get isCancelled => _cancelled;
 
+  /// Whether providers may still add sources: neither finished nor cancelled.
+  bool get isRunning => !_completed && !_cancelled;
+
   void recordCandidate() {
     if (_recordedCandidate) return;
     _recordedCandidate = true;

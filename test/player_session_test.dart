@@ -398,6 +398,64 @@ void main() {
     });
   });
 
+  // Seen on a phone (28 November 2026): the provider that answered first
+  // filled the five-source budget with links that never played, and the
+  // error appeared while other providers were still looking.
+  group('budget spent while the lookup runs', () {
+    final dead = [
+      for (var i = 1; i <= 5; i++)
+        StreamSource(
+          name: 'Dead $i',
+          url: 'https://8.8.8.8/dead$i.mp4',
+          providerName: 'A$i',
+        ),
+    ];
+
+    _testSession('waits for the lookup, and a source it finds later plays', (
+      tester,
+    ) async {
+      final lookup = StreamDiscovery();
+      for (final source in dead) {
+        lookup.add(source);
+      }
+      engine.onCreate = (player) => player.uri.contains('/dead')
+          ? player.fail('Source error: response code: 404')
+          : player.initialize();
+      await openPlayer(tester, sources: dead, discovery: lookup);
+      await advance(tester);
+
+      expect(engine.players, hasLength(5));
+      // Before: "Could not play 5 sources", with providers still looking.
+      expect(find.textContaining('Could not play'), findsNothing);
+      expect(find.text('Finding another source…'), findsOneWidget);
+
+      lookup.add(_second);
+      await advance(tester);
+      expect(engine.players.last.uri, _second.url);
+      expect(engine.players.last.playCalls, 1);
+      expect(showsVideo(), isTrue);
+      await closePlayer(tester);
+    });
+
+    _testSession('shows the error once the lookup ends with nothing that '
+        'plays', (tester) async {
+      final lookup = StreamDiscovery();
+      for (final source in dead) {
+        lookup.add(source);
+      }
+      engine.onCreate = (player) =>
+          player.fail('Source error: response code: 404');
+      await openPlayer(tester, sources: dead, discovery: lookup);
+      await advance(tester);
+      expect(find.textContaining('Could not play'), findsNothing);
+
+      lookup.complete();
+      await advance(tester);
+      expect(find.textContaining('Could not play 5 sources'), findsOneWidget);
+      await closePlayer(tester);
+    });
+  });
+
   // PB-05 (docs/playback-audit/PLAYBACK_AUDIT_REPORT.md): a link that stops
   // working is refreshed by a new provider lookup, never by the one still
   // running, which only holds the links it already gave.

@@ -470,6 +470,10 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
   StreamDiscovery? _rediscovery;
   StreamSubscription<StreamSource>? _rediscoverySubscription;
 
+  /// Every candidate allowed so far failed while a lookup was still running:
+  /// the next worthwhile source it finds is tried instead of an error.
+  bool _awaitingLookup = false;
+
   /// Last playback position of this session, so a source switch or recovery
   /// resumes where the viewer was rather than at the original resume point.
   Duration? _lastPosition;
@@ -613,6 +617,22 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
       if (!mounted || !source.isPlayable || !_isSourceAllowed(source)) return;
       if (!_playbackCoordinator.addCandidate(source)) return;
       setState(() => _sources.add(source));
+      // Waiting past the automatic budget: a source still arriving is tried
+      // unless its provider or host has already failed this session.
+      if (_awaitingLookup) {
+        final next = _playbackCoordinator.nextAfterFailure(
+          _source ?? widget.source,
+          pastBudget: true,
+        );
+        if (next == null) return;
+        PlaybackLog.log(
+          'Fallback',
+          'new source arrived while waiting -> ${PlaybackLog.describe(next)}',
+        );
+        _nextStatus = 'Trying another source…';
+        unawaited(_initialize(next, resetAttempts: false));
+        return;
+      }
       if (_error) {
         final alternative = _playbackCoordinator.nextAfterFailure(
           _source ?? widget.source,
@@ -669,6 +689,7 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
     _openCancellation = cancellation;
     final generation = ++_initializationGeneration;
     _handlingFailure = false;
+    _awaitingLookup = false;
     _showedPlayback = false;
     _firstFrameDeadline?.cancel();
     _firstFrameDeadline = null;
@@ -1199,7 +1220,16 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
       return;
     }
 
-    _playbackCoordinator.recordFailure(failedCandidate, kind: failure.kind);
+    _playbackCoordinator.recordFailure(
+      failedCandidate,
+      kind: failure.kind,
+      // The engine read the response and found no video: the host sent a
+      // page, not a file. Windows' one-DASH-per-session refusal says
+      // nothing about the host.
+      hostSentNoVideo:
+          failure.kind == PlaybackFailureKind.format &&
+          error is! DashReopenUnsupported,
+    );
     final alternative = failure.canTryAnotherSource
         ? _playbackCoordinator.nextAfterFailure(failedCandidate)
         : null;
@@ -1216,6 +1246,66 @@ class _CustomVideoPlayerState extends State<CustomVideoPlayer>
     }
 
     if (!mounted || generation != _initializationGeneration) return;
+    // A provider that answers first can fill the whole budget with links
+    // that do not play while others are still looking. With a lookup still
+    // running, its next source is tried (_listenForSources) instead of the
+    // viewer being shown an error that a source seconds away would fix.
+    final running = [
+      widget.discovery,
+      _rediscovery,
+    ].whereType<StreamDiscovery>().where((lookup) => lookup.isRunning).toList();
+    if (failure.canTryAnotherSource && running.isNotEmpty) {
+      // One that arrived during the last attempt has not been offered yet.
+      final late = _playbackCoordinator.nextAfterFailure(
+        failedCandidate,
+        pastBudget: true,
+      );
+      if (late != null) {
+        PlaybackLog.log(
+          'Fallback',
+          'budget spent, lookup running -> ${PlaybackLog.describe(late)}',
+        );
+        _nextStatus = 'Trying another source…';
+        await _initialize(late, resetAttempts: false);
+        return;
+      }
+      PlaybackLog.log('Fallback', 'no candidate left; waiting for the lookup');
+      setState(() {
+        _awaitingLookup = true;
+        _status = 'Finding another source…';
+      });
+      _giveUpWhenLookupsEnd(running, failure, generation);
+      return;
+    }
+    _showPlaybackFailed(failure);
+  }
+
+  /// Ends a wait for [lookups] (see [_handleFailure]): when every one has
+  /// finished or been cancelled and nothing they found started, the viewer
+  /// gets the error after all.
+  void _giveUpWhenLookupsEnd(
+    List<StreamDiscovery> lookups,
+    PlaybackFailure failure,
+    int generation,
+  ) {
+    unawaited(
+      Future.wait([
+        for (final lookup in lookups)
+          Future.any([lookup.finished, lookup.whenCancelled]),
+      ]).then((_) {
+        if (!mounted ||
+            !_awaitingLookup ||
+            generation != _initializationGeneration) {
+          return;
+        }
+        PlaybackLog.log('Fallback', 'lookup ended without a playable source');
+        _showPlaybackFailed(failure);
+      }),
+    );
+  }
+
+  void _showPlaybackFailed(PlaybackFailure failure) {
+    _awaitingLookup = false;
     final attempted = _playbackCoordinator.attemptedCount;
     _metrics.gaveUp();
     CrashReporter.instance.setContext(CrashContext.playbackState, 'failed');

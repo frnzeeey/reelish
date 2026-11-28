@@ -245,7 +245,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 |---|---|---|---|---|---|---|
 | `_DangerTile` | Widget | [`account_settings_screen.dart:547`](../../lib/src/screens/account_settings_screen.dart#L547) | extends StatelessWidget | Shared | its own file | A `SettingsTile` for an irreversible action, in the danger colour whatever the accent, so it never looks like an ordinary setting. |
 | `DartFrame` | Typedef | [`error_scrubber.dart:118`](../../lib/src/diagnostics/error_scrubber.dart#L118) | = ( | Shared | its own file only | One frame of a Dart stack trace, as a crash report needs it. |
-| `DashReopenUnsupported` | Exception | [`player_engine.dart:90`](../../lib/src/services/player_engine.dart#L90) | implements Exception | Shared | 1 lib file, 2 test files | Thrown instead of opening a second DASH stream with libmpv on Windows, which would end the app (PB-24, see `WindowsDashGuard`). |
+| `DashReopenUnsupported` | Exception | [`player_engine.dart:90`](../../lib/src/services/player_engine.dart#L90) | implements Exception | Shared | 2 lib files, 2 test files | Thrown instead of opening a second DASH stream with libmpv on Windows, which would end the app (PB-24, see `WindowsDashGuard`). |
 | `DesktopCatalogPage` | Widget | [`desktop_pages.dart:427`](../../lib/src/desktop/desktop_pages.dart#L427) | extends StatefulWidget | Windows | 1 lib file, 1 test file | Movies or Series: the whole paged feed as a grid that loads more as it is scrolled. |
 | `_DesktopCatalogPageState` | Widget state | [`desktop_pages.dart:449`](../../lib/src/desktop/desktop_pages.dart#L449) | extends State<DesktopCatalogPage> | Windows | its own file |  |
 | `DesktopCollectionPage` | Widget | [`desktop_collections.dart:270`](../../lib/src/desktop/desktop_collections.dart#L270) | extends StatefulWidget | Windows | its own file only | A collection, smart collection or folder, filling the window. |
@@ -559,7 +559,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `_Lock` | Widget | [`app_icon_settings_screen.dart:468`](../../lib/src/screens/app_icon_settings_screen.dart#L468) | extends StatelessWidget | Shared | its own file | The small lock on a supporter icon: quiet, in the Supporter gold. |
 | `_LockMark` | Widget | [`profile_style_screen.dart:748`](../../lib/src/screens/profile_style_screen.dart#L748) | extends StatelessWidget | Shared | its own file | A small lock in the Supporter gold. |
 | `LookupOutcome` | Enum | [`analytics_events.dart:54`](../../lib/src/analytics/analytics_events.dart#L54) |  | Shared | 1 lib file, 1 test file | How a Play that never opened the player ended, for `AnalyticsEvent.sourceLookup`. |
-| `LookupStats` | Service type | [`stream_discovery.dart:168`](../../lib/src/services/stream_discovery.dart#L168) |  | Shared | 1 lib file | What a `StreamDiscovery` measured, without its sources: counts and times only, never which provider, link or title. |
+| `LookupStats` | Service type | [`stream_discovery.dart:171`](../../lib/src/services/stream_discovery.dart#L171) |  | Shared | 1 lib file | What a `StreamDiscovery` measured, without its sources: counts and times only, never which provider, link or title. |
 
 ## M
 
@@ -682,7 +682,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `PartyDesktopFrame` | Widget | [`party_desktop.dart:18`](../../lib/src/screens/watch_party/party_desktop.dart#L18) | extends StatelessWidget | Shared | 3 lib files | A Windows party page: Back and the title over a centred column no wider than `maxWidth`, on the page background with a soft accent glow. |
 | `PartyDesktopPoster` | Widget | [`party_desktop.dart:118`](../../lib/src/screens/watch_party/party_desktop.dart#L118) | extends StatelessWidget | Shared | 1 lib file | The title's poster, large, with a soft shadow; a quiet tile without one. |
 | `PartyEndReason` | Enum | [`watch_party_controller.dart:90`](../../lib/src/watch_party/watch_party_controller.dart#L90) |  | Shared | 1 lib file, 1 test file | Why this device is no longer in the party. |
-| `_PartyHandle` | Class | [`custom_video_player.dart:4174`](../../lib/src/widgets/player/custom_video_player.dart#L4174) | implements PartyPlayerHandle | Shared | its own file | The player as watch party sync sees it. |
+| `_PartyHandle` | Class | [`custom_video_player.dart:4264`](../../lib/src/widgets/player/custom_video_player.dart#L4264) | implements PartyPlayerHandle | Shared | its own file | The player as watch party sync sees it. |
 | `PartyHowItWorks` | Widget | [`party_widgets.dart:355`](../../lib/src/screens/watch_party/party_widgets.dart#L355) | extends StatelessWidget | Shared | 1 lib file | Three short steps: what a watch party does. |
 | `PartyLinks` | Class | [`party_links.dart:13`](../../lib/src/watch_party/party_links.dart#L13) |  | Shared | 1 lib file, 3 test files |  |
 | `PartyParticipant` | Class | [`party_models.dart:195`](../../lib/src/watch_party/party_models.dart#L195) |  | Shared | 4 lib files, 2 test files |  |
@@ -727,7 +727,7 @@ Every class, enum, mixin, extension and typedef in `lib/`, A–Z (case-insensiti
 | `PlaybackFailure` | Service type | [`playback_coordinator.dart:116`](../../lib/src/services/playback_coordinator.dart#L116) |  | Shared | 1 lib file, 1 test file |  |
 | `PlaybackFailureKind` | Enum | [`playback_coordinator.dart:13`](../../lib/src/services/playback_coordinator.dart#L13) |  | Shared | 3 lib files, 5 test files |  |
 | `PlaybackFailureSide` | Enum | [`playback_diagnostics.dart:8`](../../lib/src/diagnostics/playback_diagnostics.dart#L8) |  | Shared | 1 test file | Whose fault a playback failure most likely is. |
-| `PlaybackLog` | Service type | [`playback_coordinator.dart:474`](../../lib/src/services/playback_coordinator.dart#L474) |  | Shared | 2 lib files | Development-only playback diagnostics. |
+| `PlaybackLog` | Service type | [`playback_coordinator.dart:512`](../../lib/src/services/playback_coordinator.dart#L512) |  | Shared | 2 lib files | Development-only playback diagnostics. |
 | `PlaybackMetrics` | Service type | [`playback_metrics.dart:33`](../../lib/src/services/playback_metrics.dart#L33) |  | Shared | 1 lib file, 2 test files | One player session's timings and failures. |
 | `PlaybackOutcome` | Enum | [`analytics_events.dart:26`](../../lib/src/analytics/analytics_events.dart#L26) |  | Shared | 1 lib file, 2 test files | How a player session ended, for `AnalyticsEvent.playbackSession`. |
 | `PlaybackQualityPolicy` | Service type | [`playback_quality_policy.dart:26`](../../lib/src/services/playback_quality_policy.dart#L26) |  | Shared | 2 lib files, 1 test file |  |

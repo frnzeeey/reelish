@@ -114,8 +114,17 @@ order:
    before torrents, known stream types before unknown. Sources still
    arriving from the running discovery join the candidates
    (`_listenForSources`). Budget: 5 distinct sources (`maxAutomaticAttempts`).
-6. **Error screen** with `PlaybackFailure.userMessage` ("Could not play 3
-   sources. …").
+   A host whose response no engine recognized as video (a `format` failure:
+   a page where a file should be) has its other links ranked last for the
+   session (`hostSentNoVideo`).
+6. **Wait for the lookup** when nothing is left but a lookup is still
+   running: the loading screen says "Finding another source…", and each
+   source it still adds is tried past the budget unless its provider failed
+   twice or its host sent no video (`nextAfterFailure(pastBudget: true)`).
+   A provider that answers first can otherwise fill the budget with links
+   that do not play while working ones are seconds away.
+7. **Error screen** once every lookup has finished, with
+   `PlaybackFailure.userMessage` ("Could not play 3 sources. …").
 
 Network, HTTP, DNS and timeout failures skip step 4: they do not depend on
 the engine, so retrying them only doubles the wait.

@@ -74,7 +74,8 @@ picker opens as before with the best source preselected.
 
 `nextAfterFailure` ranks the untried candidates by tier first, then by the
 existing rules (another provider, failed providers lower, direct before
-torrent). A provider that failed twice drops below everything else. After a
+torrent). A provider that failed twice, or a host that answered with
+something no engine recognized as video, drops below everything else. After a
 `decoder` or `rendering` failure of a source claiming 1440p or more, the
 ceiling drops below that height for the session: the device could not show
 it, so other sources of the same height are not tried first. The automatic
