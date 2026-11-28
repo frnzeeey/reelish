@@ -549,9 +549,12 @@ class _TvLibraryPageState extends State<TvLibraryPage> {
         autofocus: true,
       ),
     ];
+    // Only watched or saved titles are featured; with none, the hero would
+    // be an empty band above Collections.
+    final hasTitles = _history.isNotEmpty || _favorites.isNotEmpty;
     return TvBrowseFrame(
       featured: _featured,
-      heroFraction: .42,
+      heroFraction: hasTitles ? .42 : .14,
       header: const TvPageHeading('My library'),
       child: rows.isEmpty
           ? const TvMessage(

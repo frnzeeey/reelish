@@ -402,8 +402,14 @@ class _MediaDetailsScreenState extends State<MediaDetailsScreen> {
                       ),
                     if (details != null && details.voteCount > 0)
                       _metadata('${_formatCount(details.voteCount)} votes'),
+                    // Written as on Windows' details page: 1 h 58 min.
                     if ((details?.runtimeMinutes ?? 0) > 0)
-                      _metadata('${details!.runtimeMinutes} min'),
+                      _metadata(
+                        details!.runtimeMinutes! >= 60
+                            ? '${details.runtimeMinutes! ~/ 60} h '
+                                  '${details.runtimeMinutes! % 60} min'
+                            : '${details.runtimeMinutes} min',
+                      ),
                   ],
                 ),
                 if (details?.tagline.isNotEmpty == true) ...[

@@ -362,9 +362,11 @@ class _RailItemState extends State<_RailItem> {
                           ),
                         ),
                         const SizedBox(height: 2),
+                        // Two lines: the column is too narrow at 1024–1366
+                        // for most descriptions on one.
                         Text(
                           widget.value ?? description,
-                          maxLines: 1,
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: AppTextSize.label,

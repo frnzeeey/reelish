@@ -36,6 +36,7 @@ import '../desktop/desktop_provider_search.dart';
 import '../desktop/desktop_plugins_page.dart';
 import '../desktop/desktop_settings_page.dart';
 import '../desktop/desktop_shell.dart';
+import '../desktop/desktop_widgets.dart' show DesktopMetrics;
 import '../platform/device_capabilities.dart';
 import '../services/media_catalog_rules.dart';
 import '../services/paged_feed_controller.dart';
@@ -3161,12 +3162,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               onToggleFavorite: _toggleFavorite,
               onHistoryChanged: () => unawaited(_loadHistory()),
             ),
-            // Two columns in the middle of the window.
-            TvDestination.together => Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1100),
-                child: const TogetherScreen(),
-              ),
+            // Two columns, on the same left edge as the other pages.
+            TvDestination.together => _desktopColumn(
+              maxWidth: 1100,
+              // TogetherScreen pads its own sides by AppSpace.md.
+              inset: DesktopMetrics.pagePadding - AppSpace.md,
+              child: const TogetherScreen(),
             ),
             TvDestination.plugins => DesktopPluginsPage(
               pluginService: _providerPlugins,
@@ -3177,17 +3178,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               playbackSettings: _playbackSettings,
               plugins: availablePlugins,
             ),
-            // A readable column in the middle of the window.
-            TvDestination.profile => Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 860),
-                child: ProfileScreen(
-                  appearance: widget.accentSettings,
-                  storage: _storage,
-                  refreshToken: _libraryRefreshToken,
-                  onOpenLibrary: () =>
-                      _onTvDestinationChanged(TvDestination.library),
-                ),
+            // A readable column, on the same left edge as the other pages.
+            TvDestination.profile => _desktopColumn(
+              // ProfileScreen is a SettingsPage: its readable width (820),
+              // so it does not centre itself again, and its side padding.
+              maxWidth: 820,
+              inset: DesktopMetrics.pagePadding - SettingsMetrics.horizontal,
+              child: ProfileScreen(
+                appearance: widget.accentSettings,
+                storage: _storage,
+                refreshToken: _libraryRefreshToken,
+                onOpenLibrary: () =>
+                    _onTvDestinationChanged(TvDestination.library),
               ),
             ),
           },
@@ -3196,6 +3198,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ],
     );
   }
+
+  /// A Windows page narrower than the window, top left, its text on the
+  /// same left edge as the full-width pages: [inset] plus the page's own
+  /// side padding makes [DesktopMetrics.pagePadding].
+  Widget _desktopColumn({
+    required double maxWidth,
+    required double inset,
+    required Widget child,
+  }) => Align(
+    alignment: Alignment.topLeft,
+    child: Padding(
+      padding: EdgeInsets.only(left: inset),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxWidth),
+        child: child,
+      ),
+    ),
+  );
 
   Widget _resolvingOverlay() {
     final resolving = _resolving;
@@ -3279,13 +3299,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ),
       TabPageTransition(
         active: _tab == 3,
-        child: Builder(
-          builder: (settingsContext) => SettingsScreen(
-            accentSettings: widget.accentSettings,
-            onAppearanceSettings: () => unawaited(_openAppearanceSettings()),
-            onPlaybackSettings: () =>
-                unawaited(_openPlaybackSettings(availablePlugins)),
-            onPlugins: () => _openPluginsPage(settingsContext),
+        // Phone dock tab only: a centred column on a tablet.
+        child: PhoneReadableWidth(
+          child: Builder(
+            builder: (settingsContext) => SettingsScreen(
+              accentSettings: widget.accentSettings,
+              onAppearanceSettings: () => unawaited(_openAppearanceSettings()),
+              onPlaybackSettings: () =>
+                  unawaited(_openPlaybackSettings(availablePlugins)),
+              onPlugins: () => _openPluginsPage(settingsContext),
+            ),
           ),
         ),
       ),

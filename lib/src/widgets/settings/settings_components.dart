@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/reelish_icons.dart';
 
+import '../../platform/device_capabilities.dart';
 import '../../theme/design_tokens.dart';
 import '../../theme/glass_theme.dart';
 import '../tv/tv_focus.dart';
@@ -15,6 +16,33 @@ abstract final class SettingsMetrics {
 
   /// Space the floating navigation dock covers at the bottom of a tab.
   static const dockClearance = 112.0;
+}
+
+/// A list page on a tablet: centred at [maxWidth] once the screen is at
+/// least [from] wide, so rows do not stretch across it. Phones (narrower)
+/// and the TV and Windows interfaces (their own widths) are unchanged.
+class PhoneReadableWidth extends StatelessWidget {
+  const PhoneReadableWidth({super.key, required this.child});
+
+  final Widget child;
+
+  static const from = 600.0;
+  static const maxWidth = 680.0;
+
+  @override
+  Widget build(BuildContext context) {
+    if (DeviceCapabilities.usesTvLayout ||
+        MediaQuery.sizeOf(context).width < from) {
+      return child;
+    }
+    return Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: maxWidth),
+        child: child,
+      ),
+    );
+  }
 }
 
 /// A settings page: header, sectioned content, and the TMDB footer.

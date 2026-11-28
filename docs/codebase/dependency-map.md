@@ -84,7 +84,7 @@ graph LR
   screens["screens"] -->|1| app["app"]
   screens["screens"] -->|1| collections["collections"]
   screens["screens"] -->|4| connect["connect"]
-  screens["screens"] -->|7| desktop["desktop"]
+  screens["screens"] -->|8| desktop["desktop"]
   screens["screens"] -->|3| diagnostics["diagnostics"]
   screens["screens"] -->|8| discovery["discovery"]
   screens["screens"] -->|1| intro_skip["intro_skip"]
@@ -239,6 +239,7 @@ graph LR
   widgets_plugin_manager["widgets/plugin_manager"] -->|1| platform["platform"]
   widgets_plugin_manager["widgets/plugin_manager"] -->|3| services["services"]
   widgets_plugin_manager["widgets/plugin_manager"] -->|3| theme["theme"]
+  widgets_settings["widgets/settings"] -->|1| platform["platform"]
   widgets_settings["widgets/settings"] -->|7| theme["theme"]
   widgets_settings["widgets/settings"] -->|2| widgets["widgets"]
   widgets_settings["widgets/settings"] -->|1| widgets_tv["widgets/tv"]
@@ -283,7 +284,7 @@ graph LR
 | `navigation` | `theme` (1) |
 | `notifications` | `account` (4), `analytics` (2), `models` (1), `platform` (1), `services` (2) |
 | `platform` | `account` (3), `analytics` (2), `widgets` (1) |
-| `screens` | `account` (31), `analytics` (3), `app` (1), `collections` (1), `connect` (4), `desktop` (7), `diagnostics` (3), `discovery` (8), `intro_skip` (1), `messaging` (1), `models` (29), `navigation` (12), `notifications` (4), `platform` (21), `screens/collections` (1), `screens/search` (3), `screens/social` (3), `screens/tv` (3), `screens/watch_party` (3), `search` (3), `services` (48), `social` (4), `spotlight` (7), `support` (3), `theme` (81), `viewmodels` (3), `watch_party` (3), `widgets` (48), `widgets/collections` (1), `widgets/player` (4), `widgets/plugin_library` (18), `widgets/plugin_manager` (4), `widgets/settings` (20), `widgets/social` (2), `widgets/tv` (8), `wrapped` (3) |
+| `screens` | `account` (31), `analytics` (3), `app` (1), `collections` (1), `connect` (4), `desktop` (8), `diagnostics` (3), `discovery` (8), `intro_skip` (1), `messaging` (1), `models` (29), `navigation` (12), `notifications` (4), `platform` (21), `screens/collections` (1), `screens/search` (3), `screens/social` (3), `screens/tv` (3), `screens/watch_party` (3), `search` (3), `services` (48), `social` (4), `spotlight` (7), `support` (3), `theme` (81), `viewmodels` (3), `watch_party` (3), `widgets` (48), `widgets/collections` (1), `widgets/player` (4), `widgets/plugin_library` (18), `widgets/plugin_manager` (4), `widgets/settings` (20), `widgets/social` (2), `widgets/tv` (8), `wrapped` (3) |
 | `screens/collections` | `collections` (3), `models` (1), `navigation` (1), `services` (1), `theme` (3), `viewmodels` (1), `widgets` (3), `widgets/collections` (2) |
 | `screens/search` | `discovery` (2), `models` (5), `navigation` (1), `platform` (3), `search` (9), `theme` (17), `widgets` (4), `widgets/tv` (2) |
 | `screens/social` | `account` (5), `connect` (1), `messaging` (10), `models` (1), `navigation` (2), `platform` (6), `screens/watch_party` (1), `social` (12), `theme` (20), `widgets` (6), `widgets/collections` (1), `widgets/settings` (6), `widgets/social` (4), `widgets/tv` (4) |
@@ -302,7 +303,7 @@ graph LR
 | `widgets/player` | `account` (1), `diagnostics` (2), `intro_skip` (4), `models` (20), `platform` (9), `services` (17), `social` (1), `theme` (36), `watch_party` (5), `widgets` (8), `widgets/tv` (1), `widgets/watch_party` (1) |
 | `widgets/plugin_library` | `models` (4), `platform` (1), `services` (5), `theme` (30), `widgets` (3) |
 | `widgets/plugin_manager` | `models` (1), `platform` (1), `services` (3), `theme` (3) |
-| `widgets/settings` | `theme` (7), `widgets` (2), `widgets/tv` (1) |
+| `widgets/settings` | `platform` (1), `theme` (7), `widgets` (2), `widgets/tv` (1) |
 | `widgets/social` | `account` (1), `models` (1), `platform` (2), `social` (4), `theme` (5), `widgets` (1), `widgets/tv` (1) |
 | `widgets/tv` | `models` (1), `platform` (1), `theme` (5), `widgets` (2) |
 | `widgets/watch_party` | `platform` (1), `theme` (3), `watch_party` (2), `widgets/tv` (1) |
@@ -317,7 +318,7 @@ The files imported by the most other `lib/` files. A change to one of these reac
 | [`lib/src/theme/glass_theme.dart`](../../lib/src/theme/glass_theme.dart) | 131 | 55 |
 | [`lib/src/theme/reelish_icons.dart`](../../lib/src/theme/reelish_icons.dart) | 112 | 11 |
 | [`lib/src/theme/design_tokens.dart`](../../lib/src/theme/design_tokens.dart) | 84 | 2 |
-| [`lib/src/platform/device_capabilities.dart`](../../lib/src/platform/device_capabilities.dart) | 63 | 33 |
+| [`lib/src/platform/device_capabilities.dart`](../../lib/src/platform/device_capabilities.dart) | 64 | 33 |
 | [`lib/src/models/media_item.dart`](../../lib/src/models/media_item.dart) | 59 | 60 |
 | [`lib/src/account/account_controller.dart`](../../lib/src/account/account_controller.dart) | 31 | 37 |
 | [`lib/src/widgets/settings/settings_components.dart`](../../lib/src/widgets/settings/settings_components.dart) | 31 | 3 |
@@ -334,9 +335,9 @@ The files imported by the most other `lib/` files. A change to one of these reac
 | [`lib/src/models/episode_progress.dart`](../../lib/src/models/episode_progress.dart) | 13 | 14 |
 | [`lib/src/widgets/glass_button.dart`](../../lib/src/widgets/glass_button.dart) | 13 | 1 |
 | [`lib/src/account/supporter_controller.dart`](../../lib/src/account/supporter_controller.dart) | 12 | 10 |
+| [`lib/src/desktop/desktop_widgets.dart`](../../lib/src/desktop/desktop_widgets.dart) | 12 | 6 |
 | [`lib/src/models/plugin_catalog.dart`](../../lib/src/models/plugin_catalog.dart) | 12 | 2 |
 | [`lib/src/social/friends_controller.dart`](../../lib/src/social/friends_controller.dart) | 12 | 8 |
-| [`lib/src/desktop/desktop_widgets.dart`](../../lib/src/desktop/desktop_widgets.dart) | 11 | 6 |
 | [`lib/src/discovery/tmdb_genres.dart`](../../lib/src/discovery/tmdb_genres.dart) | 11 | 3 |
 | [`lib/src/services/provider_plugin_service.dart`](../../lib/src/services/provider_plugin_service.dart) | 11 | 6 |
 

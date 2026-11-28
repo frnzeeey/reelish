@@ -146,13 +146,18 @@ class _UniversalSearchViewState extends State<UniversalSearchView> {
     _ => null,
   };
 
+  // Windows: the same left edge as the other pages (DesktopMetrics.pagePadding).
   EdgeInsets get _gutter => EdgeInsets.symmetric(
     horizontal: DeviceCapabilities.isTv
         ? 48
         : DeviceCapabilities.isDesktop
-        ? 32
+        ? 40
         : AppSpace.md,
   );
+
+  /// The search field's width on Windows, so it does not run the width of a
+  /// large monitor. Phone and TV keep the full width.
+  static const _desktopFieldWidth = 880.0;
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -161,12 +166,25 @@ class _UniversalSearchViewState extends State<UniversalSearchView> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: _gutter.copyWith(top: AppSpace.sm),
-          child: Row(
-            children: [
-              ?widget.leading,
-              Expanded(child: _input()),
-            ],
+          // Windows: the field where the other pages put their title.
+          padding: _gutter.copyWith(
+            top: DeviceCapabilities.isDesktop ? AppSpace.xl : AppSpace.sm,
+          ),
+          child: Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: DeviceCapabilities.isDesktop
+                    ? _desktopFieldWidth
+                    : double.infinity,
+              ),
+              child: Row(
+                children: [
+                  ?widget.leading,
+                  Expanded(child: _input()),
+                ],
+              ),
+            ),
           ),
         ),
         const SizedBox(height: AppSpace.sm),
